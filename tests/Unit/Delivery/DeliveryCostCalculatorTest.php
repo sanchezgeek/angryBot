@@ -15,25 +15,56 @@ final class DeliveryCostCalculatorTest extends TestCase
      */
     public function calculateTestCasesProvider(): iterable
     {
-        $firstGrade = [new DeliveryRange(100, 0, 100), new DeliveryRange(80, 100, 300), new DeliveryRange(70, 300, null)];
+        // (0..100 => 100, 100..300 => 80, 300 ................ => 70)
+        $ranges = [new DeliveryRange(100, 0, 100), new DeliveryRange(80, 100, 300), new DeliveryRange(70, 300, null)];
 
-        yield '305 | (0..100 => 100, 100..300 => 80, 300 ................ => 70) === 26350' => [
-            $firstGrade,
+        yield '305km | 26350 rub.' => [
+            $ranges,
             305,
             26350,
         ];
 
-        yield '299 | (0..100 => 100, 100..300 => 80, 300 ................ => 70) === 25920' => [
-            $firstGrade,
+        yield '301km | 26070 rub.' => [
+            $ranges,
+            301,
+            26070,
+        ];
+
+        yield '300km | 26000 rub.' => [
+            $ranges,
+            300,
+            26000,
+        ];
+
+        yield '299km => 25920 rub.' => [
+            $ranges,
             299,
             25920,
         ];
 
-//        yield '305 | 0..8 => 100, 8..11, 11..12, 12 ................' => [
-//            [new DeliveryRange(, 0, 8), new DeliveryRange(80, 100, 300), new DeliveryRange(70, 300, null)],
-//            305,
-//            26350,
-//        ];
+        yield '101km => 10080 rub.' => [
+            $ranges,
+            101,
+            10080,
+        ];
+
+        yield '100km => 10000 rub.' => [
+            $ranges,
+            100,
+            10000
+        ];
+
+        yield '99km => 9900 rub.' => [
+            $ranges,
+            99,
+            9900,
+        ];
+
+        yield '1 => 100 rub.' => [
+            $ranges,
+            1,
+            100,
+        ];
     }
 
     /**
@@ -41,24 +72,10 @@ final class DeliveryCostCalculatorTest extends TestCase
      */
     public function testCalculate(array $ranges, int $distance, int $expectedCost): void
     {
-        $calculator = new  DeliveryCostCalculator();
+        $calculator = new DeliveryCostCalculator();
 
         $cost = $calculator->calculate($distance, ...$ranges);
 
         self::assertSame($expectedCost, $cost);
     }
 }
-
-
-/*
-Необходимо рассчитать стоимость перевозки груза, чем дальше расстояние тем меньше оплата за км.
-НАПРИМЕР: от 1 до 100 км стоимость 100р за километр от 100 до 300 км стоимость 80р за километр от 300 и выше км стоимость 70р за километр
-Пользователь хочет узнать стоимость перевозки, например за 305 км,
-    получается 100км за каждый,
-    следующие 200 по 80р за каждый,
-    и еще 5 по 70р за каждый
-В итоге мы должны получить  26 350р
-Необходимо реализовать данный калькулятор на php.
-Данный калькулятор должен решать задачу с любыми входящими данные (разные цены, километражи)
-Задачу выполнить в стиле ООП.
-Вышеприведённые данные указаны как ПРИМЕР. */
