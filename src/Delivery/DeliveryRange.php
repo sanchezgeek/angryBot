@@ -12,6 +12,30 @@ final class DeliveryRange
 
     public function __construct(int $price, int $start, ?int $end)
     {
+        if ($end !== null && $end <= 0) {
+            throw new \InvalidArgumentException(
+                'The end of the segment must be greater than zero.'
+            );
+        }
+
+        if ($start < 0) {
+            throw new \InvalidArgumentException(
+                'The beginning of the segment must be greater or equal to zero.'
+            );
+        }
+
+        if ($end !== null && $end <= $start) {
+            throw new \InvalidArgumentException(
+                \sprintf('The end of the segment must be greater than start ("%s..%s").', $start, $end ?: '..')
+            );
+        }
+
+        if ($price < 0) {
+            throw new \InvalidArgumentException(
+                \sprintf('The price of the segment ("%s..%s") must be greater than 0.', $start, $end)
+            );
+        }
+
         $this->start = $start;
         $this->end = $end;
         $this->price = $price;
