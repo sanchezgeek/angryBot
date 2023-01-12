@@ -10,7 +10,7 @@ final class DeliveryRange
     private ?int $end;
     private int $price;
 
-    public function __construct(int $price, int $start, ?int $end)
+    public function __construct(int $start, ?int $end, int $price)
     {
         if ($end !== null && $end <= 0) {
             throw new \InvalidArgumentException(

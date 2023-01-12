@@ -16,7 +16,7 @@ final class DeliveryCostCalculatorTest extends TestCase
     public function calculateTestCases(): iterable
     {
         // (0..100 => 100, 100..300 => 80, 300 ................ => 70)
-        $ranges = [new DeliveryRange(100, 0, 100), new DeliveryRange(80, 100, 300), new DeliveryRange(70, 300, null)];
+        $ranges = [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 300, 80), new DeliveryRange(300, null, 70)];
 
         yield '305km | 26350 rub.' => [
             $ranges,
@@ -103,7 +103,7 @@ final class DeliveryCostCalculatorTest extends TestCase
     public function invalidRangesTestCases(): iterable
     {
         yield [
-            [new DeliveryRange(100, 0, 100), new DeliveryRange(70, 300, null)],
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(300, null, 70)],
         ];
     }
 
