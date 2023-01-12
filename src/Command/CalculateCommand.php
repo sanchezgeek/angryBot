@@ -28,31 +28,31 @@ class CalculateCommand extends Command
         $helper = $this->getHelper('question');
         $io = new SymfonyStyle($input, $output);
 
-        $distance = $input->getArgument('distance');
-        if (!(int)$distance) {
-            throw new \InvalidArgumentException(
-                \sprintf('Invalid distance provided (%s)', $distance)
-            );
-        }
-
-        /** @var DeliveryRange[] $ranges */
-        $ranges = [];
-        do {
-            $start = count($ranges) ? end($ranges)->getEnd() : 0;
-            $end = $helper->ask($input, $output, new Question(
-                'Please enter range end (or press ENTER if there is no more ranges): '
-            ));
-
-            $price = $helper->ask($input, $output, new Question(
-                \sprintf('Please enter range %s..%s price: ', $start, $end ?: '∞')
-            ));
-
-            $ranges[] = new DeliveryRange($start, $end, $price);
-        } while ($end !== null);
-
-        $calculator = new DeliveryCostCalculator();
-
         try {
+            $distance = $input->getArgument('distance');
+            if (!(int)$distance) {
+                throw new \InvalidArgumentException(
+                    \sprintf('Invalid distance provided (%s)', $distance)
+                );
+            }
+
+            /** @var DeliveryRange[] $ranges */
+            $ranges = [];
+            do {
+                $start = count($ranges) ? end($ranges)->getEnd() : 0;
+                $end = $helper->ask($input, $output, new Question(
+                    'Please enter range end (or press ENTER if there is no more ranges): '
+                ));
+
+                $price = $helper->ask($input, $output, new Question(
+                    \sprintf('Please enter range %s..%s price: ', $start, $end ?: '∞')
+                ));
+
+                $ranges[] = new DeliveryRange($start, $end, $price);
+            } while ($end !== null);
+
+            $calculator = new DeliveryCostCalculator();
+
             $cost = $calculator->calculate((int)$distance, ...$ranges);
 
             $io->success(
@@ -60,7 +60,9 @@ class CalculateCommand extends Command
             );
 
             return Command::SUCCESS;
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
+            $io->error($e->getMessage());
+
             return Command::FAILURE;
         }
     }

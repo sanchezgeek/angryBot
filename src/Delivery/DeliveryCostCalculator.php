@@ -6,6 +6,9 @@ namespace App\Delivery;
 
 final class DeliveryCostCalculator
 {
+    /**
+     * @throws \InvalidArgumentException
+     */
     public function calculate(int $distance, DeliveryRange ...$ranges): int
     {
         if ($distance <= 0) {
@@ -24,13 +27,13 @@ final class DeliveryCostCalculator
 
     /**
      * @param DeliveryRange[] $ranges
+     * @throws \InvalidArgumentException
      */
     private function validateRanges(array $ranges): void
     {
         usort($ranges, function (DeliveryRange $prev, DeliveryRange $next) {
             return $prev->getStart() > $next->getStart();
         });
-
 
         foreach ($ranges as $key => $range) {
             $mustStartsFrom = $key > 0 ? $ranges[$key - 1]->getEnd() : 0; // from previous range end or from 0 (if it's first range)
