@@ -20,9 +20,7 @@ final class DeliveryRange
     public function getAppearedDistanceCost(int $distance): int
     {
         if ($distance > $this->start) {
-            $appearedDistance = $this->end
-                ? min($this->end, $distance) - $this->start
-                : $distance - $this->start;
+            $appearedDistance = min($this->end ?? $distance, $distance) - $this->start;
 
             return $appearedDistance * $this->price;
         }
