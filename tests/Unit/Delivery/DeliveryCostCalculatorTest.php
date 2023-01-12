@@ -117,6 +117,26 @@ final class DeliveryCostCalculatorTest extends TestCase
         yield '0..100, 100..200 => also invalid' => [
             [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 200, 70)],
         ];
+
+        yield '0..100, 90..∞ => intersection' => [
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, null, 70)],
+        ];
+
+        yield '0..100, 100..∞, 90..∞ => intersection' => [
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(100, null, 70), new DeliveryRange(90, null, 70)],
+        ];
+
+        yield '0..100, 90..100, 100..∞ => intersection' => [
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, 100, 70), new DeliveryRange(100, null, 70)],
+        ];
+
+        yield '0..100, 100..110, 100..∞ => intersection' => [
+            [new DeliveryRange(0, 100, 100),  new DeliveryRange(100, 110, 70), new DeliveryRange(100, null, 70)],
+        ];
+
+        yield '0..100, 90..110, 100..∞ => intersection' => [
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, 110, 70), new DeliveryRange(100, null, 70)],
+        ];
     }
 
     /**
