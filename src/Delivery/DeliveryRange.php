@@ -27,4 +27,19 @@ final class DeliveryRange
 
         return 0;
     }
+
+    public function getStart(): int
+    {
+        return $this->start;
+    }
+
+    public function getEnd(): ?int
+    {
+        return $this->end;
+    }
+
+    public function getPrice(): int
+    {
+        return $this->price;
+    }
 }

@@ -97,4 +97,18 @@ final class DeliveryCostCalculatorTest extends TestCase
         $calculator = new DeliveryCostCalculator();
         $calculator->calculate(0);
     }
+
+    public function testCalculateWithInvalidRangesSpecified(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.');
+
+        $ranges = [new DeliveryRange(100, 0, 100), new DeliveryRange(70, 300, null)];
+
+        $calculator = new DeliveryCostCalculator();
+
+        $cost = $calculator->calculate(305, ...$ranges);
+
+        self::assertSame(10350, $cost);
+    }
 }

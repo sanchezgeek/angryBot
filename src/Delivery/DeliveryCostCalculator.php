@@ -12,12 +12,35 @@ final class DeliveryCostCalculator
             throw new \InvalidArgumentException('Distance must be greater than zero.');
         }
 
-        $cost = 0;
+        $this->validateRanges($ranges);
 
+        $cost = 0;
         foreach ($ranges as $range) {
             $cost += $range->getAppearedDistanceCost($distance);
         }
 
         return $cost;
+    }
+
+    /**
+     * @param DeliveryRange[] $ranges
+     */
+    private function validateRanges(array $ranges): void
+    {
+        usort($ranges, function (DeliveryRange $prev, DeliveryRange $next) {
+            return $prev->getStart() > $next->getStart();
+        });
+
+
+        foreach ($ranges as $key => $range) {
+            $mustStartsFrom = $key > 0 ? $ranges[$key - 1]->getEnd() : 0; // from previous range end or from 0 (if it's first range)
+            $mustEndsOn = isset($ranges[$key + 1]) ? $ranges[$key + 1]->getStart() : null; // on next range start or must have no end
+
+            if ($range->getStart() !== $mustStartsFrom || $range->getEnd() !== $mustEndsOn) {
+                throw new \InvalidArgumentException(
+                    'Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.'
+                );
+            }
+        }
     }
 }
