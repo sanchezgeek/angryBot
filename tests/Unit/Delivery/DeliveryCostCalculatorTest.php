@@ -18,19 +18,19 @@ final class DeliveryCostCalculatorTest extends TestCase
         // (0..100 => 100, 100..300 => 80, 300..∞ => 70)
         $ranges = [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 300, 80), new DeliveryRange(300, null, 70)];
 
-        yield '305km | 26350 rub.' => [
+        yield '305km => 26350 rub.' => [
             $ranges,
             305,
             26350,
         ];
 
-        yield '301km | 26070 rub.' => [
+        yield '301km => 26070 rub.' => [
             $ranges,
             301,
             26070,
         ];
 
-        yield '300km | 26000 rub.' => [
+        yield '300km => 26000 rub.' => [
             $ranges,
             300,
             26000,
@@ -60,7 +60,7 @@ final class DeliveryCostCalculatorTest extends TestCase
             9900,
         ];
 
-        yield '1 => 100 rub.' => [
+        yield '1km => 100 rub.' => [
             $ranges,
             1,
             100,
