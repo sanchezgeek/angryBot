@@ -26,7 +26,7 @@ final class DeliveryRange
 
         if ($end !== null && $end <= $start) {
             throw new \InvalidArgumentException(
-                \sprintf('The end of the segment must be greater than start ("%s..%s").', $start, $end ?: '..')
+                \sprintf('The end of the segment must be greater than start ("%s..%s").', $start, $end ?: '∞')
             );
         }
 

@@ -15,7 +15,7 @@ final class DeliveryCostCalculatorTest extends TestCase
      */
     public function calculateTestCases(): iterable
     {
-        // (0..100 => 100, 100..300 => 80, 300 ................ => 70)
+        // (0..100 => 100, 100..300 => 80, 300..∞ => 70)
         $ranges = [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 300, 80), new DeliveryRange(300, null, 70)];
 
         yield '305km | 26350 rub.' => [
@@ -102,8 +102,20 @@ final class DeliveryCostCalculatorTest extends TestCase
      */
     public function invalidRangesTestCases(): iterable
     {
-        yield [
+        yield '0..100, 300..∞ => 100|price gap|300' => [
             [new DeliveryRange(0, 100, 100), new DeliveryRange(300, null, 70)],
+        ];
+
+        yield '1..100, 100..∞ => must start from 0' => [
+            [new DeliveryRange(1, 100, 100), new DeliveryRange(100, null, 70)],
+        ];
+
+        yield '1..100, 100..200 => must end with ∞' => [
+            [new DeliveryRange(1, 100, 100), new DeliveryRange(100, 200, 70)],
+        ];
+
+        yield '0..100, 100..200 => also invalid' => [
+            [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 200, 70)],
         ];
     }
 
@@ -117,6 +129,6 @@ final class DeliveryCostCalculatorTest extends TestCase
 
         $calculator = new DeliveryCostCalculator();
 
-        $cost = $calculator->calculate(305, ...$ranges);
+        $calculator->calculate(305, ...$ranges);
     }
 }
