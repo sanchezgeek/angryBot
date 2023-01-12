@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Delivery;
 
 use App\Delivery\DeliveryCostCalculator;
 use App\Delivery\DeliveryRange;
+use http\Exception\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class DeliveryCostCalculatorTest extends TestCase
@@ -77,5 +78,23 @@ final class DeliveryCostCalculatorTest extends TestCase
         $cost = $calculator->calculate($distance, ...$ranges);
 
         self::assertSame($expectedCost, $cost);
+    }
+
+    public function testThrowExceptionOnNegativeDistanceCostCalculation()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Distance must be greater than zero.');
+
+        $calculator = new DeliveryCostCalculator();
+        $calculator->calculate(-1);
+    }
+
+    public function testThrowExceptionOnZeroDistanceCostCalculation()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Distance must be greater than zero.');
+
+        $calculator = new DeliveryCostCalculator();
+        $calculator->calculate(0);
     }
 }
