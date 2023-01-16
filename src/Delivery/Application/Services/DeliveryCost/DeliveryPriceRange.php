@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery;
+namespace App\Delivery\Application\Services\DeliveryCost;
 
-final class DeliveryRange
+final class DeliveryPriceRange
 {
     private int $start;
     private ?int $end;

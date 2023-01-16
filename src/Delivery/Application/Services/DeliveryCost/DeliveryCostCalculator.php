@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery;
+namespace App\Delivery\Application\Services\DeliveryCost;
 
+/**
+ * @see \App\Tests\Unit\Delivery\DeliveryCostCalculatorTest
+ */
 final class DeliveryCostCalculator
 {
     /**
      * @throws \InvalidArgumentException
      */
-    public function calculate(int $distance, DeliveryRange ...$ranges): int
+    public function calculate(int $distance, DeliveryPriceRange ...$ranges): int
     {
         if ($distance <= 0) {
             throw new \InvalidArgumentException('Distance must be greater than zero.');
@@ -26,13 +29,13 @@ final class DeliveryCostCalculator
     }
 
     /**
-     * @param DeliveryRange[] $ranges
+     * @param DeliveryPriceRange[] $ranges
      * @throws \InvalidArgumentException
      */
     private function validateRanges(array $ranges): void
     {
-        usort($ranges, function (DeliveryRange $prev, DeliveryRange $next) {
-            return $prev->getStart() > $next->getStart();
+        usort($ranges, function (DeliveryPriceRange $prev, DeliveryPriceRange $next): int {
+            return $prev->getStart() - $next->getStart();
         });
 
         foreach ($ranges as $key => $range) {

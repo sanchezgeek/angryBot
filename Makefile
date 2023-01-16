@@ -7,7 +7,7 @@ restart_with_rebuild: stop start_with_rebuild
 restart_with_override: stop_with_override start_with_override
 
 prepare_files:
-	cp .env .env.local
+	cp .env.local.dist .env.local
 
 start:
 	docker compose up -d

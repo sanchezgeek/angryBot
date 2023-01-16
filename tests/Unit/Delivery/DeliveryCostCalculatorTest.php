@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Delivery;
 
-use App\Delivery\DeliveryCostCalculator;
-use App\Delivery\DeliveryRange;
+use App\Delivery\Application\Services\DeliveryCost\DeliveryCostCalculator;
+use App\Delivery\Application\Services\DeliveryCost\DeliveryPriceRange;
 use PHPUnit\Framework\TestCase;
 
 final class DeliveryCostCalculatorTest extends TestCase
 {
     /**
-     * @return iterable<array-key, array<DeliveryRange>, int, int>
+     * @return iterable<array-key, array<DeliveryPriceRange>, int, int>
      */
     public function calculateTestCases(): iterable
     {
         // (0..100 => 100, 100..300 => 80, 300..∞ => 70)
-        $ranges = [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 300, 80), new DeliveryRange(300, null, 70)];
+        $ranges = [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(100, 300, 80), new DeliveryPriceRange(300, null, 70)];
 
         yield '305km => 26350 rub.' => [
             $ranges,
@@ -98,44 +98,44 @@ final class DeliveryCostCalculatorTest extends TestCase
     }
 
     /**
-     * @return iterable<array-key, array<DeliveryRange>>
+     * @return iterable<array-key, array<DeliveryPriceRange>>
      */
     public function invalidRangesTestCases(): iterable
     {
         yield '0..100, 300..∞ => 100|price gap|300' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(300, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(300, null, 70)],
         ];
 
         yield '1..100, 100..∞ => must start from 0' => [
-            [new DeliveryRange(1, 100, 100), new DeliveryRange(100, null, 70)],
+            [new DeliveryPriceRange(1, 100, 100), new DeliveryPriceRange(100, null, 70)],
         ];
 
         yield '1..100, 100..200 => must end with ∞' => [
-            [new DeliveryRange(1, 100, 100), new DeliveryRange(100, 200, 70)],
+            [new DeliveryPriceRange(1, 100, 100), new DeliveryPriceRange(100, 200, 70)],
         ];
 
         yield '0..100, 100..200 => also invalid' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(100, 200, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(100, 200, 70)],
         ];
 
         yield '0..100, 90..∞ => intersection' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(90, null, 70)],
         ];
 
         yield '0..100, 100..∞, 90..∞ => intersection' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(100, null, 70), new DeliveryRange(90, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(100, null, 70), new DeliveryPriceRange(90, null, 70)],
         ];
 
         yield '0..100, 90..100, 100..∞ => intersection' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, 100, 70), new DeliveryRange(100, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(90, 100, 70), new DeliveryPriceRange(100, null, 70)],
         ];
 
         yield '0..100, 100..110, 100..∞ => intersection' => [
-            [new DeliveryRange(0, 100, 100),  new DeliveryRange(100, 110, 70), new DeliveryRange(100, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100),  new DeliveryPriceRange(100, 110, 70), new DeliveryPriceRange(100, null, 70)],
         ];
 
         yield '0..100, 90..110, 100..∞ => intersection' => [
-            [new DeliveryRange(0, 100, 100), new DeliveryRange(90, 110, 70), new DeliveryRange(100, null, 70)],
+            [new DeliveryPriceRange(0, 100, 100), new DeliveryPriceRange(90, 110, 70), new DeliveryPriceRange(100, null, 70)],
         ];
     }
 

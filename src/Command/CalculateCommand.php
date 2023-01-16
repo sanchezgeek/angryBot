@@ -2,8 +2,8 @@
 
 namespace App\Command;
 
-use App\Delivery\DeliveryCostCalculator;
-use App\Delivery\DeliveryRange;
+use App\Delivery\Application\Services\DeliveryCost\DeliveryCostCalculator;
+use App\Delivery\Application\Services\DeliveryCost\DeliveryPriceRange;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -36,7 +36,7 @@ class CalculateCommand extends Command
                 );
             }
 
-            /** @var DeliveryRange[] $ranges */
+            /** @var DeliveryPriceRange[] $ranges */
             $ranges = [];
             do {
                 $start = count($ranges) ? end($ranges)->getEnd() : 0;
@@ -48,7 +48,7 @@ class CalculateCommand extends Command
                     \sprintf('Please enter range %s..%s price: ', $start, $end ?: '∞')
                 ));
 
-                $ranges[] = new DeliveryRange($start, $end, $price);
+                $ranges[] = new DeliveryPriceRange($start, $end, $price);
             } while ($end !== null);
 
             $calculator = new DeliveryCostCalculator();
