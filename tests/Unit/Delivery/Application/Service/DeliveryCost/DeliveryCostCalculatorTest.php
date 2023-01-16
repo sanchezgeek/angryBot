@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Delivery;
+namespace App\Tests\Unit\Delivery\Application\Service\DeliveryCost;
 
-use App\Delivery\Application\Services\DeliveryCost\DeliveryCostCalculator;
-use App\Delivery\Application\Services\DeliveryCost\DeliveryPriceRange;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @see DeliveryCostCalculator
+ */
 final class DeliveryCostCalculatorTest extends TestCase
 {
     /**
@@ -81,8 +84,8 @@ final class DeliveryCostCalculatorTest extends TestCase
 
     public function testThrowExceptionOnNegativeDistanceCostCalculation()
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Distance must be greater than zero.');
+        self::expectException(\InvalidArgumentException::class);
+        self::expectExceptionMessage('Distance must be greater than zero.');
 
         $calculator = new DeliveryCostCalculator();
         $calculator->calculate(-1);
@@ -90,8 +93,8 @@ final class DeliveryCostCalculatorTest extends TestCase
 
     public function testThrowExceptionOnZeroDistanceCostCalculation()
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Distance must be greater than zero.');
+        self::expectException(\InvalidArgumentException::class);
+        self::expectExceptionMessage('Distance must be greater than zero.');
 
         $calculator = new DeliveryCostCalculator();
         $calculator->calculate(0);
@@ -144,8 +147,8 @@ final class DeliveryCostCalculatorTest extends TestCase
      */
     public function testCalculateWithInvalidRangesSpecified(array $ranges): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.');
+        self::expectException(\InvalidArgumentException::class);
+        self::expectExceptionMessage('Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.');
 
         $calculator = new DeliveryCostCalculator();
 

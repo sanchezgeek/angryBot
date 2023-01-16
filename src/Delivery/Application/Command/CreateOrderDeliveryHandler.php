@@ -2,21 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery\Application\Commands;
+namespace App\Delivery\Application\Command;
 
+use App\Delivery\Application\Command\CreateOrderDelivery;
 use App\Delivery\Domain\Delivery;
 use App\Delivery\Domain\DeliveryRepository;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
-final class CreateOrderDeliveryCommandHandler
+final class CreateOrderDeliveryHandler
 {
     public function __construct(
         private readonly DeliveryRepository $repository
     ) {
     }
 
-    public function __invoke(CreateOrderDeliveryCommand $command): void
+    public function __invoke(CreateOrderDelivery $command): void
     {
         $delivery = new Delivery($command->id);
 

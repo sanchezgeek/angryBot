@@ -2,8 +2,8 @@
 
 namespace App\Command;
 
-use App\Delivery\Application\Services\DeliveryCost\DeliveryCostCalculator;
-use App\Delivery\Application\Services\DeliveryCost\DeliveryPriceRange;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;

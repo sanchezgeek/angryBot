@@ -5,8 +5,8 @@ namespace App\Controller\Api;
 use App\Api\Exception\BadRequestException;
 use App\Api\Request\DataFilterTrait;
 use App\Api\Response\SuccessResponseDto;
-use App\Delivery\Application\Commands\CreateOrderDeliveryCommand;
-use App\Delivery\Application\Services\Geo\GeoObjectProvider;
+use App\Delivery\Application\Command\CreateOrderDelivery;
+use App\Delivery\Application\Service\Geo\GeoObjectProvider;
 use App\Delivery\Domain\DeliveryRepository;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
 use App\Trait\DispatchCommandTrait;
@@ -55,7 +55,7 @@ class DeliveryController
         $deliveryId = $this->deliveryRepository->getNextId();
 
         try {
-            $this->dispatchCommand(new CreateOrderDeliveryCommand($deliveryId, $orderId, $address));
+            $this->dispatchCommand(new CreateOrderDelivery($deliveryId, $orderId, $address));
         } catch (OrderDeliveryAlreadyExists $e) {
             throw BadRequestException::errors([
                 [

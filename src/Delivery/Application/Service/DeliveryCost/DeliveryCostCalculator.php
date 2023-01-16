@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery\Application\Services\DeliveryCost;
+namespace App\Delivery\Application\Service\DeliveryCost;
+
+use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
 
 /**
- * @see \App\Tests\Unit\Delivery\DeliveryCostCalculatorTest
+ * @see \App\Tests\Unit\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculatorTest
  */
 final class DeliveryCostCalculator
 {

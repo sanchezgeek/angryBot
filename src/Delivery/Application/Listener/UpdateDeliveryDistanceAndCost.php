@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery\Application\Listeners;
+namespace App\Delivery\Application\Listener;
 
 use App\Delivery\Domain\Event\DeliveryAddressChanged;
-use App\Delivery\Application\Services\DeliveryCost\DeliveryCostCalculator;
-use App\Delivery\Application\Services\DeliveryCost\DeliveryPriceRange;
-use App\Delivery\Application\Services\Geo\DistanceCalculator;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
+use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
+use App\Delivery\Application\Service\Geo\DistanceCalculator;
 use App\Delivery\Domain\DeliveryRepository;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 

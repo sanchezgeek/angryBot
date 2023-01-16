@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery\Application\Commands;
+namespace App\Delivery\Application\Command;
 
-final class CreateOrderDeliveryCommand
+final class CreateOrderDelivery
 {
     public function __construct(
         public readonly int $id,

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Delivery\Application\Services\Geo;
+namespace App\Delivery\Application\Service\Geo;
 
 use App\Delivery\Integration\Yandex\Geo\Api as GeoApi;
 use App\Delivery\Integration\Yandex\Geo\GeoObject;
