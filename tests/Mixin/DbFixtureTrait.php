@@ -31,6 +31,9 @@ trait DbFixtureTrait
      */
     protected function ensureNoFixtures(): void
     {
-        $this->fixtures = null;
+        if ($this->fixtures) {
+            $this->fixtures->clear();
+            $this->fixtures = null;
+        }
     }
 }

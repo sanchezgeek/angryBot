@@ -18,7 +18,7 @@ final class Api
 
     protected array $filters = [];
 
-    protected ?Response $response = null;
+    protected ?Result $result = null;
 
     public function __construct(string $yandexApiKey, ?string $version = null)
     {
@@ -64,14 +64,14 @@ final class Api
             throw new Exception($msg);
         }
 
-        $this->response = new Response($data);
+        $this->result = new Result($data);
 
         return $this;
     }
 
-    public function getResponse(): Response
+    public function getResult(): Result
     {
-        return $this->response;
+        return $this->result;
     }
 
     public function reset(): self
@@ -83,7 +83,7 @@ final class Api
             ->setOffset(0)
             ->setLimit(10);
 
-        $this->response = null;
+        $this->result = null;
 
         return $this;
     }

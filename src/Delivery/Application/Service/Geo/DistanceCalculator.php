@@ -6,14 +6,14 @@ namespace App\Delivery\Application\Service\Geo;
 
 use App\Delivery\Integration\Yandex\Geo\GeoObject;
 
-final class DistanceCalculator
+final class DistanceCalculator implements DistanceCalculatorInterface
 {
     /**
      * @return int Distance in meters
      */
     public function getDistanceBetween(GeoObject $a, GeoObject $b): int
     {
-        return $this->calculateDistance($b->getLatitude(), $b->getLongitude(), $a->getLatitude(), $a->getLongitude());
+        return $this->calculateDistance($b->latitude, $b->longitude, $a->latitude, $a->longitude);
     }
 
     private function calculateDistance(float $lat1, float $lon1, float $lat2, float $lon2): int

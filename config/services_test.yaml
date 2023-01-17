@@ -1,0 +1,6 @@
+services:
+    App\Delivery\Application\Service\Geo\DistanceCalculatorInterface:
+        public: true
+
+    App\Delivery\Application\Service\Geo\GeoObjectProviderInterface:
+        public: true

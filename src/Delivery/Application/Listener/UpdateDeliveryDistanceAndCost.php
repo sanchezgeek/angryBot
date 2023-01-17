@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Delivery\Application\Listener;
 
 use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
+use App\Delivery\Application\Service\Geo\DistanceCalculatorInterface;
 use App\Delivery\Application\Service\Geo\GeoObjectProvider;
+use App\Delivery\Application\Service\Geo\GeoObjectProviderInterface;
 use App\Delivery\Domain\Delivery;
 use App\Delivery\Domain\Event\DeliveryAddressChanged;
 use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
@@ -21,8 +23,8 @@ final class UpdateDeliveryDistanceAndCost
 
     public function __construct(
         private readonly DeliveryRepository $deliveryRepository,
-        private readonly DistanceCalculator $distanceCalculator,
-        private readonly GeoObjectProvider $geoObjectProvider,
+        private readonly DistanceCalculatorInterface $distanceCalculator,
+        private readonly GeoObjectProviderInterface $geoObjectProvider,
         private readonly DeliveryCostCalculator $deliveryCostCalculator,
         private readonly string $depotAddress,
     ) {

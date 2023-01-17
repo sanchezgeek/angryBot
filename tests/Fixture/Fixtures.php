@@ -6,6 +6,7 @@ namespace App\Tests\Fixture;
 
 use Closure;
 use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
+use Doctrine\Common\DataFixtures\Purger\ORMPurger;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use Symfony\Bridge\Doctrine\DataFixtures\ContainerAwareLoader;
@@ -19,6 +20,8 @@ final class Fixtures
      * @var array<string, AbstractFixture>
      */
     private array $fixtures = [];
+
+    private ?ORMExecutor $executor = null;
 
     public function __construct(Closure | ContainerInterface $container)
     {
@@ -40,7 +43,7 @@ final class Fixtures
 
     public function apply(): void
     {
-        $executor = new ORMExecutor($this->getEntityManager());
+        $executor = $this->getExecutor();
         $loader = new ContainerAwareLoader($this->getContainer());
 
         foreach ($this->fixtures as $fixture) {
@@ -48,6 +51,11 @@ final class Fixtures
         }
 
         $executor->execute($loader->getFixtures(), true);
+    }
+
+    public function clear(): void
+    {
+        $this->getExecutor()->purge();
     }
 
     private function getContainer(): ContainerInterface
@@ -59,11 +67,18 @@ final class Fixtures
         return $this->container;
     }
 
-    private function getEntityManager(): EntityManagerInterface
+    private function getExecutor(): ORMExecutor
     {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = $this->getContainer()->get(EntityManagerInterface::class);
+        if (!$this->executor) {
+            /** @var EntityManagerInterface $entityManager */
+            $entityManager = $this->getContainer()->get(EntityManagerInterface::class);
 
-        return $entityManager;
+            $purger = new ORMPurger($entityManager);
+            $purger->setPurgeMode(ORMPurger::PURGE_MODE_TRUNCATE);
+
+            $this->executor = new ORMExecutor($entityManager, $purger);
+        }
+
+        return $this->executor;
     }
 }

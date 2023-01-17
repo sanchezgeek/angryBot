@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Controller\Api;
 
 use App\Controller\Api\DeliveryController;
+use App\Delivery\Application\Service\Geo\DistanceCalculatorInterface;
+use App\Delivery\Application\Service\Geo\GeoObjectProviderInterface;
 use App\Delivery\Domain\DeliveryRepository;
+use App\Delivery\Integration\Yandex\Geo\GeoObject;
 use App\Helper\Json;
 use App\Tests\Fixture\DeliveryFixture;
 use App\Tests\Mixin\DbFixtureTrait;
@@ -20,12 +23,26 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
 {
     use DbFixtureTrait;
 
+    /**
+     * @see .env.test
+     */
+    private const DEPOT_ADDRESS = 'Москва, Сумской проезд, 11';
+
     private const URL = '/api/delivery-order-create';
 
     private const VALID_REQUEST_DATA = [
         'order_id' => 100500,
         'address' => 'Тверская 6',
     ];
+
+    private ?DeliveryRepository $deliveryRepository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->deliveryRepository = self::getContainer()->get(DeliveryRepository::class);
+    }
 
     public function invalidRequestCases(): iterable
     {
@@ -140,12 +157,55 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
             ]
         ]]);
 
-        /** @var DeliveryRepository $deliveryRepository */
-        $deliveryRepository = self::getContainer()->get(DeliveryRepository::class);
-        $deliveries = $deliveryRepository->findAll();
+        $deliveries = $this->deliveryRepository->findAll();
         self::assertCount(1, $deliveries);
         self::assertSame($existedDeliveryId, $deliveries[0]->getId());
         self::assertSame($orderId, $deliveries[0]->getOrderId());
         self::assertSame(DeliveryFixture::ADDRESS, $deliveries[0]->getAddress());
+    }
+
+    public function testCreateOrderDelivery(): void
+    {
+        // Arrange
+        $request = Json::encode([
+            'order_id' => $orderId = 100500,
+            'address' => $deliveryAddress = 'Москва, Алтуфьевское шоссе, 58А',
+        ]);
+
+        $geoObjectProvider = $this->createMock(GeoObjectProviderInterface::class);
+        $geoObjectProvider
+            ->method('findGeoObject')
+            ->withConsecutive([self::DEPOT_ADDRESS], [$deliveryAddress])
+            ->willReturnOnConsecutiveCalls(
+                $depot = new GeoObject('Сумской проезд, 11', 'Россия', 'Москва', 37.608975, 55.634954),
+                $destination = new GeoObject('Алтуфьевское шоссе, 58А', 'Россия', 'Москва', 37.590075, 55.882005)
+            );
+
+        $distanceCalculator= $this->createMock(DistanceCalculatorInterface::class);
+        $distanceCalculator
+            ->expects(self::once())
+            ->method('getDistanceBetween')
+            ->with($depot, $destination)
+            ->willReturn($distance = 27);
+
+        self::getContainer()->set(GeoObjectProviderInterface::class, $geoObjectProvider);
+        self::getContainer()->set(DistanceCalculatorInterface::class, $distanceCalculator);
+
+        // Act
+        self::assertCount(0, $this->deliveryRepository->findAll());
+        $this->client->request(Request::METHOD_POST, self::URL, [], [], [], $request);
+
+        // Assert
+        $deliveries = $this->deliveryRepository->findAll();
+        self::assertCount(1, $deliveries);
+        self::assertSame($orderId, $deliveries[0]->getOrderId());
+        self::assertSame($deliveryAddress, $deliveries[0]->getAddress());
+
+        $this->checkResponseCodeAndContent(200, [
+            'status' => 'Success',
+            'payload' => [
+                'deliveryId' => $deliveries[0]->getId()
+            ],
+        ]);
     }
 }
