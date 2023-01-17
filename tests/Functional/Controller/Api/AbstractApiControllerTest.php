@@ -26,7 +26,7 @@ abstract class AbstractApiControllerTest extends WebTestCase
 
         $actualContent = Json::decode($this->client->getResponse()->getContent());
 
-        $this->assertEqualsCanonicalizing(
+        self::assertEqualsCanonicalizing(
             $expectedContent,
             $actualContent,
             Json::encode([$expectedContent, $actualContent])

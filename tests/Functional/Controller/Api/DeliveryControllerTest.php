@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Controller\Api;
 
 use App\Controller\Api\DeliveryController;
+use App\Delivery\Domain\DeliveryRepository;
 use App\Helper\Json;
+use App\Tests\Fixture\DeliveryFixture;
+use App\Tests\Mixin\DbFixtureTrait;
+use App\Tests\PHPUnit\DbDependentTest;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @see DeliveryController
  */
-final class DeliveryControllerTest extends AbstractApiControllerTest
+final class DeliveryControllerTest extends AbstractApiControllerTest implements DbDependentTest
 {
+    use DbFixtureTrait;
+
     private const URL = '/api/delivery-order-create';
 
     private const VALID_REQUEST_DATA = [
@@ -110,5 +116,36 @@ final class DeliveryControllerTest extends AbstractApiControllerTest
         $this->client->request(Request::METHOD_POST, self::URL, [], [], [], Json::encode($params));
 
         $this->checkResponseCodeAndContent($code, ['errors' => $errors]);
+    }
+
+    public function testCreateOrderDeliveryWhenDeliveryForThatOrderAlreadyExists(): void
+    {
+        // Arrange
+        $existedDeliveryId = 100500;
+        $orderId = 200500;
+
+        $this->applyDbFixtures(new DeliveryFixture($existedDeliveryId, $orderId));
+
+        $request = Json::encode(['order_id' => $orderId, 'address' => 'some new address']);
+
+        // Act
+        $this->client->request(Request::METHOD_POST, self::URL, [], [], [], $request);
+
+        // Assert
+        $this->checkResponseCodeAndContent(400, ['errors' => [
+            [
+                'field' => 'order_id',
+                'message' => 'Delivery for this order already exists.',
+                'payload' => ['deliveryId' => $existedDeliveryId],
+            ]
+        ]]);
+
+        /** @var DeliveryRepository $deliveryRepository */
+        $deliveryRepository = self::getContainer()->get(DeliveryRepository::class);
+        $deliveries = $deliveryRepository->findAll();
+        self::assertCount(1, $deliveries);
+        self::assertSame($existedDeliveryId, $deliveries[0]->getId());
+        self::assertSame($orderId, $deliveries[0]->getOrderId());
+        self::assertSame(DeliveryFixture::ADDRESS, $deliveries[0]->getAddress());
     }
 }
