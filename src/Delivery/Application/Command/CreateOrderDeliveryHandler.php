@@ -13,7 +13,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class CreateOrderDeliveryHandler
 {
     public function __construct(
-        private readonly DeliveryRepository $repository
+        private readonly DeliveryRepository $repository,
     ) {
     }
 

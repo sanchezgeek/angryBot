@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Delivery\Application\Listener;
 
+use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
+use App\Delivery\Application\Service\Geo\GeoObjectProvider;
+use App\Delivery\Domain\Delivery;
 use App\Delivery\Domain\Event\DeliveryAddressChanged;
 use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
 use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
@@ -19,6 +22,7 @@ final class UpdateDeliveryDistanceAndCost
     public function __construct(
         private readonly DeliveryRepository $deliveryRepository,
         private readonly DistanceCalculator $distanceCalculator,
+        private readonly GeoObjectProvider $geoObjectProvider,
         private readonly DeliveryCostCalculator $deliveryCostCalculator,
         private readonly string $depotAddress,
     ) {
@@ -33,13 +37,24 @@ final class UpdateDeliveryDistanceAndCost
     {
         $delivery = $this->deliveryRepository->find($event->deliveryId);
 
-        // 1km if result distance less than 1km
-        $distance = $this->distanceCalculator->getDistanceBetween($this->depotAddress, $delivery->getAddress()) ?: 1;
-        $cost = $this->deliveryCostCalculator->calculate($distance, ...$this->prices);
+        $deliveryDistance = $this->getDeliveryDistance($delivery);
+        $deliveryCost = $this->deliveryCostCalculator->calculate($deliveryDistance ?: 1, ...$this->prices); // min 1km
 
-        $delivery->setDistance($distance);
-        $delivery->setCost($cost);
+        $delivery->setDistance($deliveryDistance);
+        $delivery->setCost($deliveryCost);
 
         $this->deliveryRepository->save($delivery);
+    }
+
+    private function getDeliveryDistance(Delivery $delivery): int
+    {
+        $depot = $this->geoObjectProvider->findGeoObject($this->depotAddress);
+        $destination = $this->geoObjectProvider->findGeoObject($delivery->getAddress());
+
+        if (!$destination) {
+            throw DeliveryDestinationNotFound::forAddress($delivery->getAddress());
+        }
+
+        return $this->distanceCalculator->getDistanceBetween($depot, $destination);
     }
 }

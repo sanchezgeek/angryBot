@@ -6,6 +6,8 @@ use App\Api\Exception\BadRequestException;
 use App\Api\Request\DataFilterTrait;
 use App\Api\Response\SuccessResponseDto;
 use App\Delivery\Application\Command\CreateOrderDelivery;
+use App\Delivery\Application\Command\CreateOrderDeliveryHandler;
+use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
 use App\Delivery\Application\Service\Geo\GeoObjectProvider;
 use App\Delivery\Domain\DeliveryRepository;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
@@ -26,7 +28,7 @@ class DeliveryController
     public function __construct(
         private readonly DeliveryRepository $deliveryRepository,
         private readonly GeoObjectProvider $geoObjectProvider,
-        MessageBusInterface $commandBus
+        MessageBusInterface $commandBus,
     ) {
         $this->commandBus = $commandBus;
     }
@@ -45,16 +47,10 @@ class DeliveryController
             'address' => [new NotBlank(), new Type('string')],
         ], $request->toArray());
 
-        if (!$this->geoObjectProvider->findGeoObject($address)) {
-            throw BadRequestException::error(
-                \sprintf('Cannot find address `%s` to calculate distance', $address),
-                'address'
-            );
-        }
-
         $deliveryId = $this->deliveryRepository->getNextId();
 
         try {
+            /** @see CreateOrderDeliveryHandler */
             $this->dispatchCommand(new CreateOrderDelivery($deliveryId, $orderId, $address));
         } catch (OrderDeliveryAlreadyExists $e) {
             throw BadRequestException::errors([
@@ -64,6 +60,8 @@ class DeliveryController
                     'payload' => ['deliveryId' => $e->deliveryId],
                 ],
             ]);
+        } catch (DeliveryDestinationNotFound $e) {
+            throw BadRequestException::error($e->getMessage(), 'address');
         }
 
         return new JsonResponse(

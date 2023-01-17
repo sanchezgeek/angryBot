@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Delivery\Domain\Exception;
 
-final class OrderDeliveryAlreadyExists extends \RuntimeException
+final class OrderDeliveryAlreadyExists extends \DomainException
 {
     private function __construct(public readonly int $deliveryId)
     {

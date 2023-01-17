@@ -4,34 +4,21 @@ declare(strict_types=1);
 
 namespace App\Delivery\Application\Service\Geo;
 
-use App\Delivery\Application\Service\Geo\GeoObjectProvider;
+use App\Delivery\Integration\Yandex\Geo\GeoObject;
 
 final class DistanceCalculator
 {
-    public function __construct(
-        private readonly GeoObjectProvider $geoProvider,
-    ) {
-    }
-
     /**
      * @return int Distance in meters
      */
-    public function getDistanceBetween(string $a, string $b): int
+    public function getDistanceBetween(GeoObject $a, GeoObject $b): int
     {
-        $aGeo = $this->geoProvider->findGeoObject($a);
-        $bGeo = $this->geoProvider->findGeoObject($b);
-
-        return $this->calculateDistance(
-            $bGeo->getLatitude(),
-            $bGeo->getLongitude(),
-            $aGeo->getLatitude(),
-            $aGeo->getLongitude(),
-        );
+        return $this->calculateDistance($b->getLatitude(), $b->getLongitude(), $a->getLatitude(), $a->getLongitude());
     }
 
     private function calculateDistance(float $lat1, float $lon1, float $lat2, float $lon2): int
     {
-        if (($lat1 == $lat2) && ($lon1 == $lon2)) {
+        if ($lat1 === $lat2 && $lon1 === $lon2) {
             return 0;
         } else {
             $theta = $lon1 - $lon2;
