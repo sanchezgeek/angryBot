@@ -164,7 +164,44 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
         self::assertSame(DeliveryFixture::ADDRESS, $deliveries[0]->getAddress());
     }
 
-    public function testCreateOrderDelivery(): void
+    public function testCreateOrderDeliveryWhenDestinationNotFound(): void
+    {
+        // Arrange
+        $request = Json::encode([
+            'order_id' => $orderId = 100500,
+            'address' => $deliveryAddress = 'Москва, Алтуфьевское шоссе, 58А',
+        ]);
+
+        $geoObjectProvider = $this->createMock(GeoObjectProviderInterface::class);
+        $geoObjectProvider
+            ->method('findGeoObject')
+            ->withConsecutive([self::DEPOT_ADDRESS], [$deliveryAddress])
+            ->willReturnOnConsecutiveCalls(
+                new GeoObject('Сумской проезд, 11', 'Россия', 'Москва', 37.608975, 55.634954),
+                null
+            );
+
+        $distanceCalculator= $this->createMock(DistanceCalculatorInterface::class);
+        $distanceCalculator->expects(self::never())->method('getDistanceBetween');
+
+        self::getContainer()->set(GeoObjectProviderInterface::class, $geoObjectProvider);
+        self::getContainer()->set(DistanceCalculatorInterface::class, $distanceCalculator);
+
+        // Act
+        $this->client->request(Request::METHOD_POST, self::URL, [], [], [], $request);
+
+        // Assert
+        self::assertCount(0, $this->deliveryRepository->findAll());
+
+        $this->checkResponseCodeAndContent(400, ['errors' => [
+            [
+                'field' => 'address',
+                'message' => \sprintf('Cannot find `%s` geo to calculate distance.', $deliveryAddress),
+            ]
+        ]]);
+    }
+
+    public function testSuccessCreateOrderDelivery(): void
     {
         // Arrange
         $request = Json::encode([
