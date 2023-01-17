@@ -13,6 +13,8 @@ use App\Delivery\Domain\DeliveryRepository;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Validator\Constraints\GreaterThan;
+use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\Type;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +22,9 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Throwable;
 
+/**
+ * @see \App\Tests\Functional\Controller\Api\DeliveryControllerTest
+ */
 class DeliveryController
 {
     use DataFilterTrait;
@@ -43,8 +48,8 @@ class DeliveryController
     public function create(Request $request): JsonResponse
     {
         [$orderId, $address] = self::filterData([
-            'order_id' => [new NotBlank(), new Type('int')],
-            'address' => [new NotBlank(), new Type('string')],
+            'order_id' => [new NotBlank(), new Type('int'), new GreaterThan(0)],
+            'address' => [new NotBlank(), new Type('string'), new Length(null, 6, 200)],
         ], $request->toArray());
 
         $deliveryId = $this->deliveryRepository->getNextId();
