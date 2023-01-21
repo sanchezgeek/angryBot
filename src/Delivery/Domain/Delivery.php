@@ -7,7 +7,6 @@ namespace App\Delivery\Domain;
 use App\Delivery\Domain\Event\DeliveryAddressChanged;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
-use App\Delivery\Domain\DeliveryRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: DeliveryRepository::class)]

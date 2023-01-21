@@ -12,13 +12,13 @@ use App\Delivery\Integration\Yandex\Geo\Exception\ServerError;
  */
 final class Api
 {
-    const LANG_RU = 'ru-RU';
+    public const LANG_RU = 'ru-RU';
 
-    protected string $version = '1.x';
+    private string $version = '1.x';
 
-    protected array $filters = [];
+    private array $filters = [];
 
-    protected ?Result $result = null;
+    private ?Result $result = null;
 
     public function __construct(string $yandexApiKey, ?string $version = null)
     {

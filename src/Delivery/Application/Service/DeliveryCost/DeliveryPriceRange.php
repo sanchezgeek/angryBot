@@ -17,25 +17,25 @@ final class DeliveryPriceRange
     {
         if ($start < 0) {
             throw new \InvalidArgumentException(
-                'The beginning of the segment must be greater or equal to zero.'
+                'The beginning of the segment must be greater or equal to zero.',
             );
         }
 
         if ($end !== null && $end <= 0) {
             throw new \InvalidArgumentException(
-                'The end of the segment must be greater than zero.'
+                'The end of the segment must be greater than zero.',
             );
         }
 
         if ($end !== null && $end <= $start) {
             throw new \InvalidArgumentException(
-                \sprintf('The end of the segment must be greater than start ("%d..%d").', $start, $end)
+                \sprintf('The end of the segment must be greater than start ("%d..%d").', $start, $end),
             );
         }
 
         if ($price < 0) {
             throw new \InvalidArgumentException(
-                \sprintf('The price of the segment ("%s..%s") must be greater than 0.', $start, $end)
+                \sprintf('The price of the segment ("%s..%s") must be greater than 0.', $start, $end),
             );
         }
 
@@ -47,7 +47,7 @@ final class DeliveryPriceRange
     public function getAppearedDistanceCost(int $distance): int
     {
         if ($distance > $this->start) {
-            $appearedDistance = min($this->end ?? $distance, $distance) - $this->start;
+            $appearedDistance = \min($this->end ?? $distance, $distance) - $this->start;
 
             return $appearedDistance * $this->price;
         }

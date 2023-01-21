@@ -32,20 +32,20 @@ class CalculateCommand extends Command
             $distance = $input->getArgument('distance');
             if (!(int)$distance) {
                 throw new \InvalidArgumentException(
-                    \sprintf('Invalid distance provided (%s)', $distance)
+                    \sprintf('Invalid distance provided (%s)', $distance),
                 );
             }
 
             /** @var DeliveryPriceRange[] $ranges */
             $ranges = [];
             do {
-                $start = count($ranges) ? end($ranges)->getEnd() : 0;
+                $start = \count($ranges) ? \end($ranges)->getEnd() : 0;
                 $end = $helper->ask($input, $output, new Question(
-                    'Please enter range end (or press ENTER if there is no more ranges): '
+                    'Please enter range end (or press ENTER if there is no more ranges): ',
                 ));
 
                 $price = $helper->ask($input, $output, new Question(
-                    \sprintf('Please enter range %s..%s price: ', $start, $end ?: '∞')
+                    \sprintf('Please enter range %s..%s price: ', $start, $end ?: '∞'),
                 ));
 
                 $ranges[] = new DeliveryPriceRange($start, $end, $price);
@@ -56,7 +56,7 @@ class CalculateCommand extends Command
             $cost = $calculator->calculate((int)$distance, ...$ranges);
 
             $io->success(
-                \sprintf('Result transfer cost: %d', $cost)
+                \sprintf('Result transfer cost: %d', $cost),
             );
 
             return Command::SUCCESS;

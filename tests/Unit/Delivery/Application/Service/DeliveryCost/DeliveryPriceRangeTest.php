@@ -26,7 +26,7 @@ final class DeliveryPriceRangeTest extends TestCase
         yield 'with negative range start' => [-1, 100, 100, 'The beginning of the segment must be greater or equal to zero.'];
         yield 'with negative range end' => [0, -1, 100, 'The end of the segment must be greater than zero.'];
         yield 'with range end greater than start' => [10, 2, 100, 'The end of the segment must be greater than start ("10..2").'];
-        yield 'with negative price' => [1, 2, -1, 'The price of the segment ("1..2") must be greater than 0.',];
+        yield 'with negative price' => [1, 2, -1, 'The price of the segment ("1..2") must be greater than 0.'];
     }
 
     /**

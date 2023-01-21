@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Delivery\Application\Command;
 
-use App\Delivery\Application\Command\CreateOrderDelivery;
 use App\Delivery\Domain\Delivery;
 use App\Delivery\Domain\DeliveryRepository;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;

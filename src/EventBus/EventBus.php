@@ -7,13 +7,13 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 final class EventBus
 {
     public function __construct(
-        private readonly EventDispatcherInterface $eventDispatcher
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
     public function handleEvent(Event $event): void
     {
-        $this->eventDispatcher->dispatch($event, get_class($event));
+        $this->eventDispatcher->dispatch($event, \get_class($event));
     }
 
     public function handleEvents(HasEvents $eventsHolder): void

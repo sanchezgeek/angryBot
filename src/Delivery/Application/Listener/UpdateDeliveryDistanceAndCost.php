@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace App\Delivery\Application\Listener;
 
 use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
-use App\Delivery\Application\Service\Geo\DistanceCalculatorInterface;
-use App\Delivery\Application\Service\Geo\GeoObjectProvider;
-use App\Delivery\Application\Service\Geo\GeoObjectProviderInterface;
-use App\Delivery\Domain\Delivery;
-use App\Delivery\Domain\Event\DeliveryAddressChanged;
 use App\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculator;
 use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
-use App\Delivery\Application\Service\Geo\DistanceCalculator;
+use App\Delivery\Application\Service\Geo\DistanceCalculatorInterface;
+use App\Delivery\Application\Service\Geo\GeoObjectProviderInterface;
+use App\Delivery\Domain\Delivery;
 use App\Delivery\Domain\DeliveryRepository;
+use App\Delivery\Domain\Event\DeliveryAddressChanged;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]

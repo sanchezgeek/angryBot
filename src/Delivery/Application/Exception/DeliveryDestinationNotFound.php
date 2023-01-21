@@ -9,7 +9,7 @@ final class DeliveryDestinationNotFound extends \RuntimeException
     public static function forAddress(string $address): self
     {
         return new self(
-            \sprintf('Cannot find `%s` geo to calculate distance.', $address)
+            \sprintf('Cannot find `%s` geo to calculate distance.', $address),
         );
     }
 }

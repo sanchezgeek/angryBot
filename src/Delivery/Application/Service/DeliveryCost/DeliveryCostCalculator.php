@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Delivery\Application\Service\DeliveryCost;
 
-use App\Delivery\Application\Service\DeliveryCost\DeliveryPriceRange;
-
 /**
  * @see \App\Tests\Unit\Delivery\Application\Service\DeliveryCost\DeliveryCostCalculatorTest
  */
@@ -36,7 +34,7 @@ final class DeliveryCostCalculator
      */
     private function validateRanges(array $ranges): void
     {
-        usort($ranges, function (DeliveryPriceRange $prev, DeliveryPriceRange $next): int {
+        \usort($ranges, function (DeliveryPriceRange $prev, DeliveryPriceRange $next): int {
             return $prev->getStart() - $next->getStart();
         });
 
@@ -46,7 +44,7 @@ final class DeliveryCostCalculator
 
             if ($range->getStart() !== $mustStartsFrom || $range->getEnd() !== $mustEndsOn) {
                 throw new \InvalidArgumentException(
-                    'Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.'
+                    'Check that the segments are specified correctly: maybe the segments intersect or there are gaps between segments.',
                 );
             }
         }

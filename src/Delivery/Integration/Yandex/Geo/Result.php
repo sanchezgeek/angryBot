@@ -9,7 +9,7 @@ final class Result
     /**
      * @var GeoObject[]
      */
-    protected array $items = [];
+    private array $items = [];
 
     public function __construct(array $data)
     {
@@ -49,7 +49,7 @@ final class Result
             $data['CountryName'],
             $data['LocalityName'],
             $data['Longitude'],
-            $data['Latitude']
+            $data['Latitude'],
         );
     }
 }

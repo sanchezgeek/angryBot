@@ -114,7 +114,7 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
         ];
 
         yield 'address too long' => [
-            \array_merge(self::VALID_REQUEST_DATA, ['address' => str_repeat("Тверс", 50)]),
+            \array_merge(self::VALID_REQUEST_DATA, ['address' => \str_repeat("Тверс", 50)]),
             [
                 [
                     'field' => 'address',
@@ -154,7 +154,7 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
                 'field' => 'order_id',
                 'message' => 'Delivery for this order already exists.',
                 'payload' => ['deliveryId' => $existedDeliveryId],
-            ]
+            ],
         ]]);
 
         $deliveries = $this->deliveryRepository->findAll();
@@ -178,10 +178,10 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
             ->withConsecutive([self::DEPOT_ADDRESS], [$deliveryAddress])
             ->willReturnOnConsecutiveCalls(
                 new GeoObject('Сумской проезд, 11', 'Россия', 'Москва', 37.608975, 55.634954),
-                null
+                null,
             );
 
-        $distanceCalculator= $this->createMock(DistanceCalculatorInterface::class);
+        $distanceCalculator = $this->createMock(DistanceCalculatorInterface::class);
         $distanceCalculator->expects(self::never())->method('getDistanceBetween');
 
         self::getContainer()->set(GeoObjectProviderInterface::class, $geoObjectProvider);
@@ -197,7 +197,7 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
             [
                 'field' => 'address',
                 'message' => \sprintf('Cannot find `%s` geo to calculate distance.', $deliveryAddress),
-            ]
+            ],
         ]]);
     }
 
@@ -215,10 +215,10 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
             ->withConsecutive([self::DEPOT_ADDRESS], [$deliveryAddress])
             ->willReturnOnConsecutiveCalls(
                 $depot = new GeoObject('Сумской проезд, 11', 'Россия', 'Москва', 37.608975, 55.634954),
-                $destination = new GeoObject('Алтуфьевское шоссе, 58А', 'Россия', 'Москва', 37.590075, 55.882005)
+                $destination = new GeoObject('Алтуфьевское шоссе, 58А', 'Россия', 'Москва', 37.590075, 55.882005),
             );
 
-        $distanceCalculator= $this->createMock(DistanceCalculatorInterface::class);
+        $distanceCalculator = $this->createMock(DistanceCalculatorInterface::class);
         $distanceCalculator
             ->expects(self::once())
             ->method('getDistanceBetween')
@@ -241,7 +241,7 @@ final class DeliveryControllerTest extends AbstractApiControllerTest implements 
         $this->checkResponseCodeAndContent(200, [
             'status' => 'Success',
             'payload' => [
-                'deliveryId' => $deliveries[0]->getId()
+                'deliveryId' => $deliveries[0]->getId(),
             ],
         ]);
     }

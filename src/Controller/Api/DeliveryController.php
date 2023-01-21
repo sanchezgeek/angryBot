@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller\Api;
 
 use App\Api\Exception\BadRequestException;
@@ -12,14 +14,14 @@ use App\Delivery\Application\Service\Geo\GeoObjectProvider;
 use App\Delivery\Domain\DeliveryRepository;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
 use App\Trait\DispatchCommandTrait;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Validator\Constraints\GreaterThan;
-use Symfony\Component\Validator\Constraints\Length;
-use Symfony\Component\Validator\Constraints\Type;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\Constraints\GreaterThan;
+use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Type;
 use Throwable;
 
 /**
@@ -70,7 +72,7 @@ class DeliveryController
         }
 
         return new JsonResponse(
-            new SuccessResponseDto(['deliveryId' => $deliveryId])
+            new SuccessResponseDto(['deliveryId' => $deliveryId]),
         );
     }
 }

@@ -29,7 +29,7 @@ abstract class AbstractApiControllerTest extends WebTestCase
         self::assertEqualsCanonicalizing(
             $expectedContent,
             $actualContent,
-            Json::encode([$expectedContent, $actualContent])
+            Json::encode([$expectedContent, $actualContent]),
         );
     }
 }
