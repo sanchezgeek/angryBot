@@ -10,7 +10,6 @@ use App\Api\Response\SuccessResponseDto;
 use App\Delivery\Application\Command\CreateOrderDelivery;
 use App\Delivery\Application\Command\CreateOrderDeliveryHandler;
 use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
-use App\Delivery\Application\Service\Geo\GeoObjectProvider;
 use App\Delivery\Domain\DeliveryRepository;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
 use App\Trait\DispatchCommandTrait;
@@ -34,7 +33,6 @@ class DeliveryController
 
     public function __construct(
         private readonly DeliveryRepository $deliveryRepository,
-        private readonly GeoObjectProvider $geoObjectProvider,
         MessageBusInterface $commandBus,
     ) {
         $this->commandBus = $commandBus;

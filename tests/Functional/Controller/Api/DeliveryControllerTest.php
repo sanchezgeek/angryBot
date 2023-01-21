@@ -6,9 +6,9 @@ namespace App\Tests\Functional\Controller\Api;
 
 use App\Controller\Api\DeliveryController;
 use App\Delivery\Application\Service\Geo\DistanceCalculatorInterface;
+use App\Delivery\Application\Service\Geo\GeoObject;
 use App\Delivery\Application\Service\Geo\GeoObjectProviderInterface;
 use App\Delivery\Domain\DeliveryRepository;
-use App\Delivery\Integration\Yandex\Geo\GeoObject;
 use App\Helper\Json;
 use App\Tests\Fixture\DeliveryFixture;
 use App\Tests\Mixin\DbFixtureTrait;

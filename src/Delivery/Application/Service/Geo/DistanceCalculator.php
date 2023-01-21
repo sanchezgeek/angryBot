@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Delivery\Application\Service\Geo;
 
-use App\Delivery\Integration\Yandex\Geo\GeoObject;
-
 final class DistanceCalculator implements DistanceCalculatorInterface
 {
     /**
