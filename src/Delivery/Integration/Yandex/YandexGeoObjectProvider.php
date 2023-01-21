@@ -11,13 +11,16 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * @see \App\Tests\Unit\Delivery\Integration\Yandex\YandexGeoObjectProviderTest
+ */
 final class YandexGeoObjectProvider implements GeoObjectProviderInterface
 {
     private const URL = 'https://geocode-maps.yandex.ru/1.x/';
 
     public function __construct(
         private readonly HttpClientInterface $client,
-        private readonly string $yandexApiKey
+        private readonly string $yandexApiKey,
     ) {
     }
 
@@ -54,7 +57,7 @@ final class YandexGeoObjectProvider implements GeoObjectProviderInterface
             return null;
         } catch (\Throwable $e) {
             throw new \RuntimeException(
-                \sprintf('Error in %s: %s. Request was: %s.', __METHOD__, $e->getMessage(), $url)
+                \sprintf('Error in %s: %s. Request was: %s.', __METHOD__, $e->getMessage(), $url),
             );
         }
     }
@@ -65,13 +68,13 @@ final class YandexGeoObjectProvider implements GeoObjectProviderInterface
             'Address' => $entry['metaDataProperty']['GeocoderMetaData']['text'],
         ];
 
-        array_walk_recursive($entry, function ($value, $key) use (&$data) {
-            if (in_array($key, ['CountryName', 'LocalityName'])) {
+        \array_walk_recursive($entry, function ($value, $key) use (&$data) {
+            if (\in_array($key, ['CountryName', 'LocalityName'])) {
                 $data[$key] = $value;
             }
         });
 
-        $pos = explode(' ', $entry['Point']['pos']);
+        $pos = \explode(' ', $entry['Point']['pos']);
         $data['Longitude'] = (float)$pos[0];
         $data['Latitude'] = (float)$pos[1];
 
