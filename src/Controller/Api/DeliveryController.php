@@ -7,21 +7,17 @@ namespace App\Controller\Api;
 use App\Api\Exception\BadRequestException;
 use App\Api\Request\DataFilterTrait;
 use App\Api\Response\SuccessResponseDto;
-use App\Delivery\Application\Command\CreateOrderDelivery;
-use App\Delivery\Application\Command\CreateOrderDeliveryHandler;
 use App\Delivery\Application\Exception\DeliveryDestinationNotFound;
-use App\Delivery\Domain\DeliveryRepository;
+use App\Delivery\Application\Service\OrderDelivery;
+use App\Delivery\Application\Service\OrderDeliveryService;
 use App\Delivery\Domain\Exception\OrderDeliveryAlreadyExists;
-use App\Trait\DispatchCommandTrait;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\GreaterThan;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Type;
-use Throwable;
 
 /**
  * @see \App\Tests\Functional\Controller\Api\DeliveryControllerTest
@@ -29,13 +25,10 @@ use Throwable;
 class DeliveryController
 {
     use DataFilterTrait;
-    use DispatchCommandTrait;
 
     public function __construct(
-        private readonly DeliveryRepository $deliveryRepository,
-        MessageBusInterface $commandBus,
+        private readonly OrderDeliveryService $orderDeliveryService,
     ) {
-        $this->commandBus = $commandBus;
     }
 
     /**
@@ -43,7 +36,7 @@ class DeliveryController
      *
      * @param Request $request
      * @return JsonResponse
-     * @throws BadRequestException|Throwable
+     * @throws BadRequestException
      */
     public function create(Request $request): JsonResponse
     {
@@ -52,11 +45,8 @@ class DeliveryController
             'address' => [new NotBlank(), new Type('string'), new Length(null, 6, 200)],
         ], $request->toArray());
 
-        $deliveryId = $this->deliveryRepository->getNextId();
-
         try {
-            /** @see CreateOrderDeliveryHandler */
-            $this->dispatchCommand(new CreateOrderDelivery($deliveryId, $orderId, $address));
+            $deliveryId = $this->orderDeliveryService->create(new OrderDelivery($orderId, $address));
         } catch (OrderDeliveryAlreadyExists $e) {
             throw BadRequestException::errors([
                 [

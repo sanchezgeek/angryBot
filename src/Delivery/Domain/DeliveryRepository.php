@@ -31,16 +31,23 @@ class DeliveryRepository extends ServiceEntityRepository
     public function save(Delivery $delivery): void
     {
         try {
-            $this->getEntityManager()->wrapInTransaction(function () use ($delivery) {
-                $this->getEntityManager()->persist($delivery);
-                $this->getEntityManager()->flush();
+            $isTransactionActive = $this->getEntityManager()->getConnection()->isTransactionActive();
 
+            $save = function () use ($delivery) {
+                $this->getEntityManager()->persist($delivery);
                 $this->eventBus->handleEvents($delivery);
-            });
+            };
+
+            $isTransactionActive ? $save() : $this->getEntityManager()->wrapInTransaction($save);
         } catch (UniqueConstraintViolationException) {
-            $delivery = $this->findOneBy(['orderId' => $delivery->getOrderId()]);
+            $delivery = $this->findOneByOrderId($delivery->getOrderId());
             throw OrderDeliveryAlreadyExists::withDeliveryId($delivery->getId());
         }
+    }
+
+    public function findOneByOrderId(int $orderId): ?Delivery
+    {
+        return $this->findOneBy(['orderId' => $orderId]);
     }
 
     public function getNextId(): int
