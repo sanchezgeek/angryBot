@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Stub;
+namespace App\Tests\Stub\Request;
 
 use Closure;
 use InvalidArgumentException;
@@ -11,6 +11,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
+/**
+ * @see \App\Tests\Unit\Stub\SymfonyHttpClientStubTest
+ */
 class SymfonyHttpClientStub extends MockHttpClient
 {
     private ResponseInterface $defaultResponse;
@@ -21,14 +24,9 @@ class SymfonyHttpClientStub extends MockHttpClient
     private array $matchers = [];
 
     /**
-     * @var array<array>
+     * @var RequestCall[]
      */
-    private array $requestCallsParams = [];
-
-    /**
-     * @var array<string>
-     */
-    private array $requestCallsUrls = [];
+    private array $requestCalls = [];
 
     public function __construct(?string $baseUri = null)
     {
@@ -47,13 +45,23 @@ class SymfonyHttpClientStub extends MockHttpClient
             }
 
             $urlParts = \parse_url($url);
-            $this->requestCallsUrls[] = $urlParts['scheme'] . '://' . $urlParts['host'] . $urlParts['path'];
 
             $params = [];
             if ($query = $urlParts['query'] ?? null) {
                 \parse_str($query, $params);
             }
-            $this->requestCallsParams[] = $params;
+
+            $data = [];
+            if ($body = $options['body'] ?? null) {
+                \parse_str($body, $data);
+            }
+
+            $this->requestCalls[] = new RequestCall(
+                $method,
+                $urlParts['scheme'] . '://' . $urlParts['host'] . $urlParts['path'],
+                $params,
+                $data ?: null,
+            );
 
             return $response ?? $this->defaultResponse;
         };
@@ -110,18 +118,8 @@ class SymfonyHttpClientStub extends MockHttpClient
         );
     }
 
-    public function getCallsCount(): int
+    public function getRequestCalls(): array
     {
-        return \count($this->requestCallsUrls);
-    }
-
-    public function getCallRequestUrl(int $num): ?string
-    {
-        return $this->requestCallsUrls[$num] ?? null;
-    }
-
-    public function getCallRequestParams(int $num): ?array
-    {
-        return $this->requestCallsParams[$num] ?? null;
+        return $this->requestCalls;
     }
 }

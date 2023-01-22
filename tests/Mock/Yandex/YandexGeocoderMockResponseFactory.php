@@ -103,4 +103,35 @@ final class YandexGeocoderMockResponseFactory
 }
 JSON, ['http_code' => 200]);
     }
+
+    public static function notFound(): MockResponse
+    {
+        return new MockResponse(<<<JSON
+{
+  "response": {
+    "GeoObjectCollection": {
+      "metaDataProperty": {
+        "GeocoderResponseMetaData": {
+          "request": "Unknown address",
+          "results": "1",
+          "found": "0"
+        }
+      },
+      "featureMember": []
+    }
+  }
+}
+JSON, ['http_code' => 200]);
+    }
+
+    public static function unauthorized(): MockResponse
+    {
+        return new MockResponse(<<<JSON
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "Invalid key"
+}
+JSON, ['http_code' => 403]);
+    }
 }
