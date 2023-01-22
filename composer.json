@@ -19,6 +19,7 @@
         "symfony/framework-bundle": "6.0.*",
         "symfony/http-client": "6.0.*",
         "symfony/messenger": "6.0.*",
+        "symfony/monolog-bundle": "^3.8",
         "symfony/runtime": "6.0.*",
         "symfony/validator": "6.0.*",
         "symfony/yaml": "6.0.*"
