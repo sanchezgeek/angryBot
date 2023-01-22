@@ -12,7 +12,7 @@ doctrine:
         mappings:
             Delivery:
                 is_bundle: false
-                dir: '%kernel.project_dir%/src/Delivery/Domain'
+                dir: '%kernel.project_dir%/src/modules/Delivery/Domain'
                 prefix: 'App\Delivery\Domain'
 
 when@test:

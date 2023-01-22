@@ -39,6 +39,9 @@ final class YandexGeoObjectProvider implements GeoObjectProviderInterface
             $response = $this->client->request(Request::METHOD_GET, $url);
             $content = Json::decode($response->getContent(false));
 
+            //            file_put_contents(__DIR__ . '/../../../../tests/Mock/Yandex/response/unathorized.json', $response->getContent(false));
+            //            die;
+
             if ($response->getStatusCode() !== Response::HTTP_OK) {
                 throw new \RuntimeException(
                     \sprintf(

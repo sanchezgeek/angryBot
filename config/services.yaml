@@ -21,7 +21,11 @@ services:
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
+            - '../src/modules/'
             - '../src/Kernel.php'
+
+    App\Delivery\:
+        resource: '../src/modules/Delivery'
 
     App\Controller\:
         resource: '../src/Controller'
