@@ -1,4 +1,7 @@
 services:
+    Symfony\Contracts\HttpClient\HttpClientInterface:
+        class: App\Tests\Stub\SymfonyHttpClientStub
+
     App\Delivery\Application\Service\Geo\DistanceCalculatorInterface:
         public: true
 
