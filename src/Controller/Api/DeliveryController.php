@@ -38,6 +38,7 @@ class DeliveryController
      * @return JsonResponse
      * @throws BadRequestException
      */
+    #[Route('/api/delivery-order-create', name: 'delivery-order-create', methods: 'POST')]
     public function create(Request $request): JsonResponse
     {
         [$orderId, $address] = self::filterData([

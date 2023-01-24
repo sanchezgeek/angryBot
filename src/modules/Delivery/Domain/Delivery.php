@@ -10,7 +10,7 @@ use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: DeliveryRepository::class)]
-final class Delivery implements HasEvents
+class Delivery implements HasEvents
 {
     use RecordEvents;
 
