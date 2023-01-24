@@ -1,4 +1,4 @@
-DOCKER_COMP = docker compose
+DOCKER_COMP = docker compose --env-file=.env.local
 
 # Docker containers
 PHP_CONT = $(DOCKER_COMP) exec php
@@ -12,18 +12,24 @@ SYMFONY  = $(PHP_CONT) bin/console
 .DEFAULT_GOAL = help
 .PHONY        : help build up start down logs sh composer vendor sf cc
 
+prepare_files:
+	@if [ ! -f .env.local ]; then cp .env.local.dist .env.local; fi
+
 ## —— 🎵 🐳 The Symfony Docker Makefile 🐳 🎵 ——————————————————————————————————
 help: ## Outputs this help screen
 	@grep -E '(^[a-zA-Z0-9\./_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
 ## —— Docker 🐳 ————————————————————————————————————————————————————————————————
 build: ## Builds the Docker images
+	@$(DOCKER_COMP) build
+
+rebuild: ## Rebuilds the Docker images
 	@$(DOCKER_COMP) build --pull --no-cache
 
 up: ## Start the docker hub in detached mode (no logs)
 	@$(DOCKER_COMP) up --detach
 
-start: build up ## Build and start the containers
+start: prepare_files build up ## Build and start the containers
 
 stop: ## Stop the docker hub
 	@$(DOCKER_COMP) stop
@@ -53,3 +59,7 @@ sf: ## List all Symfony commands or pass the parameter "c=" to run a given comma
 
 cc: c=c:c ## Clear the cache
 cc: sf
+
+## —— App 🛠 ———————————————————————————————————————————————————————————————
+test: ## Run tests
+	@$(PHP_CONT) bin/phpunit
