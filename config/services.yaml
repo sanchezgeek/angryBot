@@ -27,7 +27,26 @@ services:
     App\Delivery\:
         resource: '../src/modules/Delivery'
 
+    App\Bot\:
+        resource: '../src/modules/Bot'
+
     App\Controller\:
         resource: '../src/Controller'
         tags:
             - 'controller.service_arguments'
+
+    App\Messenger\SchedulerTransport\TransportFactory:
+        tags: [ 'messenger.transport_factory' ]
+
+    App\Messenger\SchedulerTransport\Scheduler:
+        factory: [ 'App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
+
+    App\Bot\Infrastructure\ByBit\PositionService:
+        arguments:
+            $apiKey: '%env(BYBIT_API_KEY)%'
+            $apiSecret: '%env(BYBIT_API_SECRET)%'
+
+    App\Bot\Infrastructure\ByBit\ExchangeOrdersService:
+        arguments:
+            $apiKey: '%env(BYBIT_API_KEY)%'
+            $apiSecret: '%env(BYBIT_API_SECRET)%'
