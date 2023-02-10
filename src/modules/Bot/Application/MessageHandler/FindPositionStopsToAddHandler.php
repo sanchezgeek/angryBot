@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Bot\Application\MessageHandler;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
-use App\Bot\Application\Message\CheckPositionJob;
 use App\Bot\Application\Message\FindPositionStopsToAdd;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -26,13 +25,18 @@ final class FindPositionStopsToAddHandler
 {
     use LoggerTrait;
 
-    private const DEFAULT_TRIGGER_DELTA = 25;
+    private const SL_DEFAULT_TRIGGER_DELTA = 25;
+    private const BUY_ORDER_TRIGGER_DELTA = 1;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 40;
+
     public function __construct(
         private readonly PositionService $positionService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderService $buyOrderService,
         private readonly MessageBusInterface $messageBus,
         LoggerInterface $logger,
+
+        private readonly float $slForcedTriggerDelta
     ) {
         $this->logger = $logger;
     }
@@ -51,13 +55,16 @@ final class FindPositionStopsToAddHandler
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($stops as $stop) {
-            $delta = $stop->getTriggerDelta() ?: self::DEFAULT_TRIGGER_DELTA;
             if ($this->isCurrentIndexPriceOverStop($ticker, $stop)) {
                 $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
                 $stop->setPrice($price);
 
                 $this->addStop($position, $ticker, $stop);
-            } elseif (abs($stop->getPrice() - $ticker->indexPrice) <= $delta) {
+            } elseif (
+                abs($stop->getPrice() - $ticker->indexPrice) <= (
+                    $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
+                )
+            ) {
                 $this->addStop($position, $ticker, $stop);
 
                 $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
@@ -116,7 +123,7 @@ final class FindPositionStopsToAddHandler
     private function createOppositeBuyOrder(Ticker $ticker, Stop $stop): array
     {
         $price = $stop->originalPrice ?: $stop->getPrice();
-        $triggerPrice = $stop->getPositionSide() === Side::Sell ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DELTA : $price + self::BUY_ORDER_OPPOSITE_PRICE_DELTA;
+        $triggerPrice = $stop->getPositionSide() === Side::Sell ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
         $orderId = $this->buyOrderService->create(
             $ticker,
@@ -128,7 +135,4 @@ final class FindPositionStopsToAddHandler
 
         return [$orderId, $triggerPrice];
     }
-
-    private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DELTA = 30;
 }

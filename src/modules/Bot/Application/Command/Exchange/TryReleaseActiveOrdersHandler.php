@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
 use App\Trait\DispatchCommandTrait;
@@ -19,7 +20,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
-    private const RELESE_OVER_DISTANCE = 60;
+    private const RELEASE_OVER_DISTANCE = 35;
     private const DEFAULT_TRIGGER_DELTA = 10;
 
     public function __construct(
@@ -32,17 +33,21 @@ final class TryReleaseActiveOrdersHandler
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
-        $activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol);
+        if (\count($activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol)) < 7) {
+            return;
+        }
 
         $ticker = $this->positionService->getTickerInfo($command->symbol);
 
-        if (\count($activeOrders) > 7) {
-            foreach ($activeOrders as $order) {
-                if (abs($order->triggerPrice - $ticker->indexPrice) > self::RELESE_OVER_DISTANCE) {
-                    $this->exchangeOrdersService->closeActiveConditionalOrder($order);
+        foreach ($activeOrders as $order) {
+            if (
+                abs($order->triggerPrice - $ticker->indexPrice) > self::RELEASE_OVER_DISTANCE
+                || $order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice
+                || $order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice
+            ) {
+                $this->exchangeOrdersService->closeActiveConditionalOrder($order);
 
-                    $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
-                }
+                $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
             }
         }
     }

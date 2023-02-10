@@ -90,6 +90,8 @@ final class FindPositionBuyOrdersToAddHandler
                     $order->addToContext('buyOrderId', $orderId);
                     $this->buyOrderRepository->save($order);
                 }
+
+//                $stopData = $position->side !== Side::Buy ? $this->createStop($ticker, $order) : [];
                 $stopData = $this->createStop($ticker, $order);
 
                 $this->info(
@@ -112,7 +114,7 @@ final class FindPositionBuyOrdersToAddHandler
     private function createStop(Ticker $ticker, BuyOrder $buyOrder): array
     {
 //        $price = $buyOrder->getPrice();
-        $oppositePriceDelta = $buyOrder->getVolume() >= 0.003 ? self::STOP_ORDER_OPPOSITE_PRICE_DELTA : 52;
+        $oppositePriceDelta = $buyOrder->getVolume() >= 0.003 ? self::STOP_ORDER_OPPOSITE_PRICE_DELTA : 45;
         $price = $buyOrder->originalPrice ?: $buyOrder->getPrice();
         $triggerPrice = $buyOrder->getPositionSide(
         ) === Side::Sell ? $price + $oppositePriceDelta : $price - $oppositePriceDelta;
@@ -129,5 +131,5 @@ final class FindPositionBuyOrdersToAddHandler
     }
 
     private const STOP_ORDER_TRIGGER_DELTA = 8;
-    private const STOP_ORDER_OPPOSITE_PRICE_DELTA = 100;
+    private const STOP_ORDER_OPPOSITE_PRICE_DELTA = 70;
 }

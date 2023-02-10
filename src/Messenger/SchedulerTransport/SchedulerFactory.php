@@ -17,9 +17,9 @@ use Exception;
  */
 final class SchedulerFactory
 {
-    private const VERY_FAST = 2;
-    private const FAST = 3;
-    private const MEDIUM = 4;
+    private const VERY_FAST = 1;
+    private const FAST = 2;
+    private const MEDIUM = 3;
     private const SLOW = 5;
     private const VERY_SLOW = 10;
 
@@ -35,8 +35,8 @@ final class SchedulerFactory
         $shortStopSpeed = self::FAST;
         $shortBuySpeed = self::MEDIUM;
 
-        $longStopSpeed = self::FAST;
-        $longBuySpeed = self::VERY_FAST;
+        $longStopSpeed = self::VERY_FAST;
+        $longBuySpeed = self::FAST;
 
         $jobSchedules = [
             // Простановка SL ШОРТ-позиции
