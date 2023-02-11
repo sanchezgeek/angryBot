@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Bot\Application\MessageHandler\Job;
+
+use App\Bot\Application\Message\Job\FixupOrdersDoubling;
+use App\Bot\Domain\BuyOrderRepository;
+use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\ValueObject\Order\OrderType;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query\Expr\OrderBy;
+use Doctrine\ORM\QueryBuilder;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+
+#[AsMessageHandler]
+final class FixupOrdersDoublingHandler
+{
+    public function __construct(
+        private readonly StopRepository $stopRepository,
+        private readonly BuyOrderRepository $buyOrderRepository,
+        private readonly EntityManagerInterface $entityManager
+    ) {
+    }
+
+    public function __invoke(FixupOrdersDoubling $message)
+    {
+        $repository = $message->orderType === OrderType::Add
+            ? $this->buyOrderRepository
+            : $this->stopRepository;
+
+        $orders = $repository->findActive(
+            side: $message->positionSide,
+            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', 'desc'))
+        );
+
+        $forRemove = [];
+
+        $stepOrders = [];
+        $stepBottom = ceil($orders[0]->getPrice()) - $message->step;
+        while ($order = \array_shift($orders)) {
+            if ($order->getPrice() > $stepBottom) {
+                $stepOrders[] = $order;
+            } else {
+                $stepBottom = $stepBottom - $message->step;
+                \array_unshift($orders, $order); // Push back
+                \usort($stepOrders, static fn(Stop|BuyOrder $a, Stop|BuyOrder $b) => $a->getVolume() <=> $b->getVolume());
+
+                while (count($stepOrders) > $message->maxStepOrdersQnt) {
+                    $forRemove[] = \array_shift($stepOrders);
+                }
+                $stepOrders = [];
+            }
+        }
+
+        foreach ($forRemove as $order) {
+            $this->entityManager->remove($order);
+            $this->entityManager->flush();
+        }
+    }
+}

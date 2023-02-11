@@ -6,7 +6,6 @@ namespace App\Bot\Infrastructure\ByBit;
 
 use App\Bot\Application\Service\Exchange\ExchangeOrdersServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\Json;

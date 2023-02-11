@@ -47,7 +47,7 @@ final class FindPositionBuyOrdersToAddHandler
         // Fake
         $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
 
-        $orders = $this->buyOrderRepository->findActiveByPositionNearTicker($position, $this->lastTicker);
+        $orders = $this->buyOrderRepository->findActive($position->side, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($orders as $order) {

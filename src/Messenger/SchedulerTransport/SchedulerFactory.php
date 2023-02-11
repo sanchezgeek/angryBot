@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
-use App\Bot\Application\Message\CheckPositionJob;
 use App\Bot\Application\Message\FindPositionBuyOrdersToAdd;
 use App\Bot\Application\Message\FindPositionStopsToAdd;
+use App\Bot\Application\Message\Job\FixupOrdersDoubling;
+use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
@@ -50,6 +51,12 @@ final class SchedulerFactory
 
             // LONG-позиция | BUY
             PeriodicalJob::infinite('2020-01-01T00:00:04Z', \sprintf('PT%sS', $longBuySpeed), new FindPositionBuyOrdersToAdd(Symbol::BTCUSDT, Side::Buy)),
+
+            // Utils
+            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 2)), // Cleanup SHORT StopLoses
+            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 2)), // Cleanup SHORT purchases
+            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2)), // Cleanup LONG StopLoses
+            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2)), // Cleanup LONG purchases
         ];
 
         return new Scheduler($clock, $jobSchedules);

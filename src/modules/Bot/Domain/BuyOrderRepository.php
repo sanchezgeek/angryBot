@@ -17,7 +17,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method BuyOrder[]    findAll()
  * @method BuyOrder[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class BuyOrderRepository extends ServiceEntityRepository
+class BuyOrderRepository extends ServiceEntityRepository implements PositionOrderRepository
 {
     public function __construct(
         private readonly EventBus $eventBus,
@@ -47,24 +47,28 @@ class BuyOrderRepository extends ServiceEntityRepository
     /**
      * @return BuyOrder[]
      */
-    public function findActiveByPositionNearTicker(Position $position, ?Ticker $ticker): array
+    public function findActive(Side $side, ?Ticker $ticker = null, callable $qbModifier = null): array
     {
         $qb = $this->createQueryBuilder('s');
 
         $qb
             ->andWhere('s.positionSide = :posSide')
             ->andWhere("HAS_NOT_ELEMENT(s.context, 'buyOrderId') = true")
-            ->setParameter(':posSide', $position->side)
+            ->setParameter(':posSide', $side)
         ;
 
         if ($ticker){
-            if ($position->side === Side::Buy) {
+            if ($side === Side::Buy) {
                 $qb->andWhere('s.price < :price');
                 $qb->setParameter(':price', $ticker->indexPrice + 50);
             } else {
                 $qb->andWhere('s.price > :price');
                 $qb->setParameter(':price', $ticker->indexPrice - 50);
             }
+        }
+
+        if ($qbModifier) {
+            $qbModifier($qb);
         }
 
         return $qb->getQuery()->getResult();

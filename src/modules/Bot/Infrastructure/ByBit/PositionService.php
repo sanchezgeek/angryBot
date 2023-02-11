@@ -7,7 +7,7 @@ namespace App\Bot\Infrastructure\ByBit;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersCountReached;
@@ -83,7 +83,7 @@ final class PositionService implements PositionServiceInterface
                 'reduce_only' => 'true',
                 'close_on_trigger' => 'false',
                 'base_price' => $ticker->markPrice,
-                'order_type' => OrderType::Market->value,
+                'order_type' => ExecutionOrderType::Market->value,
                 'qty' => $qty,
                 'stop_px' => $price,
                 'time_in_force' => 'GoodTillCancel',
@@ -115,7 +115,7 @@ final class PositionService implements PositionServiceInterface
                 'reduce_only' => 'false',
                 'close_on_trigger' => 'false',
                 'base_price' => $ticker->markPrice,
-                'order_type' => OrderType::Market->value,
+                'order_type' => ExecutionOrderType::Market->value,
                 'qty' => $qty,
                 'trigger_price' => $price,
 //                'stop_px' => $price,

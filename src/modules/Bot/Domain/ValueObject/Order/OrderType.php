@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Bot\Domain\ValueObject\Order;
 
 enum OrderType: string
 {
-    case Market = 'Market';
-    case Limit = 'Limit';
+    case Stop = 'Stop';
+    case Add = 'Add';
 }

@@ -53,7 +53,7 @@ final class FindPositionStopsToAddHandler
         // Fake
         $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
 
-        $stops = $this->stopRepository->findActiveByPositionNearTicker($position, $this->lastTicker);
+        $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($stops as $stop) {
