@@ -6,6 +6,8 @@ namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeOrdersServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Exchange\ActiveStopOrder;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Stop\StopService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -30,6 +32,8 @@ final class TryReleaseActiveOrdersHandler
 
         $ticker = $this->positionService->getTickerInfo($command->symbol);
 
+        $claimedOrderVolume = $command->forVolume;
+
         foreach ($activeOrders as $key => $order) {
             if (\count($activeOrders) < self::MAX_ORDER_MUST_LEFT) {
                 return;
@@ -37,15 +41,24 @@ final class TryReleaseActiveOrdersHandler
 
             if (
                 abs($order->triggerPrice - $ticker->indexPrice) > self::RELEASE_OVER_DISTANCE
-                || $order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice
-                || $order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice
+                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
+                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
-                $this->exchangeOrdersService->closeActiveConditionalOrder($order);
-
-                $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
+                $this->release($order, $ticker);
+            } elseif ($order->volume < $claimedOrderVolume) {
+                // Force in case of volume of active order less than claimed volume of new order
+                $claimedOrderVolume = null; // Only once
+                $this->release($order, $ticker);
             }
 
             unset($activeOrders[$key]);
         }
+    }
+
+    private function release(ActiveStopOrder $order, Ticker $ticker): void
+    {
+        $this->exchangeOrdersService->closeActiveConditionalOrder($order);
+
+        $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
     }
 }

@@ -115,7 +115,9 @@ final class FindPositionStopsToAddHandler
             }
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
-            $this->messageBus->dispatch(new TryReleaseActiveOrders($ticker->symbol));
+            $this->messageBus->dispatch(
+                TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
+            );
         }
     }
 
