@@ -6,7 +6,6 @@ namespace App\Bot\Application\Command;
 
 use App\Bot\Domain\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Stop;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]

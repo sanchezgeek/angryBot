@@ -13,7 +13,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Application\Exception\MaxActiveCondOrdersCountReached;
+use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
@@ -111,7 +111,7 @@ final class FindPositionBuyOrdersToAddHandler
 
                 $this->info(\sprintf('Buy order on %s successfully pushed to exchange (stop: $%.2f)', $position->getCaption(), $stopData['triggerPrice']));
             }
-        } catch (MaxActiveCondOrdersCountReached $e) {
+        } catch (MaxActiveCondOrdersQntReached $e) {
             $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
             $this->messageBus->dispatch(new TryReleaseActiveOrders($ticker->symbol));
         }

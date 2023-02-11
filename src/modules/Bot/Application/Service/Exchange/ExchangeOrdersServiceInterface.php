@@ -14,8 +14,5 @@ interface ExchangeOrdersServiceInterface
      */
     public function getActiveConditionalOrders(Symbol $symbol): array;
 
-    /**
-     * @return ActiveStopOrder[]
-     */
-    public function closeActiveConditionalOrder(ActiveStopOrder $order): void;
+    public function closeActiveConditionalOrder(ActiveStopOrder $order);
 }

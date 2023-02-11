@@ -13,7 +13,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Service\Buy\BuyOrderService;
-use App\Bot\Application\Exception\MaxActiveCondOrdersCountReached;
+use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
@@ -113,7 +113,7 @@ final class FindPositionStopsToAddHandler
                     ['orderId' => $stopOrderId, 'oppositeBuyOrder' => $oppositeBuyOrderData],
                 );
             }
-        } catch (MaxActiveCondOrdersCountReached $e) {
+        } catch (MaxActiveCondOrdersQntReached $e) {
             $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
             $this->messageBus->dispatch(new TryReleaseActiveOrders($ticker->symbol));
         }

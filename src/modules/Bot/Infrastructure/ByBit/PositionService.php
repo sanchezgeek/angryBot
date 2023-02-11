@@ -10,7 +10,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Application\Exception\MaxActiveCondOrdersCountReached;
+use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use Lin\Bybit\BybitLinear;
 
 final class PositionService implements PositionServiceInterface
@@ -90,13 +90,13 @@ final class PositionService implements PositionServiceInterface
             ]);
 
             if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
-                throw new MaxActiveCondOrdersCountReached($result['ret_msg']);
+                throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
             }
 
             var_dump($result);
 
             return $result['result']['stop_order_id'];
-        } catch (MaxActiveCondOrdersCountReached $e) {
+        } catch (MaxActiveCondOrdersQntReached $e) {
             throw $e;
         } catch (\Exception $e) {
             print_r($e->getMessage());
@@ -123,13 +123,13 @@ final class PositionService implements PositionServiceInterface
             ]);
 
             if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
-                throw new MaxActiveCondOrdersCountReached($result['ret_msg']);
+                throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
             }
 
             var_dump($result);
 
             return $result['result']['order_id'];
-        } catch (MaxActiveCondOrdersCountReached $e) {
+        } catch (MaxActiveCondOrdersQntReached $e) {
             throw $e;
         } catch (\Exception $e) {
             print_r($e->getMessage());

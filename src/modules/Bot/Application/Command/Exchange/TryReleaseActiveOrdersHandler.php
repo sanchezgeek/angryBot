@@ -4,18 +4,11 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command\Exchange;
 
-use App\Bot\Application\Command\CreateBuyOrder;
 use App\Bot\Application\Service\Exchange\ExchangeOrdersServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\BuyOrderRepository;
-use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
-use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
@@ -29,7 +22,6 @@ final class TryReleaseActiveOrdersHandler
         private readonly PositionServiceInterface $positionService,
         private readonly StopService $stopService,
     ) {
-
     }
 
     public function __invoke(TryReleaseActiveOrders $command): void

@@ -57,7 +57,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             ->setParameter(':posSide', $side)
         ;
 
-        if ($ticker){
+        if ($ticker) {
             if ($side === Side::Buy) {
                 $qb->andWhere('s.price < :price');
                 $qb->setParameter(':price', $ticker->indexPrice + 50);

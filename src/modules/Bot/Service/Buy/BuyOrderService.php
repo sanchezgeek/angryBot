@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Service\Buy;
 
 use App\Bot\Application\Command\CreateBuyOrder;
-use App\Bot\Application\Command\CreateStop;
 use App\Bot\Domain\BuyOrderRepository;
-use App\Bot\Domain\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Trait\DispatchCommandTrait;

@@ -48,42 +48,27 @@ class Stop implements HasEvents
         $this->positionSide = $positionSide;
     }
 
-    /**
-     * @return float
-     */
     public function getPrice(): float
     {
         return $this->price;
     }
 
-    /**
-     * @param float $price
-     */
     public function setPrice(float $price): void
     {
         $this->originalPrice = $this->price;
         $this->price = $price;
     }
 
-    /**
-     * @return float
-     */
     public function getVolume(): float
     {
         return $this->volume;
     }
 
-    /**
-     * @return Side
-     */
     public function getPositionSide(): Side
     {
         return $this->positionSide;
     }
 
-    /**
-     * @return array
-     */
     public function getContext(): array
     {
         return $this->context;

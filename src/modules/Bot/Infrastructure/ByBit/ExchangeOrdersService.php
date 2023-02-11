@@ -45,7 +45,6 @@ final class ExchangeOrdersService implements ExchangeOrdersServiceInterface
 
     public function getActiveConditionalOrders(Symbol $symbol): array
     {
-
         $params = [
             'symbol' => $symbol->value,
             'stop_order_status' => 'Untriggered',

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command;
 
-use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 
