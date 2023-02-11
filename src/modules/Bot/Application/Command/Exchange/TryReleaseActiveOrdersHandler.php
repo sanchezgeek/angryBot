@@ -20,6 +20,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
+    private const MAX_ORDER_MUST_LEFT = 4;
     private const RELEASE_OVER_DISTANCE = 35;
     private const DEFAULT_TRIGGER_DELTA = 10;
 
@@ -33,13 +34,15 @@ final class TryReleaseActiveOrdersHandler
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
-        if (\count($activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol)) < 7) {
-            return;
-        }
+        $activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol);
 
         $ticker = $this->positionService->getTickerInfo($command->symbol);
 
-        foreach ($activeOrders as $order) {
+        foreach ($activeOrders as $key => $order) {
+            if (\count($activeOrders) < self::MAX_ORDER_MUST_LEFT) {
+                return;
+            }
+
             if (
                 abs($order->triggerPrice - $ticker->indexPrice) > self::RELEASE_OVER_DISTANCE
                 || $order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice
@@ -49,6 +52,8 @@ final class TryReleaseActiveOrdersHandler
 
                 $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
             }
+
+            unset($activeOrders[$key]);
         }
     }
 }

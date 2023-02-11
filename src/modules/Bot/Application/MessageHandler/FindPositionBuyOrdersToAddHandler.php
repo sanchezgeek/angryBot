@@ -6,6 +6,7 @@ namespace App\Bot\Application\MessageHandler;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Message\FindPositionBuyOrdersToAdd;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -13,8 +14,8 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersCountReached;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
+use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -30,35 +31,45 @@ final class FindPositionBuyOrdersToAddHandler
     private const REGULAR_ORDER_STOP_DISTANCE = 45;
     private const ADDITION_ORDER_STOP_DISTANCE = 70;
 
+//    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
+//    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
+
     private ?Ticker $lastTicker = null;
 
+    /**
+     * @var PositionData[]
+     */
+    private array $positionsData = [];
+
     public function __construct(
-        private readonly PositionService $positionService,
+        private readonly PositionServiceInterface $positionService,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+        private readonly ClockInterface $clock,
         LoggerInterface $logger,
     ) {
         $this->logger = $logger;
     }
-
     public function __invoke(FindPositionBuyOrdersToAdd $message): void
     {
-        // Fake
-        $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
+        $positionData = $this->getPositionData($message->symbol, $message->side);
+        if (!$positionData->isPositionOpened()) {
+            return;
+        }
 
-        $orders = $this->buyOrderRepository->findActive($position->side, $this->lastTicker);
+        $orders = $this->buyOrderRepository->findActive($positionData->position->side, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($orders as $order) {
             $delta = $order->getTriggerDelta() ?: self::DEFAULT_TRIGGER_DELTA;
             if (abs($order->getPrice() - $ticker->indexPrice) <= $delta) {
-                $this->addBuyOrder($position, $ticker, $order);
+                $this->addBuyOrder($positionData->position, $ticker, $order);
             } elseif ($this->isCurrentIndexPriceAlreadyOverOrderPrice($ticker, $order)) {
                 $price = $order->getPositionSide() === Side::Sell ? $ticker->indexPrice - 10 : $ticker->indexPrice + 10;
                 $order->setPrice($price);
 
-                $this->addBuyOrder($position, $ticker, $order);
+                $this->addBuyOrder($positionData->position, $ticker, $order);
             }
         }
 
@@ -67,9 +78,6 @@ final class FindPositionBuyOrdersToAddHandler
         $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
     }
 
-    /**
-     * @throws \LogicException
-     */
     private function isCurrentIndexPriceAlreadyOverOrderPrice(Ticker $ticker, BuyOrder $order): bool
     {
         if ($order->getPositionSide() === Side::Sell) {
@@ -99,12 +107,9 @@ final class FindPositionBuyOrdersToAddHandler
                 }
 
 //                $stopData = $position->side !== Side::Buy ? $this->createStop($ticker, $order) : [];
-                $stopData = $this->createStop($ticker, $order);
+                $stopData = $this->createStop($position, $ticker, $order);
 
-                $this->info(
-                    \sprintf('Buy order on %s successfully pushed to exchange', $position->getCaption()),
-                    ['orderId' => $orderId, 'softStop' => $stopData],
-                );
+                $this->info(\sprintf('Buy order on %s successfully pushed to exchange (stop: $%.2f)', $position->getCaption(), $stopData['triggerPrice']));
             }
         } catch (MaxActiveCondOrdersCountReached $e) {
             $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
@@ -113,31 +118,61 @@ final class FindPositionBuyOrdersToAddHandler
     }
 
     /**
+     * @param Position $position
      * @param Ticker $ticker
      * @param BuyOrder $buyOrder
      *
-     * @return array{}
+     * @return array{stopId: int, triggerPrice: float}
      */
-    private function createStop(Ticker $ticker, BuyOrder $buyOrder): array
+    private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
         $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
             ? self::REGULAR_ORDER_STOP_DISTANCE
             : self::ADDITION_ORDER_STOP_DISTANCE;
 
-//        $price = $buyOrder->getPrice();
-        $price = $buyOrder->originalPrice ?: $buyOrder->getPrice();
-        $triggerPrice = $buyOrder->getPositionSide() === Side::Sell
-            ? $price + $oppositePriceDelta
-            : $price - $oppositePriceDelta;
+        $currentPositionIsHedgePosition = $this->getOppositePosition($position)->size > $position->size;
+
+        $basePrice = $buyOrder->originalPrice ?: $buyOrder->getPrice();
+
+        $triggerPrice = $currentPositionIsHedgePosition
+            ? ($position->side === Side::Sell ? $position->entryPrice + 10 : $position->entryPrice - 10) // @todo придумать логику
+            : ($position->side === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta);
 
         $stopId = $this->stopService->create(
             $ticker,
-            $buyOrder->getPositionSide(),
+            $position->side,
             $triggerPrice,
             $buyOrder->getVolume(),
             self::STOP_ORDER_TRIGGER_DELTA,
         );
 
-        return [$stopId, $triggerPrice];
+        return ['stopId' => $stopId, 'triggerPrice' => $triggerPrice];
+    }
+
+    private function getPositionData(Symbol $symbol, Side $side): PositionData
+    {
+        if (
+            !($positionData = $this->positionsData[$symbol->value . $side->value] ?? null)
+            || $positionData->needUpdate($this->clock->now())
+        ) {
+            $position = $this->positionService->getOpenedPositionInfo($symbol, $side);
+            $this->info(
+                \sprintf(
+                    'UPD %s | %.3f btc | entry: $%.2f | liq: $%.2f',
+                    $position->getCaption(),
+                    $position->size,
+                    $position->entryPrice,
+                    $position->liquidationPrice,
+                ));
+
+            $this->positionsData[$symbol->value . $side->value] = new PositionData($position, $this->clock->now());
+        }
+
+        return $this->positionsData[$symbol->value . $side->value];
+    }
+
+    private function getOppositePosition(Position $position): Position
+    {
+        return $this->getPositionData($position->symbol, $position->side === Side::Buy ? Side::Sell : Side::Buy)->position;
     }
 }

@@ -40,33 +40,25 @@ final class SchedulerFactory
         $longBuySpeed = self::FAST;
 
         $jobSchedules = [
-            // Простановка SL ШОРТ-позиции
+            // SHORT-позиция | SL
             PeriodicalJob::infinite('2020-01-01T00:00:01Z', \sprintf('PT%sS', $shortStopSpeed), new FindPositionStopsToAdd(Symbol::BTCUSDT, Side::Sell)),
 
-            // Покупка в ШОРТ-позицию
+            // SHORT-позиция | BUY
             PeriodicalJob::infinite('2020-01-01T00:00:02Z', \sprintf('PT%sS', $shortBuySpeed), new FindPositionBuyOrdersToAdd(Symbol::BTCUSDT, Side::Sell)),
 
-            // LONG-позиции | STOP
+            // LONG-позиция | SL
             PeriodicalJob::infinite('2020-01-01T00:00:03Z',\sprintf('PT%sS', $longStopSpeed), new FindPositionStopsToAdd(Symbol::BTCUSDT, Side::Buy)),
 
             // LONG-позиция | BUY
             PeriodicalJob::infinite('2020-01-01T00:00:04Z', \sprintf('PT%sS', $longBuySpeed), new FindPositionBuyOrdersToAdd(Symbol::BTCUSDT, Side::Buy)),
 
             // Utils
-            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 2)), // Cleanup SHORT StopLoses
-            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 2)), // Cleanup SHORT purchases
-            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2)), // Cleanup LONG StopLoses
-            PeriodicalJob::infinite('2020-01-01T00:00:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2)), // Cleanup LONG purchases
+            PeriodicalJob::infinite('2020-01-01T00:01:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 2)), // Cleanup SHORT StopLoses
+            PeriodicalJob::infinite('2020-01-01T00:02:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)), // Cleanup SHORT purchases
+            PeriodicalJob::infinite('2020-01-01T00:03:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2)), // Cleanup LONG StopLoses
+            PeriodicalJob::infinite('2020-01-01T00:04:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2)), // Cleanup LONG purchases
         ];
 
         return new Scheduler($clock, $jobSchedules);
     }
-
-    private static function infinite(string $interval, object $job): PeriodicalJob
-    {
-        return PeriodicalJob::infinite('2020-01-01T00:00:00Z', $interval, $job);
-    }
 }
-
-
-//            PeriodicalJob::infinite('2020-01-01T00:00:00Z', 'PT5S', new CheckPositionJob(Symbol::BTCUSDT, Side::Sell)),
