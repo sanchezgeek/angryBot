@@ -25,7 +25,10 @@ final class FindPositionBuyOrdersToAddHandler
 {
     use LoggerTrait;
 
-    private const DEFAULT_TRIGGER_DELTA = 25;
+    private const DEFAULT_TRIGGER_DELTA = 1;
+    private const STOP_ORDER_TRIGGER_DELTA = 3;
+    private const REGULAR_ORDER_STOP_DISTANCE = 45;
+    private const ADDITION_ORDER_STOP_DISTANCE = 70;
 
     private ?Ticker $lastTicker = null;
 
@@ -117,11 +120,15 @@ final class FindPositionBuyOrdersToAddHandler
      */
     private function createStop(Ticker $ticker, BuyOrder $buyOrder): array
     {
+        $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
+            ? self::REGULAR_ORDER_STOP_DISTANCE
+            : self::ADDITION_ORDER_STOP_DISTANCE;
+
 //        $price = $buyOrder->getPrice();
-        $oppositePriceDelta = $buyOrder->getVolume() >= 0.003 ? self::STOP_ORDER_OPPOSITE_PRICE_DELTA : 45;
         $price = $buyOrder->originalPrice ?: $buyOrder->getPrice();
-        $triggerPrice = $buyOrder->getPositionSide(
-        ) === Side::Sell ? $price + $oppositePriceDelta : $price - $oppositePriceDelta;
+        $triggerPrice = $buyOrder->getPositionSide() === Side::Sell
+            ? $price + $oppositePriceDelta
+            : $price - $oppositePriceDelta;
 
         $stopId = $this->stopService->create(
             $ticker,
@@ -133,7 +140,4 @@ final class FindPositionBuyOrdersToAddHandler
 
         return [$stopId, $triggerPrice];
     }
-
-    private const STOP_ORDER_TRIGGER_DELTA = 8;
-    private const STOP_ORDER_OPPOSITE_PRICE_DELTA = 70;
 }
