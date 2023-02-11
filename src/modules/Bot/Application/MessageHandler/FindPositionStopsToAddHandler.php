@@ -29,6 +29,8 @@ final class FindPositionStopsToAddHandler
     private const BUY_ORDER_TRIGGER_DELTA = 1;
     private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 40;
 
+    private ?Ticker $lastTicker = null;
+
     public function __construct(
         private readonly PositionService $positionService,
         private readonly StopRepository $stopRepository,
@@ -51,12 +53,12 @@ final class FindPositionStopsToAddHandler
         // Fake
         $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
 
-        $stops = $this->stopRepository->findActiveByPosition($position);
+        $stops = $this->stopRepository->findActiveByPositionNearTicker($position, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($stops as $stop) {
             if ($this->isCurrentIndexPriceOverStop($ticker, $stop)) {
-                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
+                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 5 : $ticker->indexPrice - 5;
                 $stop->setPrice($price);
 
                 $this->addStop($position, $ticker, $stop);
@@ -66,13 +68,10 @@ final class FindPositionStopsToAddHandler
                 )
             ) {
                 $this->addStop($position, $ticker, $stop);
-
-                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
-                $stop->setPrice($price);
-
-                $this->addStop($position, $ticker, $stop);
             }
         }
+
+        $this->lastTicker = $ticker;
 
         $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
     }

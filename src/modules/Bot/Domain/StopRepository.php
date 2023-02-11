@@ -4,6 +4,7 @@ namespace App\Bot\Domain;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\ValueObject\Position\Side;
 use App\Delivery\Domain\Delivery;
 use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -47,7 +48,7 @@ class StopRepository extends ServiceEntityRepository
     /**
      * @return Stop[]
      */
-    public function findActiveByPosition(Position $position): array
+    public function findActiveByPositionNearTicker(Position $position, ?Ticker $ticker): array
     {
         $qb = $this->createQueryBuilder('s');
 
@@ -56,6 +57,16 @@ class StopRepository extends ServiceEntityRepository
             ->andWhere("HAS_NOT_ELEMENT(s.context, 'stopOrderId') = true")
             ->setParameter(':posSide', $position->side)
         ;
+
+        if ($ticker) {
+            if ($position->side === Side::Sell) {
+                $qb->andWhere('s.price < :price');
+                $qb->setParameter(':price', $ticker->indexPrice + 50);
+            } else {
+                $qb->andWhere('s.price > :price');
+                $qb->setParameter(':price', $ticker->indexPrice - 50);
+            }
+        }
 
         return $qb->getQuery()->getResult();
     }

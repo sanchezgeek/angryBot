@@ -27,6 +27,8 @@ final class FindPositionBuyOrdersToAddHandler
 
     private const DEFAULT_TRIGGER_DELTA = 25;
 
+    private ?Ticker $lastTicker = null;
+
     public function __construct(
         private readonly PositionService $positionService,
         private readonly BuyOrderRepository $buyOrderRepository,
@@ -42,7 +44,7 @@ final class FindPositionBuyOrdersToAddHandler
         // Fake
         $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
 
-        $orders = $this->buyOrderRepository->findActiveByPosition($position);
+        $orders = $this->buyOrderRepository->findActiveByPositionNearTicker($position, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($orders as $order) {
@@ -56,6 +58,8 @@ final class FindPositionBuyOrdersToAddHandler
                 $this->addBuyOrder($position, $ticker, $order);
             }
         }
+
+        $this->lastTicker = $ticker;
 
         $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
     }
