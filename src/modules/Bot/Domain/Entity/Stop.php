@@ -6,7 +6,7 @@ namespace App\Bot\Domain\Entity;
 
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
-use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;

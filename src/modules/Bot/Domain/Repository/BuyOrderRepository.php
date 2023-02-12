@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Bot\Domain;
+namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Delivery\Domain\Delivery;
 use App\EventBus\EventBus;

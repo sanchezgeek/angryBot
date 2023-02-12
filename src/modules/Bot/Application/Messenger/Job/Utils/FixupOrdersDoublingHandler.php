@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\MessageHandler\Job;
+namespace App\Bot\Application\Messenger\Job\Utils;
 
-use App\Bot\Application\Message\Job\FixupOrdersDoubling;
-use App\Bot\Domain\BuyOrderRepository;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\Expr\OrderBy;

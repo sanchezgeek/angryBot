@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command;
 
-use App\Bot\Domain\BuyOrderRepository;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

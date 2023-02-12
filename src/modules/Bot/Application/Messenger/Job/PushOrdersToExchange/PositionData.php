@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\MessageHandler;
+namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Domain\Position;
 

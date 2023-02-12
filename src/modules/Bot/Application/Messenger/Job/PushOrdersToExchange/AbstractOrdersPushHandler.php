@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\MessageHandler;
+namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -12,7 +12,7 @@ use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 
-abstract class AbstractPositionNearestOrdersChecker
+abstract class AbstractOrdersPushHandler
 {
     use LoggerTrait;
 
@@ -45,6 +45,12 @@ abstract class AbstractPositionNearestOrdersChecker
                     $position->entryPrice,
                     $position->liquidationPrice,
                 ));
+
+//            if ($opposite = $this->getOppositePosition($position)) {
+//                $this->info(
+//                    \sprintf('Positions VALUE diff: $%.2f', abs(round($position->positionValue - $opposite->positionValue, 2)))
+//                );
+//            }
 
             $this->positionsData[$symbol->value . $side->value] = new PositionData($position, $this->clock->now());
         }

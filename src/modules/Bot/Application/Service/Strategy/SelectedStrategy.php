@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Strategy;
 
+use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
+
 final class SelectedStrategy
 {
-    public readonly HedgeOppositeStopCreate $hedgeSupportPositionOppositeStopCreation;
-    public readonly HedgeOppositeStopCreate $hedgeMainPositionOppositeStopCreation;
+    public HedgeOppositeStopCreate $hedgeSupportPositionOppositeStopCreation;
+    public HedgeOppositeStopCreate $hedgeMainPositionOppositeStopCreation;
 
     public function __construct(
         string $hedgeSupportPositionCreateOppositeStopAfter,

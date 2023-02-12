@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Domain;
+namespace App\Bot\Domain\Repository;
 
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 
 interface PositionOrderRepository

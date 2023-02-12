@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Command;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\Repository\StopRepository;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]

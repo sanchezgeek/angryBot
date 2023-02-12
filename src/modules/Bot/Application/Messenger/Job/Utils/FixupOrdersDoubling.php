@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Message\Job;
+namespace App\Bot\Application\Messenger\Job\Utils;
 
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Position\Side;

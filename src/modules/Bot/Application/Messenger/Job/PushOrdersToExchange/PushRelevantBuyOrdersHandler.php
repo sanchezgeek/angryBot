@@ -2,25 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\MessageHandler;
+namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
-use App\Bot\Application\Message\FindPositionBuyOrdersToAdd;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
-use App\Bot\Application\Service\Strategy\HedgeOppositeStopCreate;
+use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
 use App\Bot\Application\Service\Strategy\SelectedStrategy;
-use App\Bot\Domain\BuyOrderRepository;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
-use App\Trait\LoggerTrait;
 use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -28,7 +25,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrdersChecker
+final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
 {
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 3;
@@ -56,7 +53,7 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
         parent::__construct($positionService, $clock, $logger);
     }
 
-    public function __invoke(FindPositionBuyOrdersToAdd $message): void
+    public function __invoke(PushRelevantBuyOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
         if (!$positionData->isPositionOpened()) {

@@ -2,18 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\MessageHandler;
+namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
-use App\Bot\Application\Message\FindPositionStopsToAdd;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\StopRepository;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Service\Buy\BuyOrderService;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Clock\ClockInterface;
@@ -22,7 +20,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersChecker
+final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
 {
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
@@ -44,7 +42,7 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
         parent::__construct($positionService, $clock, $logger);
     }
 
-    public function __invoke(FindPositionStopsToAdd $message): void
+    public function __invoke(PushRelevantStopOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
         if (!$positionData->isPositionOpened()) {
@@ -121,7 +119,7 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
         $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
             $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
-            // If this position is support, we need to sure that we can afford opposite buy after stop (that we add, for example, by mistake)
+            // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)
             if ($hedge->isSupportPosition($position)) {
 
             }
