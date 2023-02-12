@@ -14,6 +14,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Buy\BuyOrderService;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
+use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -23,6 +24,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
 {
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
+    private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
     private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 40;
 
@@ -32,6 +34,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
         private readonly HedgeService $hedgeService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderService $buyOrderService,
+        private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -114,15 +117,28 @@ final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
             ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE
             : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
-        $volume = $stop->getVolume() >= 0.006 ? $stop->getVolume() / 2 : $stop->getVolume();
+        $volume = $stop->getVolume() >= 0.006 ? round($stop->getVolume() / 2, 3) : $stop->getVolume();
 
         $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
             $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
             // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)
             if ($hedge->isSupportPosition($position)) {
+                $vol = round($volume / 3, 3);
+                if ($vol < 0.001) {
+                    $vol = 0.001;
+                } elseif ($vol > 0.002) {
+                    $vol = 0.002;
+                }
 
-            }
+                $this->stopService->create(
+                    $oppositePosition->side,
+                    $oppositePosition->side === Side::Sell ? ($triggerPrice - 3) : ($triggerPrice + 3),
+                    $vol,
+                    self::SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA,
+                    ['asSupportFromMainHedgePosition' => true],
+                );
+            } // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
         }
 
         $orderId = $this->buyOrderService->create(

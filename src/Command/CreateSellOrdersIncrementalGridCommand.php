@@ -84,7 +84,8 @@ class CreateSellOrdersIncrementalGridCommand extends Command
                 );
             }
 
-            $i = $fromPrice > $toPrice ? - $step : $step;
+            $context = ['uniqid' => \uniqid('inc-create', true)];
+
 
             if ($fromPrice > $toPrice) {
                 for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
@@ -92,18 +93,19 @@ class CreateSellOrdersIncrementalGridCommand extends Command
                         $positionSide,
                         $price,
                         $volume,
-                        $triggerDelta
+                        $triggerDelta,
+                        $context
                     );
                     $volume = round($volume+$increment, 3);
                 }
-
             } else {
                 for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
                     $this->stopService->create(
                         $positionSide,
                         $price,
                         $volume,
-                        $triggerDelta
+                        $triggerDelta,
+                        $context
                     );
                     $volume = round($volume+$increment, 3);
                 }

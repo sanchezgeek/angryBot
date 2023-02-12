@@ -33,10 +33,10 @@ final class SchedulerFactory
      */
     public static function createScheduler(ClockInterface $clock): Scheduler
     {
-        $shortStopSpeed = self::VERY_FAST;
+        $shortStopSpeed = self::FAST;
         $shortBuySpeed = self::MEDIUM;
 
-        $longStopSpeed = self::FAST;
+        $longStopSpeed = self::VERY_FAST;
         $longBuySpeed = self::VERY_FAST;
 
 //        $shortStopSpeed = self::FAST;
@@ -46,7 +46,8 @@ final class SchedulerFactory
 //        $longBuySpeed = self::MEDIUM;
 
         $jobSchedules = [
-            /**** Push relevant orders to Exchange *****/
+                                                /**** Push relevant orders to Exchange *****/
+
             // SHORT-position | SL
             PeriodicalJob::infinite('2020-01-01T00:00:01Z', \sprintf('PT%sS', $shortStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)),
 
@@ -61,14 +62,18 @@ final class SchedulerFactory
 
 
 
-            /**** Utils *****/
-            // Cleanup SHORT StopLoses (+add removed volume to group)
+                                                            /**** Utils *****/
+
+            // Cleanup SHORT-position | SL
             PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', $cleanupPeriod = '45S'), new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 4, true)),
-            // Cleanup SHORT purchases
+
+            // Cleanup SHORT-position | BUY
             PeriodicalJob::infinite('2020-01-01T00:02:06Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)),
-            // Cleanup LONG StopLoses (+add removed volume to group)
-            PeriodicalJob::infinite('2020-01-01T00:03:07Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2, true)),
-            // Cleanup LONG purchases
+
+            // Cleanup LONG-position | SL
+            PeriodicalJob::infinite('2020-01-01T00:03:07Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 3, true)),
+
+            // Cleanup LONG-position | BUY
             PeriodicalJob::infinite('2020-01-01T00:04:08Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true)),
         ];
 

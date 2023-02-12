@@ -124,7 +124,9 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
         $selectedStrategy = 'default';
         $positionSide = $position->side;
 
-        $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
+        $volume = $buyOrder->getVolume();
+
+        $oppositePriceDelta = $volume >= 0.005
             ? self::REGULAR_ORDER_STOP_DISTANCE
             : self::ADDITION_ORDER_STOP_DISTANCE;
 
@@ -135,7 +137,17 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
             $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
             $stopStrategy = $hedge->isSupportPosition($position) ? $this->selectedStrategy->hedgeSupportPositionOppositeStopCreation : $this->selectedStrategy->hedgeMainPositionOppositeStopCreation;
 
-            if ($stopStrategy === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP) {
+            // Для суппорта нужно вручную менять стратегию, если объём позиции достиг определённого значения
+            // Например на default, чтобы дальше покупки всё-таки оказывались под стоп-лоссами. А то позиция растёт, а нахуя она нужна - непонятно
+
+            if (
+                (
+                    $stopStrategy === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP
+                ) || (
+                    $stopStrategy === HedgeOppositeStopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
+                    && $volume >= HedgeOppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+                )
+            ) {
                 $firstPositionStop = $this->stopRepository->findActive(
                     side: $positionSide,
                     qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
@@ -144,7 +156,14 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
                 if ($firstPositionStop = $firstPositionStop[0] ?? null) {
                     $basePrice = $firstPositionStop->getPrice();
                 }
-            } elseif ($stopStrategy === HedgeOppositeStopCreate::UNDER_POSITION) {
+            } elseif (
+                (
+                    $stopStrategy === HedgeOppositeStopCreate::UNDER_POSITION
+                ) || (
+                    $stopStrategy === HedgeOppositeStopCreate::ONLY_BIG_SL_UNDER_POSITION
+                    && $volume >= HedgeOppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+                )
+            ) {
                 $positionPrice = \ceil($position->entryPrice);
                 $basePrice = $ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
 
@@ -167,7 +186,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
         $stopId = $this->stopService->create(
             $positionSide,
             $triggerPrice,
-            $buyOrder->getVolume(),
+            $volume,
             self::STOP_ORDER_TRIGGER_DELTA,
 //            ['onlyAfterExchangeOrderExecuted' => $buyOrder->getExchangeOrderId()], On ByBit Buy happens immediately
         );
