@@ -59,7 +59,7 @@ final class SchedulerFactory
             PeriodicalJob::infinite('2020-01-01T00:00:04Z', \sprintf('PT%sS', $longBuySpeed), new FindPositionBuyOrdersToAdd(Symbol::BTCUSDT, Side::Buy)),
 
             // Utils
-            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', $cleanupPeriod = '45S'), new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 3, true)), // Cleanup SHORT StopLoses (+add removed volume to group)
+            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', $cleanupPeriod = '45S'), new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 4, true)), // Cleanup SHORT StopLoses (+add removed volume to group)
             PeriodicalJob::infinite('2020-01-01T00:02:06Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)), // Cleanup SHORT purchases
             PeriodicalJob::infinite('2020-01-01T00:03:07Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2, true)), // Cleanup LONG StopLoses (+add removed volume to group)
             PeriodicalJob::infinite('2020-01-01T00:04:08Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2)), // Cleanup LONG purchases
