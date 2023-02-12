@@ -7,6 +7,7 @@ namespace App\Bot\Application\MessageHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Message\FindPositionStopsToAdd;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\StopRepository;
@@ -30,6 +31,7 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
     private ?Ticker $lastTicker = null;
 
     public function __construct(
+        private readonly HedgeService $hedgeService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderService $buyOrderService,
         private readonly MessageBusInterface $messageBus,
@@ -132,9 +134,13 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
 
         $volume = $stop->getVolume() >= 0.006 ? $stop->getVolume() / 2 : $stop->getVolume();
 
-        $isHedge = $this->getOppositePosition($position) !== null; // $isHedge = $this->getOppositePosition($position)->size > $position->size;
+        $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
+            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
+            // If this position is support, we need to sure that we can afford opposite buy after stop (that we add, for example, by mistake)
+            if ($hedge->isSupportPosition($position)) {
 
+            }
         }
 
         $orderId = $this->buyOrderService->create(
