@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -17,6 +18,8 @@ use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
+use Doctrine\ORM\Query\Expr\OrderBy;
+use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -44,6 +47,7 @@ final class FindPositionBuyOrdersToAddHandler
     public function __construct(
         private readonly PositionServiceInterface $positionService,
         private readonly BuyOrderRepository $buyOrderRepository,
+        private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
         private readonly ClockInterface $clock,
@@ -130,26 +134,35 @@ final class FindPositionBuyOrdersToAddHandler
      */
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
+        $positionSide = $position->side;
+
         $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
             ? self::REGULAR_ORDER_STOP_DISTANCE
             : self::ADDITION_ORDER_STOP_DISTANCE;
 
-//        $currentPositionIsHedgePosition = $this->getOppositePosition($position)->size > $position->size;
-        $isHedge = $this->getOppositePosition($position) !== null;
+        $isHedge = $this->getOppositePosition($position) !== null; // $isHedge = $this->getOppositePosition($position)->size > $position->size;
+        if ($isHedge) {
+            $firstPositionStop = $this->stopRepository->findActive(
+                side: $positionSide,
+                qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
+            );
 
-        $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
+            $price = $firstPositionStop ? $firstPositionStop[0]->getPrice() : \ceil($position->entryPrice);
 
-        $triggerPrice = $isHedge
-            ? ($position->side === Side::Sell ? \ceil($position->entryPrice) + 10.5 : \ceil($position->entryPrice) - 10.5) // @todo придумать логику
-            : ($position->side === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta);
+            $triggerPrice = $positionSide === Side::Sell ? $price + 1 : $price - 1; // @todo придумать нормальную логику
+        } else {
+            $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
+
+            $triggerPrice = $positionSide === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta;
+        }
 
         $stopId = $this->stopService->create(
             $ticker,
-            $position->side,
+            $positionSide,
             $triggerPrice,
             $buyOrder->getVolume(),
             self::STOP_ORDER_TRIGGER_DELTA,
-            ['onlyAfterExchangeOrderExecuted' => $buyOrder->getExchangeOrderId()],
+//            ['onlyAfterExchangeOrderExecuted' => $buyOrder->getExchangeOrderId()], On ByBit Buy happens immediately
         );
 
         return ['id' => $stopId, 'triggerPrice' => $triggerPrice];

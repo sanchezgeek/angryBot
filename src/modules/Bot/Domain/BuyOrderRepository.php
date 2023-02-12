@@ -50,7 +50,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     public function findActive(
         Side $side,
         ?Ticker $nearTicker = null,
-        bool $exceptOppositeOrders = false,
+        bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('bo');
