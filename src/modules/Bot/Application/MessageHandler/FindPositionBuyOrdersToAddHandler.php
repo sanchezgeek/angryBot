@@ -70,7 +70,7 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
             $delta = $order->getTriggerDelta() ?: self::DEFAULT_TRIGGER_DELTA;
             if (abs($order->getPrice() - $ticker->indexPrice) <= $delta) {
                 $this->addBuyOrder($positionData->position, $ticker, $order);
-            } elseif ($this->isCurrentIndexPriceAlreadyOverOrderPrice($ticker, $order)) {
+            } elseif ($ticker->isIndexPriceAlreadyOverBuyOrderPrice($positionData->position->side, $order->getPrice())) {
                 $price = $order->getPositionSide() === Side::Sell ? $ticker->indexPrice - 10 : $ticker->indexPrice + 10;
                 $order->setPrice($price);
 
@@ -81,19 +81,6 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
         $this->lastTicker = $ticker;
 
         $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
-    }
-
-    private function isCurrentIndexPriceAlreadyOverOrderPrice(Ticker $ticker, BuyOrder $order): bool
-    {
-        if ($order->getPositionSide() === Side::Sell) {
-            return $ticker->indexPrice < $order->getPrice();
-        }
-
-        if ($order->getPositionSide() === Side::Buy) {
-            return $ticker->indexPrice > $order->getPrice();
-        }
-
-        throw new \LogicException(\sprintf('Unexpected positionSide "%s"', $order->getPositionSide()->value));
     }
 
     private function addBuyOrder(Position $position, Ticker $ticker, BuyOrder $buyOrder): void
@@ -110,7 +97,7 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
                     $this->buyOrderRepository->save($buyOrder);
                 }
 
-                $stopData = $this->createOpposite($position, $buyOrder);
+                $stopData = $this->createOpposite($position, $ticker, $buyOrder);
 
                 $this->info(
                     \sprintf(
@@ -133,8 +120,9 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
     /**
      * @return array{id: int, triggerPrice: float}
      */
-    private function createOpposite(Position $position, BuyOrder $buyOrder): array
+    private function createOpposite(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
+        $triggerPrice = null;
         $positionSide = $position->side;
 
         $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
@@ -143,12 +131,10 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
 
         $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
-            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
-            $price = \ceil($position->entryPrice); // Default: "under position" (if HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP not selected)
+            $basePrice = null;
 
-            $stopStrategy = $hedge->isSupportPosition($position)
-                ? $this->selectedStrategy->hedgeSupportPositionOppositeStopCreation
-                : $this->selectedStrategy->hedgeMainPositionOppositeStopCreation;
+            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
+            $stopStrategy = $hedge->isSupportPosition($position) ? $this->selectedStrategy->hedgeSupportPositionOppositeStopCreation : $this->selectedStrategy->hedgeMainPositionOppositeStopCreation;
 
             if ($stopStrategy === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP) {
                 $firstPositionStop = $this->stopRepository->findActive(
@@ -157,12 +143,22 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
                 );
 
                 if ($firstPositionStop = $firstPositionStop[0] ?? null) {
-                    $price = $firstPositionStop->getPrice();
+                    $basePrice = $firstPositionStop->getPrice();
                 }
+            } elseif ($stopStrategy === HedgeOppositeStopCreate::UNDER_POSITION) {
+                $positionPrice = \ceil($position->entryPrice);
+                $basePrice = $ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
+
+                $basePrice = $positionSide === Side::Sell ? $basePrice - 10 : $basePrice + 10;
             }
 
-            $triggerPrice = $positionSide === Side::Sell ? $price + 1 : $price - 1; // @todo придумать нормальную логику
-        } else {
+            if ($basePrice) {
+                $triggerPrice = $positionSide === Side::Sell ? $basePrice + 1 : $basePrice - 1;
+            }
+        }
+
+        // If still cannot calc $triggerPrice
+        if ($triggerPrice === null) {
             $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
 
             $triggerPrice = $positionSide === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta;

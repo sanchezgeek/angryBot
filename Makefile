@@ -72,3 +72,6 @@ restart: ## Restart bot
 
 out: ## Get consumers output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
+
+crit: ## Get dev CRITICAL
+	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep CRIT

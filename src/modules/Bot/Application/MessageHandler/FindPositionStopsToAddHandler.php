@@ -55,7 +55,7 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
         $ticker = $this->positionService->getTickerInfo($message->symbol);
 
         foreach ($stops as $stop) {
-            if ($this->isCurrentIndexPriceOverStop($ticker, $stop)) {
+            if ($ticker->isIndexPriceAlreadyOverStopPrice($positionData->position->side, $stop->getPrice())) {
                 $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 3 : $ticker->indexPrice - 3;
                 $stop->setPrice($price);
 
@@ -72,22 +72,6 @@ final class FindPositionStopsToAddHandler extends AbstractPositionNearestOrdersC
         $this->lastTicker = $ticker;
 
         $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
-    }
-
-    /**
-     * @throws \LogicException
-     */
-    private function isCurrentIndexPriceOverStop(Ticker $ticker, Stop $stop): bool
-    {
-        if ($stop->getPositionSide() === Side::Sell) {
-            return $ticker->indexPrice > $stop->getPrice();
-        }
-
-        if ($stop->getPositionSide() === Side::Buy) {
-            return $ticker->indexPrice < $stop->getPrice();
-        }
-
-        throw new \LogicException(\sprintf('Unexpected positionSide "%s"', $stop->getPositionSide()->value));
     }
 
     private function addStop(Position $position, Ticker $ticker, Stop $stop): void
