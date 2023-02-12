@@ -21,9 +21,7 @@ final class PositionData
 
     public function needUpdate(\DateTimeImmutable $currentDatetime): bool
     {
-        return !$this->lastUpdated
-            || $currentDatetime->getTimestamp() - $this->lastUpdated->getTimestamp(
-        ) > self::UPDATE_INTERVAL;
+        return !$this->lastUpdated || $currentDatetime->getTimestamp() - $this->lastUpdated->getTimestamp() > self::UPDATE_INTERVAL;
     }
 
     public function isPositionOpened(): bool

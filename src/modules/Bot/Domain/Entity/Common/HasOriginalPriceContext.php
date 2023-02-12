@@ -11,11 +11,13 @@ trait HasOriginalPriceContext
         return $this->context['originalPrice'] ?? null;
     }
 
-    private function setOriginalPrice(float $price): void
+    private function setOriginalPrice(float $price): self
     {
         // Do not replace existed one
         if (!isset($this->context['originalPrice'])) {
             $this->context['originalPrice'] = $price;
         }
+
+        return $this;
     }
 }
