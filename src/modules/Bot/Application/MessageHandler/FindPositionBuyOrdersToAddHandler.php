@@ -101,11 +101,12 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
 
                 $this->info(
                     \sprintf(
-                        '+++ BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f)',
+                        '+++ BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f with %s strategy)',
                         $position->getCaption(),
                         $buyOrder->getVolume(),
                         $buyOrder->getPrice(),
-                        $stopData['triggerPrice']
+                        $stopData['triggerPrice'],
+                        $stopData['strategy'],
                     ),
                     ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
                 );
@@ -118,11 +119,12 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
     }
 
     /**
-     * @return array{id: int, triggerPrice: float}
+     * @return array{id: int, triggerPrice: float, strategy: string}
      */
     private function createOpposite(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
         $triggerPrice = null;
+        $selectedStrategy = 'default';
         $positionSide = $position->side;
 
         $oppositePriceDelta = $buyOrder->getVolume() >= 0.005
@@ -153,6 +155,7 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
             }
 
             if ($basePrice) {
+                $selectedStrategy = $stopStrategy->value;
                 $triggerPrice = $positionSide === Side::Sell ? $basePrice + 1 : $basePrice - 1;
             }
         }
@@ -172,6 +175,6 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
 //            ['onlyAfterExchangeOrderExecuted' => $buyOrder->getExchangeOrderId()], On ByBit Buy happens immediately
         );
 
-        return ['id' => $stopId, 'triggerPrice' => $triggerPrice];
+        return ['id' => $stopId, 'triggerPrice' => $triggerPrice, 'strategy' => $selectedStrategy];
     }
 }
