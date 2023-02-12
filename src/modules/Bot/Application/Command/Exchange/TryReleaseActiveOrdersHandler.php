@@ -35,7 +35,7 @@ final class TryReleaseActiveOrdersHandler
         $claimedOrderVolume = $command->forVolume;
 
         foreach ($activeOrders as $key => $order) {
-            if (\count($activeOrders) < self::MAX_ORDER_MUST_LEFT) {
+            if (!$command->force && \count($activeOrders) < self::MAX_ORDER_MUST_LEFT) {
                 return;
             }
 
@@ -45,7 +45,7 @@ final class TryReleaseActiveOrdersHandler
                 || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
                 $this->release($order, $ticker);
-            } elseif ($order->volume < $claimedOrderVolume) {
+            } elseif ($claimedOrderVolume !== null && $order->volume < $claimedOrderVolume) {
                 // Force in case of volume of active order less than claimed volume of new order
                 $claimedOrderVolume = null; // Only once
                 $this->release($order, $ticker);

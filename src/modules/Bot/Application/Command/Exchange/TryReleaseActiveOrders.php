@@ -11,8 +11,9 @@ use App\Bot\Domain\ValueObject\Symbol;
 readonly final class TryReleaseActiveOrders
 {
     public function __construct(
-        public readonly Symbol $symbol,
-        public readonly float $forVolume
+        public Symbol $symbol,
+        public ?float $forVolume = null,
+        public bool $force = false
     ) {
     }
 
