@@ -22,7 +22,7 @@ final class StopService
         $this->commandBus = $commandBus;
     }
 
-    public function create(Ticker $ticker, Side $positionSide, float $price, float $volume, float $triggerDelta): int
+    public function create(Ticker $ticker, Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
     {
         $id = $this->repository->getNextId();
 
@@ -30,10 +30,10 @@ final class StopService
             new CreateStop(
                 $id,
                 $positionSide,
-                $ticker,
                 $volume,
                 $price,
-                $triggerDelta
+                $triggerDelta,
+                $context
             ),
         );
 

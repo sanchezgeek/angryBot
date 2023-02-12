@@ -53,7 +53,8 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
         $qb
             ->andWhere('s.positionSide = :posSide')
-            ->andWhere("HAS_NOT_ELEMENT(s.context, 'buyOrderId') = true")
+            ->andWhere("HAS_ELEMENT(s.context, 'buyOrderId') = false")
+            ->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false")
             ->setParameter(':posSide', $side)
         ;
 

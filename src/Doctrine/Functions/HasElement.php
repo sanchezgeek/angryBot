@@ -7,7 +7,7 @@ namespace App\Doctrine\Functions;
 use Doctrine\ORM\Query\AST\Functions;
 use Doctrine\ORM\Query\Lexer;
 
-class HasNotElement extends Functions\FunctionNode
+class HasElement extends Functions\FunctionNode
 {
     public $leftHandSide = null;
     public $rightHandSide = null;
@@ -27,6 +27,6 @@ class HasNotElement extends Functions\FunctionNode
         return '(' .
             $this->leftHandSide->dispatch($sqlWalker) . " -> " .
             $this->rightHandSide->dispatch($sqlWalker) .
-            ') IS NULL';
+        ') IS NOT NULL';
     }
 }

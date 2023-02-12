@@ -7,7 +7,7 @@ doctrine:
         auto_mapping: true
         dql:
             string_functions:
-                HAS_NOT_ELEMENT: \App\Doctrine\Functions\HasNotElement
+                HAS_ELEMENT: \App\Doctrine\Functions\HasElement
         mappings:
             Delivery:
                 is_bundle: false

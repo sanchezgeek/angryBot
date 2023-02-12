@@ -61,12 +61,7 @@ class CreateBuyOrderCommand extends Command
                 );
             }
 
-            $symbol = Symbol::BTCUSDT;
-
-            $ticker = $this->positionService->getTickerInfo($symbol);
-
             $this->buyOrderService->create(
-                $ticker,
                 Side::tryFrom($positionSide),
                 $price,
                 $volume,

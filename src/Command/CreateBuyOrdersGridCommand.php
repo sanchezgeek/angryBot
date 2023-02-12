@@ -19,7 +19,6 @@ class CreateBuyOrdersGridCommand extends Command
 
     public function __construct(
         private readonly BuyOrderService $buyOrderService,
-        private readonly PositionService $positionService,
         string $name = null,
     ) {
         parent::__construct($name);
@@ -41,11 +40,7 @@ class CreateBuyOrdersGridCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $symbol = Symbol::BTCUSDT;
-
-
         try {
-            $ticker = $this->positionService->getTickerInfo($symbol);
             $positionSide = $input->getArgument('position_side');
             $triggerDelta = 1;
 //            $triggerDelta = $input->getArgument('trigger_delta') ?? null;
@@ -82,7 +77,6 @@ class CreateBuyOrdersGridCommand extends Command
 
             for ($price = $toPrice; $price > $fromPrice; $price-=$step) {
                 $this->buyOrderService->create(
-                    $ticker,
                     $positionSide,
                     $price,
                     $volume,

@@ -18,7 +18,7 @@ final class CreateStopHandler
 
     public function __invoke(CreateStop $command): void
     {
-        $stop = new Stop($command->id, $command->price, $command->volume, $command->triggerDelta, $command->positionSide);
+        $stop = new Stop($command->id, $command->price, $command->volume, $command->triggerDelta, $command->positionSide, $command->context);
 
         $this->repository->save($stop);
     }

@@ -58,7 +58,7 @@ final class FindPositionStopsToAddHandler
 
         foreach ($stops as $stop) {
             if ($this->isCurrentIndexPriceOverStop($ticker, $stop)) {
-                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 5 : $ticker->indexPrice - 5;
+                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 3 : $ticker->indexPrice - 3;
                 $stop->setPrice($price);
 
                 $this->addStop($position, $ticker, $stop);
@@ -94,33 +94,30 @@ final class FindPositionStopsToAddHandler
 
     private function addStop(Position $position, Ticker $ticker, Stop $stop): void
     {
-        $price = $stop->getPrice();
-
         try {
-            $stopOrderId = $this->positionService->addStop($position, $ticker, $price, $stop->getVolume());
+            if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
+                $stop->setExchangeOrderId($exchangeOrderId);
 
-            if ($stopOrderId) {
                 if ($stop->getVolume() <= 0.005) {
                     $this->stopRepository->remove($stop);
                 } else {
-                    $stop->addToContext('stopOrderId', $stopOrderId);
                     $this->stopRepository->save($stop);
                 }
-                $oppositeBuyOrderData = $this->createOppositeBuyOrder($ticker, $stop);
+
+                $oppositeBuyOrderData = $this->createOppositeBuyOrder($stop);
 
                 $this->info(
                     \sprintf(
-                        'SL %s|%.3f|%.2f pushed to exchange (oppositeBuy: $%.2f)',
+                        '--- SL %s|%.3f|%.2f pushed to exchange (oppositeBuy: $%.2f)',
                         $position->getCaption(),
                         $stop->getVolume(),
-                        $price,
+                        $stop->getPrice(),
                         $oppositeBuyOrderData['triggerPrice'],
                     ),
-                    ['stopOrderId' => $stopOrderId, 'buy_order' => $oppositeBuyOrderData],
+                    ['exchange.orderId' => $exchangeOrderId, '`buy_order`' => $oppositeBuyOrderData],
                 );
             }
         } catch (MaxActiveCondOrdersQntReached $e) {
-            $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
             );
@@ -130,17 +127,21 @@ final class FindPositionStopsToAddHandler
     /**
      * @return array{id: int, triggerPrice: float}
      */
-    private function createOppositeBuyOrder(Ticker $ticker, Stop $stop): array
+    private function createOppositeBuyOrder(Stop $stop): array
     {
-        $price = $stop->originalPrice ?: $stop->getPrice();
-        $triggerPrice = $stop->getPositionSide() === Side::Sell ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
+        $price = $stop->getOriginalPrice() ?? $stop->getPrice();
+        $triggerPrice = $stop->getPositionSide() === Side::Sell
+            ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE
+            : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
+
+        $volume = $stop->getVolume() >= 0.006 ? $stop->getVolume() / 2 : $stop->getVolume();
 
         $orderId = $this->buyOrderService->create(
-            $ticker,
             $stop->getPositionSide(),
             $triggerPrice,
-            $stop->getVolume() >= 0.006 ? $stop->getVolume() / 2 : $stop->getVolume(),
+            $volume,
             self::BUY_ORDER_TRIGGER_DELTA,
+            ['onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId()],
         );
 
         return ['id' => $orderId, 'triggerPrice' => $triggerPrice];

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Domain\Entity;
 
 use App\Bot\Domain\BuyOrderRepository;
+use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
+use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
@@ -13,6 +15,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {
+    use HasOriginalPriceContext;
+    use HasExchangeOrderContext;
+
     use RecordEvents;
 
     #[ORM\Id]
@@ -38,15 +43,14 @@ class BuyOrder implements HasEvents
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public ?float $originalPrice = null;
-
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Side $positionSide)
+    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $price;
         $this->volume = $volume;
         $this->triggerDelta = $triggerDelta;
         $this->positionSide = $positionSide;
+        $this->context = $context;
     }
 
     public function getPrice(): float
@@ -56,7 +60,8 @@ class BuyOrder implements HasEvents
 
     public function setPrice(float $price): void
     {
-        $this->originalPrice = $this->price;
+        $this->setOriginalPrice($this->price);
+
         $this->price = $price;
     }
 
@@ -68,16 +73,6 @@ class BuyOrder implements HasEvents
     public function getPositionSide(): Side
     {
         return $this->positionSide;
-    }
-
-    public function getContext(): array
-    {
-        return $this->context;
-    }
-
-    public function addToContext(string $key, $value): void
-    {
-        $this->context[$key] = $value;
     }
 
     public function getTriggerDelta(): ?float

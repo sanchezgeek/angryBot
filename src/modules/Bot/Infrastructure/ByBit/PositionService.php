@@ -93,7 +93,9 @@ final class PositionService implements PositionServiceInterface
                 throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
             }
 
-            var_dump($result);
+            if ($result['ret_code'] !== 0) {
+                var_dump($result);
+            }
 
             return $result['result']['stop_order_id'];
         } catch (MaxActiveCondOrdersQntReached $e) {
@@ -126,7 +128,9 @@ final class PositionService implements PositionServiceInterface
                 throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
             }
 
-            var_dump($result);
+            if ($result['ret_code'] !== 0) {
+                var_dump($result);
+            }
 
             return $result['result']['order_id'];
         } catch (MaxActiveCondOrdersQntReached $e) {

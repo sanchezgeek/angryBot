@@ -22,7 +22,7 @@ final class BuyOrderService
         $this->commandBus = $commandBus;
     }
 
-    public function create(Ticker $ticker, Side $positionSide, float $price, float $volume, float $triggerDelta): int
+    public function create(Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
     {
         $id = $this->repository->getNextId();
 
@@ -30,10 +30,10 @@ final class BuyOrderService
             new CreateBuyOrder(
                 $id,
                 $positionSide,
-                $ticker,
                 $volume,
                 $price,
-                $triggerDelta
+                $triggerDelta,
+                $context
             ),
         );
 

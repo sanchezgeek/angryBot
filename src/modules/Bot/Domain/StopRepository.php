@@ -55,7 +55,8 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
         $qb
             ->andWhere('s.positionSide = :posSide')
-            ->andWhere("HAS_NOT_ELEMENT(s.context, 'stopOrderId') = true")
+            ->andWhere("HAS_ELEMENT(s.context, 'exchange.orderId') = false")
+            ->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false")
             ->setParameter(':posSide', $side)
         ;
 

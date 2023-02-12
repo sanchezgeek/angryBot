@@ -91,34 +91,36 @@ final class FindPositionBuyOrdersToAddHandler
         throw new \LogicException(\sprintf('Unexpected positionSide "%s"', $order->getPositionSide()->value));
     }
 
-    private function addBuyOrder(Position $position, Ticker $ticker, BuyOrder $order): void
+    private function addBuyOrder(Position $position, Ticker $ticker, BuyOrder $buyOrder): void
     {
         try {
-            $orderId = $this->positionService->addBuyOrder($position, $ticker, $order->getPrice(), $order->getVolume());
+            $exchangeOrderId = $this->positionService->addBuyOrder($position, $ticker, $buyOrder->getPrice(), $buyOrder->getVolume());
 
-            if ($orderId) {
-                if ($order->getVolume() <= 0.005) {
-                    $this->buyOrderRepository->remove($order);
+            if ($exchangeOrderId) {
+                $buyOrder->setExchangeOrderId($exchangeOrderId);
+
+                if ($buyOrder->getVolume() <= 0.005) {
+                    $this->buyOrderRepository->remove($buyOrder);
                 } else {
-                    $order->addToContext('buyOrderId', $orderId);
-                    $this->buyOrderRepository->save($order);
+                    $this->buyOrderRepository->save($buyOrder);
                 }
-                $stopData = $this->createStop($position, $ticker, $order);
+
+                $stopData = $this->createStop($position, $ticker, $buyOrder);
 
                 $this->info(
                     \sprintf(
-                        'BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f)',
+                        '+++ BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f)',
                         $position->getCaption(),
-                        $order->getVolume(),
-                        $order->getPrice(),
+                        $buyOrder->getVolume(),
+                        $buyOrder->getPrice(),
                         $stopData['triggerPrice']
                     ),
-                    ['orderId' => $orderId, '`stop`' => $stopData],
+                    ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
                 );
             }
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->messageBus->dispatch(
-                TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $order)
+                TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
             );
         }
     }
@@ -135,7 +137,7 @@ final class FindPositionBuyOrdersToAddHandler
 //        $currentPositionIsHedgePosition = $this->getOppositePosition($position)->size > $position->size;
         $isHedge = $this->getOppositePosition($position) !== null;
 
-        $basePrice = $buyOrder->originalPrice ?: $buyOrder->getPrice();
+        $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
 
         $triggerPrice = $isHedge
             ? ($position->side === Side::Sell ? \ceil($position->entryPrice) + 10.5 : \ceil($position->entryPrice) - 10.5) // @todo придумать логику
@@ -147,6 +149,7 @@ final class FindPositionBuyOrdersToAddHandler
             $triggerPrice,
             $buyOrder->getVolume(),
             self::STOP_ORDER_TRIGGER_DELTA,
+            ['onlyAfterExchangeOrderExecuted' => $buyOrder->getExchangeOrderId()],
         );
 
         return ['id' => $stopId, 'triggerPrice' => $triggerPrice];
