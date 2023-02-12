@@ -7,6 +7,8 @@ namespace App\Bot\Application\MessageHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Message\FindPositionBuyOrdersToAdd;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Strategy\HedgeOppositeStopCreate;
+use App\Bot\Application\Service\Strategy\SelectedStrategy;
 use App\Bot\Domain\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -42,6 +44,9 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+
+        private readonly SelectedStrategy $selectedStrategy,
+
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
@@ -136,12 +141,18 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
 
         $isHedge = $this->getOppositePosition($position) !== null; // $isHedge = $this->getOppositePosition($position)->size > $position->size;
         if ($isHedge) {
-            $firstPositionStop = $this->stopRepository->findActive(
-                side: $positionSide,
-                qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
-            );
+            $price = \ceil($position->entryPrice); // Default: "under position" (if HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP not selected)
 
-            $price = $firstPositionStop ? $firstPositionStop[0]->getPrice() : \ceil($position->entryPrice);
+            if ($this->selectedStrategy->hedgeOppositeStopCreate === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP) {
+                $firstPositionStop = $this->stopRepository->findActive(
+                    side: $positionSide,
+                    qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
+                );
+
+                if ($firstPositionStop = $firstPositionStop[0] ?? null) {
+                    $price = $firstPositionStop->getPrice();
+                }
+            }
 
             $triggerPrice = $positionSide === Side::Sell ? $price + 1 : $price - 1; // @todo придумать нормальную логику
         } else {
