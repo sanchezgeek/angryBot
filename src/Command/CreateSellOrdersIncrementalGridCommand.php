@@ -45,7 +45,6 @@ class CreateSellOrdersIncrementalGridCommand extends Command
         $symbol = Symbol::BTCUSDT;
 
         try {
-            $ticker = $this->positionService->getTickerInfo($symbol);
             $positionSide = $input->getArgument('position_side');
             $triggerDelta = $input->getArgument('trigger_delta');
             $volume = $input->getArgument('volume');
@@ -85,17 +84,32 @@ class CreateSellOrdersIncrementalGridCommand extends Command
                 );
             }
 
-            for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                $volume = round($volume+$increment, 3);
+            $i = $fromPrice > $toPrice ? - $step : $step;
 
-                $this->stopService->create(
-                    $ticker,
-                    $positionSide,
-                    $price,
-                    $volume,
-                    $triggerDelta
-                );
+            if ($fromPrice > $toPrice) {
+                for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
+                    $this->stopService->create(
+                        $positionSide,
+                        $price,
+                        $volume,
+                        $triggerDelta
+                    );
+                    $volume = round($volume+$increment, 3);
+                }
+
+            } else {
+                for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
+                    $this->stopService->create(
+                        $positionSide,
+                        $price,
+                        $volume,
+                        $triggerDelta
+                    );
+                    $volume = round($volume+$increment, 3);
+                }
             }
+
+
 
 
 
