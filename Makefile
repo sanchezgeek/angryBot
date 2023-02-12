@@ -63,3 +63,12 @@ cc: sf
 ## —— App 🛠 ———————————————————————————————————————————————————————————————
 test: ## Run tests
 	@$(PHP_CONT) bin/phpunit
+
+run: ## Run bot
+	@$(PHP_CONT) /usr/bin/supervisord
+
+restart: ## Restart bot
+	@$(PHP_CONT) /usr/bin/supervisorctl restart all
+
+out: ## Get consumers output
+	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log

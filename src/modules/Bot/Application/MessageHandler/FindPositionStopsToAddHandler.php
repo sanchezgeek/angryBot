@@ -51,7 +51,7 @@ final class FindPositionStopsToAddHandler
 //        }
 
         // Fake
-        $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300);
+        $position = new Position($message->side, Symbol::BTCUSDT, 23100, 0.3, 23300, 123);
 
         $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
         $ticker = $this->positionService->getTickerInfo($message->symbol);
@@ -109,8 +109,14 @@ final class FindPositionStopsToAddHandler
                 $oppositeBuyOrderData = $this->createOppositeBuyOrder($ticker, $stop);
 
                 $this->info(
-                    \sprintf('SL on %s successfully pushed to exchange', $position->getCaption()),
-                    ['orderId' => $stopOrderId, 'oppositeBuyOrder' => $oppositeBuyOrderData],
+                    \sprintf(
+                        'SL %s|%.3f|%.2f pushed to exchange (oppositeBuy: $%.2f)',
+                        $position->getCaption(),
+                        $stop->getVolume(),
+                        $price,
+                        $oppositeBuyOrderData['triggerPrice'],
+                    ),
+                    ['stopOrderId' => $stopOrderId, 'buy_order' => $oppositeBuyOrderData],
                 );
             }
         } catch (MaxActiveCondOrdersQntReached $e) {
@@ -121,6 +127,9 @@ final class FindPositionStopsToAddHandler
         }
     }
 
+    /**
+     * @return array{id: int, triggerPrice: float}
+     */
     private function createOppositeBuyOrder(Ticker $ticker, Stop $stop): array
     {
         $price = $stop->originalPrice ?: $stop->getPrice();
@@ -134,6 +143,6 @@ final class FindPositionStopsToAddHandler
             self::BUY_ORDER_TRIGGER_DELTA,
         );
 
-        return [$orderId, $triggerPrice];
+        return ['id' => $orderId, 'triggerPrice' => $triggerPrice];
     }
 }

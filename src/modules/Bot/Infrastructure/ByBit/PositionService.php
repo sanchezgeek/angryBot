@@ -33,7 +33,6 @@ final class PositionService implements PositionServiceInterface
             'symbol' => $symbol->value,
         ]);
 
-
         foreach ($data['result'] as $item) {
             if (
                 $item['entry_price'] !== 0
@@ -42,8 +41,9 @@ final class PositionService implements PositionServiceInterface
                 return new Position(
                     $side,
                     $symbol,
-                    $item['entry_price'],
+                    \round($item['entry_price'], 2),
                     $item['size'],
+                    \round($item['position_value'], 2),
                     $item['liq_price'],
                 );
             }
@@ -82,7 +82,7 @@ final class PositionService implements PositionServiceInterface
                 'trigger_by' => 'IndexPrice',
                 'reduce_only' => 'true',
                 'close_on_trigger' => 'false',
-                'base_price' => $ticker->markPrice,
+                'base_price' => $ticker->indexPrice,
                 'order_type' => ExecutionOrderType::Market->value,
                 'qty' => $qty,
                 'stop_px' => $price,

@@ -93,10 +93,8 @@ final class FindPositionBuyOrdersToAddHandler
 
     private function addBuyOrder(Position $position, Ticker $ticker, BuyOrder $order): void
     {
-        $price = $order->getPrice();
-
         try {
-            $orderId = $this->positionService->addBuyOrder($position, $ticker, $price, $order->getVolume());
+            $orderId = $this->positionService->addBuyOrder($position, $ticker, $order->getPrice(), $order->getVolume());
 
             if ($orderId) {
                 if ($order->getVolume() <= 0.005) {
@@ -105,14 +103,20 @@ final class FindPositionBuyOrdersToAddHandler
                     $order->addToContext('buyOrderId', $orderId);
                     $this->buyOrderRepository->save($order);
                 }
-
-//                $stopData = $position->side !== Side::Buy ? $this->createStop($ticker, $order) : [];
                 $stopData = $this->createStop($position, $ticker, $order);
 
-                $this->info(\sprintf('Buy order on %s successfully pushed to exchange (stop: $%.2f)', $position->getCaption(), $stopData['triggerPrice']));
+                $this->info(
+                    \sprintf(
+                        'BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f)',
+                        $position->getCaption(),
+                        $order->getVolume(),
+                        $order->getPrice(),
+                        $stopData['triggerPrice']
+                    ),
+                    ['orderId' => $orderId, '`stop`' => $stopData],
+                );
             }
         } catch (MaxActiveCondOrdersQntReached $e) {
-            $this->warning($e->getMessage() . PHP_EOL, ['price' => $price]);
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $order)
             );
@@ -120,11 +124,7 @@ final class FindPositionBuyOrdersToAddHandler
     }
 
     /**
-     * @param Position $position
-     * @param Ticker $ticker
-     * @param BuyOrder $buyOrder
-     *
-     * @return array{stopId: int, triggerPrice: float}
+     * @return array{id: int, triggerPrice: float}
      */
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
@@ -132,12 +132,13 @@ final class FindPositionBuyOrdersToAddHandler
             ? self::REGULAR_ORDER_STOP_DISTANCE
             : self::ADDITION_ORDER_STOP_DISTANCE;
 
-        $currentPositionIsHedgePosition = $this->getOppositePosition($position)->size > $position->size;
+//        $currentPositionIsHedgePosition = $this->getOppositePosition($position)->size > $position->size;
+        $isHedge = $this->getOppositePosition($position) !== null;
 
         $basePrice = $buyOrder->originalPrice ?: $buyOrder->getPrice();
 
-        $triggerPrice = $currentPositionIsHedgePosition
-            ? ($position->side === Side::Sell ? $position->entryPrice + 10 : $position->entryPrice - 10) // @todo придумать логику
+        $triggerPrice = $isHedge
+            ? ($position->side === Side::Sell ? \ceil($position->entryPrice) + 10.5 : \ceil($position->entryPrice) - 10.5) // @todo придумать логику
             : ($position->side === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta);
 
         $stopId = $this->stopService->create(
@@ -148,7 +149,7 @@ final class FindPositionBuyOrdersToAddHandler
             self::STOP_ORDER_TRIGGER_DELTA,
         );
 
-        return ['stopId' => $stopId, 'triggerPrice' => $triggerPrice];
+        return ['id' => $stopId, 'triggerPrice' => $triggerPrice];
     }
 
     private function getPositionData(Symbol $symbol, Side $side): PositionData
@@ -160,9 +161,10 @@ final class FindPositionBuyOrdersToAddHandler
             $position = $this->positionService->getOpenedPositionInfo($symbol, $side);
             $this->info(
                 \sprintf(
-                    'UPD %s | %.3f btc | entry: $%.2f | liq: $%.2f',
+                    'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
                     $position->getCaption(),
                     $position->size,
+                    $position->positionValue,
                     $position->entryPrice,
                     $position->liquidationPrice,
                 ));
@@ -173,7 +175,7 @@ final class FindPositionBuyOrdersToAddHandler
         return $this->positionsData[$symbol->value . $side->value];
     }
 
-    private function getOppositePosition(Position $position): Position
+    private function getOppositePosition(Position $position): ?Position
     {
         return $this->getPositionData($position->symbol, $position->side === Side::Buy ? Side::Sell : Side::Buy)->position;
     }

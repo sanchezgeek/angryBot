@@ -54,7 +54,7 @@ final class SchedulerFactory
 
             // Utils
             PeriodicalJob::infinite('2020-01-01T00:01:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 2)), // Cleanup SHORT StopLoses
-            PeriodicalJob::infinite('2020-01-01T00:02:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)), // Cleanup SHORT purchases
+            PeriodicalJob::infinite('2020-01-01T00:02:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 2)), // Cleanup SHORT purchases
             PeriodicalJob::infinite('2020-01-01T00:03:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 2)), // Cleanup LONG StopLoses
             PeriodicalJob::infinite('2020-01-01T00:04:04Z', 'PT1M', new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2)), // Cleanup LONG purchases
         ];

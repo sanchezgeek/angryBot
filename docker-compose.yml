@@ -11,6 +11,8 @@ services:
     restart: unless-stopped
     volumes:
       - php_socket:/var/run/php
+      - ./docker/etc/supervisor.d:/etc/supervisor.d
+    command: ['/usr/bin/supervisord', '-c', '/etc/supervisord.conf', '-n']
     healthcheck:
       interval: 10s
       timeout: 3s

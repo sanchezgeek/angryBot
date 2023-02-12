@@ -14,6 +14,7 @@ final class Position
         public readonly Symbol $symbol,
         public readonly float $entryPrice,
         public readonly float $size,
+        public readonly float $positionValue,
         public readonly float $liquidationPrice,
     ) {
     }

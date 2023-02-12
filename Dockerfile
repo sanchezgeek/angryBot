@@ -43,6 +43,7 @@ RUN apk add --no-cache \
 		file \
 		gettext \
 		git \
+		supervisor \
 	;
 
 RUN set -eux; \
