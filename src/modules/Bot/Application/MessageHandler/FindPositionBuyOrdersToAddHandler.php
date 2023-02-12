@@ -25,10 +25,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class FindPositionBuyOrdersToAddHandler
+final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrdersChecker
 {
-    use LoggerTrait;
-
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 3;
     private const REGULAR_ORDER_STOP_DISTANCE = 45;
@@ -39,22 +37,18 @@ final class FindPositionBuyOrdersToAddHandler
 
     private ?Ticker $lastTicker = null;
 
-    /**
-     * @var PositionData[]
-     */
-    private array $positionsData = [];
-
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
-        private readonly ClockInterface $clock,
+        PositionServiceInterface $positionService,
         LoggerInterface $logger,
+        ClockInterface $clock,
     ) {
-        $this->logger = $logger;
+        parent::__construct($positionService, $clock, $logger);
     }
+
     public function __invoke(FindPositionBuyOrdersToAdd $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
@@ -109,7 +103,7 @@ final class FindPositionBuyOrdersToAddHandler
                     $this->buyOrderRepository->save($buyOrder);
                 }
 
-                $stopData = $this->createStop($position, $ticker, $buyOrder);
+                $stopData = $this->createOpposite($position, $buyOrder);
 
                 $this->info(
                     \sprintf(
@@ -132,7 +126,7 @@ final class FindPositionBuyOrdersToAddHandler
     /**
      * @return array{id: int, triggerPrice: float}
      */
-    private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
+    private function createOpposite(Position $position, BuyOrder $buyOrder): array
     {
         $positionSide = $position->side;
 
@@ -157,7 +151,6 @@ final class FindPositionBuyOrdersToAddHandler
         }
 
         $stopId = $this->stopService->create(
-            $ticker,
             $positionSide,
             $triggerPrice,
             $buyOrder->getVolume(),
@@ -166,33 +159,5 @@ final class FindPositionBuyOrdersToAddHandler
         );
 
         return ['id' => $stopId, 'triggerPrice' => $triggerPrice];
-    }
-
-    private function getPositionData(Symbol $symbol, Side $side): PositionData
-    {
-        if (
-            !($positionData = $this->positionsData[$symbol->value . $side->value] ?? null)
-            || $positionData->needUpdate($this->clock->now())
-        ) {
-            $position = $this->positionService->getOpenedPositionInfo($symbol, $side);
-            $this->info(
-                \sprintf(
-                    'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
-                    $position->getCaption(),
-                    $position->size,
-                    $position->positionValue,
-                    $position->entryPrice,
-                    $position->liquidationPrice,
-                ));
-
-            $this->positionsData[$symbol->value . $side->value] = new PositionData($position, $this->clock->now());
-        }
-
-        return $this->positionsData[$symbol->value . $side->value];
-    }
-
-    private function getOppositePosition(Position $position): ?Position
-    {
-        return $this->getPositionData($position->symbol, $position->side === Side::Buy ? Side::Sell : Side::Buy)->position;
     }
 }

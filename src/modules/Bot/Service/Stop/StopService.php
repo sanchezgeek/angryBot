@@ -6,7 +6,6 @@ namespace App\Bot\Service\Stop;
 
 use App\Bot\Application\Command\CreateStop;
 use App\Bot\Domain\StopRepository;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -22,7 +21,7 @@ final class StopService
         $this->commandBus = $commandBus;
     }
 
-    public function create(Ticker $ticker, Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
+    public function create(Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
     {
         $id = $this->repository->getNextId();
 

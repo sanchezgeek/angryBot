@@ -59,12 +59,7 @@ class CreateStopCommand extends Command
                 );
             }
 
-            $symbol = Symbol::BTCUSDT;
-
-            $ticker = $this->positionService->getTickerInfo($symbol);
-
             $this->stopService->create(
-                $ticker,
                 $positionSide,
                 $price,
                 $volume,

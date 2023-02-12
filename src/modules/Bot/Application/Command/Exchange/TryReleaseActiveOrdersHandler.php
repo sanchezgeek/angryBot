@@ -44,21 +44,21 @@ final class TryReleaseActiveOrdersHandler
                 || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
                 || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
-                $this->release($order, $ticker);
+                $this->release($order);
             } elseif ($claimedOrderVolume !== null && $order->volume < $claimedOrderVolume) {
                 // Force in case of volume of active order less than claimed volume of new order
                 $claimedOrderVolume = null; // Only once
-                $this->release($order, $ticker);
+                $this->release($order);
             }
 
             unset($activeOrders[$key]);
         }
     }
 
-    private function release(ActiveStopOrder $order, Ticker $ticker): void
+    private function release(ActiveStopOrder $order): void
     {
         $this->exchangeOrdersService->closeActiveConditionalOrder($order);
 
-        $this->stopService->create($ticker, $order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
+        $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
     }
 }

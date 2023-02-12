@@ -10,13 +10,13 @@ trait LoggerTrait
 {
     private ?LoggerInterface $logger;
 
-    private function info(string $message, array $context = []): void
+    protected  function info(string $message, array $context = []): void
     {
         \print_r($message . PHP_EOL);
         $this->logger->info($message, $context);
     }
 
-    private function warning(string $message, array $context = []): void
+    protected function warning(string $message, array $context = []): void
     {
         $this->logger->warning($message, $context);
     }
