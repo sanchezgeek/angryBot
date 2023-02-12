@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {
+    use HasVolume;
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
 

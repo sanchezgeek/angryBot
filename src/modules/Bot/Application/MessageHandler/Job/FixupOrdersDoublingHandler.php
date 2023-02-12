@@ -33,11 +33,13 @@ final class FixupOrdersDoublingHandler
 
         $orders = $repository->findActive(
             side: $message->positionSide,
+            exceptOppositeOrders: true,
             qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', 'desc'))
         );
 
         $forRemove = [];
 
+        /** @var Stop[]|BuyOrder[] $stepOrders */
         $stepOrders = [];
         $stepBottom = ceil($orders[0]->getPrice()) - $message->step;
         while ($order = \array_shift($orders)) {
@@ -48,9 +50,22 @@ final class FixupOrdersDoublingHandler
                 \array_unshift($orders, $order); // Push back
                 \usort($stepOrders, static fn(Stop|BuyOrder $a, Stop|BuyOrder $b) => $a->getVolume() <=> $b->getVolume());
 
+                $removedVolume = 0;
                 while (count($stepOrders) > $message->maxStepOrdersQnt) {
-                    $forRemove[] = \array_shift($stepOrders);
+                    $forRemove[] = ($removed = \array_shift($stepOrders));
+                    $removedVolume += $removed->getVolume();
                 }
+
+                // Add volume to first in left group
+                if ($removedVolume && $message->groupInOne) {
+                    $firstInGroup = \array_shift($stepOrders);
+
+                    $this->entityManager->persist(
+                        $firstInGroup->addVolume($removedVolume)
+                    );
+                    $this->entityManager->flush();
+                }
+
                 $stepOrders = [];
             }
         }

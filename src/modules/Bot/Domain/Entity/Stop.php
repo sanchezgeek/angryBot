@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents
 {
+    use HasVolume;
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
 
@@ -50,6 +51,11 @@ class Stop implements HasEvents
         $this->triggerDelta = $triggerDelta;
         $this->positionSide = $positionSide;
         $this->context = $context;
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
     }
 
     public function getPrice(): float

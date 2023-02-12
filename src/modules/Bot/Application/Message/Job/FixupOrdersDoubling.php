@@ -13,7 +13,8 @@ final class FixupOrdersDoubling
         public readonly OrderType $orderType,
         public readonly Side $positionSide,
         public readonly int $step,
-        public readonly int $maxStepOrdersQnt
+        public readonly int $maxStepOrdersQnt,
+        public readonly bool $groupInOne = false
     ) {
     }
 }

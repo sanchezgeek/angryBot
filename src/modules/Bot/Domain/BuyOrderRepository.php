@@ -47,25 +47,29 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     /**
      * @return BuyOrder[]
      */
-    public function findActive(Side $side, ?Ticker $ticker = null, callable $qbModifier = null): array
-    {
-        $qb = $this->createQueryBuilder('s');
+    public function findActive(
+        Side $side,
+        ?Ticker $nearTicker = null,
+        bool $exceptOppositeOrders = false,
+        callable $qbModifier = null
+    ): array {
+        $qb = $this->createQueryBuilder('bo');
 
         $qb
-            ->andWhere('s.positionSide = :posSide')
-            ->andWhere("HAS_ELEMENT(s.context, 'buyOrderId') = false")
-            ->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false")
+            ->andWhere('bo.positionSide = :posSide')
+            ->andWhere("HAS_ELEMENT(bo.context, 'buyOrderId') = false")
             ->setParameter(':posSide', $side)
         ;
 
-        if ($ticker) {
-            if ($side === Side::Buy) {
-                $qb->andWhere('s.price < :price');
-                $qb->setParameter(':price', $ticker->indexPrice + 50);
-            } else {
-                $qb->andWhere('s.price > :price');
-                $qb->setParameter(':price', $ticker->indexPrice - 50);
-            }
+        if ($exceptOppositeOrders) {
+            $qb->andWhere("HAS_ELEMENT(bo.context, 'onlyAfterExchangeOrderExecuted') = false");
+        }
+
+        if ($nearTicker) {
+            $cond = $side === Side::Buy     ? 'bo.price < :price'           : 'bo.price > :price';
+            $price = $side === Side::Buy    ? $nearTicker->indexPrice + 50  : $nearTicker->indexPrice - 50;
+
+            $qb->andWhere($cond)->setParameter(':price', $price);
         }
 
         if ($qbModifier) {
