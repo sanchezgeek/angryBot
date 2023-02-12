@@ -7,6 +7,7 @@ namespace App\Bot\Application\MessageHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Message\FindPositionBuyOrdersToAdd;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Strategy\HedgeOppositeStopCreate;
 use App\Bot\Application\Service\Strategy\SelectedStrategy;
 use App\Bot\Domain\BuyOrderRepository;
@@ -45,6 +46,7 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
 
+        private readonly HedgeService $hedgeService,
         private readonly SelectedStrategy $selectedStrategy,
 
         PositionServiceInterface $positionService,
@@ -139,11 +141,16 @@ final class FindPositionBuyOrdersToAddHandler extends AbstractPositionNearestOrd
             ? self::REGULAR_ORDER_STOP_DISTANCE
             : self::ADDITION_ORDER_STOP_DISTANCE;
 
-        $isHedge = $this->getOppositePosition($position) !== null; // $isHedge = $this->getOppositePosition($position)->size > $position->size;
+        $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
+            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
             $price = \ceil($position->entryPrice); // Default: "under position" (if HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP not selected)
 
-            if ($this->selectedStrategy->hedgeOppositeStopCreate === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP) {
+            $stopStrategy = $hedge->isSupportPosition($position)
+                ? $this->selectedStrategy->hedgeSupportPositionOppositeStopCreation
+                : $this->selectedStrategy->hedgeMainPositionOppositeStopCreation;
+
+            if ($stopStrategy === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP) {
                 $firstPositionStop = $this->stopRepository->findActive(
                     side: $positionSide,
                     qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
