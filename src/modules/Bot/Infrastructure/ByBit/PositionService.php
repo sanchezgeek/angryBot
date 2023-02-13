@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Infrastructure\ByBit;
 
+use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -126,6 +127,10 @@ final class PositionService implements PositionServiceInterface
 
             if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
                 throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
+            }
+
+            if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
+                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side);
             }
 
             if ($result['ret_code'] !== 0) {

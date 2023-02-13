@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
@@ -25,7 +27,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
+final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 3;
@@ -85,6 +87,9 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
         try {
             $exchangeOrderId = $this->positionService->addBuyOrder($position, $ticker, $buyOrder->getPrice(), $buyOrder->getVolume());
 
+            // @todo Есть косяк: выше проставляется новый price в расчёте на то, что тут будет ордер на бирже. А его нет. Денег не хватило. Но ниже делается persist. originalPrice попадает в базу. А на самом деле ордер не был отправлен.
+            // Нужно новую цену не сразу фигачить в поле, а помещать в контекст и тут уже применять. Если вернулся $exchangeOrderId
+
             if ($exchangeOrderId) {
                 $buyOrder->setExchangeOrderId($exchangeOrderId);
 
@@ -112,6 +117,17 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPushHandler
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
             );
+        } catch (CannotAffordOrderCost $e) {
+            if (
+                ($isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null)
+                && ($hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition))
+                && ($hedge->isSupportPosition($position))
+                && ($oppositePosition->size / $position->size > 2) // Main position more than 2 times
+            ) {
+                $this->messageBus->dispatch(
+                    new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side)
+                );
+            }
         }
     }
 

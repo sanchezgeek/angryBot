@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
@@ -21,7 +22,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
+final class PushRelevantStopsHandler extends AbstractOrdersPusher
 {
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
@@ -136,9 +137,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPushHandler
                     $oppositePosition->side === Side::Sell ? ($triggerPrice - 3) : ($triggerPrice + 3),
                     $vol,
                     self::SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA,
-                    ['asSupportFromMainHedgePosition' => true],
+                    ['asSupportFromMainHedgePosition' => true, 'createdWhen' => 'tryGetHelpFromHandler'],
                 );
-            } // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
+            }
+            // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
+            // Пока что добавил отлов CannotAffordOrderCost в PushRelevantBuyOrdersHandler при попытке купить
         }
 
         $orderId = $this->buyOrderService->create(

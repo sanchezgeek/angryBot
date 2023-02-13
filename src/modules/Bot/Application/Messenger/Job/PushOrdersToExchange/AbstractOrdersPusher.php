@@ -12,7 +12,7 @@ use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 
-abstract class AbstractOrdersPushHandler
+abstract class AbstractOrdersPusher
 {
     use LoggerTrait;
 
