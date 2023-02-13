@@ -11,7 +11,8 @@ readonly final class IncreaseHedgeSupportPositionByGetProfitFromMain
 {
     public function __construct(
         public Symbol $symbol,
-        public Side $side
+        public Side $side,
+        public float $qty
     ) {
     }
 }

@@ -96,7 +96,7 @@ final class PositionService implements PositionServiceInterface
             }
 
             if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
-                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side);
+                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
             }
 
             if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
@@ -139,7 +139,7 @@ final class PositionService implements PositionServiceInterface
             }
 
             if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
-                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side);
+                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
             }
 
             if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {

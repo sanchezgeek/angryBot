@@ -16,7 +16,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
 {
-    private const DEFAULT_VOLUME = 0.001;
+    private const MIN_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 3;
 
     private const PRICE_STEP = 3; // To not allow to stop too much position size
@@ -74,10 +74,14 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
+        if (($volume = round($command->qty / 13, 3)) < self::MIN_VOLUME) {
+            $volume = self::MIN_VOLUME;
+        }
+
         $this->stopService->create(
             $mainPosition->side,
             $triggerPrice,
-            self::DEFAULT_VOLUME,
+            $volume,
             self::DEFAULT_TRIGGER_DELTA,
             ['asSupportFromMainHedgePosition' => true, 'createdWhen' => 'catchException'],
         );

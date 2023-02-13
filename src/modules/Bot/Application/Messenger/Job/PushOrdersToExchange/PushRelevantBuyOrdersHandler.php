@@ -134,7 +134,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 && ($hedge->isSupportPosition($position))
             ) {
                 $this->messageBus->dispatch(
-                    new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side)
+                    new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)
                 );
             }
         }
