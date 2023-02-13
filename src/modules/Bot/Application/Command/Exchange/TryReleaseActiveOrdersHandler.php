@@ -30,7 +30,7 @@ final class TryReleaseActiveOrdersHandler
     {
         $activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol);
 
-        $ticker = $this->positionService->getTickerInfo($command->symbol);
+        $ticker = $this->positionService->getTicker($command->symbol);
 
         $claimedOrderVolume = $command->forVolume;
 

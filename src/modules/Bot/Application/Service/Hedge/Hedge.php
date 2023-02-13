@@ -21,10 +21,10 @@ final class Hedge
         return $this->supportPosition->side === $position->side;
     }
 
-    private function getSupportRate(): float
+    public function getSupportRate(): float
     {
         $rate = $this->supportPosition->size / $this->mainPosition->size;
-        var_dump($rate);
+
         return $rate;
     }
 
@@ -36,13 +36,13 @@ final class Hedge
     }
 
     /**
-     * If steel need create small stops with default_stop_strategy
+     * PushRelevantBuyOrdersHandler will create small stops with `under_position`
      */
     public function needKeepSupportSize(): bool
     {
         $rate = $this->getSupportRate();
 
-        return $rate > 0.38 && $rate < 0.5;
+        return $rate > 0.38 && $rate < 0.45;
     }
 
     public function getHedgeStrategy(): HedgeStrategy

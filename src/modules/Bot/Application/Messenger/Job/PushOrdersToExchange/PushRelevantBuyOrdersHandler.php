@@ -6,10 +6,10 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
 use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
@@ -58,12 +58,12 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     public function __invoke(PushRelevantBuyOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
-        if (!$positionData->isPositionOpened()) {
-            return;
-        }
+//        if (!$positionData->isPositionOpened()) {
+//            return;
+//        }
 
         $orders = $this->buyOrderRepository->findActive($positionData->position->side, $this->lastTicker);
-        $ticker = $this->positionService->getTickerInfo($message->symbol);
+        $ticker = $this->positionService->getTicker($message->symbol);
 
         foreach ($orders as $order) {
             $delta = $order->getTriggerDelta() ?: self::DEFAULT_TRIGGER_DELTA;
@@ -103,8 +103,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
                 $this->info(
                     \sprintf(
-                        '+Buy+ (%s) %.3f|%.2f pushed to exchange (stop: $%.2f with %s strategy)',
-                        $position->getCaption(),
+                        '%sBuy%s %.3f | $%.2f (stop: $%.2f with %s strategy)',
+                        $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
                         $buyOrder->getVolume(),
                         $buyOrder->getPrice(),
                         $stopData['triggerPrice'],
@@ -113,6 +113,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                     ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
                 );
             }
+        } catch (ApiRateLimitReached $e) {
+            $time = 10;
+            $this->info(
+                \sprintf(
+                    'Catch %s exception. Sleep for %d seconds',
+                    ApiRateLimitReached::class,
+                    $time,
+                ),
+            );
+            \sleep($time);
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
@@ -168,8 +178,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                         side: $positionSide,
                         qbModifier: static function (QueryBuilder $qb) use ($position) {
                             $qb->andWhere(
-                                $qb->getRootAliases(
-                                )[0] . '.price' . ($position->side === Side::Sell ? '> :entryPrice' : '< :entryPrice')
+                                $qb->getRootAliases()[0] . '.price' . ($position->side === Side::Sell ? '> :entryPrice' : '< :entryPrice')
                             )->setParameter(':entryPrice', $position->entryPrice);
                             $qb->addOrderBy(
                                 new OrderBy(

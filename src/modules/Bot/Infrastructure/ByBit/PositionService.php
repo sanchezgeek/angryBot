@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Infrastructure\ByBit;
 
+use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -53,7 +54,7 @@ final class PositionService implements PositionServiceInterface
         return null;
     }
 
-    public function getTickerInfo(Symbol $symbol): Ticker
+    public function getTicker(Symbol $symbol): Ticker
     {
         $data = $this->api->publics()->getTickers([
             'symbol' => $symbol->value,
@@ -94,12 +95,20 @@ final class PositionService implements PositionServiceInterface
                 throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
             }
 
+            if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
+                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side);
+            }
+
+            if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
+                throw new ApiRateLimitReached();
+            }
+
             if ($result['ret_code'] !== 0) {
                 var_dump($result);
             }
 
             return $result['result']['stop_order_id'];
-        } catch (MaxActiveCondOrdersQntReached $e) {
+        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
             throw $e;
         } catch (\Exception $e) {
             print_r($e->getMessage());
@@ -133,12 +142,16 @@ final class PositionService implements PositionServiceInterface
                 throw CannotAffordOrderCost::forBuy($position->symbol, $position->side);
             }
 
+            if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
+                throw new ApiRateLimitReached();
+            }
+
             if ($result['ret_code'] !== 0) {
                 var_dump($result);
             }
 
             return $result['result']['order_id'];
-        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost $e) {
+        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
             throw $e;
         } catch (\Exception $e) {
             print_r($e->getMessage());

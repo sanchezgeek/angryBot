@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
@@ -50,12 +51,12 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     public function __invoke(PushRelevantStopOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
-        if (!$positionData->isPositionOpened()) {
-            return;
-        }
+//        if (!$positionData->isPositionOpened()) {
+//            return;
+//        }
 
         $stops = $this->stopRepository->findActive($positionData->position->side, $this->lastTicker);
-        $ticker = $this->positionService->getTickerInfo($message->symbol);
+        $ticker = $this->positionService->getTicker($message->symbol);
 
         foreach ($stops as $stop) {
             if ($ticker->isIndexPriceAlreadyOverStopPrice($positionData->position->side, $stop->getPrice())) {
@@ -96,8 +97,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
                 $this->info(
                     \sprintf(
-                        '-SL- (%s) %.3f | %.2f pushed to exchange (oppositeBuy: $%.2f)',
-                        $position->getCaption(),
+                        '%sSL%s %.3f | $%.2f (oppositeBuy: $%.2f)',
+                        $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
                         $stop->getVolume(),
                         $stop->getPrice(),
                         $oppositeBuyOrderData['triggerPrice'],
@@ -105,6 +106,16 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                     ['exchange.orderId' => $exchangeOrderId, '`buy_order`' => $oppositeBuyOrderData],
                 );
             }
+        } catch (ApiRateLimitReached $e) {
+            $time = 10;
+            $this->info(
+                \sprintf(
+                    'Catch %s exception. Sleep for %d seconds',
+                    ApiRateLimitReached::class,
+                    $time,
+                ),
+            );
+            \sleep($time);
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forStop($ticker->symbol, $stop)

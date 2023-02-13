@@ -54,10 +54,14 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
         }
 
         if (!$hedge->needIncreaseSupport()) {
+//            $this->info(
+//                \sprintf('Support is already filled. Current rate: %.3f', $hedge->getSupportRate())
+//            );
+
             return;
         }
 
-        $ticker = $this->positionService->getTickerInfo($command->symbol);
+        $ticker = $this->positionService->getTicker($command->symbol);
 
         // If mainPosition now in loss
         if ($ticker->isIndexPriceAlreadyOverStopPrice($mainPosition->side, $mainPosition->entryPrice)) {
