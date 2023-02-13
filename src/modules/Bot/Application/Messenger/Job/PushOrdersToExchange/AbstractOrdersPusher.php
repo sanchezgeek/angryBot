@@ -35,7 +35,18 @@ abstract class AbstractOrdersPusher
             !($positionData = $this->positionsData[$symbol->value . $side->value] ?? null)
             || $positionData->needUpdate($this->clock->now())
         ) {
-            $position = $this->positionService->getOpenedPositionInfo($symbol, $side);
+            if (!$position = $this->positionService->getOpenedPositionInfo($symbol, $side)) {
+                // Fake. For run handlers. And have ability to check hedge.
+                $position = new Position(
+                    $side,
+                    $symbol,
+                    $this->positionService->getTicker($symbol)->indexPrice,
+                    0,
+                    0,
+                    0,
+                );
+            }
+
             $this->info(
                 \sprintf(
                     'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
