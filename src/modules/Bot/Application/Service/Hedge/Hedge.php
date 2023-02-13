@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Hedge;
 
+use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
+use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Position;
 
 final class Hedge
@@ -17,5 +19,61 @@ final class Hedge
     public function isSupportPosition(Position $position): bool
     {
         return $this->supportPosition->side === $position->side;
+    }
+
+    private function getSupportRate(): float
+    {
+        $rate = $this->supportPosition->size / $this->mainPosition->size;
+        var_dump($rate);
+        return $rate;
+    }
+
+    public function needIncreaseSupport(): bool
+    {
+        $rate = $this->getSupportRate();
+
+        return $rate <= 0.38;
+    }
+
+    /**
+     * If steel need create small stops with default_stop_strategy
+     */
+    public function needKeepSupportSize(): bool
+    {
+        $rate = $this->getSupportRate();
+
+        return $rate > 0.38 && $rate < 0.5;
+    }
+
+    public function getHedgeStrategy(): HedgeStrategy
+    {
+        $mainPositionStrategy = HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
+        $supportStrategy = HedgeOppositeStopCreate::DEFAULT_STOP_STRATEGY->value;
+        $description = null;
+
+        if ($this->needIncreaseSupport()) {
+            $supportStrategy = HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
+            $description = 'needKeepSupportSize';
+        } elseif ($this->needKeepSupportSize()) {
+            $supportStrategy = HedgeOppositeStopCreate::UNDER_POSITION->value;
+            $description = 'needKeepSupportSize';
+        }
+
+        return new HedgeStrategy($supportStrategy, $mainPositionStrategy, $description);
+    }
+
+    public static function create(Position $a, Position $b): self
+    {
+        if ($a->side === $b->side) {
+            throw new \LogicException('Positions on the same side');
+        }
+
+        if ($a->size > $b->size) {
+            $mainPosition = $a; $supportPosition = $b;
+        } else {
+            $mainPosition = $b; $supportPosition = $a;
+        }
+
+        return new Hedge($mainPosition, $supportPosition);
     }
 }

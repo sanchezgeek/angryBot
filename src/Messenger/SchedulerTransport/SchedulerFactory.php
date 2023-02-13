@@ -36,8 +36,8 @@ final class SchedulerFactory
         $shortStopSpeed = self::FAST;
         $shortBuySpeed = self::MEDIUM;
 
-        $longStopSpeed = self::VERY_FAST;
-        $longBuySpeed = self::VERY_FAST;
+        $longStopSpeed = self::FAST;
+        $longBuySpeed = self::MEDIUM;
 
 //        $shortStopSpeed = self::FAST;
 //        $shortBuySpeed = self::MEDIUM;

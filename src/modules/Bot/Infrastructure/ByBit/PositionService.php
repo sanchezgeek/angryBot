@@ -138,7 +138,7 @@ final class PositionService implements PositionServiceInterface
             }
 
             return $result['result']['order_id'];
-        } catch (MaxActiveCondOrdersQntReached $e) {
+        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost $e) {
             throw $e;
         } catch (\Exception $e) {
             print_r($e->getMessage());

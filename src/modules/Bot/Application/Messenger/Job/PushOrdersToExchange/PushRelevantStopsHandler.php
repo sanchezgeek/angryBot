@@ -7,6 +7,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -82,7 +83,10 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
                 $stop->setExchangeOrderId($exchangeOrderId);
 
-                if ($stop->getVolume() <= 0.005) {
+                if (
+                    $stop->getVolume() <= 0.005
+                    && !$stop->isSupportFromMainHedgePositionStopOrder()
+                ) {
                     $this->stopRepository->remove($stop);
                 } else {
                     $this->stopRepository->save($stop);
@@ -92,7 +96,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
                 $this->info(
                     \sprintf(
-                        '--- SL %s|%.3f|%.2f pushed to exchange (oppositeBuy: $%.2f)',
+                        '-SL- (%s) %.3f | %.2f pushed to exchange (oppositeBuy: $%.2f)',
                         $position->getCaption(),
                         $stop->getVolume(),
                         $stop->getPrice(),
@@ -122,14 +126,15 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
         $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
-            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
+            $hedge = Hedge::create($position, $oppositePosition);
             // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)
-            if ($hedge->isSupportPosition($position)) {
-                $vol = round($volume / 3, 3);
-                if ($vol < 0.001) {
+            if (
+                $hedge->isSupportPosition($position)
+                && $hedge->needIncreaseSupport()
+                && ($vol = round($volume / 3, 3)) > 0.001
+            ) {
+                if ($vol > 0.001) {
                     $vol = 0.001;
-                } elseif ($vol > 0.002) {
-                    $vol = 0.002;
                 }
 
                 $this->stopService->create(

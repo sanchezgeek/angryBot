@@ -8,7 +8,7 @@ use Psr\Log\LoggerInterface;
 
 trait LoggerTrait
 {
-    private ?LoggerInterface $logger;
+    protected ?LoggerInterface $logger;
 
     protected  function info(string $message, array $context = []): void
     {

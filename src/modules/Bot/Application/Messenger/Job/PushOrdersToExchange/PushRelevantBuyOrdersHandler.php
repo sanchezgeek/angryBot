@@ -8,9 +8,10 @@ use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfit
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
-use App\Bot\Application\Service\Strategy\SelectedStrategy;
+use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -45,8 +46,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
 
-        private readonly HedgeService $hedgeService,
-        private readonly SelectedStrategy $selectedStrategy,
+        private readonly HedgeStrategy $selectedStrategy,
 
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -103,7 +103,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
                 $this->info(
                     \sprintf(
-                        '+++ BuyOrder %s|%.3f|%.2f pushed to exchange (stop: $%.2f with %s strategy)',
+                        '+Buy+ (%s) %.3f|%.2f pushed to exchange (stop: $%.2f with %s strategy)',
                         $position->getCaption(),
                         $buyOrder->getVolume(),
                         $buyOrder->getPrice(),
@@ -120,9 +120,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         } catch (CannotAffordOrderCost $e) {
             if (
                 ($isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null)
-                && ($hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition))
+                && ($hedge = Hedge::create($position, $oppositePosition))
                 && ($hedge->isSupportPosition($position))
-                && ($oppositePosition->size / $position->size > 2) // Main position more than 2 times
             ) {
                 $this->messageBus->dispatch(
                     new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side)
@@ -150,11 +149,11 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         if ($isHedge) {
             $basePrice = null;
 
-            $hedge = $this->hedgeService->getPositionsHedge($position, $oppositePosition);
-            $stopStrategy = $hedge->isSupportPosition($position) ? $this->selectedStrategy->hedgeSupportPositionOppositeStopCreation : $this->selectedStrategy->hedgeMainPositionOppositeStopCreation;
+            $hedge = Hedge::create($position, $oppositePosition);
 
-            // Для суппорта нужно вручную менять стратегию, если объём позиции достиг определённого значения
-            // Например на default, чтобы дальше покупки всё-таки оказывались под стоп-лоссами. А то позиция растёт, а нахуя она нужна - непонятно
+            $hedgeStrategy = $hedge->getHedgeStrategy();
+
+            $stopStrategy = $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionOppositeStopCreation : $hedgeStrategy->mainPositionOppositeStopCreation;
 
             if (
                 (
@@ -164,10 +163,26 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                     && $volume >= HedgeOppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
                 )
             ) {
-                $firstPositionStop = $this->stopRepository->findActive(
-                    side: $positionSide,
-                    qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'))->setMaxResults(1)
-                );
+                try {
+                    $firstPositionStop = $this->stopRepository->findActive(
+                        side: $positionSide,
+                        qbModifier: static function (QueryBuilder $qb) use ($position) {
+                            $qb->andWhere(
+                                $qb->getRootAliases(
+                                )[0] . '.price' . ($position->side === Side::Sell ? '> :entryPrice' : '< :entryPrice')
+                            )->setParameter(':entryPrice', $position->entryPrice);
+                            $qb->addOrderBy(
+                                new OrderBy(
+                                    $qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'
+                                )
+                            );
+
+                            $qb->setMaxResults(1);
+                        }
+                    );
+                } catch (\Throwable $e) {
+                    $this->logger->critical('Cannot find first stop. See logs');
+                }
 
                 if ($firstPositionStop = $firstPositionStop[0] ?? null) {
                     $basePrice = $firstPositionStop->getPrice();
@@ -183,12 +198,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 $positionPrice = \ceil($position->entryPrice);
                 $basePrice = $ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
 
-                $basePrice = $positionSide === Side::Sell ? $basePrice - 10 : $basePrice + 10;
+                $basePrice = $positionSide === Side::Buy ? $basePrice - 25 : $basePrice + 25;
             }
 
             if ($basePrice) {
-                $selectedStrategy = $stopStrategy->value;
-                $triggerPrice = $positionSide === Side::Sell ? $basePrice + 1 : $basePrice - 1;
+                if (!$ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $basePrice)) {
+                    $selectedStrategy = $stopStrategy->value . ($hedgeStrategy->description ? ('::' . $hedgeStrategy->description) : '');
+                    $triggerPrice = $positionSide === Side::Sell ? $basePrice + 1 : $basePrice - 1;
+                } else {
+                    $selectedStrategy = 'default (\'cause index price over stop)';
+                }
             }
         }
 

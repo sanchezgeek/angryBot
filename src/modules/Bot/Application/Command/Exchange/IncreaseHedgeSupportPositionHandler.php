@@ -6,6 +6,7 @@ namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
@@ -42,7 +43,17 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
         $supportedPosition = $this->getPositionData($command->symbol, $command->side);
         $mainPosition = $this->getOppositePosition($supportedPosition->position);
 
-        if (!$mainPosition) {
+        if (!$mainPosition || !$supportedPosition->position) {
+            return;
+        }
+
+        $hedge = Hedge::create($supportedPosition->position, $mainPosition);
+
+        if (!$hedge->isSupportPosition($supportedPosition->position)) {
+            return;
+        }
+
+        if (!$hedge->needIncreaseSupport()) {
             return;
         }
 
