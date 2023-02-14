@@ -13,6 +13,7 @@ use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
+use App\Helper\VolumeHelper;
 use Lin\Bybit\BybitLinear;
 
 final class PositionService implements PositionServiceInterface
@@ -43,9 +44,9 @@ final class PositionService implements PositionServiceInterface
                 return new Position(
                     $side,
                     $symbol,
-                    \round($item['entry_price'], 2),
+                    VolumeHelper::round($item['entry_price'], 2),
                     $item['size'],
-                    \round($item['position_value'], 2),
+                    VolumeHelper::round($item['position_value'], 2),
                     $item['liq_price'],
                 );
             }

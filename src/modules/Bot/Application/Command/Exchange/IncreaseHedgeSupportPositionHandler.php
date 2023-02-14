@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
+use App\Helper\VolumeHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -78,9 +79,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        if (($volume = round($command->qty / 13, 3)) < self::MIN_VOLUME) {
-            $volume = self::MIN_VOLUME;
-        }
+        $volume = VolumeHelper::round($command->qty / 13);
 
         $this->stopService->create(
             $mainPosition->side,

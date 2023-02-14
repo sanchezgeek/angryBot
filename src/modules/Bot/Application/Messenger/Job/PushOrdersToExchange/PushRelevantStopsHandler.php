@@ -18,6 +18,7 @@ use App\Bot\Service\Buy\BuyOrderService;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
+use App\Helper\VolumeHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -133,7 +134,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE
             : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
-        $volume = $stop->getVolume() >= 0.006 ? round($stop->getVolume() / 2, 3) : $stop->getVolume();
+        $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 2) : $stop->getVolume();
 
         $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
         if ($isHedge) {
@@ -142,8 +143,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             if (
                 $hedge->isSupportPosition($position)
                 && $hedge->needIncreaseSupport()
-                && ($vol = round($volume / 3, 3)) > 0.001
             ) {
+                $vol = VolumeHelper::round($volume / 3);
+
                 if ($vol > 0.005) {
                     $vol = 0.005;
                 }
