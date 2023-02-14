@@ -54,6 +54,11 @@ class BuyOrder implements HasEvents
         $this->context = $context;
     }
 
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
     public function getPrice(): float
     {
         return $this->price;

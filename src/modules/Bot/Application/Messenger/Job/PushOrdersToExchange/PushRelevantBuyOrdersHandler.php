@@ -46,8 +46,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
 
-        private readonly HedgeStrategy $selectedStrategy,
-
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
@@ -114,15 +112,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 );
             }
         } catch (ApiRateLimitReached $e) {
-            $time = 10;
-            $this->info(
-                \sprintf(
-                    'Catch %s exception. Sleep for %d seconds',
-                    ApiRateLimitReached::class,
-                    $time,
-                ),
-            );
-            \sleep($time);
+            $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
@@ -132,6 +122,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 ($isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null)
                 && ($hedge = Hedge::create($position, $oppositePosition))
                 && ($hedge->isSupportPosition($position))
+                && ($hedge->needIncreaseSupport())
             ) {
                 $this->messageBus->dispatch(
                     new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)

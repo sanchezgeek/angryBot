@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Position\Side;
@@ -15,6 +16,9 @@ use Psr\Log\LoggerInterface;
 abstract class AbstractOrdersPusher
 {
     use LoggerTrait;
+
+    private const SLEEP_INC = 5;
+    protected int $lastSleep = 0;
 
     /**
      * @var PositionData[]
@@ -72,5 +76,24 @@ abstract class AbstractOrdersPusher
     protected function getOppositePosition(Position $position): ?Position
     {
         return $this->getPositionData($position->symbol, $position->side === Side::Buy ? Side::Sell : Side::Buy)->position;
+    }
+
+    protected function sleep(string $cause): void
+    {
+        $this->lastSleep += self::SLEEP_INC;
+
+        $this->info(
+            \sprintf(
+                'Sleep for %d seconds, because %s',
+                $this->lastSleep,
+                $cause,
+            ),
+        );
+
+        sleep($this->lastSleep);
+
+        if ($this->lastSleep > 15) {
+            $this->lastSleep = 0;
+        }
     }
 }

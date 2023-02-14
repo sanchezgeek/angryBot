@@ -107,15 +107,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 );
             }
         } catch (ApiRateLimitReached $e) {
-            $time = 10;
-            $this->info(
-                \sprintf(
-                    'Catch %s exception. Sleep for %d seconds',
-                    ApiRateLimitReached::class,
-                    $time,
-                ),
-            );
-            \sleep($time);
+            $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
