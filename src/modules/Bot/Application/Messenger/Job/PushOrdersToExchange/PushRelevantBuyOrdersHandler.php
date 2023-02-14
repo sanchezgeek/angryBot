@@ -51,17 +51,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         parent::__construct($positionService, $clock, $logger);
     }
 
-    private function cannotRunDueToCannotAffordBuy(Ticker $ticker): bool
-    {
-        if ($this->cannotAffordAtPrice !== null) {
-            $range = [$ticker->indexPrice - 10, $ticker->indexPrice + 10];
-
-            return $this->cannotAffordAtPrice > $range[0] && $this->cannotAffordAtPrice < $range[1];
-        }
-
-        return false;
-    }
-
     public function __invoke(PushRelevantBuyOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
@@ -241,5 +230,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         );
 
         return ['id' => $stopId, 'triggerPrice' => $triggerPrice, 'strategy' => $selectedStrategy];
+    }
+
+    private function cannotRunDueToCannotAffordBuy(Ticker $ticker): bool
+    {
+        if ($this->cannotAffordAtPrice === null) {
+            return false;
+        }
+
+        $range = [$ticker->indexPrice - 15, $ticker->indexPrice + 15];
+
+        return $this->cannotAffordAtPrice > $range[0] && $this->cannotAffordAtPrice < $range[1];
     }
 }
