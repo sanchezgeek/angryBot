@@ -11,7 +11,6 @@ use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
-use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -21,8 +20,6 @@ use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
-use Doctrine\ORM\Query\Expr\OrderBy;
-use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -112,12 +109,18 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 );
             }
         } catch (ApiRateLimitReached $e) {
+            $this->logExchangeClientException($e);
+
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
+            $this->logExchangeClientException($e);
+
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
             );
         } catch (CannotAffordOrderCost $e) {
+            $this->logExchangeClientException($e);
+
             if (
                 ($isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null)
                 && ($hedge = Hedge::create($position, $oppositePosition))

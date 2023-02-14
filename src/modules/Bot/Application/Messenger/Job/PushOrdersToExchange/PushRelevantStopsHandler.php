@@ -107,8 +107,12 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 );
             }
         } catch (ApiRateLimitReached $e) {
+            $this->logExchangeClientException($e);
+
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
+            $this->logExchangeClientException($e);
+
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
             );

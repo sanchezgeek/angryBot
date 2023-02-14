@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -95,5 +96,12 @@ abstract class AbstractOrdersPusher
         if ($this->lastSleep > 15) {
             $this->lastSleep = 0;
         }
+    }
+
+    protected function logExchangeClientException(\Throwable $exception): void
+    {
+        $this->warning(
+            \sprintf('%s received: %s', \get_class($exception), $exception->getMessage()),
+        );
     }
 }

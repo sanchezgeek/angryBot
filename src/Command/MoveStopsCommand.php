@@ -127,12 +127,18 @@ class MoveStopsCommand extends Command
                     );
                 }
 
+                $price = $positionSide === Side::Buy ? $firstStop->getPrice() - 1 : $firstStop->getPrice() + 1;
+
                 foreach ($stops as $stop) {
                     $stop->setPrice(
-                        $positionSide === Side::Buy ? $firstStop->getPrice() - 1 : $firstStop->getPrice() + 1
+                        $price
                     );
                     $this->stopRepository->save($stop);
                 }
+
+                $io->info(
+                    \sprintf('Stops moved to %s', $price)
+                );
             }
 
 

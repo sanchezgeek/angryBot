@@ -40,6 +40,10 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
     // Но это имеет смысл, если там есть профит больше 50%
     public function __invoke(IncreaseHedgeSupportPositionByGetProfitFromMain $command): void
     {
+        var_dump(
+            \sprintf('%s received.', IncreaseHedgeSupportPositionByGetProfitFromMain::class)
+        );
+
         $supportedPosition = $this->getPositionData($command->symbol, $command->side);
         $mainPosition = $this->getOppositePosition($supportedPosition->position);
 

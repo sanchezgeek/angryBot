@@ -18,6 +18,7 @@ trait LoggerTrait
 
     protected function warning(string $message, array $context = []): void
     {
+        \print_r('!!!! ' . $message . PHP_EOL);
         $this->logger->warning($message, $context);
     }
 }
