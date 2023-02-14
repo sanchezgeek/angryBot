@@ -64,7 +64,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         // To not make extra queries to Exchange (what can lead to a ban due to ApiRateLimitReached)
         if ($this->cannotRunDueToCannotAffordBuy($ticker)) {
             $this->info(
-                \sprintf('Skipp relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice),
+                \sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice),
             );
             return;
         }
@@ -199,13 +199,13 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 )
             ) {
                 $positionPrice = \ceil($position->entryPrice);
-                $basePrice = $ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
+                $basePrice = $ticker->isIndexAlreadyOverStop($positionSide, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
 
                 $basePrice = $positionSide === Side::Buy ? $basePrice - 25 : $basePrice + 25;
             }
 
             if ($basePrice) {
-                if (!$ticker->isIndexPriceAlreadyOverStopPrice($positionSide, $basePrice)) {
+                if (!$ticker->isIndexAlreadyOverStop($positionSide, $basePrice)) {
                     $selectedStrategy = $stopStrategy->value . ($hedgeStrategy->description ? ('::' . $hedgeStrategy->description) : '');
                     $triggerPrice = $positionSide === Side::Sell ? $basePrice + 1 : $basePrice - 1;
                 } else {

@@ -16,7 +16,7 @@ final class Ticker
     ) {
     }
 
-    public function isIndexPriceAlreadyOverStopPrice(Side $positionSide, float $price): bool
+    public function isIndexAlreadyOverStop(Side $positionSide, float $price): bool
     {
         if ($positionSide === Side::Sell) {
             return $this->indexPrice >= $price;

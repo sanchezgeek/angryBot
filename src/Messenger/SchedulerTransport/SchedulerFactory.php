@@ -33,11 +33,11 @@ final class SchedulerFactory
      */
     public static function createScheduler(ClockInterface $clock): Scheduler
     {
-        $shortStopSpeed = self::FAST;
-        $shortBuySpeed = self::MEDIUM;
+        $shortStopSpeed = self::VERY_FAST;
+        $shortBuySpeed = self::FAST;
 
-        $longStopSpeed = self::VERY_FAST;
-        $longBuySpeed = self::MEDIUM;
+        $longStopSpeed = self::FAST;
+        $longBuySpeed = self::FAST;
 
 //        $shortStopSpeed = self::FAST;
 //        $shortBuySpeed = self::MEDIUM;

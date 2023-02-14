@@ -64,16 +64,19 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         $ticker = $this->positionService->getTicker($message->symbol);
 
         foreach ($stops as $stop) {
-            if ($ticker->isIndexPriceAlreadyOverStopPrice($positionData->position->side, $stop->getPrice())) {
-                $price = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 3 : $ticker->indexPrice - 3;
-                $stop->setPrice($price);
-
-                $this->addStop($positionData->position, $ticker, $stop);
-            } elseif (
-                abs($stop->getPrice() - $ticker->indexPrice) <= (
-                    $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
+            if (
+                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($positionData->position->side, $stop->getPrice()))
+                || (
+                    abs($stop->getPrice() - $ticker->indexPrice) < (
+                        $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
+                    )
                 )
             ) {
+                if ($indexAlreadyOverStop) {
+                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 8 : $ticker->indexPrice - 8;
+                    $stop->setPrice($newPrice);
+                }
+
                 $this->addStop($positionData->position, $ticker, $stop);
             }
         }
@@ -162,7 +165,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 );
             } elseif (
                 $hedge->isMainPosition($position)
-                && $ticker->isIndexPriceAlreadyOverStopPrice($position->side, $position->entryPrice) // MainPosition now in loss
+                && $ticker->isIndexAlreadyOverStop($position->side, $position->entryPrice) // MainPosition now in loss
                 && !$hedge->needKeepSupportSize()
             ) {
                 // @todo Need async job instead (to check $hedge->needKeepSupportSize() in future, if now still need keep support size)

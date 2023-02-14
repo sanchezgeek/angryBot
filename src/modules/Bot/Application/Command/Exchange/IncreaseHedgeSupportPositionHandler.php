@@ -69,7 +69,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
         $ticker = $this->positionService->getTicker($command->symbol);
 
         // If mainPosition now in loss
-        if ($ticker->isIndexPriceAlreadyOverStopPrice($mainPosition->side, $mainPosition->entryPrice)) {
+        if ($ticker->isIndexAlreadyOverStop($mainPosition->side, $mainPosition->entryPrice)) {
             return;
         }
 

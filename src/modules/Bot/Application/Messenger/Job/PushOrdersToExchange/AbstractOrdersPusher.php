@@ -42,14 +42,7 @@ abstract class AbstractOrdersPusher
         ) {
             if (!$position = $this->positionService->getOpenedPositionInfo($symbol, $side)) {
                 // Fake. For run handlers. And have ability to check hedge.
-                $position = new Position(
-                    $side,
-                    $symbol,
-                    $this->positionService->getTicker($symbol)->indexPrice,
-                    0,
-                    0,
-                    0,
-                );
+                $position = $this->fakePosition($side, $symbol);
             }
 
             $this->info(
@@ -103,5 +96,12 @@ abstract class AbstractOrdersPusher
         $this->warning(
             \sprintf('%s received: %s', \get_class($exception), $exception->getMessage()),
         );
+    }
+
+    private function fakePosition(Side $side, Symbol $symbol): Position
+    {
+        $entryPrice = $this->positionService->getTicker($symbol)->indexPrice;
+
+        return new Position($side, $symbol, $entryPrice, 0, 0, 0);
     }
 }
