@@ -108,6 +108,28 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return null;
     }
 
+    public function findFirstPositionStop(Position $position): ?Stop
+    {
+        $result = $this->findActive(
+            side: $position->side,
+            qbModifier: static function (QueryBuilder $qb) use ($position) {
+                $qb->addOrderBy(
+                    new OrderBy(
+                        $qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'
+                    )
+                );
+
+                $qb->setMaxResults(1);
+            }
+        );
+
+        if ($firstPositionStop = $result[0] ?? null) {
+            return $firstPositionStop;
+        }
+
+        return null;
+    }
+
     public function getNextId(): int
     {
         return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
