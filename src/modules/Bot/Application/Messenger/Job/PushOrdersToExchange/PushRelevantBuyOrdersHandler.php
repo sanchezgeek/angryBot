@@ -145,15 +145,18 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
             $this->logExchangeClientException($e);
 
-            if (
-                ($isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null)
-                && ($hedge = Hedge::create($position, $oppositePosition))
-                && ($hedge->isSupportPosition($position))
-                && ($hedge->needIncreaseSupport())
-            ) {
-                $this->messageBus->dispatch(
-                    new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)
-                );
+            $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
+            if ($isHedge) {
+                $hedge = Hedge::create($position, $oppositePosition);
+
+                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
+                    $this->messageBus->dispatch(
+                        new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)
+                    );
+                }
+                // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
+                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushRelevantStopsHandler) окажется неработоспособной
+                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
             }
         }
     }

@@ -76,5 +76,8 @@ out: ## Get consumers output
 crit: ## Get dev CRITICAL
 	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep CRIT
 
+warn: ## Get dev WARNING
+	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep WARN
+
 out-warn: ## Get consumers "warning" output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '!!'

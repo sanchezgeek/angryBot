@@ -21,11 +21,9 @@ final class Hedge
         return $this->supportPosition->side === $position->side;
     }
 
-    public function getSupportRate(): float
+    public function isMainPosition(Position $position): bool
     {
-        $rate = $this->supportPosition->size / $this->mainPosition->size;
-
-        return $rate;
+        return $this->mainPosition->side === $position->side;
     }
 
     public function needIncreaseSupport(): bool
@@ -42,7 +40,7 @@ final class Hedge
     {
         $rate = $this->getSupportRate();
 
-        return $rate > 0.38 && $rate < 0.45;
+        return $rate < 0.45;
     }
 
     public function getHedgeStrategy(): HedgeStrategy
@@ -75,5 +73,10 @@ final class Hedge
         }
 
         return new Hedge($mainPosition, $supportPosition);
+    }
+
+    private function getSupportRate(): float
+    {
+        return $this->supportPosition->size / $this->mainPosition->size;
     }
 }

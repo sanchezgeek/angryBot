@@ -8,6 +8,7 @@ use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
+use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -32,6 +33,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private ?Ticker $lastTicker = null;
 
     public function __construct(
+        private readonly HedgeService $hedgeService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderService $buyOrderService,
         private readonly StopService $stopService,
@@ -95,7 +97,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                     $this->stopRepository->save($stop);
                 }
 
-                $oppositeBuyOrderData = $this->createOpposite($position, $stop);
+                $oppositeBuyOrderData = $this->createOpposite($position, $stop, $ticker);
 
                 $this->info(
                     \sprintf(
@@ -124,7 +126,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     /**
      * @return array{id: int, triggerPrice: float}
      */
-    private function createOpposite(Position $position, Stop $stop): array
+    private function createOpposite(Position $position, Stop $stop, Ticker $ticker): array
     {
         $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         $triggerPrice = $stop->getPositionSide() === Side::Sell
@@ -156,6 +158,14 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                     self::SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA,
                     ['asSupportFromMainHedgePosition' => true, 'createdWhen' => 'tryGetHelpFromHandler'],
                 );
+            } elseif (
+                $hedge->isMainPosition($position)
+                && $ticker->isIndexPriceAlreadyOverStopPrice($position->side, $position->entryPrice) // MainPosition now in loss
+                && !$hedge->needKeepSupportSize()
+            ) {
+                // @todo Need async job instead (to check $hedge->needKeepSupportSize() in future, if now still need keep support size)
+                // Or it can be some problems at runtime...Need async job
+                $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop);
             }
             // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
             // Пока что добавил отлов CannotAffordOrderCost в PushRelevantBuyOrdersHandler при попытке купить
