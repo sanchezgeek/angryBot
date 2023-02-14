@@ -3,11 +3,14 @@
 namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Delivery\Domain\Delivery;
 use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query\Expr\OrderBy;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -78,6 +81,31 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    public function findFirstStopUnderPosition(Position $position): ?Stop
+    {
+        $result = $this->findActive(
+            side: $position->side,
+            qbModifier: static function (QueryBuilder $qb) use ($position) {
+                $qb->andWhere(
+                    $qb->getRootAliases()[0] . '.price' . ($position->side === Side::Sell ? '> :entryPrice' : '< :entryPrice')
+                )->setParameter(':entryPrice', $position->entryPrice);
+                $qb->addOrderBy(
+                    new OrderBy(
+                        $qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'
+                    )
+                );
+
+                $qb->setMaxResults(1);
+            }
+        );
+
+        if ($firstPositionStop = $result[0] ?? null) {
+            return $firstPositionStop;
+        }
+
+        return null;
     }
 
     public function getNextId(): int
