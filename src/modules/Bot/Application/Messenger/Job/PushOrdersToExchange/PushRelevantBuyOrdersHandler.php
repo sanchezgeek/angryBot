@@ -36,6 +36,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 //    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
 
     private ?Ticker $lastTicker = null;
+    private ?float $cannotAffordAtPrice = null;
 
     public function __construct(
         private readonly BuyOrderRepository $buyOrderRepository,
@@ -50,6 +51,17 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         parent::__construct($positionService, $clock, $logger);
     }
 
+    private function cannotRunDueToCannotAffordBuy(Ticker $ticker): bool
+    {
+        if ($this->cannotAffordAtPrice !== null) {
+            $range = [$ticker->indexPrice - 10, $ticker->indexPrice + 10];
+
+            return $this->cannotAffordAtPrice > $range[0] && $this->cannotAffordAtPrice < $range[1];
+        }
+
+        return false;
+    }
+
     public function __invoke(PushRelevantBuyOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side);
@@ -59,6 +71,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         $orders = $this->buyOrderRepository->findActive($positionData->position->side, $this->lastTicker);
         $ticker = $this->positionService->getTicker($message->symbol);
+
+        // To not make extra queries to Exchange (what can lead to a ban due to ApiRateLimitReached)
+        if ($this->cannotRunDueToCannotAffordBuy($ticker)) {
+            $this->info(
+                \sprintf('Skipp relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice),
+            );
+            return;
+        }
+
+        $this->cannotAffordAtPrice = null;
 
         foreach ($orders as $order) {
             $delta = $order->getTriggerDelta() ?: self::DEFAULT_TRIGGER_DELTA;
@@ -119,6 +141,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $buyOrder)
             );
         } catch (CannotAffordOrderCost $e) {
+            $this->cannotAffordAtPrice = $ticker->indexPrice;
+
             $this->logExchangeClientException($e);
 
             if (
