@@ -165,27 +165,11 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 )
             ) {
                 try {
-                    $firstPositionStop = $this->stopRepository->findActive(
-                        side: $positionSide,
-                        qbModifier: static function (QueryBuilder $qb) use ($position) {
-                            $qb->andWhere(
-                                $qb->getRootAliases()[0] . '.price' . ($position->side === Side::Sell ? '> :entryPrice' : '< :entryPrice')
-                            )->setParameter(':entryPrice', $position->entryPrice);
-                            $qb->addOrderBy(
-                                new OrderBy(
-                                    $qb->getRootAliases()[0] . '.price', $position->side === Side::Sell ? 'ASC' : 'DESC'
-                                )
-                            );
-
-                            $qb->setMaxResults(1);
-                        }
-                    );
+                    if ($firstPositionStop = $this->stopRepository->findFirstStopUnderPosition($position)) {
+                        $basePrice = $firstPositionStop->getPrice();
+                    }
                 } catch (\Throwable $e) {
                     $this->logger->critical('Cannot find first stop. See logs');
-                }
-
-                if ($firstPositionStop = $firstPositionStop[0] ?? null) {
-                    $basePrice = $firstPositionStop->getPrice();
                 }
             } elseif (
                 (
