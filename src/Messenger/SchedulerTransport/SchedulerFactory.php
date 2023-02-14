@@ -36,7 +36,7 @@ final class SchedulerFactory
         $shortStopSpeed = self::FAST;
         $shortBuySpeed = self::MEDIUM;
 
-        $longStopSpeed = self::FAST;
+        $longStopSpeed = self::VERY_FAST;
         $longBuySpeed = self::MEDIUM;
 
 //        $shortStopSpeed = self::FAST;
@@ -44,7 +44,7 @@ final class SchedulerFactory
 //
 //        $longStopSpeed = self::FAST;
 //        $longBuySpeed = self::MEDIUM;
-
+        $cleanupPeriod = '45S';
         $jobSchedules = [
                                                 /**** Push relevant orders to Exchange *****/
 
@@ -65,16 +65,16 @@ final class SchedulerFactory
                                                             /**** Utils *****/
 
             // Cleanup SHORT-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', $cleanupPeriod = '45S'), new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 4, true)),
+            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 4, true)),
 
             // Cleanup SHORT-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:02:06Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)),
+            PeriodicalJob::infinite('2020-01-01T00:01:06Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1)),
 
             // Cleanup LONG-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:03:07Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 3, true)),
+            PeriodicalJob::infinite('2020-01-01T00:01:07Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 3, true)),
 
             // Cleanup LONG-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:04:08Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true)),
+            PeriodicalJob::infinite('2020-01-01T00:01:08Z', \sprintf('PT%s', $cleanupPeriod), new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true)),
         ];
 
         return new Scheduler($clock, $jobSchedules);
