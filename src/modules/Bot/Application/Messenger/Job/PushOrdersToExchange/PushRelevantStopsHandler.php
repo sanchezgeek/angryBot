@@ -6,10 +6,8 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
-use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -29,12 +27,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 40;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 33;
 
     private ?Ticker $lastTicker = null;
 
     public function __construct(
-        private readonly HedgeService $hedgeService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderService $buyOrderService,
         private readonly StopService $stopService,
@@ -54,6 +51,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 //        if (!$positionData->isPositionOpened()) {
 //            return;
 //        }
+
+
+        /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
+
+
 
         $stops = $this->stopRepository->findActive($positionData->position->side, $this->lastTicker);
         $ticker = $this->positionService->getTicker($message->symbol);
@@ -140,9 +142,12 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 && $hedge->needIncreaseSupport()
                 && ($vol = round($volume / 3, 3)) > 0.001
             ) {
-                if ($vol > 0.001) {
-                    $vol = 0.001;
+                if ($vol > 0.005) {
+                    $vol = 0.005;
                 }
+
+                // @todo Всё это лучше вынести в настройки
+                // С человекопонятными названиями
 
                 $this->stopService->create(
                     $oppositePosition->side,
