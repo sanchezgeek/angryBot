@@ -8,6 +8,7 @@ use App\Bot\Domain\ValueObject\Position\Side;
 use App\Delivery\Domain\Delivery;
 use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -68,7 +69,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
         if ($nearTicker) {
             $cond = $side === Side::Buy     ? 'bo.price < :price'           : 'bo.price > :price';
-            $price = $side === Side::Buy    ? $nearTicker->indexPrice + 15  : $nearTicker->indexPrice - 15;
+            $price = $side === Side::Buy    ? $nearTicker->indexPrice + 10  : $nearTicker->indexPrice - 10;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
         }
@@ -78,6 +79,34 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function findActiveInRange(
+        Side $side,
+        float $from,
+        float $to,
+        bool $exceptOppositeOrders = false,
+        callable $qbModifier = null
+    ): array {
+        return $this->findActive(
+            side: $side,
+            exceptOppositeOrders: $exceptOppositeOrders,
+            qbModifier: function (QueryBuilder $qb) use ($from, $to, $qbModifier) {
+                $qbModifier($qb);
+
+                $priceField = $qb->getRootAliases()[0] . '.price';
+
+                $qb
+                    ->andWhere(
+                        \sprintf('%s > :from and %s < :to', $priceField, $priceField)
+                    )
+                    ->setParameter(':from', $from)
+                    ->setParameter(':to', $to);
+            }
+        );
     }
 
     public function getNextId(): int
