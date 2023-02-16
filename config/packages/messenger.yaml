@@ -17,6 +17,7 @@ framework:
             # Route your messages to the transports
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async
             App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
+            App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
 
 # when@test:
 #    framework:
