@@ -29,7 +29,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 33;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 31;
 
     private ?Ticker $lastTicker = null;
 
@@ -73,7 +73,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 )
             ) {
                 if ($indexAlreadyOverStop) {
-                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 8 : $ticker->indexPrice - 8;
+                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
                     $stop->setPrice($newPrice);
                 }
 
