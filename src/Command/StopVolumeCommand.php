@@ -47,6 +47,7 @@ class StopVolumeCommand extends Command
             ->addArgument('volume', InputArgument::REQUIRED, 'Create stops for volume')
             ->addOption('fromPrice', 'f', InputOption::VALUE_OPTIONAL, 'Price to starts from (default - ticker.indexPrice)')
             ->addOption('toPrice', 't', InputOption::VALUE_OPTIONAL, 'Price to finish with (default - position.entryPrice)')
+            ->addOption('delta', 'd', InputOption::VALUE_OPTIONAL, 'toPrice = (ticker.indexPosition + delta)')
 //            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, \sprintf('Trigger delta (default: %s)', self::DEFAULT_TRIGGER_DELTA), self::DEFAULT_TRIGGER_DELTA)
 //            ->addOption('increment', 'i', InputOption::VALUE_OPTIONAL, 'Increment (optional; default: 0.000)')
         ;
@@ -54,16 +55,7 @@ class StopVolumeCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $helper = $this->getHelper('question');
-
         $io = new SymfonyStyle($input, $output);
-
-//        $support = $this->positionService->getOpenedPositionInfo($symbol, Side::Buy);
-//        $main = $this->positionService->getOpenedPositionInfo($symbol, Side::Sell);
-//
-//        if (!$support || !$main) {
-//
-//        }
 
         try {
             if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
@@ -92,6 +84,16 @@ class StopVolumeCommand extends Command
                 );
             }
 
+            $delta = $input->getOption('delta');
+            if ($delta && !($delta = (float)($delta))) {
+                throw new \InvalidArgumentException(
+                    \sprintf('Invalid $delta provided (%s)', $input->getOption('$delta')),
+                );
+            }
+
+            if ($delta && $toPrice) {
+                throw new \LogicException('Only one of $delta and $toPrice can be used');
+            }
 
             $context = ['uniqid' => \uniqid('fix-position', true)];
 
@@ -108,6 +110,10 @@ class StopVolumeCommand extends Command
 
             if (!$fromPrice) {
                 $fromPrice = $ticker->indexPrice;
+            }
+
+            if ($delta) {
+                $toPrice = $position->side === Side::Sell ? $ticker->indexPrice + $delta : $ticker->indexPrice - $delta;
             }
 
             if ($toPrice && $ticker->isIndexAlreadyOverStop($positionSide, $toPrice)) {
