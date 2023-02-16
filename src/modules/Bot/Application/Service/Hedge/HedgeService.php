@@ -16,10 +16,6 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    // private const DEFAULT_INC = 0.001;
-    private const DEFAULT_STEP = 11;
-    private const DEFAULT_TRIGGER_DELTA = 3;
-
     public function __construct(
         private readonly StopService $stopService,
         LoggerInterface $logger,
@@ -44,23 +40,17 @@ final class HedgeService
         $stopVolume = VolumeHelper::round($supportPositionSize * $stoppedMainPositionPart);
 
         $fromPrice = $stop->getPrice();
-        $toPrice = $supportPosition->entryPrice;
 
         $context = [
             'cause' => 'incrementalStopGridAfterMainPositionStopCreated',
             'onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId(),
-            'uniqid' => ($uniqId = \uniqid('inc-stop', true))
         ];
 
-        $delta = $fromPrice - $toPrice;
-        $step = self::DEFAULT_STEP;
-
-        $count = \ceil($delta / $step);
-        $stepVolume = VolumeHelper::round($stopVolume / $count);
+        $info = $this->stopService->createIncrementalToPosition($supportPosition, $stopVolume, $fromPrice, $supportPosition->entryPrice, $context);
 
         $this->info(
             \sprintf(
-                'Create IncrementalStopGrid for %s. Info: %s.',
+                'IncrementalStopGrid for %s created. Info: %s.',
                 $supportPosition->getCaption(),
                 Json::encode([
                     'mainPosition' => ['size' => $mainPositionSize, 'stoppedVolume' => $stoppedVolume],
@@ -68,39 +58,8 @@ final class HedgeService
                         'size' => $supportPositionSize,
                         'volumeToStop' => $stopVolume
                     ],
-                    'delta' => $delta,
-                    'step' => $step,
-                    'count' => $count,
-                    'stepVolume' => $stepVolume,
-                    'uniqueID' => $uniqId,
+                    'grid' => \json_encode($info),
                 ])
-            )
-        );
-
-        // ---------------- //
-
-        $volume = $stepVolume;
-        $price = $fromPrice;
-
-        do {
-            $this->stopService->create(
-                $supportPosition->side,
-                $price,
-                $volume,
-                self::DEFAULT_TRIGGER_DELTA,
-                $context
-            );
-
-            $volume += $stepVolume;
-            $stopVolume -= $stepVolume;
-            $price -= $step;
-        } while ($stopVolume >= $stepVolume && $price >= $toPrice);
-
-        echo (
-            \sprintf(
-                '!!!! IncrementalStopGrid for %s created. UniqueID: %s',
-                $supportPosition->getCaption(),
-                $uniqId
             )
         );
     }
