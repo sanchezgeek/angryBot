@@ -68,7 +68,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
         if ($nearTicker) {
             $cond = $side === Side::Buy     ? 'bo.price < :price'           : 'bo.price > :price';
-            $price = $side === Side::Buy    ? $nearTicker->indexPrice + 50  : $nearTicker->indexPrice - 50;
+            $price = $side === Side::Buy    ? $nearTicker->indexPrice + 15  : $nearTicker->indexPrice - 15;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
         }

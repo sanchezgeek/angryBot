@@ -58,7 +58,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 //            return;
 //        }
 
-        $orders = $this->buyOrderRepository->findActive($positionData->position->side, $this->lastTicker);
         $ticker = $this->positionService->getTicker($message->symbol);
 
         // To not make extra queries to Exchange (what can lead to a ban due to ApiRateLimitReached)
@@ -68,6 +67,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             );
             return;
         }
+
+        $orders = $this->buyOrderRepository->findActive($positionData->position->side, $ticker);
 
         $this->cannotAffordAtPrice = null;
 
@@ -238,8 +239,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             return false;
         }
 
-        $range = [$ticker->indexPrice - 15, $ticker->indexPrice + 15];
+        $range = [$this->cannotAffordAtPrice - 15, $this->cannotAffordAtPrice + 15];
 
-        return $this->cannotAffordAtPrice > $range[0] && $this->cannotAffordAtPrice < $range[1];
+        return $ticker->indexPrice > $range[0] && $ticker->indexPrice < $range[1];
     }
 }
