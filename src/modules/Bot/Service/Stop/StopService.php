@@ -75,7 +75,7 @@ final class StopService
             $stepVolume = VolumeHelper::round($volume / $count);
         }
 
-        $price = $fromPrice + ($position->side === Side::Sell ? ($step) : (-$step));
+        $price = $fromPrice;
 
         $info = new CreatedIncGridInfo([
             'volume' => $volume,

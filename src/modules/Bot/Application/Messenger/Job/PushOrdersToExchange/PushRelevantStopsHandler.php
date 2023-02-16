@@ -29,7 +29,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 31;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 21;
 
     private ?Ticker $lastTicker = null;
 
@@ -50,7 +50,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushRelevantStopOrders $message): void
     {
-        $positionData = $this->getPositionData($message->symbol, $message->side);
+        $positionData = $this->getPositionData($message->symbol, $message->side, true);
 //        if (!$positionData->isPositionOpened()) {
 //            return;
 //        }
