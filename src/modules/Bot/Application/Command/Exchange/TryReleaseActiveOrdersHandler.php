@@ -16,7 +16,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class TryReleaseActiveOrdersHandler
 {
     private const MAX_ORDER_MUST_LEFT = 4;
-    private const RELEASE_OVER_DISTANCE = 35;
+    private const RELEASE_OVER_DISTANCE = 25;
 
     // @todo Всё это лучше вынести в настройки
     // С человекопонятными названиями
@@ -44,8 +44,8 @@ final class TryReleaseActiveOrdersHandler
 
             if (
                 abs($order->triggerPrice - $ticker->indexPrice) > self::RELEASE_OVER_DISTANCE
-                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
-                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
+//                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
+//                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
                 $this->release($order);
             } elseif ($claimedOrderVolume !== null && $order->volume < $claimedOrderVolume) {
