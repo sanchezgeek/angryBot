@@ -34,26 +34,33 @@ abstract class AbstractOrdersPusher
         $this->logger = $logger;
     }
 
-    protected  function getPositionData(Symbol $symbol, Side $side): PositionData
+    protected  function getPositionData(Symbol $symbol, Side $side, bool $getFake = false): PositionData
     {
         if (
             !($positionData = $this->positionsData[$symbol->value . $side->value] ?? null)
             || $positionData->needUpdate($this->clock->now())
         ) {
-            if (!$position = $this->positionService->getOpenedPositionInfo($symbol, $side)) {
+            if (
+                !($position = $this->positionService->getOpenedPositionInfo($symbol, $side))
+                && $getFake
+            ) {
                 // Fake. For run handlers. And have ability to check hedge.
                 $position = $this->fakePosition($side, $symbol);
             }
 
-            $this->info(
-                \sprintf(
-                    'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
-                    $position->getCaption(),
-                    $position->size,
-                    $position->positionValue,
-                    $position->entryPrice,
-                    $position->liquidationPrice,
-                ));
+            if ($position) {
+                $this->info(
+                    \sprintf(
+                        'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
+                        $position->getCaption(),
+                        $position->size,
+                        $position->positionValue,
+                        $position->entryPrice,
+                        $position->liquidationPrice,
+                    )
+                );
+            }
+
 
 //            if ($opposite = $this->getOppositePosition($position)) {
 //                $this->info(
