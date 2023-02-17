@@ -31,8 +31,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 3;
-    private const REGULAR_ORDER_STOP_DISTANCE = 50;
-    private const ADDITION_ORDER_STOP_DISTANCE = 30;
+    private const REGULAR_ORDER_STOP_DISTANCE = 45;
+    private const ADDITION_ORDER_STOP_DISTANCE = 70;
 
 //    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
 //    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
@@ -236,7 +236,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         // If still cannot calc $triggerPrice
         if ($triggerPrice === null) {
-            $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
+//            $basePrice = $buyOrder->getOriginalPrice() ?? $buyOrder->getPrice();
+            $basePrice = $buyOrder->getPrice();
 
             $triggerPrice = $positionSide === Side::Sell ? $basePrice + $oppositePriceDelta : $basePrice - $oppositePriceDelta;
         }
