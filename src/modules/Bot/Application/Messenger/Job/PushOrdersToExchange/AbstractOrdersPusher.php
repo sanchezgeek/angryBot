@@ -51,12 +51,12 @@ abstract class AbstractOrdersPusher
             if ($position) {
                 $this->info(
                     \sprintf(
-                        'UPD %s | %.3f btc (%.2f usdt) | entry: $%.2f | liq: $%.2f',
+                        'UPD %s | %.3f | $%.2f (liq: $%.2f | volume: %.2f usdt)',
                         $position->getCaption(),
                         $position->size,
-                        $position->positionValue,
                         $position->entryPrice,
                         $position->liquidationPrice,
+                        $position->positionValue,
                     )
                 );
             }
