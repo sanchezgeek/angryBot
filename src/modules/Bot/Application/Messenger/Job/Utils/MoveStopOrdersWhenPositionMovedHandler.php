@@ -19,7 +19,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
      */
     private array $lastRunAt = [];
 
-    private const PRICE_STEP = 10;
+    private const PRICE_STEP = 5;
     private const MOVE_STEP = 6;
 
     public function __construct(
