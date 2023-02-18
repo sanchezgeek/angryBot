@@ -27,8 +27,6 @@ final class Transport implements TransportInterface
 
     /**
      * @return iterable<Envelope>
-     *
-     * @psalm-suppress ImplementedReturnTypeMismatch
      */
     public function get(): iterable
     {

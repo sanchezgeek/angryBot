@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger;
 
-final class DispatchAsyncJob
+final class DispatchAsync
 {
     public function __construct(public object $message)
     {

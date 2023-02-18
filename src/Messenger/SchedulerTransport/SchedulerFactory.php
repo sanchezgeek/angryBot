@@ -12,7 +12,7 @@ use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
-use App\Messenger\DispatchAsyncJob;
+use App\Messenger\DispatchAsync;
 use Exception;
 
 /**
@@ -20,11 +20,11 @@ use Exception;
  */
 final class SchedulerFactory
 {
-    private const VERY_FAST = 1;
-    private const FAST = 2;
-    private const MEDIUM = 3;
-    private const SLOW = 5;
-    private const VERY_SLOW = 10;
+    private const VERY_FAST = '600 milliseconds';
+    private const FAST = '1 second';
+    private const MEDIUM = '1500 milliseconds';
+    private const SLOW = '2 seconds';
+    private const VERY_SLOW = '5 seconds';
 
     private function __construct()
     {
@@ -43,45 +43,42 @@ final class SchedulerFactory
 
         $jobSchedules = [
                                                 /**** Push relevant orders to Exchange *****/
-
             // SHORT-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:00:01Z', \sprintf('PT%sS', $shortStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)),
+            PeriodicalJob::infinite('2023-01-18T00:00:01.2Z', \DateInterval::createFromDateString($shortStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)),
 
-            // SHORT-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:00:02Z', \sprintf('PT%sS', $shortBuySpeed), new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell)),
+            // SHORT-position | BUY [async]
+            PeriodicalJob::infinite('2023-01-18T00:00:01.4Z', \DateInterval::createFromDateString($shortBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell))),
 
             // LONG-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:00:03Z', \sprintf('PT%sS', $longStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)),
+            PeriodicalJob::infinite('2023-01-18T00:00:01.6Z', \DateInterval::createFromDateString($longStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)),
 
-            // LONG-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:00:04Z', \sprintf('PT%sS', $longBuySpeed), new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy)),
-
+            // LONG-position | BUY [async]
+            PeriodicalJob::infinite('2023-01-18T00:00:01.8Z', \DateInterval::createFromDateString($longBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy))),
 
                                                             /**** Utils *****/
-
             /**** Cleanup orders *****/
             // Cleanup SHORT-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', ($cleanupPeriod = '15S')), DispatchAsyncJob::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:05Z', \sprintf('PT%s', ($cleanupPeriod = '15S')), DispatchAsync::message(
                 new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 3, true))
             ),
 
             // Cleanup SHORT-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:01:06Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:06Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsync::message(
                 new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1))
             ),
 
             // Cleanup LONG-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:01:07Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:07Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsync::message(
                 new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 3, true))
             ),
 
             // Cleanup LONG-position | BUY
-            PeriodicalJob::infinite('2020-01-01T00:01:08Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:08Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsync::message(
                 new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))
             ),
 
             /**** Move SL *****/
-            PeriodicalJob::infinite('2020-01-01T00:01:08Z', 'PT10S', DispatchAsyncJob::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:08Z', 'PT10S', DispatchAsync::message(
                 new MoveStopOrdersWhenPositionMoved(Side::Sell))
             ),
         ];

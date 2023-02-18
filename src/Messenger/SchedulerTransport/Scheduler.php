@@ -26,7 +26,7 @@ final class Scheduler implements IteratorAggregate
      * @param JobScheduleInterface[] $jobSchedules
      */
     public function __construct(
-        private ClockInterface $clock,
+        private readonly ClockInterface $clock,
         iterable $jobSchedules
     ) {
         $this->jobSchedules = (static fn (JobScheduleInterface ...$a) => $a)(...$jobSchedules);

@@ -9,14 +9,14 @@ final class CachedValue
     /**
      * 15 seconds
      */
-    private const DEFAULT_UPDATE_INTERVAL = 15000;
+    private const DEFAULT_TTL = 15000;
 
     private mixed $value;
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct(
         private readonly \Closure $valueFactory,
-        private readonly int $updateInterval = self::DEFAULT_UPDATE_INTERVAL,
+        private readonly int $ttl = self::DEFAULT_TTL,
     ) {
     }
 
@@ -42,6 +42,6 @@ final class CachedValue
         $now = (int)(new \DateTimeImmutable())->format('Uv');
         $updatedAt = (int)($this->updatedAt->format('Uv'));
 
-        return $now - $updatedAt > $this->updateInterval;
+        return $now - $updatedAt > $this->ttl;
     }
 }

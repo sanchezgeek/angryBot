@@ -11,18 +11,18 @@ use Exception;
 
 final class PeriodicalJob implements JobScheduleInterface
 {
-    public function __construct(
-        private DatePeriod $period,
-        private object $job,
-    ) {
+    public function __construct(private DatePeriod $period, private object $job)
+    {
     }
 
     /**
      * @throws Exception if invalid date or period
      */
-    public static function infinite(string $start, string $interval, object $job): self
+    public static function infinite(string $start, $interval, object $job): self
     {
-        return new self(new DatePeriod(new DateTimeImmutable($start), new DateInterval($interval), 999999999), $job);
+        $interval = $interval instanceof DateInterval ? $interval : new DateInterval($interval);
+
+        return new self(new DatePeriod(new DateTimeImmutable($start), $interval, 9999999999999), $job);
     }
 
     public function getNextRun(DateTimeImmutable $lastTick): ?DateTimeImmutable
@@ -34,13 +34,14 @@ final class PeriodicalJob implements JobScheduleInterface
         if ($startDate > $lastTick) {
             return DateTimeImmutable::createFromFormat('U.u', $startDate->format('U.u')) ?: null;
         }
+
         if ($endDate && $endDate < $lastTick) {
             return null;
         }
 
         foreach ($this->period as $firstRunDate) {
-            $gridStep = $firstRunDate->getTimestamp() - $startDate->getTimestamp();
-            if ($gridStep !== 0) {
+            $gridStep = (float)$firstRunDate->format('U.u') - (float)$startDate->format('U.u');
+            if ($gridStep > 0) {
                 break;
             }
         }
@@ -51,8 +52,8 @@ final class PeriodicalJob implements JobScheduleInterface
             // @codeCoverageIgnoreEnd
         }
 
-        $delta = (float) $lastTick->format('U.u') - (float) $startDate->format('U.u');
-        $recurrencesPassed = (int) ($delta / $gridStep);
+        $delta = (float)$lastTick->format('U.u') - (float)$startDate->format('U.u');
+        $recurrencesPassed = (int)($delta / $gridStep);
 
         $maxRecurrences = $this->period->getRecurrences();
         if ($maxRecurrences) {
@@ -67,9 +68,9 @@ final class PeriodicalJob implements JobScheduleInterface
             }
         }
 
-        $nextRunTimestamp = ($recurrencesPassed + 1) * $gridStep + $startDate->getTimestamp();
+        $nextRunTimestamp = ($recurrencesPassed + 1) * $gridStep + (float)$startDate->format('U.u');
 
-        return DateTimeImmutable::createFromFormat('U.u', $nextRunTimestamp . $startDate->format('.u')) ?: null;
+        return DateTimeImmutable::createFromFormat('U.u', (string)$nextRunTimestamp) ?: null;
     }
 
     public function getJob(): object

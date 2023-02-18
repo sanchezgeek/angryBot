@@ -14,9 +14,14 @@ framework:
                     max_retries: 0 # do not retry
 
         routing:
-            # Route your messages to the transports
+            # buy
+            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders: async
+
+            # from cron
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async
             App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
+
+            # utils
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
             App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
 

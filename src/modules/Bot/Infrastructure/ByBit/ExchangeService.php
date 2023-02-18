@@ -22,7 +22,7 @@ final class ExchangeService implements ExchangeServiceInterface
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
-    private const TICKER_UPDATE_INTERVAL = 1000;
+    private const TICKER_TTL = 700;
     private ?CachedValue $ticker = null;
 
     private BybitLinear $api;
@@ -52,7 +52,7 @@ final class ExchangeService implements ExchangeServiceInterface
                 return $ticker;
             };
 
-            $this->ticker = new CachedValue($valueFactory, self::TICKER_UPDATE_INTERVAL);
+            $this->ticker = new CachedValue($valueFactory, self::TICKER_TTL);
         }
 
         return $this->ticker->get();
