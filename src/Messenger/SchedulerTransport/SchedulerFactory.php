@@ -67,7 +67,7 @@ final class SchedulerFactory
 
             // Cleanup SHORT-position | BUY
             PeriodicalJob::infinite('2020-01-01T00:01:06Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
-                new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3))
+                new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1))
             ),
 
             // Cleanup LONG-position | SL
