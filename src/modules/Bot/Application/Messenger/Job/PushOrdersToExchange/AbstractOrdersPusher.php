@@ -6,6 +6,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Position\Side;
@@ -27,6 +28,7 @@ abstract class AbstractOrdersPusher
     private array $positionsData = [];
 
     public function __construct(
+        protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,
         protected readonly ClockInterface $clock,
         LoggerInterface $logger,
@@ -107,7 +109,7 @@ abstract class AbstractOrdersPusher
 
     private function fakePosition(Side $side, Symbol $symbol): Position
     {
-        $entryPrice = $this->positionService->getTicker($symbol)->indexPrice;
+        $entryPrice = $this->exchangeService->getTicker($symbol)->indexPrice;
 
         return new Position($side, $symbol, $entryPrice, 0, 0, 0);
     }

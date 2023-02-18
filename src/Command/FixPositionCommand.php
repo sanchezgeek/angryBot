@@ -2,10 +2,11 @@
 
 namespace App\Command;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
 use App\Helper\VolumeHelper;
 use Symfony\Component\Console\Command\Command;
@@ -26,7 +27,8 @@ class FixPositionCommand extends Command
     public function __construct(
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
-        private readonly PositionService $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $positionService,
         string $name = null,
     ) {
         parent::__construct($name);
@@ -80,7 +82,7 @@ class FixPositionCommand extends Command
             $context = ['uniqid' => \uniqid('fix-position', true)];
 
             $symbol = Symbol::BTCUSDT;
-            $ticker = $this->positionService->getTicker($symbol);
+            $ticker = $this->exchangeService->getTicker($symbol);
             $position = $this->positionService->getOpenedPositionInfo($symbol, $positionSide);
 
             if ($ticker->isIndexAlreadyOverStop($positionSide, $position->entryPrice)) {

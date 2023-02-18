@@ -2,10 +2,11 @@
 
 namespace App\Command;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -28,7 +29,8 @@ class MoveStopsCommand extends Command
 
     public function __construct(
         private readonly StopRepository $stopRepository,
-        private readonly PositionService $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $positionService,
         string $name = null,
     ) {
         parent::__construct($name);
@@ -111,7 +113,7 @@ class MoveStopsCommand extends Command
                 if (!$firstStop) {
 
                     $guessPrice = $position->entryPrice;
-                    $ticker = $this->positionService->getTicker($position->symbol);
+                    $ticker = $this->exchangeService->getTicker($position->symbol);
 
                     if ($ticker->isIndexAlreadyOverStop($position->side, $guessPrice)) {
                         $guessPrice = $ticker->indexPrice - 30;

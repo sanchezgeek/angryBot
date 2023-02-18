@@ -6,6 +6,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
@@ -39,13 +40,14 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         private readonly BuyOrderService $buyOrderService,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+        ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
 
         private readonly float $slForcedTriggerDelta
     ) {
-        parent::__construct($positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
     public function __invoke(PushRelevantStopOrders $message): void
@@ -61,7 +63,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
 
         $stops = $this->stopRepository->findActive($positionData->position->side, $this->lastTicker);
-        $ticker = $this->positionService->getTicker($message->symbol);
+        $ticker = $this->exchangeService->getTicker($message->symbol);
 
         foreach ($stops as $stop) {
             if (

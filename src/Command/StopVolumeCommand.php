@@ -2,13 +2,12 @@
 
 namespace App\Command;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
-use App\Helper\Json;
-use App\Helper\VolumeHelper;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
@@ -31,7 +30,8 @@ class StopVolumeCommand extends Command
     public function __construct(
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
-        private readonly PositionService $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $positionService,
         LoggerInterface $logger,
         string $name = null,
     ) {
@@ -98,7 +98,7 @@ class StopVolumeCommand extends Command
             $context = ['uniqid' => \uniqid('fix-position', true)];
 
             $symbol = Symbol::BTCUSDT;
-            $ticker = $this->positionService->getTicker($symbol);
+            $ticker = $this->exchangeService->getTicker($symbol);
             $position = $this->positionService->getOpenedPositionInfo($symbol, $positionSide);
 
             if ($fromPrice && $ticker->isIndexAlreadyOverStop($positionSide, $fromPrice)) {

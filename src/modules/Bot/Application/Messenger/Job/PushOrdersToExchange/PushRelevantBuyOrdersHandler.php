@@ -8,6 +8,7 @@ use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfit
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
@@ -45,11 +46,12 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
 
+        ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
     ) {
-        parent::__construct($positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
     public function __invoke(PushRelevantBuyOrders $message): void
@@ -60,7 +62,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $side = $positionData->position->side;
-        $ticker = $this->positionService->getTicker($message->symbol);
+        $ticker = $this->exchangeService->getTicker($message->symbol);
 
         if (!$this->canAffordBuy($ticker)) {
             $this->info(\sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice));

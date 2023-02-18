@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command\Exchange;
 
-use App\Bot\Application\Service\Exchange\ExchangeOrdersServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Stop\StopService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -23,17 +20,16 @@ final class TryReleaseActiveOrdersHandler
     private const DEFAULT_TRIGGER_DELTA = 3;
 
     public function __construct(
-        private readonly ExchangeOrdersServiceInterface $exchangeOrdersService,
-        private readonly PositionServiceInterface $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
     ) {
     }
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
-        $activeOrders = $this->exchangeOrdersService->getActiveConditionalOrders($command->symbol);
+        $activeOrders = $this->exchangeService->getActiveConditionalOrders($command->symbol);
 
-        $ticker = $this->positionService->getTicker($command->symbol);
+        $ticker = $this->exchangeService->getTicker($command->symbol);
 
         $claimedOrderVolume = $command->forVolume;
 
@@ -60,7 +56,7 @@ final class TryReleaseActiveOrdersHandler
 
     private function release(ActiveStopOrder $order): void
     {
-        $this->exchangeOrdersService->closeActiveConditionalOrder($order);
+        $this->exchangeService->closeActiveConditionalOrder($order);
 
         $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
     }

@@ -4,27 +4,55 @@ declare(strict_types=1);
 
 namespace App\Bot\Infrastructure\ByBit;
 
-use App\Bot\Application\Service\Exchange\ExchangeOrdersServiceInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\Json;
+use App\Value\CachedValue;
 use Lin\Bybit\BybitLinear;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class ExchangeOrdersService implements ExchangeOrdersServiceInterface
+final class ExchangeService implements ExchangeServiceInterface
 {
     private const URL = 'https://api.bybit.com';
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
+    private const TICKER_UPDATE_INTERVAL = 1000;
+    private ?CachedValue $ticker = null;
+
+    private BybitLinear $api;
+
     public function __construct(
         private readonly string $apiKey,
         private readonly string $apiSecret,
-        private readonly HttpClientInterface $client
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
+    }
+
+    public function getTicker(Symbol $symbol): Ticker
+    {
+        if ($this->ticker === null) {
+            $this->ticker = new CachedValue(function () use ($symbol) {
+                $data = $this->api->publics()->getTickers([
+                    'symbol' => $symbol->value,
+                ]);
+
+                if (!$data['result']) {
+                    throw new \RuntimeException('Ticker not found');
+                }
+
+                return new Ticker(
+                    $symbol,
+                    (float)$data['result'][0]['mark_price'],
+                    (float)$data['result'][0]['index_price'],
+                );
+            }, self::TICKER_UPDATE_INTERVAL);
+        }
+
+        return $this->ticker->get();
     }
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void

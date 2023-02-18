@@ -37,10 +37,7 @@ final class PositionService implements PositionServiceInterface
         ]);
 
         foreach ($data['result'] as $item) {
-            if (
-                $item['entry_price'] !== 0
-                && \strtolower($item['side']) === $side->value
-            ) {
+            if ($item['entry_price'] !== 0 && \strtolower($item['side']) === $side->value) {
                 return new Position(
                     $side,
                     $symbol,
@@ -53,23 +50,6 @@ final class PositionService implements PositionServiceInterface
         }
 
         return null;
-    }
-
-    public function getTicker(Symbol $symbol): Ticker
-    {
-        $data = $this->api->publics()->getTickers([
-            'symbol' => $symbol->value,
-        ]);
-
-        if (!$data['result']) {
-            throw new \RuntimeException('Ticker not found');
-        }
-
-        return new Ticker(
-            $symbol,
-            (float)$data['result'][0]['mark_price'],
-            (float)$data['result'][0]['index_price'],
-        );
     }
 
     /**

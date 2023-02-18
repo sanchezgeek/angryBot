@@ -49,7 +49,7 @@ services:
             $apiKey: '%env(BYBIT_API_KEY)%'
             $apiSecret: '%env(BYBIT_API_SECRET)%'
 
-    App\Bot\Infrastructure\ByBit\ExchangeOrdersService:
+    App\Bot\Infrastructure\ByBit\ExchangeService:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'
             $apiSecret: '%env(BYBIT_API_SECRET)%'

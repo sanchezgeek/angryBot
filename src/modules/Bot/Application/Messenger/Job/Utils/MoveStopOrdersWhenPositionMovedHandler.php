@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\Utils;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -23,6 +24,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
 
     public function __construct(
         private readonly StopRepository $stopRepository,
+        private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionService $positionService,
     ) {
     }
@@ -33,7 +35,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
 
         $lastRun = $this->getLastRunAt($side);
 
-        $ticker = $this->positionService->getTicker(Symbol::BTCUSDT);
+        $ticker = $this->exchangeService->getTicker(Symbol::BTCUSDT);
         $position = $this->positionService->getOpenedPositionInfo($ticker->symbol, $side);
 
         if (!$lastRun) {

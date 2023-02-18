@@ -16,8 +16,6 @@ interface PositionServiceInterface
 {
     public function getOpenedPositionInfo(Symbol $symbol, Side $side): ?Position;
 
-    public function getTicker(Symbol $symbol): Ticker;
-
     /**
      * @return ?string Created stop order id or NULL if creation failed
      *

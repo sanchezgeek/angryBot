@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Position\Side;
@@ -30,11 +31,12 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
     public function __construct(
         private readonly StopService $stopService,
 
+        ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
     ) {
-        parent::__construct($positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
     // @todo Ещё можно попробовать фиксировать прибыль на supportPosition, чтобы ей было на что докупаться
@@ -66,7 +68,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        $ticker = $this->positionService->getTicker($command->symbol);
+        $ticker = $this->exchangeService->getTicker($command->symbol);
 
         // If mainPosition now in loss
         if ($ticker->isIndexAlreadyOverStop($mainPosition->side, $mainPosition->entryPrice)) {
