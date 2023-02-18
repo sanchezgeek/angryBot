@@ -51,9 +51,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     public function __invoke(PushRelevantStopOrders $message): void
     {
         $positionData = $this->getPositionData($message->symbol, $message->side, true);
-//        if (!$positionData->isPositionOpened()) {
-//            return;
-//        }
+        if (!$positionData->isPositionOpened()) {
+            return;
+        }
 
 
         /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
@@ -67,7 +67,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             if (
                 ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($positionData->position->side, $stop->getPrice()))
                 || (
-                    abs($stop->getPrice() - $ticker->indexPrice) < (
+                    abs($stop->getPrice() - $ticker->indexPrice) <= (
                         $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
                     )
                 )
@@ -91,6 +91,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         try {
             if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
                 $stop->setExchangeOrderId($exchangeOrderId);
+
+                // @todo Есть косяк: выше проставляется новый price в расчёте на то, что тут будет ордер на бирже. А его нет. Денег не хватило. Но ниже делается persist. originalPrice попадает в базу. А на самом деле ордер не был отправлен.
+                // Нужно новую цену не сразу фигачить в поле, а помещать в контекст и тут уже применять. Если вернулся $exchangeOrderId
 
                 if (
                     $stop->getVolume() <= 0.005

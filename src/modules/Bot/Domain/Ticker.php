@@ -29,7 +29,7 @@ final class Ticker
         throw new \LogicException(\sprintf('Unexpected positionSide "%s"', $positionSide->value));
     }
 
-    public function isIndexPriceAlreadyOverBuyOrderPrice(Side $positionSide, float $price): bool
+    public function isIndexAlreadyOverBuyOrder(Side $positionSide, float $price): bool
     {
         if ($positionSide === Side::Sell) {
             return $this->indexPrice <= $price;

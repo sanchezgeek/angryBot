@@ -7,6 +7,7 @@ namespace App\Bot\Domain\Entity;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
@@ -16,7 +17,6 @@ use Doctrine\ORM\Mapping as ORM;
 class BuyOrder implements HasEvents
 {
     use HasVolume;
-    use HasOriginalPriceContext;
     use HasExchangeOrderContext;
 
     use RecordEvents;
@@ -66,8 +66,6 @@ class BuyOrder implements HasEvents
 
     public function setPrice(float $price): void
     {
-        $this->setOriginalPrice($this->price);
-
         $this->price = $price;
     }
 
@@ -76,13 +74,8 @@ class BuyOrder implements HasEvents
         return $this->volume;
     }
 
-    public function getPositionSide(): Side
+    public function mustBeExecuted(Ticker $ticker): bool
     {
-        return $this->positionSide;
-    }
-
-    public function getTriggerDelta(): ?float
-    {
-        return $this->triggerDelta;
+        return $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
     }
 }

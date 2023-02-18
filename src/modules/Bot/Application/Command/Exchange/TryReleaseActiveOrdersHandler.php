@@ -15,7 +15,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
-    private const MAX_ORDER_MUST_LEFT = 4;
+    private const MAX_ORDER_MUST_LEFT = 3;
     private const RELEASE_OVER_DISTANCE = 25;
 
     // @todo Всё это лучше вынести в настройки
