@@ -106,8 +106,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                 // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
             }
         }
-
-        $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
     }
 
     /**

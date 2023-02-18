@@ -84,8 +84,6 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         $this->lastTicker = $ticker;
-
-        $this->info(\sprintf('%s: %.2f', $message->symbol->value, $ticker->indexPrice));
     }
 
     private function addStop(Position $position, Ticker $ticker, Stop $stop): void

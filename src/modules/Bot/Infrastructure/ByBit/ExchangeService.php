@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Infrastructure\ByBit;
 
+use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -12,6 +13,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\Json;
 use App\Value\CachedValue;
 use Lin\Bybit\BybitLinear;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 final class ExchangeService implements ExchangeServiceInterface
@@ -28,6 +30,7 @@ final class ExchangeService implements ExchangeServiceInterface
     public function __construct(
         private readonly string $apiKey,
         private readonly string $apiSecret,
+        private readonly EventDispatcherInterface $events,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
@@ -35,21 +38,21 @@ final class ExchangeService implements ExchangeServiceInterface
     public function getTicker(Symbol $symbol): Ticker
     {
         if ($this->ticker === null) {
-            $this->ticker = new CachedValue(function () use ($symbol) {
-                $data = $this->api->publics()->getTickers([
-                    'symbol' => $symbol->value,
-                ]);
+            $valueFactory = function () use ($symbol) {
+                $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
 
-                if (!$data['result']) {
-                    throw new \RuntimeException('Ticker not found');
-                }
+                \assert(isset($data['result']), 'Ticker not found');
 
-                return new Ticker(
-                    $symbol,
-                    (float)$data['result'][0]['mark_price'],
-                    (float)$data['result'][0]['index_price'],
+                $ticker = new Ticker(
+                    $symbol, (float)$data['result'][0]['mark_price'], (float)$data['result'][0]['index_price']
                 );
-            }, self::TICKER_UPDATE_INTERVAL);
+
+                $this->events->dispatch(new TickerUpdated($ticker));
+
+                return $ticker;
+            };
+
+            $this->ticker = new CachedValue($valueFactory, self::TICKER_UPDATE_INTERVAL);
         }
 
         return $this->ticker->get();
