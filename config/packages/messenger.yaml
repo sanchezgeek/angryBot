@@ -18,7 +18,7 @@ framework:
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async
             App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
-            App\Bot\Application\Messenger\Job\Utils\MoveStopOrders: async
+            App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
 
 # when@test:
 #    framework:

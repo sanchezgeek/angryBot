@@ -7,6 +7,7 @@ namespace App\Messenger\SchedulerTransport;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrders;
 use App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling;
+use App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -58,14 +59,15 @@ final class SchedulerFactory
 
                                                             /**** Utils *****/
 
+            /**** Cleanup orders *****/
             // Cleanup SHORT-position | SL
-            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', ($cleanupPeriod = '30S')), DispatchAsyncJob::message(
-                new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 4, true))
+            PeriodicalJob::infinite('2020-01-01T00:01:05Z', \sprintf('PT%s', ($cleanupPeriod = '15S')), DispatchAsyncJob::message(
+                new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 3, true))
             ),
 
             // Cleanup SHORT-position | BUY
             PeriodicalJob::infinite('2020-01-01T00:01:06Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
-                new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 1))
+                new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3))
             ),
 
             // Cleanup LONG-position | SL
@@ -76,6 +78,11 @@ final class SchedulerFactory
             // Cleanup LONG-position | BUY
             PeriodicalJob::infinite('2020-01-01T00:01:08Z', \sprintf('PT%s', $cleanupPeriod), DispatchAsyncJob::message(
                 new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))
+            ),
+
+            /**** Move SL *****/
+            PeriodicalJob::infinite('2020-01-01T00:01:08Z', 'PT10S', DispatchAsyncJob::message(
+                new MoveStopOrdersWhenPositionMoved(Side::Sell))
             ),
         ];
 
