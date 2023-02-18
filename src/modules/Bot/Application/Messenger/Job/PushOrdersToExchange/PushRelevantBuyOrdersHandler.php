@@ -31,7 +31,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 5;
     private const REGULAR_ORDER_STOP_DISTANCE = 45;
-    private const ADDITION_ORDER_STOP_DISTANCE = 70;
+    private const ADDITION_ORDER_STOP_DISTANCE = 57;
 
 //    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
 //    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
@@ -72,7 +72,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $orders = $this->buyOrderRepository->findActiveInRange(
             side: $side,
             from: ($side === Side::Sell ? $ticker->indexPrice - 10  : $ticker->indexPrice + 10),
-            to: ($side === Side::Sell ? $ticker->indexPrice + 25  : $ticker->indexPrice - 25),
+            to: ($side === Side::Sell ? $ticker->indexPrice + 15  : $ticker->indexPrice - 15),
             // To get the cheapest orders (to ignore sleep by CannotAffordOrderCost in case of can afford buy less qty)
             qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side === Side::Sell ? 'asc' : 'desc')
         );
