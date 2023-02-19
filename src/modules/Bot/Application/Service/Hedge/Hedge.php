@@ -8,11 +8,11 @@ use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
 use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Position;
 
-final class Hedge
+final readonly class Hedge
 {
     public function __construct(
-        public readonly Position $mainPosition,
-        public readonly Position $supportPosition,
+        public Position $mainPosition,
+        public Position $supportPosition,
     ) {
     }
 

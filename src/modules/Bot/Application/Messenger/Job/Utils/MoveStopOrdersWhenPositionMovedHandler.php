@@ -36,7 +36,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
         $lastRun = $this->getLastRunAt($side);
 
         $ticker = $this->exchangeService->getTicker(Symbol::BTCUSDT);
-        $position = $this->positionService->getOpenedPositionInfo($ticker->symbol, $side);
+        $position = $this->positionService->getPosition($ticker->symbol, $side);
 
         if (!$lastRun) {
             $this->lastRunAt[$side->value] = $position->entryPrice;

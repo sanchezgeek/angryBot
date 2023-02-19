@@ -56,12 +56,13 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
     public function __invoke(PushRelevantBuyOrders $message): void
     {
-        $positionData = $this->getPositionData($message->symbol, $message->side, true);
-        if (!$positionData->isPositionOpened()) {
+        $position = $this->positionService->getPosition($message->symbol, $message->side);
+        // need make fake
+        if (!$position) {
             return;
         }
 
-        $side = $positionData->position->side;
+        $side = $position->side;
         $ticker = $this->exchangeService->getTicker($message->symbol);
 
         if (!$this->canAffordBuy($ticker)) {
@@ -82,17 +83,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         try {
             foreach ($orders as $order) {
                 if ($order->mustBeExecuted($ticker)) {
-                    $this->buy($positionData->position, $ticker, $order);
+                    $this->buy($position, $ticker, $order);
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-            $position = $positionData->position;
             $this->cannotAffordAtPrice = $ticker->indexPrice;
             $this->cannotAffordAt = $this->clock->now();
 
             $this->logExchangeClientException($e);
 
-            $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
+            $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
             if ($isHedge) {
                 $hedge = Hedge::create($position, $oppositePosition);
 
@@ -162,7 +162,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $side = $position->side;
         $volume = $buyOrder->getVolume();
 
-        $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
+        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
         if ($isHedge) {
             $hedge = Hedge::create($position, $oppositePosition);
             $hedgeStrategy = $hedge->getHedgeStrategy();

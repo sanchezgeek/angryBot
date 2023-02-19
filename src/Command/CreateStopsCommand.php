@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class FixPositionCommand extends Command
+class CreateStopsCommand extends Command
 {
     private const DEFAULT_INITIAL_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 1;
@@ -38,7 +38,7 @@ class FixPositionCommand extends Command
     {
         $this
             ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
-//            ->addOption('volume', 'v', InputOption::VALUE_OPTIONAL, \sprintf('Initial volume (default: %s)', self::DEFAULT_INITIAL_VOLUME), self::DEFAULT_INITIAL_VOLUME)
+            ->addArgument('volume', InputArgument::REQUIRED, 'Create stops for volume')
             ->addOption('step', 's', InputOption::VALUE_OPTIONAL, \sprintf('Step (default: %s)', self::DEFAULT_STEP), self::DEFAULT_STEP)
             ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, \sprintf('Trigger delta (default: %s)', self::DEFAULT_TRIGGER_DELTA), self::DEFAULT_TRIGGER_DELTA)
             ->addOption('increment', 'i', InputOption::VALUE_OPTIONAL, 'Increment (optional; default: 0.000)')
@@ -61,6 +61,12 @@ class FixPositionCommand extends Command
             if (!$positionSide = Side::tryFrom($side)) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $positionSide provided (%s)', $side),
+                );
+            }
+
+            if (!(string)($volume = $input->getArgument('volume'))) {
+                throw new \InvalidArgumentException(
+                    \sprintf('Invalid $volume provided (%s)', $volume),
                 );
             }
 

@@ -52,8 +52,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushRelevantStopOrders $message): void
     {
-        $positionData = $this->getPositionData($message->symbol, $message->side, true);
-        if (!$positionData->isPositionOpened()) {
+        $position = $this->positionService->getPosition($message->symbol, $message->side);
+        if (!$position) {
             return;
         }
 
@@ -62,12 +62,12 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
 
 
-        $stops = $this->stopRepository->findActive($positionData->position->side, $this->lastTicker);
+        $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
         $ticker = $this->exchangeService->getTicker($message->symbol);
 
         foreach ($stops as $stop) {
             if (
-                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($positionData->position->side, $stop->getPrice()))
+                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($position->side, $stop->getPrice()))
                 || (
                     abs($stop->getPrice() - $ticker->indexPrice) <= (
                         $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
@@ -79,7 +79,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                     $stop->setPrice($newPrice);
                 }
 
-                $this->addStop($positionData->position, $ticker, $stop);
+                $this->addStop($position, $ticker, $stop);
             }
         }
 
@@ -142,7 +142,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 2) : $stop->getVolume();
 
-        $isHedge = ($oppositePosition = $this->getOppositePosition($position)) !== null;
+        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
         if ($isHedge) {
             $hedge = Hedge::create($position, $oppositePosition);
             // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)

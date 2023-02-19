@@ -99,7 +99,7 @@ class StopVolumeCommand extends Command
 
             $symbol = Symbol::BTCUSDT;
             $ticker = $this->exchangeService->getTicker($symbol);
-            $position = $this->positionService->getOpenedPositionInfo($symbol, $positionSide);
+            $position = $this->positionService->getPosition($symbol, $positionSide);
 
             if ($fromPrice && $ticker->isIndexAlreadyOverStop($positionSide, $fromPrice)) {
                 if (!$io->confirm(\sprintf('ticker.indexPrice already over specified $fromPrice. Do you want to use current ticker.indexPrice as $fromPrice?'))) {

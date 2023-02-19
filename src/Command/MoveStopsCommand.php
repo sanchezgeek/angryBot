@@ -103,7 +103,7 @@ class MoveStopsCommand extends Command
             }
 
             if ($mode === self::OVER_FIRST_STOP) {
-                $position = $this->positionService->getOpenedPositionInfo(Symbol::BTCUSDT, $positionSide);
+                $position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide);
                 if (!$position) {
                     throw new \LogicException('Position not found');
                 }

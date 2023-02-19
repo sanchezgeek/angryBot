@@ -47,10 +47,12 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             \sprintf('%s received.', IncreaseHedgeSupportPositionByGetProfitFromMain::class)
         );
 
-        $supportedPosition = $this->getPositionData($command->symbol, $command->side);
-        $mainPosition = $this->getOppositePosition($supportedPosition->position);
+        if (!$supportedPosition = $this->positionService->getPosition($command->symbol, $command->side)) {
+            return;
+        }
 
-        if (!$mainPosition || !$supportedPosition->position) {
+        ;
+        if (!$mainPosition = $this->positionService->getOppositePosition($supportedPosition)) {
             return;
         }
 

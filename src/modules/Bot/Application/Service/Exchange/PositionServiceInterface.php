@@ -14,7 +14,15 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 interface PositionServiceInterface
 {
-    public function getOpenedPositionInfo(Symbol $symbol, Side $side): ?Position;
+    /**
+     * @return Position|null Null - if position not opened
+     */
+    public function getPosition(Symbol $symbol, Side $side): ?Position;
+
+    /**
+     * @return Position|null Null - if there is no opposite position opened
+     */
+    public function getOppositePosition(Position $position): ?Position;
 
     /**
      * @return ?string Created stop order id or NULL if creation failed

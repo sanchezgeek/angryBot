@@ -9,4 +9,9 @@ enum Side: string
 {
     case Sell = 'sell';
     case Buy = 'buy';
+
+    public function getOpposite(): self
+    {
+        return $this === self::Buy ? self::Sell : self::Buy;
+    }
 }

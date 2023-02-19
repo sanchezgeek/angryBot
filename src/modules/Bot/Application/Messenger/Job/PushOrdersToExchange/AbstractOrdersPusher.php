@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
-use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
-use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -34,51 +32,6 @@ abstract class AbstractOrdersPusher
         LoggerInterface $logger,
     ) {
         $this->logger = $logger;
-    }
-
-    protected  function getPositionData(Symbol $symbol, Side $side, bool $getFake = false): PositionData
-    {
-        if (
-            !($positionData = $this->positionsData[$symbol->value . $side->value] ?? null)
-            || $positionData->needUpdate($this->clock->now())
-        ) {
-            if (
-                !($position = $this->positionService->getOpenedPositionInfo($symbol, $side))
-                && $getFake
-            ) {
-                // Fake. For run handlers. And have ability to check hedge.
-                $position = $this->fakePosition($side, $symbol);
-            }
-
-            if ($position) {
-                $this->info(
-                    \sprintf(
-                        'UPD %s | %.3f | $%.2f (liq: $%.2f | volume: %.2f usdt)',
-                        $position->getCaption(),
-                        $position->size,
-                        $position->entryPrice,
-                        $position->liquidationPrice,
-                        $position->positionValue,
-                    )
-                );
-            }
-
-
-//            if ($opposite = $this->getOppositePosition($position)) {
-//                $this->info(
-//                    \sprintf('Positions VALUE diff: $%.2f', abs(round($position->positionValue - $opposite->positionValue, 2)))
-//                );
-//            }
-
-            $this->positionsData[$symbol->value . $side->value] = new PositionData($position, $this->clock->now());
-        }
-
-        return $this->positionsData[$symbol->value . $side->value];
-    }
-
-    protected function getOppositePosition(Position $position): ?Position
-    {
-        return $this->getPositionData($position->symbol, $position->side === Side::Buy ? Side::Sell : Side::Buy)->position;
     }
 
     protected function sleep(string $cause): void
