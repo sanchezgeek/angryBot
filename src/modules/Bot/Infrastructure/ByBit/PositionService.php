@@ -15,27 +15,24 @@ use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Helper\VolumeHelper;
-use App\Value\CachedValue;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final class PositionService implements PositionServiceInterface
 {
 //    private const URL = 'https://api-testnet.bybit.com';
     private const URL = 'https://api.bybit.com';
 
-    private const POSITION_TTL = 15000;
-
-    /**
-     * @var CachedValue[]
-     */
-    private array $positions = [];
+    private const POSITION_TTL = '15 seconds';
 
     private BybitLinear $api;
 
     public function __construct(
         private readonly string $apiKey,
         private readonly string $apiSecret,
+        private readonly CacheInterface $cache,
         private readonly EventDispatcherInterface $events,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
@@ -43,35 +40,33 @@ final class PositionService implements PositionServiceInterface
 
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        if (($this->positions[$symbol->value . $side->value]??null) === null) {
-            $valueFactory = function () use ($symbol, $side) {
-                $data = $this->api->privates()->getPositionList([
-                    'symbol' => $symbol->value,
-                ]);
+        $key = \sprintf('position_data_%s_%s', $symbol->value, $side->value);
 
-                $position = null;
-                foreach ($data['result'] as $item) {
-                    if ($item['entry_price'] !== 0 && \strtolower($item['side']) === $side->value) {
-                        $position = new Position(
-                            $side,
-                            $symbol,
-                            VolumeHelper::round($item['entry_price'], 2),
-                            $item['size'],
-                            VolumeHelper::round($item['position_value'], 2),
-                            $item['liq_price'],
-                        );
-                    }
+        return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
+            $item->expiresAfter(\DateInterval::createFromDateString(self::POSITION_TTL));
+
+            $data = $this->api->privates()->getPositionList([
+                'symbol' => $symbol->value,
+            ]);
+
+            $position = null;
+            foreach ($data['result'] as $item) {
+                if ($item['entry_price'] !== 0 && \strtolower($item['side']) === $side->value) {
+                    $position = new Position(
+                        $side,
+                        $symbol,
+                        VolumeHelper::round($item['entry_price'], 2),
+                        $item['size'],
+                        VolumeHelper::round($item['position_value'], 2),
+                        $item['liq_price'],
+                    );
                 }
+            }
 
-                $position && $this->events->dispatch(new PositionUpdated($position));
+            $position && $this->events->dispatch(new PositionUpdated($position));
 
-                return $position;
-            };
-
-            $this->positions[$symbol->value . $side->value] = new CachedValue($valueFactory, self::POSITION_TTL);
-        }
-
-        return $this->positions[$symbol->value . $side->value]->get();
+            return $position;
+        });
     }
 
     public function getOppositePosition(Position $position): ?Position

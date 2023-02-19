@@ -7,6 +7,7 @@ namespace App\Bot\Application\Service\Hedge;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Service\Stop\StopService;
+use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Helper\VolumeHelper;
 use App\Trait\LoggerTrait;
@@ -19,7 +20,9 @@ final class HedgeService
     public function __construct(
         private readonly StopService $stopService,
         LoggerInterface $logger,
+        ClockInterface $clock,
     ) {
+        $this->clock = $clock;
         $this->logger = $logger;
     }
 

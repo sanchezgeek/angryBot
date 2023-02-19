@@ -44,16 +44,16 @@ final class SchedulerFactory
         $jobSchedules = [
                                                 /**** Push relevant orders to Exchange *****/
             // SHORT-position | SL
-            PeriodicalJob::infinite('2023-01-18T00:00:01.2Z', \DateInterval::createFromDateString($shortStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)),
+            PeriodicalJob::infinite('2023-01-18T00:00:01.11Z', \DateInterval::createFromDateString($shortStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)),
 
             // SHORT-position | BUY [async]
-            PeriodicalJob::infinite('2023-01-18T00:00:01.4Z', \DateInterval::createFromDateString($shortBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::infinite('2023-01-18T00:00:01.37Z', \DateInterval::createFromDateString($shortBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell))),
 
             // LONG-position | SL
-            PeriodicalJob::infinite('2023-01-18T00:00:01.6Z', \DateInterval::createFromDateString($longStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)),
+            PeriodicalJob::infinite('2023-01-18T00:00:01.77Z', \DateInterval::createFromDateString($longStopSpeed), new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)),
 
             // LONG-position | BUY [async]
-            PeriodicalJob::infinite('2023-01-18T00:00:01.8Z', \DateInterval::createFromDateString($longBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy))),
+            PeriodicalJob::infinite('2023-01-18T00:00:02.22Z', \DateInterval::createFromDateString($longBuySpeed), DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy))),
 
                                                             /**** Utils *****/
             /**** Cleanup orders *****/

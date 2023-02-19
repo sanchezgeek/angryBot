@@ -8,8 +8,6 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Service\Stop\StopService;
-use App\Trait\LoggerTrait;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +17,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class StopVolumeCommand extends Command
 {
-    use LoggerTrait;
-
     private const DEFAULT_INITIAL_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
@@ -29,13 +25,10 @@ class StopVolumeCommand extends Command
 
     public function __construct(
         private readonly StopService $stopService,
-        private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService,
-        LoggerInterface $logger,
         string $name = null,
     ) {
-        $this->logger = $logger;
 
         parent::__construct($name);
     }

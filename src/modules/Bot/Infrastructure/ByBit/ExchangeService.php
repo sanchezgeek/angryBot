@@ -11,10 +11,12 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\Json;
-use App\Value\CachedValue;
+use App\Helper\RunningContext;
 use Lin\Bybit\BybitLinear;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final class ExchangeService implements ExchangeServiceInterface
 {
@@ -22,8 +24,7 @@ final class ExchangeService implements ExchangeServiceInterface
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
-    private const TICKER_TTL = 700;
-    private ?CachedValue $ticker = null;
+    private const TICKER_TTL = '1000 milliseconds';
 
     private BybitLinear $api;
 
@@ -31,31 +32,30 @@ final class ExchangeService implements ExchangeServiceInterface
         private readonly string $apiKey,
         private readonly string $apiSecret,
         private readonly EventDispatcherInterface $events,
+        private readonly CacheItemPoolInterface $cache,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
 
     public function getTicker(Symbol $symbol): Ticker
     {
-        if ($this->ticker === null) {
-            $valueFactory = function () use ($symbol) {
-                $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+        $key = \sprintf('ticker_data_%s', $symbol->value);
 
-                \assert(isset($data['result']), 'Ticker not found');
+        return $this->cache->get($key, function (ItemInterface $item) use ($symbol) {
+            $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
 
-                $ticker = new Ticker(
-                    $symbol, (float)$data['result'][0]['mark_price'], (float)$data['result'][0]['index_price']
-                );
+            \assert(isset($data['result']), 'Ticker not found');
 
-                $this->events->dispatch(new TickerUpdated($ticker));
+            $ticker = new Ticker(
+                $symbol, (float)$data['result'][0]['mark_price'], (float)$data['result'][0]['index_price'],
+            );
 
-                return $ticker;
-            };
+            $this->events->dispatch(new TickerUpdated($ticker));
 
-            $this->ticker = new CachedValue($valueFactory, self::TICKER_TTL);
-        }
+            $item->expiresAfter(\DateInterval::createFromDateString(self::TICKER_TTL));
 
-        return $this->ticker->get();
+            return $ticker;
+        }, 0);
     }
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void

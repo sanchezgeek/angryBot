@@ -28,9 +28,10 @@ abstract class AbstractOrdersPusher
     public function __construct(
         protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,
-        protected readonly ClockInterface $clock,
+        ClockInterface $clock,
         LoggerInterface $logger,
     ) {
+        $this->clock = $clock;
         $this->logger = $logger;
     }
 

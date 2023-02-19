@@ -48,8 +48,23 @@ services:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'
             $apiSecret: '%env(BYBIT_API_SECRET)%'
+            $cache: '@cache.filesystem_shared_pool'
 
     App\Bot\Infrastructure\ByBit\ExchangeService:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'
             $apiSecret: '%env(BYBIT_API_SECRET)%'
+            $cache: '@cache.filesystem_shared_pool'
+
+#    Symfony\Contracts\Cache\CacheInterface:
+#        class: Symfony\Component\Cache\Adapter\ApcuAdapter
+
+    app.cache_shared_filesystem_adapter:
+        parent: 'cache.adapter.filesystem'
+        tags:
+            - { name: 'cache.pool', namespace: 'shared' }
+
+    app.cache_shared_apcu_adapter:
+        parent: 'cache.adapter.apcu'
+        tags:
+            - { name: 'cache.pool', namespace: 'shared' }
