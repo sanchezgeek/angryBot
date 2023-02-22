@@ -8,6 +8,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use Doctrine\ORM\QueryBuilder;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,6 +16,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[AsCommand(name: 'bot:move-stops', description: 'Move position stops')]
 class MoveStopsCommand extends Command
 {
     private const OVER_FIRST_STOP = 'first_stop';
@@ -24,8 +26,6 @@ class MoveStopsCommand extends Command
         self::OVER_FIRST_STOP,
         self::OVER_SPECIFIED_PRICE,
     ];
-
-    protected static $defaultName = 'move-stops';
 
     public function __construct(
         private readonly StopRepository $stopRepository,
@@ -42,7 +42,7 @@ class MoveStopsCommand extends Command
             ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
             ->addArgument('priceToBeginFrom', InputArgument::REQUIRED, 'Price from which SL\'ses must be moved')
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode', self::OVER_FIRST_STOP)
-            ->addOption('moveOverPrice', 'p', InputOption::VALUE_OPTIONAL, 'Price above|under which must be placed')
+            ->addOption('moveOverPrice', 'p', InputOption::VALUE_OPTIONAL, 'Price above|under which SL\'ses must be placed')
         ;
     }
 

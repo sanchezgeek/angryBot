@@ -9,16 +9,16 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Service\Stop\StopService;
 use Doctrine\ORM\QueryBuilder;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[AsCommand(name: 'bot:move-buys', description: 'Move position buy-orders')]
 class MoveBuyOrdersCommand extends Command
 {
-    protected static $defaultName = 'move-buys';
-
     public function __construct(
         private readonly BuyOrderRepository $buyOrderRepository,
         string $name = null,
@@ -30,8 +30,8 @@ class MoveBuyOrdersCommand extends Command
     {
         $this
             ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
-            ->addArgument('priceToBeginBefore', InputArgument::REQUIRED, 'Price from which SL\'ses must be moved')
-            ->addArgument('moveOverPrice', InputArgument::REQUIRED, 'Price above|under which must be placed');
+            ->addArgument('priceToBeginBefore', InputArgument::REQUIRED, 'Price from which BuyOrders must be moved')
+            ->addArgument('moveOverPrice', InputArgument::REQUIRED, 'Price above|under which BuyOrders must be placed');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
