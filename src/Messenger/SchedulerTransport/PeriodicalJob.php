@@ -68,7 +68,7 @@ final class PeriodicalJob implements JobScheduleInterface
             }
         }
 
-        $nextRunTimestamp = ($recurrencesPassed + 1) * $gridStep + (float)$startDate->format('U.u');
+        $nextRunTimestamp = \number_format(($recurrencesPassed + 1) * $gridStep + (float)$startDate->format('U.u'), 6, thousands_separator: '');
 
         return DateTimeImmutable::createFromFormat('U.u', (string)$nextRunTimestamp) ?: null;
     }
