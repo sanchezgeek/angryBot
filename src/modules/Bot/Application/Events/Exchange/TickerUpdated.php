@@ -15,6 +15,6 @@ final readonly class TickerUpdated implements LoggingEvent
 
     public function getLog(): string
     {
-        return \sprintf('%s: %.2f', $this->ticker->symbol->value, $this->ticker->indexPrice);
+        return \sprintf('        %s: %.2f', $this->ticker->symbol->value, $this->ticker->indexPrice);
     }
 }

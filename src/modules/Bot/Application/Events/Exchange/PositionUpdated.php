@@ -16,7 +16,7 @@ final readonly class PositionUpdated implements LoggingEvent
     public function getLog(): string
     {
         return \sprintf(
-            '%s | %.3f | $%.2f (liq: $%.2f | volume: %.2f USDT)',
+            '--#%s#-- | %.3f | $%.2f (liq: $%.2f | volume: %.2f USDT)',
             $this->position->getCaption(),
             $this->position->size,
             $this->position->entryPrice,
