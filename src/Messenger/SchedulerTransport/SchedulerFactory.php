@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
+use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrders;
 use App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling;
@@ -59,7 +60,7 @@ final class SchedulerFactory
             /**** Cleanup orders *****/
             // Cleanup SHORT-position | SL
             PeriodicalJob::infinite('2023-01-18T00:01:05Z', \sprintf('PT%s', ($cleanupPeriod = '15S')), DispatchAsync::message(
-                new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 1, 3, true))
+                new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 6, 3, true))
             ),
 
             // Cleanup SHORT-position | BUY
@@ -78,9 +79,13 @@ final class SchedulerFactory
             ),
 
             /**** Move SL *****/
-            PeriodicalJob::infinite('2023-01-18T00:01:08Z', 'PT10S', DispatchAsync::message(
+            PeriodicalJob::infinite('2023-01-18T00:01:08Z', 'PT30S', DispatchAsync::message(
                 new MoveStopOrdersWhenPositionMoved(Side::Sell))
             ),
+
+            PeriodicalJob::infinite('2023-01-18T00:01:08Z', 'PT30S', DispatchAsync::message(
+                new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true)
+            )),
         ];
 
         return new Scheduler($clock, $jobSchedules);
