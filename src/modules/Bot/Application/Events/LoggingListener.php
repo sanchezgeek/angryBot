@@ -9,10 +9,9 @@ use App\Clock\ClockInterface;
 use App\Helper\RunningContext;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-#[AsEventListener]
-final class LoggingListener
+final class LoggingListener implements EventSubscriberInterface
 {
     use LoggerTrait;
 
@@ -24,10 +23,18 @@ final class LoggingListener
         $this->logger = $logger;
     }
 
-    public function __invoke(TickerUpdated $event): void
+    public function __invoke(LoggingEvent $event): void
     {
         $this->info(
             \sprintf('%s [%s]', $event->getLog(), RunningContext::getRunningWorker()),
         );
+    }
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            TickerUpdated::class => '__invoke',
+//            PositionUpdated::class => '__invoke',
+        ];
     }
 }

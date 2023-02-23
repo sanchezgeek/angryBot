@@ -68,3 +68,7 @@ services:
         parent: 'cache.adapter.apcu'
         tags:
             - { name: 'cache.pool', namespace: 'shared' }
+
+    App\Bot\Application\Events\LoggingListener:
+        tags:
+            - { name: 'kernel.event_subscriber'}
