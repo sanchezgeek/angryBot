@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'bot:stop-info', description: 'Move position stops')]
-class GetStopInfoCommand extends Command
+class StopInfoCommand extends Command
 {
     public function __construct(
         private readonly StopRepository $stopRepository,
@@ -106,6 +106,7 @@ class GetStopInfoCommand extends Command
                 }
             }
 
+            $total = 0;
             foreach ($ranges as ['from' => $from, 'to' => $to, 'description' => $description]) {
                 $stops = $this->stopRepository->findActive(
                     side: $positionSide,
@@ -122,10 +123,18 @@ class GetStopInfoCommand extends Command
 
                 $sum = $this->sumVolume(...$stops);
 
-                $io->info(
+                $io->note(
                     \sprintf('from %.0f to %.0f: %.3f btc %s', $from, $to, $sum, $description ?? ''),
                 );
+
+                $total += $sum;
             }
+
+            $io->note(
+                \sprintf('total: %.3f btc', $total),
+            );
+
+            // Добавить сюда ещё подсчёт ~ суммы PNL по всем ордерам
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
