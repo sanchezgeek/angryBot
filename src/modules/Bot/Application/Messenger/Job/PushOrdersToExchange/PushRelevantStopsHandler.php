@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Events\Stop\StopPushedToExchange;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -20,6 +21,7 @@ use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
 use App\Helper\VolumeHelper;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -30,7 +32,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 21;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 37;
 
     private ?Ticker $lastTicker = null;
 
@@ -40,6 +42,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         private readonly BuyOrderService $buyOrderService,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+        private readonly EventDispatcherInterface $events,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -103,6 +106,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 } else {
                     $this->stopRepository->save($stop);
                 }
+
+//                $this->events->dispatch(new StopPushedToExchange($stop));
 
                 $oppositeBuyOrderData = $this->createOpposite($position, $stop, $ticker);
 

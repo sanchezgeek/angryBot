@@ -71,4 +71,4 @@ services:
 
     App\Bot\Application\Events\LoggingListener:
         tags:
-            - { name: 'kernel.event_subscriber'}
+            - { name: 'kernel.event_subscriber', priority: -100}

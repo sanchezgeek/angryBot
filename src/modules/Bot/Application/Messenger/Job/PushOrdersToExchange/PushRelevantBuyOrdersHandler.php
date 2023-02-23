@@ -7,14 +7,12 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Events\BuyOrder\BuyOrderPushedToExchange;
-use App\Bot\Application\Events\Stop\StopPushedToExchange;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Strategy\Hedge\OppositeStopCreate;
-use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -125,7 +123,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                     $this->buyOrderRepository->save($order);
                 }
 
-                $this->events->dispatch(new BuyOrderPushedToExchange($order->getId()));
+//                $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
                 $stopData = $this->createStop($position, $ticker, $order);
 
@@ -136,7 +134,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                         $order->getVolume(),
                         $order->getPrice(),
                         $stopData['triggerPrice'],
-                        $stopData['strategy'],
+                        $stopData['strategy']->value,
                         $stopData['description'],
                     ),
                     ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
@@ -156,7 +154,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return array{id: int, triggerPrice: float, strategy: string, description: string}
+     * @return array{id: int, triggerPrice: float, strategy: OppositeStopCreate, description: string}
      */
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {

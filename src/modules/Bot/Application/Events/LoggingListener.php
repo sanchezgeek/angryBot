@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Events;
 
+use App\Bot\Application\Events\BuyOrder\BuyOrderPushedToExchange;
+use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Clock\ClockInterface;
 use App\Helper\RunningContext;
@@ -23,10 +25,11 @@ final class LoggingListener implements EventSubscriberInterface
         $this->logger = $logger;
     }
 
-    public function __invoke(LoggingEvent $event): void
+    public function __invoke(LoggableEvent $event): void
     {
         $this->info(
             \sprintf('%s [%s]', $event->getLog(), RunningContext::getRunningWorker()),
+            $event->getContext(),
         );
     }
 
@@ -35,6 +38,7 @@ final class LoggingListener implements EventSubscriberInterface
         return [
             TickerUpdated::class => '__invoke',
 //            PositionUpdated::class => '__invoke',
+            BuyOrderPushedToExchange::class => '__invoke',
         ];
     }
 }
