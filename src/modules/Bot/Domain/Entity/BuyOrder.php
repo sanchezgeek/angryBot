@@ -59,6 +59,11 @@ class BuyOrder implements HasEvents
         return $this->id;
     }
 
+    public function getPositionSide(): Side
+    {
+        return $this->positionSide;
+    }
+
     public function getPrice(): float
     {
         return $this->price;

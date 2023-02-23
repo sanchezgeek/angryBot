@@ -25,4 +25,15 @@ final class Position
 
         return $this->symbol->value . ' ' . $type;
     }
+
+    /**
+     * @return float Delta between position->entryPrice and ticker->indexPrice (+ in case of profit / - case of losses)
+     */
+    public function getDeltaWithTicker(Ticker $ticker): float
+    {
+        return $this->side === Side::Sell
+            ? $this->entryPrice - $ticker->indexPrice
+            : $ticker->indexPrice - $this->entryPrice
+        ;
+    }
 }

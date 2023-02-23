@@ -6,12 +6,15 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Events\BuyOrder\BuyOrderPushedToExchange;
+use App\Bot\Application\Events\Stop\StopPushedToExchange;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
+use App\Bot\Application\Service\Strategy\Hedge\OppositeStopCreate;
+use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -22,6 +25,7 @@ use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Service\Stop\StopService;
 use App\Clock\ClockInterface;
 use Doctrine\ORM\QueryBuilder;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -31,11 +35,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const STOP_ORDER_TRIGGER_DELTA = 5;
-    private const REGULAR_ORDER_STOP_DISTANCE = 45;
-    private const ADDITION_ORDER_STOP_DISTANCE = 57;
-
-//    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
-//    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
 
     private ?\DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -45,6 +44,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+        private readonly EventDispatcherInterface $events,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
@@ -125,16 +125,19 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
                     $this->buyOrderRepository->save($order);
                 }
 
+                $this->events->dispatch(new BuyOrderPushedToExchange($order->getId()));
+
                 $stopData = $this->createStop($position, $ticker, $order);
 
                 $this->info(
                     \sprintf(
-                        '%sBuy%s %.3f | $%.2f (stop: $%.2f with %s strategy)',
+                        '%sBuy%s %.3f | $%.2f (stop: $%.2f with "%s" strategy (%s))',
                         $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
                         $order->getVolume(),
                         $order->getPrice(),
                         $stopData['triggerPrice'],
                         $stopData['strategy'],
+                        $stopData['description'],
                     ),
                     ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
                 );
@@ -153,67 +156,103 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return array{id: int, triggerPrice: float, strategy: string}
+     * @return array{id: int, triggerPrice: float, strategy: string, description: string}
      */
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
         $triggerPrice = null;
-        $selectedStrategy = 'default';
         $side = $position->side;
         $volume = $buyOrder->getVolume();
 
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-        if ($isHedge) {
-            $hedge = Hedge::create($position, $oppositePosition);
-            $hedgeStrategy = $hedge->getHedgeStrategy();
-            $stopStrategy = $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionOppositeStopCreation : $hedgeStrategy->mainPositionOppositeStopCreation;
+        $strategy = $this->getStopStrategy($position, $buyOrder);
 
-            $basePrice = null;
-            if (
-                (
-                    $stopStrategy === HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP
-                ) || (
-                    $stopStrategy === HedgeOppositeStopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
-                    && $volume >= HedgeOppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
-                )
-            ) {
-                if ($firstPositionStop = $this->stopRepository->findFirstStopUnderPosition($position)) {
-                    $basePrice = $firstPositionStop->getPrice();
-                }
-            } elseif (
-                (
-                    $stopStrategy === HedgeOppositeStopCreate::UNDER_POSITION
-                ) || (
-                    $stopStrategy === HedgeOppositeStopCreate::ONLY_BIG_SL_UNDER_POSITION
-                    && $volume >= HedgeOppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
-                )
-            ) {
-                $positionPrice = \ceil($position->entryPrice);
-                $basePrice = $ticker->isIndexAlreadyOverStop($side, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
+        $stopStrategy = $strategy['strategy'];
+        $description = $strategy['description'];
 
-                $basePrice = $side === Side::Buy ? $basePrice - 25 : $basePrice + 25;
+        $basePrice = null;
+        if (
+            (
+                $stopStrategy === OppositeStopCreate::AFTER_FIRST_POSITION_STOP
+            ) || (
+                $stopStrategy === OppositeStopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
+                && $volume >= OppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+            )
+        ) {
+            if ($firstPositionStop = $this->stopRepository->findFirstStopUnderPosition($position)) {
+                $basePrice = $firstPositionStop->getPrice();
             }
+        } elseif (
+            (
+                $stopStrategy === OppositeStopCreate::UNDER_POSITION
+            ) || (
+                $stopStrategy === OppositeStopCreate::ONLY_BIG_SL_UNDER_POSITION
+                && $volume >= OppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+            )
+        ) {
+            $positionPrice = \ceil($position->entryPrice);
+            $basePrice = $ticker->isIndexAlreadyOverStop($side, $positionPrice) ? $ticker->indexPrice : $positionPrice; // tmp
 
-            if ($basePrice) {
-                if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) {
-                    $selectedStrategy = $stopStrategy->value . ($hedgeStrategy->description ? ('::' . $hedgeStrategy->description) : '');
-                    $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1;
-                } else {
-                    $selectedStrategy = 'default (\'cause index price over stop)';
-                }
+            $basePrice = $side === Side::Buy ? $basePrice - 25 : $basePrice + 25;
+        }
+
+        if ($basePrice) {
+            if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) {
+                $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1;
+            } else {
+                $description = 'because index price over stop)';
             }
         }
 
-        // If still cannot calc $triggerPrice
-        if ($triggerPrice === null) {
-            $oppositePriceDelta = $volume >= 0.005 ? self::REGULAR_ORDER_STOP_DISTANCE : self::ADDITION_ORDER_STOP_DISTANCE;
+        // If still cannot get best $triggerPrice
+        if ($stopStrategy !== OppositeStopCreate::DEFAULT && $triggerPrice === null) {
+            $stopStrategy = OppositeStopCreate::DEFAULT;
+        }
 
-            $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $oppositePriceDelta : $buyOrder->getPrice() - $oppositePriceDelta;
+        if ($stopStrategy === OppositeStopCreate::DEFAULT) {
+            $stopPriceDelta = OppositeStopCreate::getDefaultStrategyStopOrderDistance($volume);
+
+            $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
         }
 
         $stopId = $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
 
-        return ['id' => $stopId, 'triggerPrice' => $triggerPrice, 'strategy' => $selectedStrategy];
+        return ['id' => $stopId, 'triggerPrice' => $triggerPrice, 'strategy' => $stopStrategy, 'description' => $description];
+    }
+
+    /**
+     * @return array{strategy: OppositeStopCreate, description: string}
+     */
+    private function getStopStrategy(Position $position, BuyOrder $order): array
+    {
+        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
+        if ($isHedge) {
+            $hedge = Hedge::create($position, $oppositePosition);
+            $hedgeStrategy = $hedge->getHedgeStrategy();
+
+            return [
+                'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionOppositeStopCreation : $hedgeStrategy->mainPositionOppositeStopCreation,
+                'description' => $hedgeStrategy->description
+            ];
+        }
+
+        $delta = $position->getDeltaWithTicker(
+            $this->exchangeService->getTicker($position->symbol)
+        );
+
+        $defaultStrategyStopPriceDelta = OppositeStopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
+
+        // To not reduce position size by placing stop orders between position and ticker
+        if ($delta > $defaultStrategyStopPriceDelta) {
+            return [
+                'strategy' => OppositeStopCreate::UNDER_POSITION,
+                'description' => 'position in profit: keep position size',
+            ];
+        }
+
+        return [
+            'strategy' => OppositeStopCreate::DEFAULT,
+            'description' => 'by default',
+        ];
     }
 
     /**
@@ -227,7 +266,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             $this->cannotAffordAt !== null
             && ($this->clock->now()->getTimestamp() - $this->cannotAffordAt->getTimestamp()) > $refreshSeconds
         ) {
-           return true;
+            return true;
         }
 
         if ($this->cannotAffordAtPrice === null) {

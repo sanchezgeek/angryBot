@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Hedge;
 
-use App\Bot\Application\Service\Strategy\Hedge\HedgeOppositeStopCreate;
+use App\Bot\Application\Service\Strategy\Hedge\OppositeStopCreate;
 use App\Bot\Application\Service\Strategy\HedgeStrategy;
 use App\Bot\Domain\Position;
 
@@ -45,16 +45,16 @@ final readonly class Hedge
 
     public function getHedgeStrategy(): HedgeStrategy
     {
-        $mainPositionStrategy = HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
-        $supportStrategy = HedgeOppositeStopCreate::DEFAULT_STOP_STRATEGY->value;
+        $mainPositionStrategy = OppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
+        $supportStrategy = OppositeStopCreate::DEFAULT->value;
         $description = null;
 
         if ($this->needIncreaseSupport()) {
-            $supportStrategy = HedgeOppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
-            $description = 'needKeepSupportSize';
+            $supportStrategy = OppositeStopCreate::AFTER_FIRST_POSITION_STOP->value;
+            $description = 'need increase support size';
         } elseif ($this->needKeepSupportSize()) {
-            $supportStrategy = HedgeOppositeStopCreate::UNDER_POSITION->value;
-            $description = 'needKeepSupportSize';
+            $supportStrategy = OppositeStopCreate::UNDER_POSITION->value;
+            $description = 'need keep support size';
         }
 
         return new HedgeStrategy($supportStrategy, $mainPositionStrategy, $description);
