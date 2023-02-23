@@ -70,7 +70,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($nearTicker) {
-            $cond = $side === Side::Sell    ? 's.price < :price'            : 's.price > :price';
+            $cond = $side === Side::Sell    ? '(:price > s.price - s.triggerDelta)' : '(:price < s.price + s.triggerDelta)';
             $price = $side === Side::Sell   ? $nearTicker->indexPrice + 50  : $nearTicker->indexPrice - 50;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
