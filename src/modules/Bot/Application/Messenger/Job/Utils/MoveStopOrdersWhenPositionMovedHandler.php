@@ -20,7 +20,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
     private array $lastRunAt = [];
 
     private const PRICE_STEP = 2;
-    private const MOVE_STEP = 1;
+    private const MOVE_STEP = 3;
 
     public function __construct(
         private readonly StopRepository $stopRepository,
@@ -45,8 +45,8 @@ final class MoveStopOrdersWhenPositionMovedHandler
 
         if (
             $side === Side::Sell
-                ? ($position->entryPrice < ($lastRun - self::PRICE_STEP))
-                : ($position->entryPrice > ($lastRun + self::PRICE_STEP))
+                ? ($position->entryPrice <= ($lastRun - self::PRICE_STEP))
+                : ($position->entryPrice >= ($lastRun + self::PRICE_STEP))
         ) {
             $stops = $this->stopRepository->findActive($side);
             foreach ($stops as $stop) {
