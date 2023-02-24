@@ -83,4 +83,4 @@ out: ## Get consumers output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
 
 s-info: ## Get SHORT-position info
-	@$(PHP_CONT) ./bin/console p:stop-info sell -r 10
+	@$(PHP_CONT) ./bin/console bot:sl:info sell -r 10

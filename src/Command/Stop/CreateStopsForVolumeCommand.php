@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Service\Orders\StopService;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,21 +15,15 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class StopVolumeCommand extends Command
+#[AsCommand(name: 'bot:sl:volume', description: 'Creates incremental SL\'ses grid.')]
+class CreateStopsForVolumeCommand extends Command
 {
-    private const DEFAULT_INITIAL_VOLUME = 0.001;
-    private const DEFAULT_TRIGGER_DELTA = 1;
-    private const DEFAULT_STEP = 13;
-
-    protected static $defaultName = 'stop-volume';
-
     public function __construct(
         private readonly StopService $stopService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService,
         string $name = null,
     ) {
-
         parent::__construct($name);
     }
 
@@ -41,8 +35,6 @@ class StopVolumeCommand extends Command
             ->addOption('fromPrice', 'f', InputOption::VALUE_OPTIONAL, 'Price to starts from (default - ticker.indexPrice)')
             ->addOption('toPrice', 't', InputOption::VALUE_OPTIONAL, 'Price to finish with (default - position.entryPrice)')
             ->addOption('delta', 'd', InputOption::VALUE_OPTIONAL, 'toPrice = (ticker.indexPosition + delta)')
-//            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, \sprintf('Trigger delta (default: %s)', self::DEFAULT_TRIGGER_DELTA), self::DEFAULT_TRIGGER_DELTA)
-//            ->addOption('increment', 'i', InputOption::VALUE_OPTIONAL, 'Increment (optional; default: 0.000)')
         ;
     }
 
@@ -124,6 +116,8 @@ class StopVolumeCommand extends Command
 
                 $toPrice = $position->side === Side::Sell ? $ticker->indexPrice + $delta : $ticker->indexPrice - $delta;
             }
+
+            $toPrice = $toPrice ?: $position->entryPrice;
 
             $info = $this->stopService->createIncrementalToPosition(
                 $position,

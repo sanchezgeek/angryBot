@@ -56,12 +56,11 @@ final class StopService
         Position $position,
         float $volume,
         float $fromPrice,
-        ?float $toPrice = null,
+        float $toPrice,
         array $context = []
     ): CreatedIncGridInfo {
         $context['uniqid'] = \uniqid('inc-stop', true);
 
-        $toPrice = $toPrice ?: $position->entryPrice;
         $delta = abs($fromPrice - $toPrice);
         $step = self::DEFAULT_STEP;
 

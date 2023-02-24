@@ -15,12 +15,12 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class MoveStopOrdersWhenPositionMovedHandler
 {
     /**
-     * @var array float
+     * @var float[]
      */
     private array $lastRunAt = [];
 
     private const PRICE_STEP = 2;
-    private const MOVE_STEP = 3;
+    private const MOVE_STEP = 2;
 
     public function __construct(
         private readonly StopRepository $stopRepository,

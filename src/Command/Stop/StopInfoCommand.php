@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Command\Position;
+namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use Doctrine\ORM\QueryBuilder;
@@ -19,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'p:stop-info', description: 'Move position stops')]
+#[AsCommand(name: 'bot:sl:info', description: 'Move position stops')]
 class StopInfoCommand extends Command
 {
     private ?int $specifiedPeriods = 4;
@@ -137,14 +137,7 @@ class StopInfoCommand extends Command
                 [$volume, $pnl] = $this->sum($position, ...$stops);
 
                 $io->note(
-                    \sprintf(
-                        'from %.0f to %.0f: %.3f btc (with %.3f PNL) %s',
-                        $from,
-                        $to,
-                        $volume,
-                        $pnl,
-                        $description ?? '',
-                    ),
+                    \sprintf('from %.0f to %.0f: %.3f btc (%s) %s', $from, $to, $volume, new Pnl($pnl), $description ?? ''),
                 );
 
                 $totalVolume += $volume;
@@ -153,7 +146,7 @@ class StopInfoCommand extends Command
 
             $io->note([
                 \sprintf('total stops volume: %.3f btc', $totalVolume),
-                \sprintf('total PNL: %.3f usdt', $totalPnl),
+                \sprintf('total PNL: %s', new Pnl($totalPnl)),
                 \sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100),
             ]);
 

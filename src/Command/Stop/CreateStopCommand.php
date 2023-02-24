@@ -1,24 +1,22 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Stop;
 
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Application\Service\Orders\StopService;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[AsCommand(name: 'bot:sl:single', description: 'Creates single stop with specified price.')]
 class CreateStopCommand extends Command
 {
-    protected static $defaultName = 'stop';
-
     public function __construct(
         private readonly StopService $stopService,
-        private readonly PositionService $positionService,
         string $name = null,
     ) {
         parent::__construct($name);
@@ -65,10 +63,6 @@ class CreateStopCommand extends Command
                 $volume,
                 $triggerDelta
             );
-
-//            $io->success(
-//                \sprintf('Result transfer cost: %d', $cost),
-//            );
 
             return Command::SUCCESS;
         } catch (\Exception $e) {

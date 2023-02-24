@@ -1,24 +1,27 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Stop;
 
+use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Bot\Application\Service\Orders\StopService;
+use Doctrine\ORM\QueryBuilder;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class CreateSellOrdersIncrementalGridCommand extends Command
+#[AsCommand(name: 'bot:sl:grid', description: 'Creates incremental SL\'ses grid.')]
+class CreateIncrementalStopsGridCommand extends Command
 {
-    protected static $defaultName = 'stop-inc-grid';
-
     public function __construct(
         private readonly StopService $stopService,
+        private readonly StopRepository $stopRepository,
         private readonly PositionService $positionService,
         string $name = null,
     ) {
@@ -84,45 +87,82 @@ class CreateSellOrdersIncrementalGridCommand extends Command
                 );
             }
 
-            $context = ['uniqid' => \uniqid('inc-create', true)];
+            $context = ['uniqid' => $uniqueId = \uniqid('inc-create', true)];
 
 
-            if ($fromPrice > $toPrice) {
-                for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
-                    $this->stopService->create(
-                        $positionSide,
-                        $price,
-                        $volume,
-                        $triggerDelta,
-                        $context
-                    );
-                    $volume = round($volume+$increment, 3);
-                }
-            } else {
-                for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                    $this->stopService->create(
-                        $positionSide,
-                        $price,
-                        $volume,
-                        $triggerDelta,
-                        $context
-                    );
-                    $volume = round($volume+$increment, 3);
+            $position = $this->positionService->getPosition($symbol, $positionSide);
+
+            $alreadyStopped = 0;
+            $stops = $this->stopRepository->findActive($positionSide);
+            foreach ($stops as $stop) {
+                $alreadyStopped += $stop->getVolume();
+            }
+
+            if ($position->size < $alreadyStopped) {
+                if (
+                    !$io->confirm(
+                        \sprintf('All position volume already under SL\'ses. Last position SL\'ses will be removed. Want to continue? ')
+                    )
+                ) {
+                    return Command::FAILURE;
                 }
             }
 
+            if ($fromPrice > $toPrice) {
+                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
+            }
+
+            for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
+                $this->stopService->create(
+                    $positionSide,
+                    $price,
+                    $volume,
+                    $triggerDelta,
+                    $context
+                );
+                $volume = round($volume+$increment, 3);
+            }
+
+            $sum = 0;
+            $stops = $this->stopRepository->findActive(
+                side: $positionSide,
+                qbModifier: function (QueryBuilder $qb) use ($positionSide) {
+                    $priceField = $qb->getRootAliases()[0] . '.price';
+
+                    $qb->orderBy($priceField, $positionSide === Side::Sell ? 'DESC' : 'ASC');
+                }
+            );
+
+            foreach ($stops as $stop) {
+                $sum += $stop->getVolume();
+            }
+
+            $delta = $sum - $position->size;
 
 
+            /** @var Stop[] $removed */
+            $removed = [];
+            while ($delta > 0) {
+                $stop = \array_shift($stops);
+                $delta -= $stop->getVolume();
+                $this->stopRepository->remove($stop);
+                $removed[] = $stop;
+            }
 
+            $result = [
+                \sprintf('SL\'ses uniqueID: %s', $uniqueId),
+            ];
 
+            if ($removed) {
+                $volume = 0;
+                foreach ($removed as $stop) {
+                    $volume+= $stop->getVolume();
+                }
 
+                $result[] = \sprintf('Removed volume: %.2f', $volume);
+            }
 
-
-
-
-//            $io->success(
-//                \sprintf('Result transfer cost: %d', $cost),
-//            );
+            $io->success($result);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
