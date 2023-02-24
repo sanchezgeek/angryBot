@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Service\Stop;
+namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Command\CreateStop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Service\Stop\Dto\CreatedIncGridInfo;
+use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Helper\Json;
 use App\Helper\PriceHelper;
 use App\Helper\VolumeHelper;

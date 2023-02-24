@@ -12,7 +12,7 @@ use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Application\Service\Strategy\Hedge\OppositeStopCreate;
+use App\Bot\Application\Service\Strategy\StopCreate;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -20,7 +20,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
-use App\Bot\Service\Stop\StopService;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use Doctrine\ORM\QueryBuilder;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -154,7 +154,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return array{id: int, triggerPrice: float, strategy: OppositeStopCreate, description: string}
+     * @return array{id: int, triggerPrice: float, strategy: StopCreate, description: string}
      */
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
     {
@@ -170,10 +170,10 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $basePrice = null;
         if (
             (
-                $stopStrategy === OppositeStopCreate::AFTER_FIRST_POSITION_STOP
+                $stopStrategy === StopCreate::AFTER_FIRST_POSITION_STOP
             ) || (
-                $stopStrategy === OppositeStopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
-                && $volume >= OppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+                $stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
+                && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM
             )
         ) {
             if ($firstPositionStop = $this->stopRepository->findFirstStopUnderPosition($position)) {
@@ -181,10 +181,10 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             }
         } elseif (
             (
-                $stopStrategy === OppositeStopCreate::UNDER_POSITION
+                $stopStrategy === StopCreate::UNDER_POSITION
             ) || (
-                $stopStrategy === OppositeStopCreate::ONLY_BIG_SL_UNDER_POSITION
-                && $volume >= OppositeStopCreate::BIG_SL_VOLUME_STARTS_FROM
+                $stopStrategy === StopCreate::ONLY_BIG_SL_UNDER_POSITION
+                && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM
             )
         ) {
             $positionPrice = \ceil($position->entryPrice);
@@ -202,12 +202,12 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         // If still cannot get best $triggerPrice
-        if ($stopStrategy !== OppositeStopCreate::DEFAULT && $triggerPrice === null) {
-            $stopStrategy = OppositeStopCreate::DEFAULT;
+        if ($stopStrategy !== StopCreate::DEFAULT && $triggerPrice === null) {
+            $stopStrategy = StopCreate::DEFAULT;
         }
 
-        if ($stopStrategy === OppositeStopCreate::DEFAULT) {
-            $stopPriceDelta = OppositeStopCreate::getDefaultStrategyStopOrderDistance($volume);
+        if ($stopStrategy === StopCreate::DEFAULT) {
+            $stopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($volume);
 
             $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
         }
@@ -218,7 +218,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return array{strategy: OppositeStopCreate, description: string}
+     * @return array{strategy: StopCreate, description: string}
      */
     private function getStopStrategy(Position $position, BuyOrder $order): array
     {
@@ -237,18 +237,18 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             $this->exchangeService->getTicker($position->symbol)
         );
 
-        $defaultStrategyStopPriceDelta = OppositeStopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
+        $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
         // To not reduce position size by placing stop orders between position and ticker
         if ($delta > $defaultStrategyStopPriceDelta) {
             return [
-                'strategy' => OppositeStopCreate::UNDER_POSITION,
+                'strategy' => StopCreate::UNDER_POSITION,
                 'description' => 'position in profit: keep position size',
             ];
         }
 
         return [
-            'strategy' => OppositeStopCreate::DEFAULT,
+            'strategy' => StopCreate::DEFAULT,
             'description' => 'by default',
         ];
     }

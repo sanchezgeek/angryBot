@@ -16,9 +16,9 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Service\Buy\BuyOrderService;
+use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
-use App\Bot\Service\Stop\StopService;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use App\Helper\VolumeHelper;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -66,6 +66,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
 
         $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
+
+//        $ids = \array_map(function(Stop $stop) {
+//            return $stop->getId();
+//        }, $stops); var_dump($ids);
+
         $ticker = $this->exchangeService->getTicker($message->symbol);
 
         foreach ($stops as $stop) {

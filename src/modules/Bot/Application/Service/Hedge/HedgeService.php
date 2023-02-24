@@ -6,7 +6,7 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Service\Stop\StopService;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Helper\VolumeHelper;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Service\Stop\Dto;
+namespace App\Bot\Application\Service\Orders\Dto;
 
 final class CreatedIncGridInfo implements \JsonSerializable
 {

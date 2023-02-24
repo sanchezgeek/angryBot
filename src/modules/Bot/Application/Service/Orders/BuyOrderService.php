@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Service\Buy;
+namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Command\CreateBuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Service\Strategy\Hedge;
+namespace App\Bot\Application\Service\Strategy;
 
-enum OppositeStopCreate: string
+enum StopCreate: string
 {
     case DEFAULT = 'default';
 

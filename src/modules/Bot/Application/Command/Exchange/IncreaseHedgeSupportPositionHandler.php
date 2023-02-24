@@ -9,7 +9,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Service\Stop\StopService;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use App\Helper\VolumeHelper;
 use Psr\Log\LoggerInterface;
