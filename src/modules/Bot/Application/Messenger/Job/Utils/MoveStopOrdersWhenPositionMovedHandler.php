@@ -35,7 +35,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
 
         $lastRun = $this->getLastRunAt($side);
 
-        $ticker = $this->exchangeService->getTicker(Symbol::BTCUSDT);
+        $ticker = $this->exchangeService->ticker(Symbol::BTCUSDT);
         $position = $this->positionService->getPosition($ticker->symbol, $side);
 
         if (!$lastRun) {
@@ -48,11 +48,27 @@ final class MoveStopOrdersWhenPositionMovedHandler
                 ? ($position->entryPrice <= ($lastRun - self::PRICE_STEP))
                 : ($position->entryPrice >= ($lastRun + self::PRICE_STEP))
         ) {
+            $delta = abs($position->entryPrice - $lastRun);
+            $times = $delta / self::PRICE_STEP;
+            $move = $times * self::MOVE_STEP;
+
             $stops = $this->stopRepository->findActive($side);
             foreach ($stops as $stop) {
-                $stop->setPrice($side === Side::Sell ? $stop->getPrice() - self::MOVE_STEP : $stop->getPrice() + self::MOVE_STEP);
-                $this->stopRepository->save($stop);
+                $needMove = true;
+                if ($stop->getVolume() > 0.05) {
+                    $needMove =
+                        $position->side === Side::Sell
+                            ? $stop->getPrice() > $position->entryPrice
+                            : $stop->getPrice() < $position->entryPrice
+                    ;
+                }
+
+                if ($needMove) {
+                    $stop->setPrice($side === Side::Sell ? $stop->getPrice() - $move : $stop->getPrice() + $move);
+                    $this->stopRepository->save($stop);
+                }
             }
+
             $this->lastRunAt[$side->value] = $position->entryPrice;
         }
     }
