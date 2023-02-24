@@ -82,7 +82,7 @@ class FixPositionCommand extends Command
             $context = ['uniqid' => \uniqid('fix-position', true)];
 
             $symbol = Symbol::BTCUSDT;
-            $ticker = $this->exchangeService->getTicker($symbol);
+            $ticker = $this->exchangeService->ticker($symbol);
             $position = $this->positionService->getPosition($symbol, $positionSide);
 
             if ($ticker->isIndexAlreadyOverStop($positionSide, $position->entryPrice)) {

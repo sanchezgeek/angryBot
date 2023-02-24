@@ -6,7 +6,7 @@ namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Service\Stop\StopService;
+use App\Bot\Application\Service\Orders\StopService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -27,9 +27,9 @@ final class TryReleaseActiveOrdersHandler
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
-        $activeOrders = $this->exchangeService->getActiveConditionalOrders($command->symbol);
+        $activeOrders = $this->exchangeService->activeConditionalOrders($command->symbol);
 
-        $ticker = $this->exchangeService->getTicker($command->symbol);
+        $ticker = $this->exchangeService->ticker($command->symbol);
 
         $claimedOrderVolume = $command->forVolume;
 

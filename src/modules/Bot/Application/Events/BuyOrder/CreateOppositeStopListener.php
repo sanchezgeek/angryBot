@@ -29,7 +29,7 @@ final class CreateOppositeStopListener
         $order = $event->order;
 
         $position = $this->positionService->getPosition($symbol, $order->getPositionSide());
-        $ticker = $this->exchangeService->getTicker($symbol);
+        $ticker = $this->exchangeService->ticker($symbol);
 
 //        $stopData = $this->createStop($position, $ticker, $order);
         $stopData = [

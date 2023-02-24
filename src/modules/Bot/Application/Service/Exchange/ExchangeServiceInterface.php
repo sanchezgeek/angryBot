@@ -10,12 +10,12 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 interface ExchangeServiceInterface
 {
-    public function getTicker(Symbol $symbol): Ticker;
+    public function ticker(Symbol $symbol): Ticker;
 
     /**
      * @return ActiveStopOrder[]
      */
-    public function getActiveConditionalOrders(Symbol $symbol): array;
+    public function activeConditionalOrders(Symbol $symbol): array;
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order);
 }

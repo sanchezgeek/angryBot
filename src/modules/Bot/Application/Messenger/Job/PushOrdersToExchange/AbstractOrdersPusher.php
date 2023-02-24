@@ -63,7 +63,7 @@ abstract class AbstractOrdersPusher
 
     private function fakePosition(Side $side, Symbol $symbol): Position
     {
-        $entryPrice = $this->exchangeService->getTicker($symbol)->indexPrice;
+        $entryPrice = $this->exchangeService->ticker($symbol)->indexPrice;
 
         return new Position($side, $symbol, $entryPrice, 0, 0, 0, 0, 0);
     }

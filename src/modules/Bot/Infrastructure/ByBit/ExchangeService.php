@@ -10,6 +10,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Helper\RunningContext;
 use Lin\Bybit\BybitLinear;
@@ -33,15 +34,22 @@ final class ExchangeService implements ExchangeServiceInterface
         private readonly string $apiSecret,
         private readonly EventDispatcherInterface $events,
         private readonly CacheItemPoolInterface $cache,
+        private readonly ClockInterface $clock,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
 
-    public function getTicker(Symbol $symbol): Ticker
+    private function tickerCacheKey(Symbol $symbol)
+    {
+//        return
+    }
+
+    public function ticker(Symbol $symbol): Ticker
     {
         $key = \sprintf('ticker_data_%s', $symbol->value);
 
-        return $this->cache->get($key, function (ItemInterface $item) use ($symbol) {
+        $requestedAt = $this->clock->now();
+        return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $requestedAt) {
             $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
 
             \assert(isset($data['result']), 'Ticker not found');
@@ -50,7 +58,7 @@ final class ExchangeService implements ExchangeServiceInterface
                 $symbol, (float)$data['result'][0]['mark_price'], (float)$data['result'][0]['index_price'],
             );
 
-            $this->events->dispatch(new TickerUpdated($ticker));
+            $this->events->dispatch(new TickerUpdated($ticker, $requestedAt));
 
             $item->expiresAfter(\DateInterval::createFromDateString(self::TICKER_TTL));
 
@@ -74,7 +82,7 @@ final class ExchangeService implements ExchangeServiceInterface
         }
     }
 
-    public function getActiveConditionalOrders(Symbol $symbol): array
+    public function activeConditionalOrders(Symbol $symbol): array
     {
         $params = [
             'symbol' => $symbol->value,

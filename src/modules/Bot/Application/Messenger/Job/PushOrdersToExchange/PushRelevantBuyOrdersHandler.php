@@ -61,7 +61,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $side = $position->side;
-        $ticker = $this->exchangeService->getTicker($message->symbol);
+        $ticker = $this->exchangeService->ticker($message->symbol);
 
         if (!$this->canAffordBuy($ticker)) {
             $this->info(\sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice));
@@ -234,7 +234,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $delta = $position->getDeltaWithTicker(
-            $this->exchangeService->getTicker($position->symbol)
+            $this->exchangeService->ticker($position->symbol)
         );
 
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());

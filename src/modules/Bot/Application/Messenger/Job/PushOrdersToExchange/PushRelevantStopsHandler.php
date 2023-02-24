@@ -71,7 +71,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 //            return $stop->getId();
 //        }, $stops); var_dump($ids);
 
-        $ticker = $this->exchangeService->getTicker($message->symbol);
+        $ticker = $this->exchangeService->ticker($message->symbol);
 
         foreach ($stops as $stop) {
             if (

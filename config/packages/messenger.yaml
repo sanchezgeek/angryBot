@@ -6,6 +6,7 @@ framework:
         transports:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
+            cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
             failed: 'doctrine://default?queue_name=failed'
             sync: 'sync://'
             cron:
@@ -24,6 +25,9 @@ framework:
             # utils
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
             App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
+
+            # cache
+            App\Bot\Application\Messenger\Job\Cache\WarmupTicker: cache
 
 # when@test:
 #    framework:

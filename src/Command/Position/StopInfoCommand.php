@@ -54,7 +54,7 @@ class StopInfoCommand extends Command
         }
 
         $position = $this->positionService->getPosition($symbol, $positionSide);
-        $ticker = $this->exchangeService->getTicker($symbol);
+        $ticker = $this->exchangeService->ticker($symbol);
 
         $specifiedPrice = null;
         if ($input->getOption('price') && !($specifiedPrice = (float)$input->getOption('price'))) {
@@ -129,6 +129,10 @@ class StopInfoCommand extends Command
                         ;
                     }
                 );
+
+                if (!$stops) {
+                    break;
+                }
 
                 [$volume, $pnl] = $this->sum($position, ...$stops);
 
