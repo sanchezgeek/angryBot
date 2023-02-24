@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use Doctrine\ORM\QueryBuilder;
@@ -17,9 +19,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:stop-info', description: 'Move position stops')]
+#[AsCommand(name: 'p:stop-info', description: 'Move position stops')]
 class StopInfoCommand extends Command
 {
+    private ?int $specifiedPeriods = 4;
+
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
@@ -43,38 +47,42 @@ class StopInfoCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $symbol = Symbol::BTCUSDT;
 
+        if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
+            throw new \InvalidArgumentException(
+                \sprintf('Invalid $step provided (%s)', $input->getArgument('position_side')),
+            );
+        }
+
+        $position = $this->positionService->getPosition($symbol, $positionSide);
+        $ticker = $this->exchangeService->getTicker($symbol);
+
+        $specifiedPrice = null;
+        if ($input->getOption('price') && !($specifiedPrice = (float)$input->getOption('price'))) {
+            throw new \InvalidArgumentException(
+                \sprintf('Invalid $price provided (%s)', $specifiedPrice),
+            );
+        }
+
+        if ($input->getOption('qnt') && !($this->specifiedPeriods = (int)$input->getOption('qnt'))) {
+            throw new \InvalidArgumentException(
+                \sprintf('Invalid periods $qnt provided (%s)', $this->specifiedPeriods),
+            );
+        }
+
         try {
-            if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $input->getArgument('position_side')),
-                );
-            }
-
-            if ($input->getOption('price') && !($price = (float)$input->getOption('price'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $price provided (%s)', $price),
-                );
-            }
-
-            if ($input->getOption('qnt') && !($periods = (float)$input->getOption('qnt'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid periods $qnt provided (%s)', $periods),
-                );
-            }
-
-            $periods = $periods ?? 4;
-
-            $ticker = $this->exchangeService->getTicker($symbol);
-            $position = $this->positionService->getPosition($symbol, $positionSide);
-            var_dump('entry: ' . $position->entryPrice . '; liq: ' . $position->liquidationPrice);
+            var_dump(
+                'size: ' . $position->size,
+                'entry: ' . $position->entryPrice,
+                'liq: ' . $position->liquidationPrice
+            );
 
             $ranges = [];
-            if (isset($price)) {
-                $ticker->isIndexAlreadyOverStop($positionSide, $price) && throw new \RuntimeException('Index price already over specified price');
+            if (isset($specifiedPrice)) {
+                $ticker->isIndexAlreadyOverStop($positionSide, $specifiedPrice) && throw new \RuntimeException('Index price already over specified price');
 
                 $ranges[] = [
-                    'from' => $positionSide === Side::Sell ? $ticker->indexPrice : $price,
-                    'to' => $positionSide === Side::Sell ? $price : $ticker->indexPrice,
+                    'from' => $positionSide === Side::Sell ? $ticker->indexPrice : $specifiedPrice,
+                    'to' => $positionSide === Side::Sell ? $specifiedPrice : $ticker->indexPrice,
                     'description' => null
                 ];
             } else {
@@ -89,7 +97,7 @@ class StopInfoCommand extends Command
                     : ['from' => $position->entryPrice, 'to' => $position->entryPrice + 100]
                 ;
 
-                for ($i=0; $i<$periods; $i++) {
+                for ($i=0; $i<$this->specifiedPeriods; $i++) {
                     if ($positionSide === Side::Sell) {
                         $proto['from'] += 100; $proto['to'] += 100;
                     } else {
@@ -106,7 +114,8 @@ class StopInfoCommand extends Command
                 }
             }
 
-            $total = 0;
+            $totalVolume = 0;
+            $totalPnl = 0;
             foreach ($ranges as ['from' => $from, 'to' => $to, 'description' => $description]) {
                 $stops = $this->stopRepository->findActive(
                     side: $positionSide,
@@ -121,20 +130,28 @@ class StopInfoCommand extends Command
                     }
                 );
 
-                $sum = $this->sumVolume(...$stops);
+                [$volume, $pnl] = $this->sum($position, ...$stops);
 
                 $io->note(
-                    \sprintf('from %.0f to %.0f: %.3f btc %s', $from, $to, $sum, $description ?? ''),
+                    \sprintf(
+                        'from %.0f to %.0f: %.3f btc (with %.3f PNL) %s',
+                        $from,
+                        $to,
+                        $volume,
+                        $pnl,
+                        $description ?? '',
+                    ),
                 );
 
-                $total += $sum;
+                $totalVolume += $volume;
+                $totalPnl += $pnl;
             }
 
-            $io->note(
-                \sprintf('total: %.3f btc', $total),
-            );
-
-            // Добавить сюда ещё подсчёт ~ суммы PNL по всем ордерам
+            $io->note([
+                \sprintf('total stops volume: %.3f btc', $totalVolume),
+                \sprintf('total PNL: %.3f usdt', $totalPnl),
+                \sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100),
+            ]);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
@@ -144,20 +161,18 @@ class StopInfoCommand extends Command
         }
     }
 
-    private function info(SymfonyStyle $io, $range): void
-    {
-        $io->info(
-            \sprintf('from %.0f to %.0f: %.3f btc %s', $from, $to, $sum, $description ?? ''),
-        );
-    }
-
-    private function sumVolume(Stop... $stops): float
+    /**
+     * @return float[]
+     */
+    private function sum(Position $position, Stop... $stops): array
     {
         $sum = 0;
+        $pnl = 0;
         foreach ($stops as $stop) {
             $sum += $stop->getVolume();
+            $pnl += $stop->getPnlUsd($position);
         }
 
-        return $sum;
+        return [$sum, $pnl];
     }
 }

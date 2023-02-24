@@ -70,9 +70,6 @@ run: ## Run bot
 restart: ## Restart bot
 	@$(PHP_CONT) /usr/bin/supervisorctl restart all
 
-out: ## Get consumers output
-	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
-
 crit: ## Get dev CRITICAL
 	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep CRIT
 
@@ -81,3 +78,9 @@ warn: ## Get dev WARNING
 
 out-warn: ## Get consumers "warning" output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '!!'
+
+out: ## Get consumers output
+	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
+
+s-info: ## Get SHORT-position info
+	@$(PHP_CONT) ./bin/console p:stop-info sell

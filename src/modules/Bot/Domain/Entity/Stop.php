@@ -7,6 +7,7 @@ namespace App\Bot\Domain\Entity;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
 use App\Bot\Domain\Entity\Common\HasSupportContext;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\EventBus\HasEvents;
@@ -85,5 +86,23 @@ class Stop implements HasEvents
     public function getTriggerDelta(): ?float
     {
         return $this->triggerDelta;
+    }
+
+    public function getPnlInPercents(Position $position): float
+    {
+        $sign = $this->positionSide === Side::Sell ? -1 : +1;
+        $delta = $this->price - $position->entryPrice;
+
+        return $sign * ($delta / $position->entryPrice) * $position->positionLeverage * 100;
+    }
+
+    public function getPnlUsd(Position $position): float
+    {
+        $pnl = $this->getPnlInPercents($position) / 100;
+
+        $positionPart = $this->volume / $position->size;
+        $orderCost = $position->positionMargin * $positionPart;
+
+        return $orderCost * $pnl;
     }
 }

@@ -16,6 +16,8 @@ final class Position
         public readonly float $size,
         public readonly float $positionValue,
         public readonly float $liquidationPrice,
+        public readonly float $positionMargin,
+        public readonly float $positionLeverage,
     ) {
     }
 

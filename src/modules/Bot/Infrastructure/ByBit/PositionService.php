@@ -59,6 +59,8 @@ final class PositionService implements PositionServiceInterface
                         $item['size'],
                         VolumeHelper::round($item['position_value'], 2),
                         $item['liq_price'],
+                        $item['position_margin'],
+                        $item['leverage'],
                     );
                 }
             }

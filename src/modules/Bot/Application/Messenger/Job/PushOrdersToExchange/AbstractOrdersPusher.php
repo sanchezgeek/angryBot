@@ -65,6 +65,6 @@ abstract class AbstractOrdersPusher
     {
         $entryPrice = $this->exchangeService->getTicker($symbol)->indexPrice;
 
-        return new Position($side, $symbol, $entryPrice, 0, 0, 0);
+        return new Position($side, $symbol, $entryPrice, 0, 0, 0, 0, 0);
     }
 }
