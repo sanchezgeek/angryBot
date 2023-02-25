@@ -12,7 +12,7 @@ use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Helper\Json;
-use App\Helper\RunningContext;
+use App\Worker\AppContext;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
 use App\Value\CachedValue;
 use Lin\Bybit\BybitLinear;
@@ -27,7 +27,7 @@ final class ExchangeService implements ExchangeServiceInterface
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
-    private const TICKER_TTL = '1 second';
+    private const DEFAULT_TICKER_TTL = '800 milliseconds';
 
     private BybitLinear $api;
 
@@ -36,7 +36,6 @@ final class ExchangeService implements ExchangeServiceInterface
         private readonly string $apiSecret,
         private readonly EventDispatcherInterface $events,
         private readonly CacheItemPoolInterface $cache,
-        private readonly ClockInterface $clock,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
@@ -51,7 +50,7 @@ final class ExchangeService implements ExchangeServiceInterface
             return $item->get();
         }
 
-        return $this->updateTicker($symbol, \DateInterval::createFromDateString(self::TICKER_TTL));
+        return $this->updateTicker($symbol, \DateInterval::createFromDateString(self::DEFAULT_TICKER_TTL));
     }
 
     /**
@@ -61,13 +60,13 @@ final class ExchangeService implements ExchangeServiceInterface
      *
      * @see SchedulerFactory::createScheduler() -> "Warmup ticker data"
      */
-    public function updateTicker(Symbol $symbol, \DateInterval $ttl = null): Ticker
+    public function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
     {
         $key = $this->tickerCacheKey($symbol);
 
         $ticker = $this->getTicker($symbol);
 
-        $item = $this->cache->getItem($key)->set($ticker)->expiresAfter($ttl ?: 2); // by default for two seconds
+        $item = $this->cache->getItem($key)->set($ticker)->expiresAfter($ttl);
 
         $this->cache->save($item);
 
@@ -83,7 +82,7 @@ final class ExchangeService implements ExchangeServiceInterface
         $markPrice = (float)$data['result'][0]['mark_price'];
         $indexPrice = (float)$data['result'][0]['index_price'];
 
-        $ticker = new Ticker($symbol, $markPrice, $indexPrice, RunningContext::getRunningWorker());
+        $ticker = new Ticker($symbol, $markPrice, $indexPrice, AppContext::workerHash());
 
         $this->events->dispatch(new TickerUpdated($ticker));
 

@@ -4,35 +4,33 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
-use DateInterval;
-use DatePeriod;
-use DateTimeImmutable;
 use Exception;
 
-final class PeriodicalJob implements JobScheduleInterface
+final readonly class PeriodicalJob implements JobScheduleInterface
 {
-    public function __construct(private DatePeriod $period, private object $job)
+    public function __construct(private \DatePeriod $period, private object $job)
     {
     }
 
     /**
      * @throws Exception if invalid date or period
      */
-    public static function infinite(string $start, $interval, object $job): self
+    public static function infinite($start, $interval, object $job): self
     {
-        $interval = $interval instanceof DateInterval ? $interval : new DateInterval($interval);
+        $interval = $interval instanceof \DateInterval ? $interval : new \DateInterval($interval);
+        $start = $start instanceof \DateTimeImmutable ? $start : new \DateTimeImmutable($start);
 
-        return new self(new DatePeriod(new DateTimeImmutable($start), $interval, 9999999999999), $job);
+        return new self(new \DatePeriod($start, $interval, 9999999999999), $job);
     }
 
-    public function getNextRun(DateTimeImmutable $lastTick): ?DateTimeImmutable
+    public function getNextRun(\DateTimeImmutable $lastTick): ?\DateTimeImmutable
     {
         $startDate = $this->period->getStartDate();
         $endDate = $this->period->getEndDate();
         $gridStep = 0;
 
         if ($startDate > $lastTick) {
-            return DateTimeImmutable::createFromFormat('U.u', $startDate->format('U.u')) ?: null;
+            return \DateTimeImmutable::createFromFormat('U.u', $startDate->format('U.u')) ?: null;
         }
 
         if ($endDate && $endDate < $lastTick) {
@@ -70,7 +68,7 @@ final class PeriodicalJob implements JobScheduleInterface
 
         $nextRun = ($recurrencesPassed + 1) * $gridStep + (float)$startDate->format('U.u');
 
-        return DateTimeImmutable::createFromFormat('U.u', \number_format($nextRun, 6, thousands_separator: '')) ?: null;
+        return \DateTimeImmutable::createFromFormat('U.u', \number_format($nextRun, 6, thousands_separator: '')) ?: null;
     }
 
     public function getJob(): object

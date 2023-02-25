@@ -8,7 +8,7 @@ use App\Bot\Application\Events\BuyOrder\BuyOrderPushedToExchange;
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Clock\ClockInterface;
-use App\Helper\RunningContext;
+use App\Worker\AppContext;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -28,7 +28,7 @@ final class LoggingListener implements EventSubscriberInterface
     public function __invoke(LoggableEvent $event): void
     {
         $this->info(
-            \sprintf('%s [%s]', $event->getLog(), RunningContext::getRunningWorker()),
+            \sprintf('%s [%s]', $event->getLog(), AppContext::workerHash()),
             $event->getContext(),
         );
     }

@@ -26,8 +26,8 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
             App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
 
-            # cache
-            App\Bot\Application\Messenger\Job\Cache\UpdateTicker: cache
+#            # cache
+#            App\Bot\Application\Messenger\Job\Cache\UpdateTicker: cache
 
 # when@test:
 #    framework:

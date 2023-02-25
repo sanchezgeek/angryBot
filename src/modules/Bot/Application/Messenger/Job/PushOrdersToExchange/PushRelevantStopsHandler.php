@@ -65,6 +65,14 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
         $ticker = $this->exchangeService->ticker($message->symbol);
 
+//        \print_r(
+//            \sprintf(
+//                '%s | %s',
+//                (new \DateTimeImmutable())->format('m/d H:i:s.v'),
+//                'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . \App\Helper\RunningContext::runtimeId()
+//            ) . PHP_EOL
+//        );
+
         foreach ($stops as $stop) {
             if (
                 ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($position->side, $stop->getPrice()))
