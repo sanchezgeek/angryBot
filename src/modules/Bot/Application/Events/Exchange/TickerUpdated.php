@@ -9,17 +9,12 @@ use App\Bot\Domain\Ticker;
 
 final class TickerUpdated extends LoggableEvent
 {
-    public function __construct(public readonly Ticker $ticker, public readonly \DateTimeImmutable $requestedAt)
+    public function __construct(public readonly Ticker $ticker)
     {
     }
 
     public function getLog(): string
     {
-        return \sprintf(
-            '        %s: %.2f (requestedAt: %s)',
-            $this->ticker->symbol->value,
-            $this->ticker->indexPrice,
-            $this->requestedAt->format('H:s.v'),
-        );
+        return \sprintf('        %s: %.2f', $this->ticker->symbol->value, $this->ticker->indexPrice);
     }
 }

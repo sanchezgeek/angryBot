@@ -27,7 +27,7 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
 
             # cache
-            App\Bot\Application\Messenger\Job\Cache\WarmupTicker: cache
+            App\Bot\Application\Messenger\Job\Cache\UpdateTicker: cache
 
 # when@test:
 #    framework:

@@ -7,9 +7,9 @@ namespace App\Value;
 final class CachedValue
 {
     /**
-     * 15 seconds
+     * 5 seconds
      */
-    private const DEFAULT_TTL = 15000;
+    private const DEFAULT_TTL = 5000;
 
     private mixed $value;
     private ?\DateTimeImmutable $updatedAt = null;
@@ -38,7 +38,6 @@ final class CachedValue
             return true;
         }
 
-        // in milliseconds
         $now = (int)(new \DateTimeImmutable())->format('Uv');
         $updatedAt = (int)($this->updatedAt->format('Uv'));
 

@@ -13,6 +13,8 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Helper\RunningContext;
+use App\Messenger\SchedulerTransport\SchedulerFactory;
+use App\Value\CachedValue;
 use Lin\Bybit\BybitLinear;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -25,7 +27,7 @@ final class ExchangeService implements ExchangeServiceInterface
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
-    private const TICKER_TTL = '800 milliseconds';
+    private const TICKER_TTL = '1 second';
 
     private BybitLinear $api;
 
@@ -39,31 +41,58 @@ final class ExchangeService implements ExchangeServiceInterface
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
 
-    private function tickerCacheKey(Symbol $symbol)
-    {
-//        return
-    }
-
     public function ticker(Symbol $symbol): Ticker
     {
-        $key = \sprintf('ticker_data_%s', $symbol->value);
+        $item = $this->cache->getItem(
+            $this->tickerCacheKey($symbol)
+        );
 
-        $requestedAt = $this->clock->now();
-        return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $requestedAt) {
-            $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+        if ($item->isHit()) {
+            return $item->get();
+        }
 
-            \assert(isset($data['result']), 'Ticker not found');
+        return $this->updateTicker($symbol, \DateInterval::createFromDateString(self::TICKER_TTL));
+    }
 
-            $ticker = new Ticker(
-                $symbol, (float)$data['result'][0]['mark_price'], (float)$data['result'][0]['index_price'],
-            );
+    /**
+     * @internal
+     *
+     * Do not do any checks. Just get from exchange and update cache for 2 seconds.
+     *
+     * @see SchedulerFactory::createScheduler() -> "Warmup ticker data"
+     */
+    public function updateTicker(Symbol $symbol, \DateInterval $ttl = null): Ticker
+    {
+        $key = $this->tickerCacheKey($symbol);
 
-            $this->events->dispatch(new TickerUpdated($ticker, $requestedAt));
+        $ticker = $this->getTicker($symbol);
 
-            $item->expiresAfter(\DateInterval::createFromDateString(self::TICKER_TTL));
+        $item = $this->cache->getItem($key)->set($ticker)->expiresAfter($ttl ?: 2); // by default for two seconds
 
-            return $ticker;
-        }, 0);
+        $this->cache->save($item);
+
+        return $ticker;
+    }
+
+    private function getTicker(Symbol $symbol): Ticker
+    {
+        $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+
+        \assert(isset($data['result']), 'Ticker not found');
+
+        $markPrice = (float)$data['result'][0]['mark_price'];
+        $indexPrice = (float)$data['result'][0]['index_price'];
+
+        $ticker = new Ticker($symbol, $markPrice, $indexPrice, RunningContext::getRunningWorker());
+
+        $this->events->dispatch(new TickerUpdated($ticker));
+
+        return $ticker;
+    }
+
+    private function tickerCacheKey(Symbol $symbol): string
+    {
+        return \sprintf('ticker_%s', $symbol->value);
     }
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
@@ -166,5 +195,35 @@ final class ExchangeService implements ExchangeServiceInterface
 //        ]);
 
     }
+
+
+//    /**
+//     * @var CachedValue[]
+//     */
+//    private array $tickersHotCache = [];
+
+//    private function getTicker(Symbol $symbol, ?\DateTimeImmutable $requestedAt = null): Ticker
+//    {
+//        if (!isset($this->tickersHotCache[$symbol->value])) {
+//            $valueFactory = function () use ($symbol, $requestedAt) {
+//                $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+//
+//                \assert(isset($data['result']), 'Ticker not found');
+//
+//                $markPrice = (float)$data['result'][0]['mark_price'];
+//                $indexPrice = (float)$data['result'][0]['index_price'];
+//
+//                $ticker = new Ticker($symbol, $markPrice, $indexPrice, RunningContext::getRunningWorker());
+//
+//                $this->events->dispatch(new TickerUpdated($ticker, $requestedAt));
+//
+//                return $ticker;
+//            };
+//
+//            $this->tickersHotCache[$symbol->value] = new CachedValue($valueFactory, 300); // no more than 3 times per second
+//        }
+//
+//        return $this->tickersHotCache[$symbol->value]->get();
+//    }
 
 }

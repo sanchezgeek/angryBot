@@ -13,6 +13,7 @@ final class Ticker
         public readonly Symbol $symbol,
         public readonly float  $markPrice,
         public readonly float  $indexPrice,
+        public readonly string $updatedBy,
     ) {
     }
 

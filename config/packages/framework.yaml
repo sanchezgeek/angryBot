@@ -17,12 +17,6 @@ framework:
     #fragments: true
     php_errors:
         log: true
-    cache:
-        pools:
-            cache.apcu_shared_pool:
-                adapter: app.cache_shared_apcu_adapter
-            cache.filesystem_shared_pool:
-                adapter: app.cache_shared_filesystem_adapter
 
 when@test:
     framework:

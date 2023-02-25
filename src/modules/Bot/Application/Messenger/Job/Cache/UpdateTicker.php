@@ -6,9 +6,9 @@ namespace App\Bot\Application\Messenger\Job\Cache;
 
 use App\Bot\Domain\ValueObject\Symbol;
 
-readonly final class WarmupTicker
+readonly final class UpdateTicker
 {
-    public function __construct(public Symbol $symbol)
+    public function __construct(public Symbol $symbol, public ?\DateInterval $ttl = null)
     {
     }
 }

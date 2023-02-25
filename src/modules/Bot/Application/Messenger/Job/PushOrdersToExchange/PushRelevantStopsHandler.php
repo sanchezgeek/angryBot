@@ -60,17 +60,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             return;
         }
 
-
         /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
 
-
-
         $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
-
-//        $ids = \array_map(function(Stop $stop) {
-//            return $stop->getId();
-//        }, $stops); var_dump($ids);
-
         $ticker = $this->exchangeService->ticker($message->symbol);
 
         foreach ($stops as $stop) {
