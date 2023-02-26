@@ -7,11 +7,12 @@ namespace App\Worker;
 enum RunningWorker: string
 {
     case DEF = 'default';
-    case CRON = 'cron';
 
     case SHORT = 'short';
     case LONG = 'long';
 
     case ASYNC = 'async';
+
+    case UTILS = 'utils';
     case CACHE = 'cache';
 }

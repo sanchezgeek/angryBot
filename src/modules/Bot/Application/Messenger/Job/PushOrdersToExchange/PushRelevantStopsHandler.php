@@ -21,6 +21,7 @@ use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use App\Helper\VolumeHelper;
+use App\Worker\AppContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -33,8 +34,6 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
     private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 37;
-
-    private ?Ticker $lastTicker = null;
 
     public function __construct(
         private readonly HedgeService $hedgeService,
@@ -55,6 +54,17 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushRelevantStopOrders $message): void
     {
+        $ticker = $this->exchangeService->ticker($message->symbol);
+
+//        \print_r(
+//            \sprintf(
+//                '%s | %s | %s',
+//                (new \DateTimeImmutable())->format('m/d H:i:s.v'),
+//                $message->side->value,
+//                'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . AppContext::workerHash()
+//            ) . PHP_EOL
+//        );
+
         $position = $this->positionService->getPosition($message->symbol, $message->side);
         if (!$position) {
             return;
@@ -62,16 +72,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
         /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
 
-        $stops = $this->stopRepository->findActive($position->side, $this->lastTicker);
-        $ticker = $this->exchangeService->ticker($message->symbol);
-
-//        \print_r(
-//            \sprintf(
-//                '%s | %s',
-//                (new \DateTimeImmutable())->format('m/d H:i:s.v'),
-//                'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . \App\Helper\RunningContext::runtimeId()
-//            ) . PHP_EOL
-//        );
+        $stops = $this->stopRepository->findActive($position->side, $ticker);
 
         foreach ($stops as $stop) {
             if (
@@ -90,8 +91,6 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 $this->addStop($position, $ticker, $stop);
             }
         }
-
-        $this->lastTicker = $ticker;
     }
 
     private function addStop(Position $position, Ticker $ticker, Stop $stop): void
