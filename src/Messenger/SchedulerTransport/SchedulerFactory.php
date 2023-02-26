@@ -23,7 +23,7 @@ use Exception;
  */
 final class SchedulerFactory
 {
-    private const VERY_FAST = '700 milliseconds';
+    private const VERY_FAST = '650 milliseconds';
     private const FAST = '1000 milliseconds';
     private const MEDIUM = '1500 milliseconds';
     private const SLOW = '2 seconds';
@@ -42,26 +42,26 @@ final class SchedulerFactory
             RunningWorker::SHORT  => [
                 // SHORT-position | SL
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:01.31Z', \DateInterval::createFromDateString(self::VERY_FAST),
+                    '2023-02-25T00:00:01.88Z', \DateInterval::createFromDateString(self::VERY_FAST),
                     new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)
                 ),
 
                 // SHORT-position | BUY [async]
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:01.37Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:02.01Z', \DateInterval::createFromDateString(self::FAST),
                     DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell))
                 ),
             ],
             RunningWorker::LONG => [
                 // LONG-position | SL
                 PeriodicalJob::infinite(
-                    '2023-01-18T00:00:01.77Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:01.41Z', \DateInterval::createFromDateString(self::FAST),
                     new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)
                 ),
 
                 // LONG-position | BUY [async]
                 PeriodicalJob::infinite(
-                    '2023-01-18T00:00:02.22Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:02.11Z', \DateInterval::createFromDateString(self::FAST),
                     DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy))
                 ),
             ],
@@ -104,11 +104,15 @@ final class SchedulerFactory
     private static function cache(): array
     {
         $start = (new \DateTimeImmutable('2023-02-25T00:00:01.11Z'))->add(\DateInterval::createFromDateString(
-            \sprintf('%d milliseconds', AppContext::procNum() * 500)
+            \sprintf('%d milliseconds', AppContext::procNum() * 555)
         ));
 
         return [
-            PeriodicalJob::infinite($start, 'PT1S', new UpdateTicker(Symbol::BTCUSDT, new \DateInterval('PT2S'))),
+            /**
+             * Cache for two seconds, because there are two cache workers (so any order worker no need to do request to get ticker)
+             * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
+             */
+            PeriodicalJob::infinite($start, \DateInterval::createFromDateString('1100 milliseconds'), new UpdateTicker(Symbol::BTCUSDT, new \DateInterval('PT2S'))),
         ];
     }
 }
