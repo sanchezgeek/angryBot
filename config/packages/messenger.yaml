@@ -5,6 +5,7 @@ framework:
 
         transports:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
+            async_high: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_high'
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
             cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
             failed: 'doctrine://default?queue_name=failed'
@@ -16,7 +17,7 @@ framework:
 
         routing:
             # buy
-            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders: async
+            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders: async_high
 
             # from cron
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async

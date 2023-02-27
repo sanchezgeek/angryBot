@@ -239,6 +239,13 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
+        if ($delta >= $defaultStrategyStopPriceDelta * 7) {
+            return [
+                'strategy' => StopCreate::DEFAULT,
+                'description' => 'to reduce added by mistake',
+            ];
+        }
+
         // To not reduce position size by placing stop orders between position and ticker
         if ($delta > $defaultStrategyStopPriceDelta) {
             return [
@@ -258,7 +265,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canAffordBuy(Ticker $ticker): bool
     {
-        $refreshSeconds = 5;
+        $refreshSeconds = 8;
 
         if (
             $this->cannotAffordAt !== null

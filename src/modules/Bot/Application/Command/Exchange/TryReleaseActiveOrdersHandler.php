@@ -13,11 +13,11 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class TryReleaseActiveOrdersHandler
 {
     private const MAX_ORDER_MUST_LEFT = 3;
-    private const RELEASE_OVER_DISTANCE = 30;
+    private const RELEASE_OVER_DISTANCE = 35;
 
     // @todo Всё это лучше вынести в настройки
     // С человекопонятными названиями
-    private const DEFAULT_TRIGGER_DELTA = 3;
+    private const DEFAULT_TRIGGER_DELTA = 9;
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
