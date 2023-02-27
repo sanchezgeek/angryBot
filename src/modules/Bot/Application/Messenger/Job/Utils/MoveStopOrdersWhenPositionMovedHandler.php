@@ -65,6 +65,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
 
                 if ($needMove) {
                     $stop->setPrice($side === Side::Sell ? $stop->getPrice() - $move : $stop->getPrice() + $move);
+                    $stop->cleanOriginalPrice();
                     $this->stopRepository->save($stop);
                 }
             }

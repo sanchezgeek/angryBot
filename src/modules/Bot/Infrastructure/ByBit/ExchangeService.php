@@ -27,7 +27,7 @@ final class ExchangeService implements ExchangeServiceInterface
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
     private const URL_ORDERS = 'https://api.bybit.com/contract/v3/private/order/list';
 
-    private const DEFAULT_TICKER_TTL = '800 milliseconds';
+    private const DEFAULT_TICKER_TTL = '1000 milliseconds';
 
     private BybitLinear $api;
 
