@@ -20,6 +20,8 @@ use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
+use App\Helper\Json;
+use App\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use App\Worker\AppContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -54,6 +56,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushRelevantStopOrders $message): void
     {
+        $position = $this->positionService->getPosition($message->symbol, $message->side);
+        if (!$position) {
+            return;
+        }
+
         $ticker = $this->exchangeService->ticker($message->symbol);
 
 //        \print_r(
@@ -65,14 +72,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 //            ) . PHP_EOL
 //        );
 
-        $position = $this->positionService->getPosition($message->symbol, $message->side);
-        if (!$position) {
-            return;
-        }
 
         /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
 
         $stops = $this->stopRepository->findActive($position->side, $ticker);
+        $ticker = $this->exchangeService->ticker($message->symbol);
 
         foreach ($stops as $stop) {
             if (
@@ -113,17 +117,19 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
 //                $this->events->dispatch(new StopPushedToExchange($stop));
 
-                $oppositeBuyOrderData = $this->createOpposite($position, $stop, $ticker);
+                $oppositeBuyOrderData = Json::encode(
+                    $this->createOpposite($position, $stop, $ticker)
+                );
 
                 $this->info(
                     \sprintf(
-                        '%sSL%s %.3f | $%.2f (oppositeBuy: $%.2f)',
+                        '%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)',
                         $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
                         $stop->getVolume(),
                         $stop->getPrice(),
-                        $oppositeBuyOrderData['triggerPrice'],
+                        $oppositeBuyOrderData,
                     ),
-                    ['exchange.orderId' => $exchangeOrderId, '`buy_order`' => $oppositeBuyOrderData],
+                    ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData],
                 );
             }
         } catch (ApiRateLimitReached $e) {
@@ -140,15 +146,15 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return array{id: int, triggerPrice: float}
+     * @return array<array{id: int, volume: float, price: float}>
      */
     private function createOpposite(Position $position, Stop $stop, Ticker $ticker): array
     {
+        $side = $stop->getPositionSide();
         $price = $stop->getOriginalPrice() ?? $stop->getPrice();
-        $triggerPrice = $stop->getPositionSide() === Side::Sell
-            ? $price - self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE
-            : $price + self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
+        $distance = self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
+        $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 2) : $stop->getVolume();
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
@@ -188,14 +194,37 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             // Пока что добавил отлов CannotAffordOrderCost в PushRelevantBuyOrdersHandler при попытке купить
         }
 
-        $orderId = $this->buyOrderService->create(
-            $stop->getPositionSide(),
-            $triggerPrice,
-            $volume,
-            self::BUY_ORDER_TRIGGER_DELTA,
-            ['onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId()],
-        );
+        $context = ['onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId()];
 
-        return ['id' => $orderId, 'triggerPrice' => $triggerPrice];
+        $orders = [
+            ['volume' => $volume, 'price' => $triggerPrice]
+        ];
+
+        if ($stop->getVolume() >= 0.006) {
+            $orders[] = [
+                'volume' => VolumeHelper::round($stop->getVolume() / 3.5),
+                'price' => PriceHelper::round(
+                    $side === Side::Sell ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2
+                ),
+            ];
+            $orders[] = [
+                'volume' => VolumeHelper::round($stop->getVolume() / 4.5),
+                'price' => PriceHelper::round(
+                    $side === Side::Sell ? $triggerPrice - $distance : $triggerPrice + $distance
+                ),
+            ];
+        }
+
+        foreach ($orders as $order) {
+            $order['id'] = $this->buyOrderService->create(
+                $side,
+                $order['price'],
+                $order['volume'],
+                self::BUY_ORDER_TRIGGER_DELTA,
+                $context,
+            );
+        }
+
+        return $orders;
     }
 }
