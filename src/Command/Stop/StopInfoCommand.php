@@ -70,11 +70,11 @@ class StopInfoCommand extends Command
         }
 
         try {
-            var_dump(
-                'size: ' . $position->size,
-                'entry: ' . $position->entryPrice,
-                'liq: ' . $position->liquidationPrice
-            );
+//            var_dump(
+//                'size: ' . $position->size,
+//                'entry: ' . $position->entryPrice,
+//                'liq: ' . $position->liquidationPrice
+//            );
 
             $ranges = [];
             if (isset($specifiedPrice)) {
@@ -130,9 +130,9 @@ class StopInfoCommand extends Command
                     }
                 );
 
-                if (!$stops) {
-                    break;
-                }
+//                if (!$stops) {
+//                    break;
+//                }
 
                 [$volume, $pnl] = $this->sum($position, ...$stops);
 
