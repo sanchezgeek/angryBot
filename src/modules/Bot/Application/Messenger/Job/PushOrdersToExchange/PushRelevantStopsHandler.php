@@ -155,7 +155,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         $distance = self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
-        $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 2) : $stop->getVolume();
+        $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
         if ($isHedge) {
@@ -210,7 +210,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             $orders[] = [
                 'volume' => VolumeHelper::round($stop->getVolume() / 4.5),
                 'price' => PriceHelper::round(
-                    $side === Side::Sell ? $triggerPrice - $distance : $triggerPrice + $distance
+                    $side === Side::Sell ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8
                 ),
             ];
         }
