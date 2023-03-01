@@ -130,6 +130,16 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return null;
     }
 
+    public function findByExchangeOrderId(Side $side, string $exchangeOrderId): ?Stop
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, 'exchange.orderId', '$exchangeOrderId') = true")
+        ;
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
     public function getNextId(): int
     {
         return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();

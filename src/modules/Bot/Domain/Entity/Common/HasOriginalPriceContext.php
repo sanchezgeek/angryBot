@@ -21,7 +21,7 @@ trait HasOriginalPriceContext
         return $this;
     }
 
-    public function cleanOriginalPrice(): self
+    public function clearOriginalPrice(): self
     {
         if (isset($this->context['originalPrice'])) {
             unset($this->context['originalPrice']);

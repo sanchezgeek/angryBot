@@ -12,6 +12,7 @@ doctrine:
         dql:
             string_functions:
                 HAS_ELEMENT: \App\Doctrine\Functions\HasElement
+                JSON_ELEMENT_EQUALS: \App\Doctrine\Functions\JsonElementEquals
         mappings:
             Delivery:
                 is_bundle: false

@@ -7,13 +7,14 @@ namespace App\Bot\Application\Command\Exchange;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Repository\StopRepository;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
     private const MAX_ORDER_MUST_LEFT = 3;
-    private const RELEASE_OVER_DISTANCE = 65;
+    private const RELEASE_OVER_DISTANCE = 50;
 
     // @todo Всё это лучше вынести в настройки
     // С человекопонятными названиями
@@ -22,6 +23,7 @@ final class TryReleaseActiveOrdersHandler
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
+        private readonly StopRepository $stopRepository,
     ) {
     }
 
@@ -58,6 +60,11 @@ final class TryReleaseActiveOrdersHandler
     {
         $this->exchangeService->closeActiveConditionalOrder($order);
 
-        $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
+        if ($stop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId)) {
+            $stop->clearExchangeOrderId();
+            $this->stopRepository->save($stop);
+        } else {
+            $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
+        }
     }
 }

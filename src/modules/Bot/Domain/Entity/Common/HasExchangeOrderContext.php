@@ -17,4 +17,13 @@ trait HasExchangeOrderContext
     {
         return $this->context['exchange.orderId'] ?? null;
     }
+
+    public function clearExchangeOrderId(): self
+    {
+        if (isset($this->context['exchange.orderId'])) {
+            unset($this->context['exchange.orderId']);
+        }
+
+        return $this;
+    }
 }
