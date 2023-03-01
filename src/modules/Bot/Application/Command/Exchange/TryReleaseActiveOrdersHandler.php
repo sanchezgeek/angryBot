@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
@@ -14,7 +15,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class TryReleaseActiveOrdersHandler
 {
     private const MAX_ORDER_MUST_LEFT = 3;
-    private const RELEASE_OVER_DISTANCE = 50;
+    private const DEFAULT_RELEASE_OVER_DISTANCE = 50;
 
     // @todo Всё это лучше вынести в настройки
     // С человекопонятными названиями
@@ -40,27 +41,30 @@ final class TryReleaseActiveOrdersHandler
                 return;
             }
 
+            $existedStop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId);
+            $distance = $existedStop ? $existedStop->getTriggerDelta() + 5 : self::DEFAULT_RELEASE_OVER_DISTANCE;
+
             if (
-                abs($order->triggerPrice - $ticker->indexPrice) > self::RELEASE_OVER_DISTANCE
+                abs($order->triggerPrice - $ticker->indexPrice) > $distance
 //                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
 //                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
-                $this->release($order);
+                $this->release($order, $existedStop);
             } elseif ($claimedOrderVolume !== null && $order->volume < $claimedOrderVolume) {
                 // Force in case of volume of active order less than claimed volume of new order
                 $claimedOrderVolume = null; // Only once
-                $this->release($order);
+                $this->release($order, $existedStop);
             }
 
             unset($activeOrders[$key]);
         }
     }
 
-    private function release(ActiveStopOrder $order): void
+    private function release(ActiveStopOrder $order, ?Stop $stop): void
     {
         $this->exchangeService->closeActiveConditionalOrder($order);
 
-        if ($stop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId)) {
+        if ($stop) {
             $stop->clearExchangeOrderId();
             $this->stopRepository->save($stop);
         } else {
