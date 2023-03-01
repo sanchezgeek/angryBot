@@ -115,7 +115,7 @@ final class SchedulerFactory
              * Cache for two seconds, because there are two cache workers (so any order worker no need to do request to get ticker)
              * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
              */
-            PeriodicalJob::infinite($start, 'PT2S', new UpdateTicker(Symbol::BTCUSDT, new \DateInterval('PT2S'))),
+            PeriodicalJob::infinite($start, 'PT2S', new UpdateTicker(Symbol::BTCUSDT, new \DateInterval('PT1S'))),
         ];
     }
 }
