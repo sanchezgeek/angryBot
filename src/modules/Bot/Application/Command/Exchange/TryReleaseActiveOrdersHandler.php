@@ -42,7 +42,11 @@ final class TryReleaseActiveOrdersHandler
             }
 
             $existedStop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId);
-            $distance = $existedStop ? $existedStop->getTriggerDelta() + 5 : self::DEFAULT_RELEASE_OVER_DISTANCE;
+            $distance = $existedStop ? $existedStop->getTriggerDelta() + 10 : self::DEFAULT_RELEASE_OVER_DISTANCE;
+
+            if ($distance < self::DEFAULT_RELEASE_OVER_DISTANCE) {
+                $distance = self::DEFAULT_RELEASE_OVER_DISTANCE;
+            }
 
             if (
                 abs($order->triggerPrice - $ticker->indexPrice) > $distance
@@ -66,6 +70,8 @@ final class TryReleaseActiveOrdersHandler
 
         if ($stop) {
             $stop->clearExchangeOrderId();
+            $stop->setTriggerDelta($stop->getTriggerDelta() + 3); // Increase triggerDelta little bit
+
             $this->stopRepository->save($stop);
         } else {
             $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);

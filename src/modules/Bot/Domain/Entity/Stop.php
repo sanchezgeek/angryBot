@@ -88,6 +88,13 @@ class Stop implements HasEvents
         return $this->triggerDelta;
     }
 
+    public function setTriggerDelta(float $triggerDelta): self
+    {
+        $this->triggerDelta = $triggerDelta;
+
+        return $this;
+    }
+
     public function getPnlInPercents(Position $position): float
     {
         $sign = $this->positionSide === Side::Sell ? -1 : +1;
