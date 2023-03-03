@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Service\Strategy;
+namespace App\Bot\Domain\Strategy;
 
 enum StopCreate: string
 {

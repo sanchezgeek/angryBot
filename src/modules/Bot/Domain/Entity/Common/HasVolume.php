@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Domain\Entity;
+namespace App\Bot\Domain\Entity\Common;
 
 trait HasVolume
 {

@@ -150,6 +150,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
      */
     private function createOpposite(Position $position, Stop $stop, Ticker $ticker): array
     {
+        // @todo Костыль
+        if ($position->size > 1.6) {
+            return [];
+        }
+
         $side = $stop->getPositionSide();
         $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         $distance = self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;

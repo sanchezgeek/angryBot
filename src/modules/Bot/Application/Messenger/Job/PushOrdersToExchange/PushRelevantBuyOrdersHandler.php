@@ -12,7 +12,7 @@ use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Application\Service\Strategy\StopCreate;
+use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -239,7 +239,9 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
-        if ($delta >= $defaultStrategyStopPriceDelta * 7) {
+//        if ($delta >= $defaultStrategyStopPriceDelta * 7) {
+        // @todo Нужен какой-то определятор состояния трейда
+        if ($delta >= 1250) {
             return [
                 'strategy' => StopCreate::DEFAULT,
                 'description' => 'to reduce added by mistake',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Hedge;
 
-use App\Bot\Application\Service\Strategy\StopCreate;
+use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Application\Service\Hedge\HedgeStrategy;
 use App\Bot\Domain\Position;
 

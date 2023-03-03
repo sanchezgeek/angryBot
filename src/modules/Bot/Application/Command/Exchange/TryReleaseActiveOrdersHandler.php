@@ -30,6 +30,8 @@ final class TryReleaseActiveOrdersHandler
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
+        // @todo также надо удалять oppositeBuyOrders. Иначе будет нежданчик
+
         $activeOrders = $this->exchangeService->activeConditionalOrders($command->symbol);
 
         $ticker = $this->exchangeService->ticker($command->symbol);
