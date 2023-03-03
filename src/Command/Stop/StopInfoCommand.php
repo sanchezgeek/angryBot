@@ -87,9 +87,9 @@ class StopInfoCommand extends Command
                 ];
             } else {
                 $ranges[] = [
-                    'from' => $positionSide === Side::Sell ? $ticker->indexPrice : $position->entryPrice,
-                    'to' => $positionSide === Side::Sell ? $position->entryPrice : $ticker->indexPrice,
-                    'description' => '[to position entry price]'
+                    'from' => $positionSide === Side::Sell ? $ticker->indexPrice : $position->entryPrice + 100,
+                    'to' => $positionSide === Side::Sell ? $position->entryPrice - 100 : $ticker->indexPrice,
+                    'description' => '[to position entry price -200]'
                 ];
 
                 $proto = $positionSide === Side::Sell
@@ -98,12 +98,6 @@ class StopInfoCommand extends Command
                 ;
 
                 for ($i=0; $i<$this->specifiedPeriods; $i++) {
-                    if ($positionSide === Side::Sell) {
-                        $proto['from'] += 100; $proto['to'] += 100;
-                    } else {
-                        $proto['from'] -= 100; $proto['to'] -= 100;
-                    }
-
                     $proto['description'] = \sprintf(
                         '[%s$100 %s]',
                         $positionSide === Side::Sell ? '+' : '-',
@@ -111,6 +105,12 @@ class StopInfoCommand extends Command
                     );
 
                     $ranges[] = $proto;
+
+                    if ($positionSide === Side::Sell) {
+                        $proto['from'] += 100; $proto['to'] += 100;
+                    } else {
+                        $proto['from'] -= 100; $proto['to'] -= 100;
+                    }
                 }
             }
 
@@ -130,14 +130,18 @@ class StopInfoCommand extends Command
                     }
                 );
 
-//                if (!$stops) {
-//                    break;
-//                }
-
                 [$volume, $pnl] = $this->sum($position, ...$stops);
 
                 $io->note(
-                    \sprintf('from %.0f to %.0f: %.3f btc (%s) %s', $from, $to, $volume, new Pnl($pnl), $description ?? ''),
+                    \sprintf(
+                        '[%.0f - %.0f] | %.3f btc | %.1f%% (%s) %s',
+                        $from,
+                        $to,
+                        $volume,
+                        \round($volume / $position->size, 3) * 100,
+                        new Pnl($pnl, 'USDT'),
+                        $description ?? ''
+                    ),
                 );
 
                 $totalVolume += $volume;
