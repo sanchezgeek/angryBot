@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Helper\VolumeHelper;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -16,7 +17,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:move-stops', description: 'Move position stops')]
+#[AsCommand(name: 'bot:sl:move', description: 'Move position stops')]
 class MoveStopsCommand extends Command
 {
     private const OVER_FIRST_STOP = 'first_stop';
@@ -92,14 +93,11 @@ class MoveStopsCommand extends Command
                 }
             );
 
+            $price = null;
+            $volume = 0;
 
             if ($mode === self::OVER_SPECIFIED_PRICE) {
-                foreach ($stops as $stop) {
-                    $stop->setPrice(
-                        $positionSide === Side::Buy ? $moveOverPrice - 1 : $moveOverPrice + 1
-                    );
-                    $this->stopRepository->save($stop);
-                }
+                $price = $positionSide === Side::Buy ? $moveOverPrice - 1 : $moveOverPrice + 1;
             }
 
             if ($mode === self::OVER_FIRST_STOP) {
@@ -130,23 +128,23 @@ class MoveStopsCommand extends Command
                 }
 
                 $price = $positionSide === Side::Buy ? $firstStop->getPrice() - 1 : $firstStop->getPrice() + 1;
-
-                foreach ($stops as $stop) {
-                    $stop->setPrice(
-                        $price
-                    );
-                    $this->stopRepository->save($stop);
-                }
-
-                $io->info(
-                    \sprintf('Stops moved to %s', $price)
-                );
             }
 
+            foreach ($stops as $stop) {
+                $stop->setPrice($price);
+                $stop->clearOriginalPrice();
+                $this->stopRepository->save($stop);
 
-//            $io->success(
-//                \sprintf('Result transfer cost: %d', $cost),
-//            );
+                $volume += $stop->getVolume();
+            }
+
+            if (!$price) {
+                throw new \LogicException('$price is undefined');
+            }
+
+            $io->info(
+                \sprintf('Stops moved to %s. Moved volume: %.3f', $price, VolumeHelper::round($volume))
+            );
 
             return Command::SUCCESS;
         } catch (\Exception $e) {

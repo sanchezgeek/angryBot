@@ -89,7 +89,7 @@ class StopInfoCommand extends Command
                 $ranges[] = [
                     'from' => $positionSide === Side::Sell ? $ticker->indexPrice : $position->entryPrice + 100,
                     'to' => $positionSide === Side::Sell ? $position->entryPrice - 100 : $ticker->indexPrice,
-                    'description' => '[to position entry price -200]'
+                    'description' => '[to position entry price -100]'
                 ];
 
                 $proto = $positionSide === Side::Sell
