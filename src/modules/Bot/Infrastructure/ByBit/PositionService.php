@@ -25,7 +25,7 @@ final class PositionService implements PositionServiceInterface
 //    private const URL = 'https://api-testnet.bybit.com';
     private const URL = 'https://api.bybit.com';
 
-    private const POSITION_TTL = '15 seconds';
+    private const POSITION_TTL = '10 seconds';
 
     private BybitLinear $api;
 

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command\Exchange;
 
+use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -25,6 +27,7 @@ final class TryReleaseActiveOrdersHandler
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
+        private readonly EventDispatcherInterface $events,
     ) {
     }
 
@@ -75,6 +78,8 @@ final class TryReleaseActiveOrdersHandler
             $stop->setTriggerDelta($stop->getTriggerDelta() + 3); // Increase triggerDelta little bit
 
             $this->stopRepository->save($stop);
+
+            $this->events->dispatch(new ActiveCondStopMovedBack($stop));
         } else {
             $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
         }

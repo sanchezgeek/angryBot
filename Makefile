@@ -31,7 +31,7 @@ up: ## Start the docker hub in detached mode (no logs)
 
 start: prepare_files build up ## Build and start the containers
 
-stop: ## Stop the docker hub
+dc-stop: ## Stop the docker hub
 	@$(DOCKER_COMP) stop
 
 down: ## Stop the docker hub
@@ -69,6 +69,9 @@ run: ## Run bot
 
 restart: ## Restart bot
 	@$(PHP_CONT) /usr/bin/supervisorctl restart all
+
+stop: ## Stop bot
+	@$(PHP_CONT) /usr/bin/supervisorctl stop all
 
 crit: ## Get dev CRITICAL
 	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep CRIT

@@ -239,11 +239,10 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
-//        if ($delta >= $defaultStrategyStopPriceDelta * 7) {
         // @todo Нужен какой-то определятор состояния трейда
-        if ($delta >= 1250) {
+        if ($delta >= 1550) {
             return [
-                'strategy' => StopCreate::DEFAULT,
+                'strategy' => StopCreate::AFTER_FIRST_POSITION_STOP,
                 'description' => 'to reduce added by mistake',
             ];
         }
@@ -252,7 +251,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         if ($delta > $defaultStrategyStopPriceDelta) {
             return [
                 'strategy' => StopCreate::UNDER_POSITION,
-                'description' => 'position in profit: keep position size',
+                'description' => 'position in profit -> keep position size',
             ];
         }
 
