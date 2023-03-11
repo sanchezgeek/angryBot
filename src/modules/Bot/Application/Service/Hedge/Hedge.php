@@ -45,12 +45,12 @@ final readonly class Hedge
 
     public function getHedgeStrategy(): HedgeStrategy
     {
-        $mainPositionStrategy = StopCreate::AFTER_FIRST_POSITION_STOP->value;
+        $mainPositionStrategy = StopCreate::AFTER_FIRST_STOP_UNDER_POSITION->value;
         $supportStrategy = StopCreate::DEFAULT->value;
         $description = null;
 
         if ($this->needIncreaseSupport()) {
-            $supportStrategy = StopCreate::AFTER_FIRST_POSITION_STOP->value;
+            $supportStrategy = StopCreate::AFTER_FIRST_STOP_UNDER_POSITION->value;
             $description = 'need increase support size';
         } elseif ($this->needKeepSupportSize()) {
             $supportStrategy = StopCreate::UNDER_POSITION->value;

@@ -168,16 +168,20 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $description = $strategy['description'];
 
         $basePrice = null;
-        if (
+        if ($stopStrategy === StopCreate::AFTER_FIRST_POSITION_STOP) {
+            if ($firstPositionStop = $this->stopRepository->findFirstPositionStop($position)) {
+                $basePrice = $firstPositionStop->getPrice();
+            }
+        } elseif (
             (
-                $stopStrategy === StopCreate::AFTER_FIRST_POSITION_STOP
+                $stopStrategy === StopCreate::AFTER_FIRST_STOP_UNDER_POSITION
             ) || (
-                $stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_POSITION_STOP
+                $stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION
                 && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM
             )
         ) {
-            if ($firstPositionStop = $this->stopRepository->findFirstStopUnderPosition($position)) {
-                $basePrice = $firstPositionStop->getPrice();
+            if ($firstStopUnderPosition = $this->stopRepository->findFirstStopUnderPosition($position)) {
+                $basePrice = $firstStopUnderPosition->getPrice();
             }
         } elseif (
             (
@@ -240,18 +244,32 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
         // @todo Нужен какой-то определятор состояния трейда
-        if ($delta >= 1550) {
+        if ($delta >= 2500) {
             return [
                 'strategy' => StopCreate::AFTER_FIRST_POSITION_STOP,
-                'description' => 'to reduce added by mistake',
+                'description' => \sprintf('delta=%.2f -> to reduce added by mistake on long distance', $delta)
+            ];
+        }
+
+        if ($delta >= 1500) {
+            return [
+                'strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION,
+                'description' => \sprintf('delta=%.2f -> increase position size', $delta)
+            ];
+        }
+
+        if ($delta >= 500) {
+            return [
+                'strategy' => StopCreate::UNDER_POSITION,
+                'description' => \sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)
             ];
         }
 
         // To not reduce position size by placing stop orders between position and ticker
         if ($delta > $defaultStrategyStopPriceDelta) {
             return [
-                'strategy' => StopCreate::UNDER_POSITION,
-                'description' => 'position in profit -> keep position size',
+                'strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION,
+                'description' => \sprintf('delta=%.2f -> keep position size on start', $delta)
             ];
         }
 

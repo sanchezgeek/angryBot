@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'bot:sl:volume', description: 'Creates incremental SL\'ses grid.')]
-class CreateStopsForVolumeCommand extends Command
+class StopVolumeCommand extends Command
 {
     public function __construct(
         private readonly StopService $stopService,
