@@ -16,6 +16,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {
+    public const WITH_SHORT_STOP_CONTEXT_NAME = 'withShortStop';
+
     use HasVolume;
     use HasExchangeOrderContext;
 
@@ -85,6 +87,6 @@ class BuyOrder implements HasEvents
 
     public function isWithShortStop(): bool
     {
-        return ($this->context['withShortStop'] ?? null) === true;
+        return ($this->context[self::WITH_SHORT_STOP_CONTEXT_NAME] ?? null) === true;
     }
 }

@@ -5,9 +5,8 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Command\Common\ConsoleInputAwareCommand;
-use App\Command\Common\PositionAwareCommand;
-use App\Console\ConsoleParamFetcher;
+use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
 use Doctrine\ORM\QueryBuilder;
@@ -36,9 +35,7 @@ class StopInfoCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
-        $this->setParamFetcher(new ConsoleParamFetcher($input));
+        $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
@@ -84,7 +81,7 @@ class StopInfoCommand extends Command
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
-        $this->setPositionService($positionService);
+        $this->withPositionService($positionService);
 
         parent::__construct($name);
     }

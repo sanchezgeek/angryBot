@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Helper\Json;
 use InvalidArgumentException;
 
 use Symfony\Component\Console\Input\InputInterface;
@@ -62,6 +63,24 @@ final class ConsoleParamFetcher
         return $this->fetchPercentValue($this->input->getOption($name), $name, self::OPTION_PARAM_CAPTION);
     }
 
+    public function getBoolOption(string $name): ?bool
+    {
+        if ($this->input->getOption($name) !== null) {
+            return $this->input->getOption($name) === true;
+        }
+
+        return null;
+    }
+
+    public function getJsonArrayOption(string $name): ?array
+    {
+        if ($this->input->getOption($name) !== null) {
+            return $this->fetchJsonArrayValue($this->input->getOption($name), $name);
+        }
+
+        return null;
+    }
+
     private function fetchIntValue(string $value, string $name, string $paramTypeCaption): int
     {
         if (!is_numeric($value) || (string)(int)$value !== $value) {
@@ -96,5 +115,16 @@ final class ConsoleParamFetcher
         }
 
         return (int)substr($value, 0, -1);
+    }
+
+    private function fetchJsonArrayValue(string $value, string $name): array
+    {
+        try {
+            return Json::decode($value);
+        } catch (\Throwable $e) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid \'%s\' JSON param provided ("%s" given).', $name, $value)
+            );
+        }
     }
 }

@@ -5,9 +5,8 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Command\Common\ConsoleInputAwareCommand;
-use App\Command\Common\PositionAwareCommand;
-use App\Console\ConsoleParamFetcher;
+use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use InvalidArgumentException;
@@ -42,9 +41,6 @@ class CreateSLGridByPnlRangeCommand extends Command
         self::BY_ORDERS_QNT,
     ];
 
-    private InputInterface $input;
-    private SymfonyStyle $io;
-
     protected function configure(): void
     {
         $this
@@ -60,9 +56,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->input = $input; $this->io = $io;
-
-        $this->setParamFetcher(new ConsoleParamFetcher($input));
+        $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         // @todo | tD ?
         // @todo | For price value ?
@@ -76,7 +70,7 @@ class CreateSLGridByPnlRangeCommand extends Command
             throw new LogicException('$forVolume is greater than whole position size');
         }
 
-        if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
+        if (($forVolume > $position->size / 3) && !$io->confirm(sprintf('Are you sure?'))) {
             return Command::FAILURE;
         }
 
@@ -92,7 +86,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
-            if (!$this->io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
+            if (!$io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
                 return Command::FAILURE;
             }
         } else {
@@ -149,11 +143,13 @@ class CreateSLGridByPnlRangeCommand extends Command
     }
 
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
+        PositionServiceInterface $positionService,
         string $name = null,
     ) {
+        $this->withPositionService($positionService);
+
         parent::__construct($name);
     }
 }

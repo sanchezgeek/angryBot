@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Command\Common;
+namespace App\Command\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -44,7 +44,7 @@ trait PositionAwareCommand
         return $this;
     }
 
-    private function setPositionService(PositionServiceInterface $positionService): static
+    private function withPositionService(PositionServiceInterface $positionService): static
     {
         $this->positionService = $positionService;
 
