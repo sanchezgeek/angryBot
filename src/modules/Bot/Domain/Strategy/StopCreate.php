@@ -8,6 +8,7 @@ enum StopCreate: string
 {
     case DEFAULT = 'default';
 
+    case SHORT_STOP = 'short_stop';
     case UNDER_POSITION = 'under_position';
     case ONLY_BIG_SL_UNDER_POSITION = 'only_big_sl_under_position';
 

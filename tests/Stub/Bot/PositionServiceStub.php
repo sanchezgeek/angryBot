@@ -58,7 +58,6 @@ final class PositionServiceStub implements PositionServiceInterface
         $this->addStopMethodCalls[] = [$position, $ticker, $price, $qty];
 
         $exchangeOrderId = $this->getNextExchangeOrderId();
-
         $this->pushedStopsExchangeOrderIds[] = $exchangeOrderId;
 
         return $exchangeOrderId;
@@ -93,7 +92,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this->addStopMethodCalls;
     }
 
-    public function getBuyOrderAddMethodCalls(): array
+    public function getAddBuyOrderCallsStack(): array
     {
         return $this->addBuyOrderMethodCalls;
     }

@@ -36,6 +36,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
     protected function setUp(): void
     {
         parent::setUp();
+
         /** @var BuyOrderService $buyOrderService */
         $buyOrderService = self::getContainer()->get(BuyOrderService::class);
 
@@ -46,7 +47,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
     }
 
     /**
-     * @dataProvider successPushCasesProvider
+     * @dataProvider pushStopsTestCases
      *
      * @param Stop[] $stopsExpectedAfterHandle
      */
@@ -69,7 +70,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
     }
 
-    public function successPushCasesProvider(): iterable
+    public function pushStopsTestCases(): iterable
     {
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
@@ -96,13 +97,13 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
     }
 
     /**
-     * @dataProvider oppositeBuyOrdersTestCases
+     * @dataProvider oppositeBuyOrderCreateTestCases
      */
     public function testCreateOppositeBuyOrders(
         Position $position,
         Ticker $ticker,
         array $stops,
-        array $expectedBuyOrders,
+        array $buyOrdersExpectedAfterHandle,
         array $mockedExchangeOrderIds
     ): void {
         $this->haveTicker($ticker);
@@ -112,10 +113,10 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
 
         ($this->handler)(new PushRelevantStopOrders($position->symbol, $position->side));
 
-        self::seeBuyOrdersInDb(...$expectedBuyOrders);
+        self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
     }
 
-    private function oppositeBuyOrdersTestCases(): iterable
+    private function oppositeBuyOrderCreateTestCases(): iterable
     {
         yield 'with one opposite' => [
             '$position' => PositionFactory::short(self::SYMBOL, 29000),

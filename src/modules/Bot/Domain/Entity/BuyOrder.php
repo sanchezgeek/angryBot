@@ -23,7 +23,6 @@ class BuyOrder implements HasEvents
 
     #[ORM\Id]
     #[ORM\Column]
-    #[ORM\GeneratedValue]
     private int $id;
 
     #[ORM\Column]
@@ -82,5 +81,10 @@ class BuyOrder implements HasEvents
     public function mustBeExecuted(Ticker $ticker): bool
     {
         return $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
+    }
+
+    public function isWithShortStop(): bool
+    {
+        return ($this->context['withShortStop'] ?? null) === true;
     }
 }
