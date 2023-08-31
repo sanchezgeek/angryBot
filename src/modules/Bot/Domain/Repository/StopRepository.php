@@ -32,14 +32,15 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     public function save(Stop $stop): void
     {
-        $isTransactionActive = $this->getEntityManager()->getConnection()->isTransactionActive();
-
         $save = function () use ($stop) {
             $this->getEntityManager()->persist($stop);
             $this->eventBus->handleEvents($stop);
         };
 
-        $isTransactionActive ? $save() : $this->getEntityManager()->wrapInTransaction($save);
+        $this->getEntityManager()->getConnection()->isTransactionActive()
+            ? $save()
+            : $this->getEntityManager()->wrapInTransaction($save)
+        ;
     }
 
     public function remove(Stop $stop): void

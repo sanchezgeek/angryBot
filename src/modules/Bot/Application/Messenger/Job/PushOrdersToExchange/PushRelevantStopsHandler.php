@@ -79,17 +79,17 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($message->symbol);
 
         foreach ($stops as $stop) {
+            $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
+            $price = $stop->getPrice();
+
             if (
-                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($position->side, $stop->getPrice()))
-                || (
-                    abs($stop->getPrice() - $ticker->indexPrice) <= (
-                        $this->slForcedTriggerDelta ?: ($stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA)
-                    )
-                )
+                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($position->side, $price))
+                || (abs($price - $ticker->indexPrice) <= ($this->slForcedTriggerDelta ?: $td))
             ) {
                 if ($indexAlreadyOverStop) {
-                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 10 : $ticker->indexPrice - 10;
+                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 15 : $ticker->indexPrice - 15;
                     $stop->setPrice($newPrice);
+                    $stop->setTriggerDelta($td + 7);
                 }
 
                 $this->addStop($position, $ticker, $stop);
@@ -103,24 +103,17 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
                 $stop->setExchangeOrderId($exchangeOrderId);
 
-                // @todo Есть косяк: выше проставляется новый price в расчёте на то, что тут будет ордер на бирже. А его нет. Денег не хватило. Но ниже делается persist. originalPrice попадает в базу. А на самом деле ордер не был отправлен.
-                // Нужно новую цену не сразу фигачить в поле, а помещать в контекст и тут уже применять. Если вернулся $exchangeOrderId
-
                 if (
                     $stop->getVolume() <= 0.005
                     && !$stop->isSupportFromMainHedgePositionStopOrder()
                 ) {
                     $this->stopRepository->remove($stop);
-                } else {
-                    $this->stopRepository->save($stop);
                 }
 
 //                $this->events->dispatch(new StopPushedToExchange($stop));
-
                 $this->createOpposite($position, $stop, $ticker);
 
 //                $this->info(\sprintf('%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $stop->getVolume(), $stop->getPrice(), $oppositeBuyOrderData = Json::encode($oppositeBuyOrderData)), ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData]);
-
                 $this->info(\sprintf('%sSL%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
             }
         } catch (ApiRateLimitReached $e) {
@@ -133,6 +126,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
             );
+        } finally {
+            $this->stopRepository->save($stop);
         }
     }
 
@@ -147,7 +142,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         $side = $stop->getPositionSide();
-        $price = $stop->getOriginalPrice() ?? $stop->getPrice();
+        $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         $distance = self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;

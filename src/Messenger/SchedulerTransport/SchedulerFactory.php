@@ -35,7 +35,7 @@ final class SchedulerFactory
     private const VERY_SLOW = '5 seconds';
 
     private const CONF = [
-        'short.sl.speed' => self::FAST, // self::VERY_FAST
+        'short.sl.speed' => self::VERY_FAST,
         'short.buy.speed' => self::FAST,
         'long.sl.speed' => self::FAST,
         'long.buy.speed' => self::FAST,
@@ -81,7 +81,7 @@ final class SchedulerFactory
                 // Cleanup orders
                 PeriodicalJob::infinite(
                     '2023-02-24T23:49:05Z', sprintf('PT%s', ($cleanupPeriod = '15S')),
-                    DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 5, 2, true))
+                    DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 18, 2, true))
                 ),
                 PeriodicalJob::infinite(
                     '2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod),
