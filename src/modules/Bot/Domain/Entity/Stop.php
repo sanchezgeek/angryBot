@@ -67,11 +67,13 @@ class Stop implements HasEvents
         return $this->price;
     }
 
-    public function setPrice(float $price): void
+    public function setPrice(float $price): self
     {
         $this->setOriginalPrice($this->price);
 
         $this->price = $price;
+
+        return $this;
     }
 
     public function getVolume(): float

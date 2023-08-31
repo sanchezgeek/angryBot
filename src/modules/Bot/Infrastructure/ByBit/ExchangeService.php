@@ -10,16 +10,13 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Clock\ClockInterface;
 use App\Helper\Json;
-use App\Worker\AppContext;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
-use App\Value\CachedValue;
+use App\Worker\AppContext;
 use Lin\Bybit\BybitLinear;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Contracts\Cache\ItemInterface;
 
 final class ExchangeService implements ExchangeServiceInterface
 {

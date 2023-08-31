@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Helper;
+namespace App\Domain\Shared\Helper;
 
+/**
+ * @see \App\Tests\Unit\Domain\Price\Helper\PriceHelperTest
+ */
 final class PriceHelper
 {
     private const DEFAULT_PRECISION = 2;

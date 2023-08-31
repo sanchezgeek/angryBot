@@ -14,4 +14,14 @@ enum Side: string
     {
         return $this === self::Buy ? self::Sell : self::Buy;
     }
+
+    public function isShort(): bool
+    {
+        return $this->value === self::Sell->value;
+    }
+
+    public function isLong(): bool
+    {
+        return $this->value === self::Buy->value;
+    }
 }

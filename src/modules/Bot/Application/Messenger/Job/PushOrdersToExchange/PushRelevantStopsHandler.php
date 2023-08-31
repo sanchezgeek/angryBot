@@ -5,25 +5,22 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
-use App\Bot\Application\Events\Stop\StopPushedToExchange;
 use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
+use App\Bot\Application\Service\Orders\BuyOrderService;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Application\Service\Orders\BuyOrderService;
-use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
-use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
-use App\Helper\Json;
-use App\Helper\PriceHelper;
+use App\Domain\Shared\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
-use App\Worker\AppContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -88,8 +85,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
             ) {
                 if ($indexAlreadyOverStop) {
                     $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 15 : $ticker->indexPrice - 15;
-                    $stop->setPrice($newPrice);
-                    $stop->setTriggerDelta($td + 7);
+                    $stop->setPrice($newPrice)->setTriggerDelta($td + 7);
                 }
 
                 $this->addStop($position, $ticker, $stop);

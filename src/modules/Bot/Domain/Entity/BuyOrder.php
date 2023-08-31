@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Bot\Domain\Entity;
 
+use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
-use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\EventBus\HasEvents;

@@ -7,7 +7,6 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -133,8 +132,8 @@ class MoveStopsCommand extends Command
             }
 
             foreach ($stops as $stop) {
-                $stop->setPrice($price);
-                $stop->clearOriginalPrice();
+                $stop->setPrice($price)->clearOriginalPrice();
+
                 $this->stopRepository->save($stop);
 
                 $volume += $stop->getVolume();
