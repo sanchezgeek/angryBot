@@ -1,8 +1,13 @@
 ### Description
-Order delivery service.
+Trading bot.
 
 ### Start
-`make start`
+```shell
+make start
+make composer "c=install"
+```
 
-### Tests
-`make test`
+### Maybe need after dependencies installed
+```shell
+make restart
+```
