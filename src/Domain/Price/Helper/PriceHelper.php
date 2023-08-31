@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Shared\Helper;
+namespace App\Domain\Price\Helper;
 
 /**
- * @see \App\Tests\Unit\Domain\Shared\Helper\PriceHelperTest
+ * @see \App\Tests\Unit\Domain\Price\Helper\PriceHelperTest
  */
 final class PriceHelper
 {

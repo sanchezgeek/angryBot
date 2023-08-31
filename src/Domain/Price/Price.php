@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Shared\ValueObject;
+namespace App\Domain\Price;
 
-use App\Domain\Shared\Helper\PriceHelper;
+use App\Bot\Domain\Position;
+use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Stop\Helper\PnlHelper;
 
 /**
  * @see \App\Tests\Unit\Domain\Shared\ValueObject\PriceTest
@@ -65,5 +67,10 @@ readonly final class Price
     public function lessOrEquals(Price $price): bool
     {
         return $this->value <= $price->value;
+    }
+
+    public function pnlFor(Position $position): float
+    {
+        return PnlHelper::getPnlInPercents($position, $this->value());
     }
 }

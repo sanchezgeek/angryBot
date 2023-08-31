@@ -11,10 +11,14 @@ use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @see \App\Tests\Unit\Domain\Stop\StopTest
+ */
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents
 {
@@ -100,10 +104,7 @@ class Stop implements HasEvents
 
     public function getPnlInPercents(Position $position): float
     {
-        $sign = $this->positionSide === Side::Sell ? -1 : +1;
-        $delta = $this->price - $position->entryPrice;
-
-        return $sign * ($delta / $position->entryPrice) * $position->positionLeverage * 100;
+        return PnlHelper::getPnlInPercents($position, $this->price);
     }
 
     public function getPnlUsd(Position $position): float

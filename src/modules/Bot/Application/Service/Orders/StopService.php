@@ -9,7 +9,7 @@ use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Shared\Helper\PriceHelper;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;

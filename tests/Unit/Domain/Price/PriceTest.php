@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Domain\Shared\ValueObject;
+namespace App\Tests\Unit\Domain\Price;
 
-use App\Domain\Shared\Helper\PriceHelper;
-use App\Domain\Shared\ValueObject\Price;
+use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
 use DomainException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \App\Domain\Shared\ValueObject\Price
+ * @covers \App\Domain\Price\Price
  */
 final class PriceTest extends TestCase
 {
     /**
-     * @dataProvider positiveCases
+     * @dataProvider canCreateCases
      */
     public function testCanCreate(float $value, Price $expectedResult): void
     {
@@ -25,7 +25,7 @@ final class PriceTest extends TestCase
         self::assertTrue($price->eq($expectedResult), $price->value() . ' = ' . $expectedResult->value());
     }
 
-    private function positiveCases(): iterable
+    private function canCreateCases(): iterable
     {
         return [
             [1, Price::float(1)],
@@ -38,7 +38,7 @@ final class PriceTest extends TestCase
     }
 
     /**
-     * @dataProvider createNegativeCases
+     * @dataProvider failCreateCases
      */
     public function testFailCreate(float $value): void
     {
@@ -48,7 +48,7 @@ final class PriceTest extends TestCase
         Price::float($value);
     }
 
-    private function createNegativeCases(): iterable
+    private function failCreateCases(): iterable
     {
         return [[-1], [-0.009], [0], [0.001]];
     }

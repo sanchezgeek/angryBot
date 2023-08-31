@@ -6,7 +6,14 @@ namespace App\Bot\Domain;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Helper\VolumeHelper;
+use LogicException;
 
+use function sprintf;
+
+/**
+ * @see \App\Tests\Unit\Domain\Position\PositionTest
+ */
 final class Position
 {
     public function __construct(
@@ -37,5 +44,24 @@ final class Position
             ? $this->entryPrice - $ticker->indexPrice
             : $ticker->indexPrice - $this->entryPrice
         ;
+    }
+
+    public function getVolumePart(float $percent): float
+    {
+        if ($percent <= 0 || $percent > 100) {
+            throw new LogicException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $percent));
+        }
+
+        return VolumeHelper::round($this->size * ($percent / 100));
+    }
+
+    public function isShort(): bool
+    {
+        return $this->side->isShort();
+    }
+
+    public function isLong(): bool
+    {
+        return $this->side->isLong();
     }
 }

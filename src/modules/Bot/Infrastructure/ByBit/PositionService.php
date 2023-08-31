@@ -14,7 +14,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Shared\Helper\PriceHelper;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Domain\Shared\Helper;
+namespace App\Tests\Unit\Domain\Price\Helper;
 
-use App\Domain\Shared\Helper\PriceHelper;
+use App\Domain\Price\Helper\PriceHelper;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \App\Domain\Shared\Helper\PriceHelper
+ * @covers PriceHelper
  */
 final class PriceHelperTest extends TestCase
 {

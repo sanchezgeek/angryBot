@@ -20,7 +20,7 @@ final class PositionFactory
         float $size = self::DEFAULT_SIZE,
         float $leverage = self::DEFAULT_LEVERAGE
     ): Position {
-        $positionValue = $at * $size * $leverage; // @todo is it right?
+        $positionValue = $at * $size;
         $liquidationPrice = $at + 1000; // @todo calc
 
         return new Position(
