@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\WIP;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Bot\Application\Service\Orders\StopService;
 use App\Helper\VolumeHelper;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,13 +17,12 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[AsCommand(name: 'sl:create-stops')]
 class CreateStopsCommand extends Command
 {
     private const DEFAULT_INITIAL_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
-
-    protected static $defaultName = 'fix-position';
 
     public function __construct(
         private readonly StopService $stopService,

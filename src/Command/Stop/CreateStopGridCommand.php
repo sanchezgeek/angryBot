@@ -16,8 +16,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:sl:grid', description: 'Creates incremental SL\'ses grid.')]
-class CreateIncrementalStopsGridCommand extends Command
+#[AsCommand(name: 'sl:grid', description: 'Creates incremental SL\'ses grid.')]
+class CreateStopGridCommand extends Command
 {
     public function __construct(
         private readonly StopService $stopService,

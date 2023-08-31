@@ -1,22 +1,23 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Buy;
 
-use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Service\Orders\BuyOrderService;
-use App\Bot\Infrastructure\ByBit\PositionService;
-use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\ValueObject\Position\Side;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class CreateBuyOrdersGridCommand extends Command
-{
-    protected static $defaultName = 'buy-grid';
+use function rand;
+use function random_int;
+use function round;
 
+#[AsCommand(name: 'buy:grid')]
+class CreateBuyGridCommand extends Command
+{
     public function __construct(
         private readonly BuyOrderService $buyOrderService,
         string $name = null,
@@ -76,6 +77,10 @@ class CreateBuyOrdersGridCommand extends Command
             }
 
             for ($price = $toPrice; $price > $fromPrice; $price-=$step) {
+                $rand = round(random_int(-7, 8) * 0.6, 2);
+
+                $price += $rand;
+
                 $this->buyOrderService->create(
                     $positionSide,
                     $price,

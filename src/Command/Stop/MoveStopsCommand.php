@@ -17,7 +17,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:sl:move', description: 'Move position stops')]
+use function count;
+
+#[AsCommand(name: 'sl:move', description: 'Move position stops')]
 class MoveStopsCommand extends Command
 {
     private const OVER_FIRST_STOP = 'first_stop';
@@ -42,7 +44,7 @@ class MoveStopsCommand extends Command
         $this
             ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
             ->addArgument('priceToBeginFrom', InputArgument::REQUIRED, 'Price from which SL\'ses must be moved')
-            ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode', self::OVER_FIRST_STOP)
+            ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode', self::OVER_SPECIFIED_PRICE)
             ->addOption('moveOverPrice', 'p', InputOption::VALUE_OPTIONAL, 'Price above|under which SL\'ses must be placed')
         ;
     }
@@ -143,7 +145,8 @@ class MoveStopsCommand extends Command
             }
 
             $io->info(
-                \sprintf('Stops moved to %s. Moved volume: %.3f', $price, VolumeHelper::round($volume))
+//                \sprintf('Stops moved to %s. Moved volume: %.3f', $price, VolumeHelper::round($volume))
+                \sprintf('OK (%d).', count($stops))
             );
 
             return Command::SUCCESS;

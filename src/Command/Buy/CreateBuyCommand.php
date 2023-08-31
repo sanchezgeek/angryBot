@@ -1,22 +1,20 @@
 <?php
 
-namespace App\Command;
+namespace App\Command\Buy;
 
-use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Service\Orders\BuyOrderService;
+use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Infrastructure\ByBit\PositionService;
-use App\Bot\Application\Service\Orders\StopService;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class CreateBuyOrderCommand extends Command
+#[AsCommand(name: 'buy:single')]
+class CreateBuyCommand extends Command
 {
-    protected static $defaultName = 'buy';
-
     public function __construct(
         private readonly BuyOrderService $buyOrderService,
         private readonly PositionService $positionService,

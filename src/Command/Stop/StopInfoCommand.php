@@ -19,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:sl:info', description: 'Move position stops')]
+#[AsCommand(name: 'sl:info', description: 'Move position stops')]
 class StopInfoCommand extends Command
 {
     private ?int $specifiedPeriods = 4;

@@ -12,7 +12,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'bot:sl:single', description: 'Creates single stop with specified price.')]
+#[AsCommand(name: 'sl:single', description: 'Creates single stop with specified price.')]
 class CreateStopCommand extends Command
 {
     public function __construct(
