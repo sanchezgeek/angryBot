@@ -28,16 +28,17 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         parent::__construct($registry, BuyOrder::class);
     }
 
-    public function save(BuyOrder $stop): void
+    public function save(BuyOrder $buyOrder): void
     {
-        $isTransactionActive = $this->getEntityManager()->getConnection()->isTransactionActive();
-
-        $save = function () use ($stop) {
-            $this->getEntityManager()->persist($stop);
-            $this->eventBus->handleEvents($stop);
+        $save = function () use ($buyOrder) {
+            $this->getEntityManager()->persist($buyOrder);
+            $this->eventBus->handleEvents($buyOrder);
         };
 
-        $isTransactionActive ? $save() : $this->getEntityManager()->wrapInTransaction($save);
+        $this->getEntityManager()->getConnection()->isTransactionActive()
+            ? $save()
+            : $this->getEntityManager()->wrapInTransaction($save)
+        ;
     }
 
     public function remove(BuyOrder $order): void

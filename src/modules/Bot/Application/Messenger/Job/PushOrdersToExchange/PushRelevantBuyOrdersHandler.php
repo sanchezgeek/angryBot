@@ -31,8 +31,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 {
-    private const DEFAULT_TRIGGER_DELTA = 1;
-    private const STOP_ORDER_TRIGGER_DELTA = 5;
+    private const STOP_ORDER_TRIGGER_DELTA = 17;
 
     private ?\DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -129,7 +128,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
 //                $this->info(\sprintf('%sBuy%s %.3f | $%.2f (stop: $%.2f with "%s" strategy (%s))', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $order->getVolume(), $order->getPrice(), $stopData['triggerPrice'], $stopData['strategy']->value, $stopData['description']), ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData]);
 
-                $this->info(\sprintf('%sBuy%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
+//                $this->info(\sprintf('%sBuy%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
             }
         } catch (ApiRateLimitReached $e) {
             $this->logExchangeClientException($e);
