@@ -24,7 +24,6 @@ class CreateBuyGridCommand extends Command
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
-    use RawAdditionalOrderContextAwareCommand;
     use AdditionalBuyOrderContextAwareCommand;
 
     protected function configure(): void

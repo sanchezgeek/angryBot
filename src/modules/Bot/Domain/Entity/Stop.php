@@ -8,6 +8,7 @@ use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
 use App\Bot\Domain\Entity\Common\HasSupportContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
+use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Position\ValueObject\Side;
@@ -26,6 +27,7 @@ class Stop implements HasEvents
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
     use HasSupportContext;
+    use HasWithoutOppositeContext;
 
     use RecordEvents;
 

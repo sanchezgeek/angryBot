@@ -30,6 +30,7 @@ trait PositionAwareCommand
             );
         }
 
+        // @todo | Retrieve position with `symbol` arg
         if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
             throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
         }
@@ -39,6 +40,7 @@ trait PositionAwareCommand
 
     private function configurePositionArgs(): static
     {
+        // @todo | Add `symbol` arg
         $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, InputArgument::REQUIRED, 'Position side (sell|buy)');
 
         return $this;

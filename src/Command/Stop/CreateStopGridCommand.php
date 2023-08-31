@@ -5,9 +5,10 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Infrastructure\ByBit\PositionService;
-use App\Domain\Position\ValueObject\Side;
+use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -16,39 +17,35 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_merge;
+
 #[AsCommand(name: 'sl:grid', description: 'Creates incremental SL\'ses grid.')]
 class CreateStopGridCommand extends Command
 {
-    public function __construct(
-        private readonly StopService $stopService,
-        private readonly StopRepository $stopRepository,
-        private readonly PositionService $positionService,
-        string $name = null,
-    ) {
-        parent::__construct($name);
-    }
+    use ConsoleInputAwareCommand;
+    use PositionAwareCommand;
+    use AdditionalStopContextAwareCommand;
 
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addArgument('trigger_delta', InputArgument::REQUIRED, 'Trigger delta')
             ->addArgument('volume', InputArgument::REQUIRED, 'Stop start volume')
             ->addArgument('from_price', InputArgument::REQUIRED, 'From price')
             ->addArgument('to_price', InputArgument::REQUIRED, 'To price')
             ->addArgument('step', InputArgument::REQUIRED, 'Step')
             ->addArgument('increment', InputArgument::OPTIONAL, 'Volume to add to each new SL')
+            ->configureStopAdditionalContexts()
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
-        $symbol = Symbol::BTCUSDT;
+        $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         try {
-            $positionSide = $input->getArgument('position_side');
+            $position = $this->getPosition();
             $triggerDelta = $input->getArgument('trigger_delta');
             $volume = $input->getArgument('volume');
             $fromPrice = $input->getArgument('from_price');
@@ -56,11 +53,6 @@ class CreateStopGridCommand extends Command
             $step = $input->getArgument('step');
             $increment = $input->getArgument('increment');
 
-            if (!$positionSide = Side::tryFrom($positionSide)) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $step),
-                );
-            }
             if (!(float)$step) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $step provided (%s)', $step),
@@ -88,12 +80,12 @@ class CreateStopGridCommand extends Command
             }
 
             $context = ['uniqid' => $uniqueId = \uniqid('inc-create', true)];
-
-
-            $position = $this->positionService->getPosition($symbol, $positionSide);
+            if ($additionalContext = $this->getAdditionalStopContext()) {
+                $context = array_merge($context, $additionalContext);
+            }
 
             $alreadyStopped = 0;
-            $stops = $this->stopRepository->findActive($positionSide);
+            $stops = $this->stopRepository->findActive($position->side);
             foreach ($stops as $stop) {
                 $alreadyStopped += $stop->getVolume();
             }
@@ -114,7 +106,7 @@ class CreateStopGridCommand extends Command
 
             for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
                 $this->stopService->create(
-                    $positionSide,
+                    $position->side,
                     $price,
                     $volume,
                     $triggerDelta,
@@ -125,11 +117,11 @@ class CreateStopGridCommand extends Command
 
             $sum = 0;
             $stops = $this->stopRepository->findActive(
-                side: $positionSide,
-                qbModifier: function (QueryBuilder $qb) use ($positionSide) {
+                side: $position->side,
+                qbModifier: function (QueryBuilder $qb) use ($position) {
                     $priceField = $qb->getRootAliases()[0] . '.price';
 
-                    $qb->orderBy($priceField, $positionSide === Side::Sell ? 'DESC' : 'ASC');
+                    $qb->orderBy($priceField, $position->isShort() ? 'DESC' : 'ASC');
                 }
             );
 
@@ -170,5 +162,16 @@ class CreateStopGridCommand extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    public function __construct(
+        private readonly StopService $stopService,
+        private readonly StopRepository $stopRepository,
+        PositionService $positionService,
+        string $name = null,
+    ) {
+        $this->withPositionService($positionService);
+
+        parent::__construct($name);
     }
 }

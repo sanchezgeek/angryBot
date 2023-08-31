@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
@@ -19,6 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_merge;
 use function implode;
 use function in_array;
 use function iterator_to_array;
@@ -30,6 +32,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
+    use AdditionalStopContextAwareCommand;
 
     private const DEFAULT_TRIGGER_DELTA = 17;
 
@@ -51,6 +54,7 @@ class CreateSLGridByPnlRangeCommand extends Command
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption('ordersQnt', '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count')
             ->addOption('priceStep', '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
+            ->configureStopAdditionalContexts()
         ;
     }
 
@@ -75,6 +79,9 @@ class CreateSLGridByPnlRangeCommand extends Command
         }
 
         $context = ['uniqid' => $uniqueId = uniqid('inc-create', true)];
+        if ($additionalContext = $this->getAdditionalStopContext()) {
+            $context = array_merge($context, $additionalContext);
+        }
 
         $stopsGrid = OrdersGrid::byPositionPnlRange($position, $fromPnl, $toPnl);
 
