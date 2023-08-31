@@ -33,7 +33,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 37;
+    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 38;
 
     public function __construct(
         private readonly HedgeService $hedgeService,
@@ -114,7 +114,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 }
 
 //                $this->events->dispatch(new StopPushedToExchange($stop));
-                $this->createOpposite($position, $stop, $ticker);
+                if ($stop->isWithOppositeOrder()) {
+                    $this->createOpposite($position, $stop, $ticker);
+                }
 
 //                $this->info(\sprintf('%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $stop->getVolume(), $stop->getPrice(), $oppositeBuyOrderData = Json::encode($oppositeBuyOrderData)), ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData]);
 //                $this->info(\sprintf('%sSL%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));

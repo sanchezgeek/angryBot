@@ -16,7 +16,12 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {
-    public const WITH_SHORT_STOP_CONTEXT_NAME = 'withShortStop';
+    public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
+
+    /**
+     * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
+     */
+    public const ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
 
     use HasVolume;
     use HasExchangeOrderContext;
@@ -87,6 +92,13 @@ class BuyOrder implements HasEvents
 
     public function isWithShortStop(): bool
     {
-        return ($this->context[self::WITH_SHORT_STOP_CONTEXT_NAME] ?? null) === true;
+        return ($this->context[self::WITH_SHORT_STOP_CONTEXT] ?? null) === true;
+    }
+
+    public function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId): self
+    {
+        $this->context[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT] = $exchangeOrderId;
+
+        return $this;
     }
 }

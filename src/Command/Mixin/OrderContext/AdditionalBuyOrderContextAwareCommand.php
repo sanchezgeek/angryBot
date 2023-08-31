@@ -15,7 +15,7 @@ trait AdditionalBuyOrderContextAwareCommand
     private const NEGATABLE_OPTIONS = [
         'withShortStop' => [
             'caption' => 'With short stop',
-            'mappedContext' => BuyOrder::WITH_SHORT_STOP_CONTEXT_NAME,
+            'mappedContext' => BuyOrder::WITH_SHORT_STOP_CONTEXT,
         ],
     ];
 

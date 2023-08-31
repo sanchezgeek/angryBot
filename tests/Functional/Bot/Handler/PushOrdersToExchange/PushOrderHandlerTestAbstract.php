@@ -8,6 +8,8 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
@@ -17,6 +19,9 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
+
+use function implode;
+use function sprintf;
 
 abstract class PushOrderHandlerTestAbstract extends KernelTestCase
 {
@@ -50,5 +55,27 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
     protected function haveTicker(Ticker $ticker): void
     {
         $this->exchangeServiceMock->method('ticker')->with($ticker->symbol)->willReturn($ticker);
+    }
+
+    /**
+     * @param array<Stop|BuyOrder> $orders
+     */
+    protected function ordersDesc(...$orders): string
+    {
+        $descriptions = [];
+        foreach ($orders as $order) {
+            $descriptions[] = sprintf('%.1f (%.3f)', $order->getPrice(), $order->getVolume());
+        }
+        return implode(', ', $descriptions);
+    }
+
+    /**
+     * @param array<BuyOrder> $orders
+     */
+    protected function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId, ...$orders): void
+    {
+        foreach ($orders as $order) {
+            $order->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
+        }
     }
 }
