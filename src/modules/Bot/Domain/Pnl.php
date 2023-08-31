@@ -14,7 +14,7 @@ final readonly class Pnl implements \Stringable
     {
         $sign = $this->value > 0 ? '+' : '-';
 
-        return \sprintf('%s%.3f %s', $sign, \abs($this->value), $this->currency);
+        return \sprintf('%s%.2f %s', $sign, \abs($this->value), $this->currency);
     }
 
     public function __toString(): string

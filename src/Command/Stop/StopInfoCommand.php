@@ -4,47 +4,44 @@ namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Pnl;
-use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
+use App\Command\Common\ConsoleInputAwareCommand;
+use App\Command\Common\PositionAwareCommand;
+use App\Console\ConsoleParamFetcher;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
 use Doctrine\ORM\QueryBuilder;
-use InvalidArgumentException;
-use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-use function is_numeric;
-use function sprintf;
-
 #[AsCommand(name: 'sl:info')]
 class StopInfoCommand extends Command
 {
-    private const DEFAULT_PNL_STEP = 20;
+    use ConsoleInputAwareCommand;
+    use PositionAwareCommand;
 
-    private InputInterface $input;
+    private const DEFAULT_PNL_STEP = 20;
 
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', self::DEFAULT_PNL_STEP)
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->input = $input;
+        $io = new SymfonyStyle($input, $output);
+
+        $this->setParamFetcher(new ConsoleParamFetcher($input));
 
         $position = $this->getPosition();
-        $pnlStep = $this->getIntParam($input->getOption('pnlStep'), 'pnlStep');
+        $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
 
         $stops = $this->stopRepository->findActive(
             side: $position->side,
@@ -82,37 +79,13 @@ class StopInfoCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function getIntParam(string $value, string $name): int
-    {
-        if (!is_numeric($value)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid \'%s\' INT param provided ("%s" given).', $name, $value)
-            );
-        }
-
-        return (int)$value;
-    }
-
-    private function getPosition(): Position
-    {
-        if (!$positionSide = Side::tryFrom($this->input->getArgument('position_side'))) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid $step provided (%s)', $this->input->getArgument('position_side')),
-            );
-        }
-
-        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
-            throw new RuntimeException(sprintf('Position on %s side not found', $positionSide->title()));
-        }
-
-        return $position;
-    }
-
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
         private readonly StopRepository $stopRepository,
+        PositionServiceInterface $positionService,
         string $name = null,
     ) {
+        $this->setPositionService($positionService);
+
         parent::__construct($name);
     }
 }

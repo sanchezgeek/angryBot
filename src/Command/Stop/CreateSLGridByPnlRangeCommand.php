@@ -4,15 +4,14 @@ namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Order\OrdersGrid;
+use App\Command\Common\ConsoleInputAwareCommand;
+use App\Command\Common\PositionAwareCommand;
+use App\Console\ConsoleParamFetcher;
 use App\Domain\Order\Order;
-use App\Domain\Position\ValueObject\Side;
+use App\Domain\Order\OrdersGrid;
 use InvalidArgumentException;
 use LogicException;
-use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -23,16 +22,16 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function implode;
 use function in_array;
-use function is_numeric;
 use function iterator_to_array;
 use function sprintf;
-use function str_ends_with;
-use function substr;
 use function uniqid;
 
 #[AsCommand(name: 'sl:grid:by-pnl')]
 class CreateSLGridByPnlRangeCommand extends Command
 {
+    use ConsoleInputAwareCommand;
+    use PositionAwareCommand;
+
     private const DEFAULT_TRIGGER_DELTA = 17;
 
     private const BY_PRICE_STEP = 'by_step';
@@ -49,7 +48,7 @@ class CreateSLGridByPnlRangeCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addArgument('forVolume', InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption('fromPnl', '-f', InputOption::VALUE_REQUIRED, 'fromPnl (%)')
             ->addOption('toPnl', '-t', InputOption::VALUE_REQUIRED, 'toPnl (%)')
@@ -63,23 +62,33 @@ class CreateSLGridByPnlRangeCommand extends Command
     {
         $io = new SymfonyStyle($input, $output); $this->input = $input; $this->io = $io;
 
+        $this->setParamFetcher(new ConsoleParamFetcher($input));
+
         // @todo | tD ?
         // @todo | For price value ?
-        $fromPnl = $this->getPercentParam($input->getOption('fromPnl'), 'fromPnl');
-        $toPnl = $this->getPercentParam($input->getOption('toPnl'), 'toPnl');
+        $fromPnl = $this->paramFetcher->getPercentOption('fromPnl');
+        $toPnl = $this->paramFetcher->getPercentOption('toPnl');
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
         $position = $this->getPosition();
+
+        if ($forVolume >= $position->size) {
+            throw new LogicException('$forVolume is greater than whole position size');
+        }
+
+        if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
+            return Command::FAILURE;
+        }
 
         $context = ['uniqid' => $uniqueId = uniqid('inc-create', true)];
 
         $stopsGrid = OrdersGrid::byPositionPnlRange($position, $fromPnl, $toPnl);
 
         if ($mode === self::BY_ORDERS_QNT) {
-            if (($qnt = $input->getOption('ordersQnt')) === null) {
+            if ($input->getOption('ordersQnt') === null) {
                 throw new LogicException(sprintf('In \'%s\' mode param "%s" is required', $mode, 'ordersQnt'));
             }
-            $qnt = $this->getIntParam($qnt, 'ordersQnt');
+            $qnt = $this->paramFetcher->getIntOption('ordersQnt');
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
@@ -97,9 +106,7 @@ class CreateSLGridByPnlRangeCommand extends Command
         }
 
         if ($position->size <= $alreadyStopped) {
-            if (!$io->confirm(
-                sprintf('All position volume already under SL\'ses. Want to continue? ')
-            )) {
+            if (!$io->confirm('All position volume already under SL\'ses. Want to continue? ')) {
                 return Command::FAILURE;
             }
         }
@@ -117,7 +124,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 
     private function getModeParam(): string
     {
-        $mode = $this->input->getOption('mode');
+        $mode = $this->paramFetcher->getStringOption('mode');
         if (!in_array($mode, self::MODES, true)) {
             throw new InvalidArgumentException(
                 sprintf('Invalid $mode provided (%s)', $mode),
@@ -127,77 +134,18 @@ class CreateSLGridByPnlRangeCommand extends Command
         return $mode;
     }
 
-    private function getIntParam(string $value, string $name): int
-    {
-        if (!is_numeric($value)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid \'%s\' INT param provided ("%s" given).', $name, $value)
-            );
-        }
-
-        return (int)$value;
-    }
-
-    private function getPercentParam(string $value, string $name): int
-    {
-        if (
-            !str_ends_with($value, '%')
-            || (!is_numeric(substr($value, 0, -1)))
-        ) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid \'%s\' PERCENT param provided ("%s" given).', $name, $value)
-            );
-        }
-
-        return (int)substr($value, 0, -1);
-    }
-
-    private function getFloatParam(string $value, string $name): float
-    {
-        if (!($floatValue = (float)$value)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid \'%s\' FLOAT param provided ("%s" given).', $name, $value)
-            );
-        }
-
-        return $floatValue;
-    }
-
     private function getForVolumeParam(): float
     {
         $position = $this->getPosition();
 
         try {
-            $positionSizePart = $this->getPercentParam($this->input->getArgument('forVolume'), 'forVolume');
+            $positionSizePart = $this->paramFetcher->getPercentArgument('forVolume');
             $forVolume = $position->getVolumePart($positionSizePart);
         } catch (InvalidArgumentException) {
-            $forVolume = $this->getFloatParam($this->input->getArgument('forVolume'), 'forVolume');
-        }
-
-        if ($forVolume >= $position->size) {
-            throw new LogicException('$forVolume is greater than whole position size');
-        }
-
-        if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
-            return Command::FAILURE;
+            $forVolume = $this->paramFetcher->getFloatArgument('forVolume');
         }
 
         return $forVolume;
-    }
-
-    private function getPosition(): Position
-    {
-        if (!$positionSide = Side::tryFrom($this->input->getArgument('position_side'))) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid $step provided (%s)', $this->input->getArgument('position_side')),
-            );
-        }
-
-        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
-            throw new RuntimeException(sprintf('Position on %s side not found', $positionSide->title()));
-        }
-
-        return $position;
     }
 
     public function __construct(
