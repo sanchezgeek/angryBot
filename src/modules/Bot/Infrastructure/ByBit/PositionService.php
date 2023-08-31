@@ -21,6 +21,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
+use function sprintf;
+
 final class PositionService implements PositionServiceInterface
 {
 //    private const URL = 'https://api-testnet.bybit.com';
@@ -110,7 +112,7 @@ final class PositionService implements PositionServiceInterface
             }
 
             if ($result['ret_code'] !== 0) {
-                var_dump($result['ret_code']);
+                $this->dumpError($result['ret_code'], $result['ret_msg']);
             }
 
             return $result['result']['stop_order_id'] ?? null;
@@ -153,10 +155,10 @@ final class PositionService implements PositionServiceInterface
             }
 
             if ($result['ret_code'] !== 0) {
-                var_dump($result);
+                $this->dumpError($result['ret_code'], $result['ret_msg']);
             }
 
-            return $result['result']['order_id'];
+            return $result['result']['order_id'] ?? null;
         } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -164,6 +166,11 @@ final class PositionService implements PositionServiceInterface
         }
 
         return null;
+    }
+
+    private function dumpError($code, $message): void
+    {
+        var_dump(sprintf('%d: %s', $code, $message));
     }
 
     public function addStop2(Position $position, Ticker $ticker, float $price): void
