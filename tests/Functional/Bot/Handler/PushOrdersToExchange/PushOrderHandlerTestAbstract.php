@@ -11,16 +11,16 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
-use App\Tests\Mixin\DbFixtureTrait;
+use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-abstract class AbstractOrderPushHandlerTest extends KernelTestCase
+abstract class PushOrderHandlerTestAbstract extends KernelTestCase
 {
-    use DbFixtureTrait;
+    use TestWithDbFixtures;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
