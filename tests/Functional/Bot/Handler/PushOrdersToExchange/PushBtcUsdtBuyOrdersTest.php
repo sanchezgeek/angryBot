@@ -72,9 +72,9 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
             '$buyOrdersFixtures' => [
-                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.01)), // must be pushed
-                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)),
-                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.03)), // must be pushed
+                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.01)->build()), // must be pushed
+                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
+                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.03)->build()), // must be pushed
             ],
             'expectedAddBuyOrderCalls' => [
                 [$position, $ticker, 29060.0, 0.01],
@@ -118,10 +118,10 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
             '$position' => PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => TickerFactory::create(self::SYMBOL, 29050),
             '$buyOrdersFixtures' => [
-                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.001)),
-                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)),
-                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.003)),
-                new BuyOrderFixture(BuyOrderBuilder::short(40, 29060, 0.005)),
+                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.001)->build()),
+                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
+                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.003)->build()),
+                new BuyOrderFixture(BuyOrderBuilder::short(40, 29060, 0.005)->build()),
             ],
             'stopsExpectedAfterHandle' => [
                 /**

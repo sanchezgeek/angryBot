@@ -15,11 +15,11 @@ abstract class AbstractDoctrineFixture extends AbstractFixture
     private ?string $appliedEntityClassName = null;
     private ?int $appliedId = null;
 
-    abstract protected function buildEntity(): object;
+    abstract protected function getEntity(): object;
 
     public function apply(ContainerInterface $container): void
     {
-        $entity = $this->buildEntity();
+        $entity = $this->getEntity();
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = $container->get(EntityManagerInterface::class);

@@ -9,12 +9,12 @@ use App\Tests\Factory\Entity\StopBuilder;
 
 final class StopFixture extends AbstractDoctrineFixture
 {
-    public function __construct(private readonly StopBuilder $builder)
+    public function __construct(private readonly Stop $stop)
     {
     }
 
-    protected function buildEntity(): Stop
+    protected function getEntity(): Stop
     {
-        return $this->builder->build();
+        return $this->stop;
     }
 }

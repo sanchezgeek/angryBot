@@ -9,12 +9,12 @@ use App\Tests\Factory\Entity\BuyOrderBuilder;
 
 final class BuyOrderFixture extends AbstractDoctrineFixture
 {
-    public function __construct(private readonly BuyOrderBuilder $builder)
+    public function __construct(private readonly BuyOrder $buyOrder)
     {
     }
 
-    protected function buildEntity(): BuyOrder
+    protected function getEntity(): BuyOrder
     {
-        return $this->builder->build();
+        return $this->buyOrder;
     }
 }

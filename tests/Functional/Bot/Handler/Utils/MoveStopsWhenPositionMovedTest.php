@@ -101,11 +101,11 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
             '$initialPositionEntryPrice' => $initialPositionEntryPrice,
             '$newPositionEntryPrice' => $newPositionEntryPrice,
             '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 29060, 0.1)->withTD(10)),
-                new StopFixture(StopBuilder::short(20, 29155, 0.2)->withTD(100)),
-                new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)),
-                new StopFixture(StopBuilder::short(40, 29055, 0.003)->withTD(5)),
-                new StopFixture(StopBuilder::short(50, 29055, 0.03)->withTD(5)),
+                new StopFixture(StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()),
+                new StopFixture(StopBuilder::short(20, 29155, 0.2)->withTD(100)->build()),
+                new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(40, 29055, 0.003)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(50, 29055, 0.03)->withTD(5)->build()),
             ],
             '$stopsExpectedAfterHandle' => [
                 StopBuilder::short(10, 29051.6, 0.1)->withTD(10)->build(),
@@ -120,8 +120,8 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
             '$initialPositionEntryPrice' => $initialPositionEntryPrice,
             '$newPositionEntryPrice' => $newPositionEntryPrice,
             '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 28950, 0.025)->withTD(5)),
-                new StopFixture(StopBuilder::short(20, 28540, 0.1)->withTD(5)),
+                new StopFixture(StopBuilder::short(10, 28950, 0.025)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(20, 28540, 0.1)->withTD(5)->build()),
             ],
             '$stopsExpectedAfterHandle' => [
                 StopBuilder::short(10, 28950, 0.025)->withTD(5)->build(),
@@ -133,10 +133,10 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
             '$initialPositionEntryPrice' => $initialPositionEntryPrice,
             '$newPositionEntryPrice' => $newPositionEntryPrice,
             '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 28950, 0.024)->withTD(5)),
-                new StopFixture(StopBuilder::short(20, 28950, 0.001)->withTD(5)),
-                new StopFixture(StopBuilder::short(30, 28900, 0.024)->withTD(5)),
-                new StopFixture(StopBuilder::short(40, 28900, 0.001)->withTD(5)),
+                new StopFixture(StopBuilder::short(10, 28950, 0.024)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(20, 28950, 0.001)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(30, 28900, 0.024)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(40, 28900, 0.001)->withTD(5)->build()),
             ],
             '$stopsExpectedAfterHandle' => [
                 StopBuilder::short(10, 28941.6, 0.024)->withTD(5)->build(),
@@ -151,10 +151,10 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
             '$initialPositionEntryPrice' => $initialPositionEntryPrice,
             '$newPositionEntryPrice' => $newPositionEntryPrice,
             '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 28850, 0.024)->withTD(5)),
-                new StopFixture(StopBuilder::short(20, 28850, 0.001)->withTD(5)),
-                new StopFixture(StopBuilder::short(30, 28600, 0.024)->withTD(5)),
-                new StopFixture(StopBuilder::short(40, 28600, 0.001)->withTD(5)),
+                new StopFixture(StopBuilder::short(10, 28850, 0.024)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(20, 28850, 0.001)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(30, 28600, 0.024)->withTD(5)->build()),
+                new StopFixture(StopBuilder::short(40, 28600, 0.001)->withTD(5)->build()),
             ],
             '$stopsExpectedAfterHandle' => [
                 StopBuilder::short(10, 28850, 0.024)->withTD(5)->build(),
