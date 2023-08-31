@@ -117,20 +117,11 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
 //                $this->events->dispatch(new StopPushedToExchange($stop));
 
-                $oppositeBuyOrderData = Json::encode(
-                    $this->createOpposite($position, $stop, $ticker)
-                );
+                $this->createOpposite($position, $stop, $ticker);
 
-                $this->info(
-                    \sprintf(
-                        '%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)',
-                        $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
-                        $stop->getVolume(),
-                        $stop->getPrice(),
-                        $oppositeBuyOrderData,
-                    ),
-                    ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData],
-                );
+//                $this->info(\sprintf('%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $stop->getVolume(), $stop->getPrice(), $oppositeBuyOrderData = Json::encode($oppositeBuyOrderData)), ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData]);
+
+                $this->info(\sprintf('%sSL%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
             }
         } catch (ApiRateLimitReached $e) {
             $this->logExchangeClientException($e);
