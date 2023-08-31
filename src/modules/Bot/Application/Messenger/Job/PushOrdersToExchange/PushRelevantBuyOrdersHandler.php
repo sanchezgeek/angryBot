@@ -63,7 +63,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($message->symbol);
 
         if (!$this->canAffordBuy($ticker)) {
-            $this->info(\sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice));
+//            $this->info(\sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice));
             return;
         }
         $this->cannotAffordAtPrice = null;
