@@ -4,9 +4,9 @@ namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Position\Side;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

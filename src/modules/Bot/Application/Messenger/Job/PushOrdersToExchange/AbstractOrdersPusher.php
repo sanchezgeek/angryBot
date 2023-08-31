@@ -7,12 +7,11 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Position\ValueObject\Side;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
-
 use Throwable;
 
 use function end;

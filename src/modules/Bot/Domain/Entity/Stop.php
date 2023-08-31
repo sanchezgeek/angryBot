@@ -10,7 +10,7 @@ use App\Bot\Domain\Entity\Common\HasSupportContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;

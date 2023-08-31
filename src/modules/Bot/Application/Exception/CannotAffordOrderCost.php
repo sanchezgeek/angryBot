@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Exception;
 
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 
 final class CannotAffordOrderCost extends \Exception
 {
@@ -14,7 +14,14 @@ final class CannotAffordOrderCost extends \Exception
         public readonly Side $side,
         public readonly float $qty
     ) {
-        parent::__construct('CannotAffordOrderCost');
+        parent::__construct(
+            \sprintf(
+                'CannotAffordOrderCost when try to buy $%.2f on %s %s position.',
+                $this->qty,
+                $this->symbol->value,
+                $this->side->title()
+            )
+        );
     }
 
     public static function forBuy(Symbol $symbol, Side $side, float $qty): self

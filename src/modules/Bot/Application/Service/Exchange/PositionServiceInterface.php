@@ -9,8 +9,8 @@ use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 
 interface PositionServiceInterface
 {

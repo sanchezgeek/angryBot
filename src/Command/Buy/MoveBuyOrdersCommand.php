@@ -3,7 +3,7 @@
 namespace App\Command\Buy;
 
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;

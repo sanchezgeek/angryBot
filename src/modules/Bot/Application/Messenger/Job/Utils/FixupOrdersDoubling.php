@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\Utils;
 
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 
 final class FixupOrdersDoubling
 {

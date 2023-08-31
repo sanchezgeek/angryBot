@@ -6,7 +6,7 @@ namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Command\CreateBuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
 

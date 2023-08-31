@@ -2,12 +2,12 @@
 
 namespace App\Command\Stop;
 
+use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Infrastructure\ByBit\PositionService;
-use App\Bot\Application\Service\Orders\StopService;
+use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;

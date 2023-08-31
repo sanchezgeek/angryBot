@@ -3,8 +3,8 @@
 namespace App\Command\Buy;
 
 use App\Bot\Application\Service\Orders\BuyOrderService;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Infrastructure\ByBit\PositionService;
+use App\Domain\Position\ValueObject\Side;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;

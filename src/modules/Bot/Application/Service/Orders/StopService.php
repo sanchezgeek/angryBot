@@ -8,7 +8,7 @@ use App\Bot\Application\Command\CreateStop;
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Shared\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use App\Trait\DispatchCommandTrait;

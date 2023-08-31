@@ -6,7 +6,7 @@ namespace App\Bot\Application\Events\BuyOrder;
 
 use App\Bot\Application\Events\LoggableEvent;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\ValueObject\Position\Side;
+use App\Domain\Position\ValueObject\Side;
 
 final class BuyOrderPushedToExchange extends LoggableEvent
 {
