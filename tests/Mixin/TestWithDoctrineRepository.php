@@ -8,20 +8,25 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use RuntimeException;
 
+use function count;
 use function sprintf;
 
 trait TestWithDoctrineRepository
 {
-    protected static function truncate(string $className): void
+    protected static function truncate(string $className): int
     {
         $entityManager = self::getEntityManager();
         $repository = self::getRepository($className);
 
-        foreach ($repository->findAll() as $entity) {
+        $entities = $repository->findAll();
+        foreach ($entities as $entity) {
             $entityManager->remove($entity);
         }
-
         $entityManager->flush();
+
+        self::ensureTableIsEmpty($className);
+
+        return count($entities);
     }
 
     protected static function ensureTableIsEmpty(string $className): void

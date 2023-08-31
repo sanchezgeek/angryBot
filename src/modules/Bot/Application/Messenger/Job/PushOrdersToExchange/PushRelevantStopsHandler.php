@@ -19,7 +19,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Shared\Helper\PriceHelper;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use Doctrine\ORM\QueryBuilder;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -53,7 +53,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushRelevantBtcUsdtStopsHandlerTest
+     * @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushBtcUsdtShortStopsTest
      */
     public function __invoke(PushRelevantStopOrders $message): void
     {
@@ -210,7 +210,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         foreach ($orders as $order) {
-            $order['id'] = $this->buyOrderService->create(
+            $this->buyOrderService->create(
                 $side,
                 $order['price'],
                 $order['volume'],

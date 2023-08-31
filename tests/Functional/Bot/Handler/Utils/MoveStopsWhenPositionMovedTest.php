@@ -37,8 +37,7 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::truncate(Stop::class);
-        self::beginTransaction();
+        self::truncateStops();
     }
 
     protected function setUp(): void

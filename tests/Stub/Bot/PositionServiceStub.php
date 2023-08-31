@@ -15,6 +15,9 @@ use function array_shift;
 use function sprintf;
 use function uuid_create;
 
+/**
+ * @see \App\Tests\Unit\Stub\PositionServiceStubTest
+ */
 final class PositionServiceStub implements PositionServiceInterface
 {
     /**
@@ -85,7 +88,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this->pushedStopsExchangeOrderIds;
     }
 
-    public function getStopAddMethodCalls(): array
+    public function getAddStopCallsStack(): array
     {
         return $this->addStopMethodCalls;
     }

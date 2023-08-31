@@ -38,4 +38,14 @@ trait StopTest
     {
         return self::getContainer()->get(StopRepository::class);
     }
+
+    protected static function truncateStops(): int
+    {
+        $qnt = self::truncate(Stop::class);
+
+        $entityManager = self::getEntityManager();
+        $entityManager->getConnection()->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
+
+        return $qnt;
+    }
 }

@@ -41,7 +41,7 @@ final class PositionServiceStubTest extends TestCase
         $resultExchangeStopOrdersIds[] = $stub->addStop($position, $ticker, 29110, 0.4);
 
         # asser correct result method calls
-        self::assertSame($expectedMethodCalls, $stub->getStopAddMethodCalls());
+        self::assertSame($expectedMethodCalls, $stub->getAddStopCallsStack());
 
         # asser addStop returns correct exchangeOrderId in result
         self::assertSame($resultExchangeStopOrdersIds, $stub->getPushedStopsExchangeOrderIds());
