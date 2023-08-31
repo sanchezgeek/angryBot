@@ -14,8 +14,6 @@ use function ceil;
 
 /**
  * @see \App\Tests\Unit\Domain\Stop\PositionStopRangesCollectionTest
- *
- * @template \IteratorAggregate<StopsCollection>
  */
 final class PositionStopRangesCollection implements \IteratorAggregate
 {

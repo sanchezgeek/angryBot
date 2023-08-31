@@ -78,7 +78,7 @@ final class StopsCollection
         return VolumeHelper::round($volume);
     }
 
-    public function totalUsdPnl(Position $forPosition): float
+    public function totalUsdPnL(Position $forPosition): float
     {
         $total = 0;
 

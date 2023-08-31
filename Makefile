@@ -15,11 +15,11 @@ SYMFONY  = $(PHP_CONT) bin/console
 prepare_files:
 	@if [ ! -f .env.local ]; then cp .env.local.dist .env.local; fi
 
-## —— 🎵 🐳 The Symfony Docker Makefile 🐳 🎵 ——————————————————————————————————
+## —— 🎵 🐳 The Symfony Docker Makefile 🐳 🎵 ——————————————————————————————
 help: ## Outputs this help screen
 	@grep -E '(^[a-zA-Z0-9\./_-]+:.*?##.*$$)|(^##)' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}{printf "\033[32m%-30s\033[0m %s\n", $$1, $$2}' | sed -e 's/\[32m##/[33m/'
 
-## —— Docker 🐳 ————————————————————————————————————————————————————————————————
+## —— Docker 🐳 ————————————————————————————————————————————————————————————
 build: ## Builds the Docker images
 	@$(DOCKER_COMP) build
 
@@ -43,7 +43,7 @@ logs: ## Show live logs
 sh: ## Connect to the PHP FPM container
 	@$(PHP_CONT) sh
 
-## —— Composer 🧙 ——————————————————————————————————————————————————————————————
+## —— Composer 🧙 ——————————————————————————————————————————————————————————
 composer: ## Run composer, pass the parameter "c=" to run a given command, example: make composer c='req symfony/orm-pack'
 	@$(eval c ?=)
 	@$(COMPOSER) $(c)
@@ -52,7 +52,7 @@ vendor: ## Install vendors according to the current composer.lock file
 vendor: c=install --prefer-dist --no-dev --no-progress --no-scripts --no-interaction
 vendor: composer
 
-## —— Symfony 🎵 ———————————————————————————————————————————————————————————————
+## —— Symfony 🎵 ———————————————————————————————————————————————————————————
 sf: ## List all Symfony commands or pass the parameter "c=" to run a given command, example: make sf c=about
 	@$(eval c ?=)
 	@$(SYMFONY) $(c)
@@ -60,7 +60,7 @@ sf: ## List all Symfony commands or pass the parameter "c=" to run a given comma
 cc: c=c:c ## Clear the cache
 cc: sf
 
-## —— App 🛠 ———————————————————————————————————————————————————————————————
+## —— App 🛠 ————————————————————————————————————————————————————————————————
 test: ## Run tests
 	@$(PHP_CONT) bin/phpunit
 
@@ -88,5 +88,20 @@ out-warn: ## Get consumers "warning" output
 out: ## Get consumers output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
 
-s-info: ## Get SHORT-position info
-	@$(PHP_CONT) ./bin/console bot:sl:info sell -r 7
+
+## —— Position 📉 ———————————————————————————————————————————————————————————
+
+sl-info: ## Get position SLs info
+	@$(eval s ?=)
+	@$(eval p ?= 20)
+	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p)
+
+## —— SHORT 🐻 ——
+s-info: ## Get SHORT-position SLs info
+s-info: s=sell
+s-info: sl-info
+
+## —— LONG 🐂 ——
+b-info: ## Get LONG-position SLs info
+b-info: s=buy
+b-info: sl-info
