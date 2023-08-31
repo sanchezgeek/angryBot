@@ -55,7 +55,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
     public function testPushRelevantStopOrders(
         Position $position,
         Ticker $ticker,
-        array $stopFixtures,
+        array $stopsFixtures,
         array $expectedStopAddMethodCalls,
         array $stopsExpectedAfterHandle,
         array $mockedExchangeOrderIds
@@ -63,7 +63,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
         $this->haveTicker($ticker);
         $this->positionServiceStub->havePosition($position);
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
-        $this->applyDbFixtures(...$stopFixtures);
+        $this->applyDbFixtures(...$stopsFixtures);
 
         ($this->handler)(new PushRelevantStopOrders($position->symbol, $position->side));
 

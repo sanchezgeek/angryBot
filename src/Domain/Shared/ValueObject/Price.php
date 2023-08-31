@@ -7,7 +7,7 @@ namespace App\Domain\Shared\ValueObject;
 use App\Domain\Shared\Helper\PriceHelper;
 
 /**
- * @see \App\Tests\Unit\Domain\Price\ValueObject\PriceTest
+ * @see \App\Tests\Unit\Domain\Shared\ValueObject\PriceTest
  */
 readonly final class Price
 {

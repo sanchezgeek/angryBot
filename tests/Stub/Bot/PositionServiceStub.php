@@ -102,13 +102,16 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this;
     }
 
-    public function havePosition(Position $position): self
+    public function havePosition(Position $position, bool $replace = false): self
     {
-        foreach ($this->positions as $item) {
+        foreach ($this->positions as $key => $item) {
             if ($item->symbol === $position->symbol && $item->side === $position->side) {
-                throw new LogicException(
-                    sprintf('Position %s:%s already in array', $item->symbol->value, $item->side->title())
-                );
+                if (!$replace) {
+                    throw new LogicException(
+                        sprintf('Position %s:%s already in array', $item->symbol->value, $item->side->title())
+                    );
+                }
+                unset($this->positions[$key]);
             }
         }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Shared\Helper;
 
 /**
- * @see \App\Tests\Unit\Domain\Price\Helper\PriceHelperTest
+ * @see \App\Tests\Unit\Domain\Shared\Helper\PriceHelperTest
  */
 final class PriceHelper
 {

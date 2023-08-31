@@ -11,11 +11,27 @@ use function usort;
 
 trait StopTest
 {
-    protected static function seeStopsInDb(Stop ...$stops): void
+    /**
+     * @return Stop[]
+     */
+    protected static function getCurrentStopsSnapshot(): array
     {
-        usort($stops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
+        $stops = [];
+        foreach(self::getStopRepository()->findAll() as $stop) {
+            $stops[] = clone $stop;
+        }
 
-        self::assertEquals($stops, self::getStopRepository()->findAll());
+        return $stops;
+    }
+
+    protected static function seeStopsInDb(Stop ...$expectedStops): void
+    {
+        $actualStops = self::getStopRepository()->findAll();
+
+        usort($expectedStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
+        usort($actualStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
+
+        self::assertEquals($expectedStops, $actualStops);
     }
 
     protected static function getStopRepository(): StopRepository
