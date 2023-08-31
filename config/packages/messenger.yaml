@@ -20,7 +20,7 @@ framework:
             App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders: async_high
 
             # from cron
-            App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async
+            App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
             App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
             # utils
