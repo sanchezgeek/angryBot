@@ -125,20 +125,21 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
 //                $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
-                $stopData = $this->createStop($position, $ticker, $order);
+//                $stopData =
+                    $this->createStop($position, $ticker, $order);
 
-                $this->info(
-                    \sprintf(
-                        '%sBuy%s %.3f | $%.2f (stop: $%.2f with "%s" strategy (%s))',
-                        $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
-                        $order->getVolume(),
-                        $order->getPrice(),
-                        $stopData['triggerPrice'],
-                        $stopData['strategy']->value,
-                        $stopData['description'],
-                    ),
-                    ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
-                );
+//                $this->info(
+//                    \sprintf(
+//                        '%sBuy%s %.3f | $%.2f (stop: $%.2f with "%s" strategy (%s))',
+//                        $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign,
+//                        $order->getVolume(),
+//                        $order->getPrice(),
+//                        $stopData['triggerPrice'],
+//                        $stopData['strategy']->value,
+//                        $stopData['description'],
+//                    ),
+//                    ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData],
+//                );
             }
         } catch (ApiRateLimitReached $e) {
             $this->logExchangeClientException($e);
