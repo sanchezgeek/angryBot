@@ -14,10 +14,6 @@ doctrine:
                 HAS_ELEMENT: \App\Doctrine\Functions\HasElement
                 JSON_ELEMENT_EQUALS: \App\Doctrine\Functions\JsonElementEquals
         mappings:
-            Delivery:
-                is_bundle: false
-                dir: '%kernel.project_dir%/src/modules/Delivery/Domain'
-                prefix: 'App\Delivery\Domain'
             Bot:
                 is_bundle: false
                 dir: '%kernel.project_dir%/src/modules/Bot/Domain/Entity'

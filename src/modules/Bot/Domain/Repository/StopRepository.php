@@ -5,7 +5,6 @@ namespace App\Bot\Domain\Repository;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Delivery\Domain\Delivery;
 use App\Domain\Position\ValueObject\Side;
 use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -14,7 +13,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Delivery>
+ * @extends ServiceEntityRepository<Stop>
  *
  * @method Stop|null find($id, $lockMode = null, $lockVersion = null)
  * @method Stop|null findOneBy(array $criteria, array $orderBy = null)

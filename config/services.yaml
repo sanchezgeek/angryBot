@@ -11,8 +11,6 @@ services:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         bind:
-            $depotAddress: '%env(DEPOT_ADDRESS)%'
-            $yandexApiKey: '%env(YANDEX_API_KEY)%'
             $slForcedTriggerDelta: '%env(float:SL_FORCED_TRIGGER_DELTA)%'
             $hedgeSupportPositionCreateOppositeStopAfter: '%env(HEDGE_SUPPORT_POSITION_CREATE_OPPOSITE_STOP_AFTER)%'
             $hedgeMainPositionCreateOppositeStopAfter: '%env(HEDGE_MAIN_POSITION_CREATE_OPPOSITE_STOP_AFTER)%'
@@ -27,16 +25,8 @@ services:
             - '../src/modules/'
             - '../src/Kernel.php'
 
-    App\Delivery\:
-        resource: '../src/modules/Delivery'
-
     App\Bot\:
         resource: '../src/modules/Bot'
-
-    App\Controller\:
-        resource: '../src/Controller'
-        tags:
-            - 'controller.service_arguments'
 
     App\Messenger\SchedulerTransport\TransportFactory:
         tags: [ 'messenger.transport_factory' ]

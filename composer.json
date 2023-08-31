@@ -43,7 +43,6 @@
     "autoload": {
         "psr-4": {
             "App\\": "src/",
-            "App\\Delivery\\": "src/modules/Delivery",
             "App\\Bot\\": "src/modules/Bot",
             "Lin\\Bybit\\": "src/modules/LinByBit/src"
         }
