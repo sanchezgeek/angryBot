@@ -11,12 +11,12 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrder
 use App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling;
 use App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Position\ValueObject\Side;
+use App\Messenger\DispatchAsync;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
-use App\Messenger\DispatchAsync;
 use DateInterval;
 use DateTimeImmutable;
 use Exception;
@@ -81,7 +81,7 @@ final class SchedulerFactory
                 // Cleanup orders
                 PeriodicalJob::infinite(
                     '2023-02-24T23:49:05Z', sprintf('PT%s', ($cleanupPeriod = '15S')),
-                    DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 18, 2, true))
+                    DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 20, 5, true))
                 ),
                 PeriodicalJob::infinite(
                     '2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod),
