@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Mixin;
 
 use App\Tests\Fixture\AbstractFixture;
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Container\ContainerInterface;
+use Doctrine\ORM\EntityRepository;
+
+use RuntimeException;
+
+use function sprintf;
 
 trait DbFixtureTrait
 {
@@ -16,7 +19,7 @@ trait DbFixtureTrait
      */
     private array $appliedFixtures = [];
 
-    protected function beginFixturesTransaction(): void
+    protected static function beginTransaction(): void
     {
         /** @var EntityManagerInterface $entityManager */
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
@@ -30,11 +33,8 @@ trait DbFixtureTrait
 
     protected function applyDbFixtures(AbstractFixture ...$fixtures): void
     {
-        /** @var ContainerInterface $container */
-        $container = static::getContainer();
-
         foreach ($fixtures as $fixture) {
-            $fixture->apply($container);
+            $fixture->apply(static::getContainer());
             $this->appliedFixtures[] = $fixture;
         }
     }
@@ -45,22 +45,44 @@ trait DbFixtureTrait
     protected function clear(): void
     {
         if ($this->appliedFixtures) {
-            /** @var ContainerInterface $container */
-            $container = static::getContainer();
-
             foreach ($this->appliedFixtures as $fixture) {
-                $fixture->clear($container);
+                $fixture->clear(static::getContainer());
             }
 
             $this->appliedFixtures = [];
         }
     }
 
-    protected static function truncateTable(string $table, string $schema = 'public'): void
+    protected static function truncate(string $className): void
     {
-        /** @var Connection $connection */
-        $connection = self::getContainer()->get(Connection::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
-        $connection->executeStatement(\sprintf('TRUNCATE TABLE "%s"."%s" RESTART IDENTITY CASCADE', $schema, $table));
+        $repository = self::getRepository($entityManager, $className);
+
+        foreach ($repository->findAll() as $entity) {
+            $entityManager->remove($entity);
+        }
+
+        $entityManager->flush();
+    }
+
+    protected static function ensureTableIsEmpty(string $className): void
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+
+        $repository = self::getRepository($entityManager, $className);
+
+        self::assertEmpty($repository->findAll());
+    }
+
+    protected static function getRepository(EntityManagerInterface $entityManager, string $className): EntityRepository
+    {
+        if (!$entityRepository = $entityManager->getRepository($className)) {
+            throw new RuntimeException(sprintf('Repository for %s entity not found', $className));
+        }
+
+        return $entityRepository;
     }
 }

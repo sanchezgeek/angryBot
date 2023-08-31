@@ -7,16 +7,17 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopsHandler;
 use App\Bot\Application\Service\Orders\BuyOrderService;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Tests\Factory\Entity\StopBuilder;
+use App\Tests\Factory\PositionFactory;
+use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 
-use function array_keys;
-use function array_map;
-use function array_values;
-use function count;
+use function usort;
 use function uuid_create;
 
 /**
@@ -27,74 +28,89 @@ final class PushRelevantBtcUsdtStopsHandlerTest extends AbstractOrderPushHandler
     private const SYMBOL = Symbol::BTCUSDT;
     private const SIDE = Side::Sell;
 
-    private PushRelevantStopsHandler $handler;
-
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        parent::setUp();
-
-        /** @var BuyOrderService $buyOrderService */
-        $buyOrderService = self::getContainer()->get(BuyOrderService::class);
-
-        $this->handler = new PushRelevantStopsHandler($this->hedgeService, $this->stopRepository, $buyOrderService, $this->stopService, $this->messageBus, $this->eventDispatcher, $this->exchangeServiceMock, $this->positionServiceMock, $this->loggerMock, $this->clockMock, 0);
+        self::truncate(Stop::class);
+        self::beginTransaction();
     }
 
     public function successPushCasesProvider(): iterable
     {
         yield 'by trigger delta' => [
-            'currentIndex' => 29050,
-            'fixtures' => [
-                StopFixture::short(100500, 29060)->withTriggerDelta(10),
-                StopFixture::short(200500, 29055)->withTriggerDelta(5),
-            ]
+            '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
+            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
+            '$stopFixtures' => [
+                new StopFixture(StopBuilder::short(1, 29060, 0.1)->withTD(10)),
+                new StopFixture(StopBuilder::short(2, 29155, 0.2)->withTD(100)),
+                new StopFixture(StopBuilder::short(3, 29055, 0.3)->withTD(5)),
+            ],
+            '$expectedStopAddMethodCalls' => [
+                [$position, $ticker, 29060.0, 0.1],
+                [$position, $ticker, 29055.0, 0.3],
+            ],
+            '$stopsExpectedAfterHandle' => [
+
+                # pushed
+                StopBuilder::short(1, 29060, 0.1)->withTD(10)
+                    ->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
+                StopBuilder::short(3, 29055, 0.3)->withTD(5)
+                    ->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
+
+                # unchanged
+                StopBuilder::short(2, 29155, 0.2)->withTD(100)->build(),
+            ],
+            $mockedExchangeOrderIds
         ];
     }
 
     /**
      * @dataProvider successPushCasesProvider
+     *
+     * @param Stop[] $stopsExpectedAfterHandle
      */
-    public function testCanPushStopOrdersToExchange(float $symbolIndexPrice, array $stops): void
-    {
+    public function testCanPushStopOrdersToExchange(
+        Position $position,
+        Ticker $ticker,
+        array $stopFixtures,
+        array$expectedStopAddMethodCalls,
+        array $stopsExpectedAfterHandle,
+        array $mockedExchangeOrderIds
+    ): void {
         // Arrange
-        $this->applyDbFixtures(...$stops);
+        $this->haveTicker($ticker);
+        $this->positionServiceStub->havePosition($position);
+        $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
 
-        $this->haveTicker(self::SYMBOL, $symbolIndexPrice);
-        $this->havePosition(self::SYMBOL, self::SIDE, $symbolIndexPrice - 100);
+        self::ensureTableIsEmpty(Stop::class);
+        $this->applyDbFixtures(...$stopFixtures);
 
-        $this->positionServiceMock
-            ->expects(self::exactly(count($stops)))
-            ->method('addStop')
-            ->willReturnCallback([$this, 'pushStopToExchange']);
+        usort($stopsExpectedAfterHandle, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
 
         // Act
-        ($this->handler)(new PushRelevantStopOrders(self::SYMBOL, self::SIDE));
+        $this->createHandler()(new PushRelevantStopOrders(self::SYMBOL, self::SIDE));
 
         // Assert
-        $this->assertStopsPushed(...$stops);
+        self::assertSame($expectedStopAddMethodCalls, $this->positionServiceStub->getStopAddMethodCalls());
+        self::assertEquals($stopsExpectedAfterHandle, $this->stopRepository->findAll());
     }
 
-    public function pushStopToExchange(Position $position, Ticker $ticker, float $price, float $volume): ?string
+    private function createHandler(): PushRelevantStopsHandler
     {
-        $exchangeOrderId = uuid_create();
-        $this->positionServiceCalls[$exchangeOrderId] = [$position, $ticker, $price, $volume];
+        /** @var BuyOrderService $buyOrderService */
+        $buyOrderService = self::getContainer()->get(BuyOrderService::class);
 
-        return $exchangeOrderId;
-    }
-
-    private function assertStopsPushed(StopFixture ...$stops): void
-    {
-        $expectedCalls = array_map(
-            fn(StopFixture $s) => [$this->position, $this->ticker, $s->getPrice(), $s->getVolume()],
-            $stops
+        return new PushRelevantStopsHandler(
+            $this->hedgeService,
+            $this->stopRepository,
+            $buyOrderService,
+            $this->stopService,
+            $this->messageBus,
+            $this->eventDispatcher,
+            $this->exchangeServiceMock,
+            $this->positionServiceStub,
+            $this->loggerMock,
+            $this->clockMock,
+            0
         );
-
-        self::assertSame($expectedCalls, array_values($this->positionServiceCalls));
-
-        $exchangeOrderIds = array_keys($this->positionServiceCalls);
-
-        foreach ($stops as $key => $stopFixture) {
-            $stop = $this->stopRepository->find($stopFixture->getId());
-            self::assertSame($exchangeOrderIds[$key], $stop->getExchangeOrderId());
-        }
     }
 }
