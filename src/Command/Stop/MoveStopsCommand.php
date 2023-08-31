@@ -22,27 +22,20 @@ use function count;
 class MoveStopsCommand extends Command
 {
     private const OVER_FIRST_STOP = 'first_stop';
+    private const OVER_ENTRY_PRICE = 'entry';
     private const OVER_SPECIFIED_PRICE = 'price';
 
     private const MODES = [
         self::OVER_FIRST_STOP,
         self::OVER_SPECIFIED_PRICE,
+        self::OVER_ENTRY_PRICE,
     ];
-
-    public function __construct(
-        private readonly StopRepository $stopRepository,
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $positionService,
-        string $name = null,
-    ) {
-        parent::__construct($name);
-    }
 
     protected function configure(): void
     {
         $this
             ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
-            ->addArgument('priceToBeginFrom', InputArgument::REQUIRED, 'Price from which SL\'ses must be moved')
+            ->addOption('priceToBeginFrom', '-f', InputOption::VALUE_OPTIONAL, 'Price from which SL\'ses must be moved')
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode', self::OVER_SPECIFIED_PRICE)
             ->addOption('moveOverPrice', 'p', InputOption::VALUE_OPTIONAL, 'Price above|under which SL\'ses must be placed')
         ;
@@ -53,7 +46,7 @@ class MoveStopsCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $priceToBeginFrom = $input->getArgument('priceToBeginFrom');
+            $priceToBeginFrom = $input->getOption('priceToBeginFrom');
 
             if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
                 throw new \InvalidArgumentException(
@@ -61,20 +54,30 @@ class MoveStopsCommand extends Command
                 );
             }
 
-            if (!(float)$priceToBeginFrom) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $priceToBeginFrom provided (%s)', $priceToBeginFrom),
-                );
+            $position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide);
+            if (!$position) {
+                $io->info(\sprintf('OK (%d).', 0));
+                return Command::SUCCESS;
             }
 
             $mode = $input->getOption('mode');
-            $moveOverPrice = $input->getOption('moveOverPrice');
-
             if (!\in_array($mode, self::MODES)) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $mode provided (%s)', $mode),
                 );
             }
+
+            if ($mode === self::OVER_ENTRY_PRICE && !(float)$priceToBeginFrom) {
+                $priceToBeginFrom = $positionSide->isShort() ? $position->entryPrice - 10 : $position->entryPrice + 10;
+            }
+
+            if (!($priceToBeginFrom = (float)$priceToBeginFrom)) {
+                throw new \InvalidArgumentException(
+                    \sprintf('Invalid $priceToBeginFrom provided (%s)', $priceToBeginFrom),
+                );
+            }
+
+            $moveOverPrice = $input->getOption('moveOverPrice');
 
             if ($mode === self::OVER_SPECIFIED_PRICE && !(float)$moveOverPrice) {
                 throw new \InvalidArgumentException(
@@ -88,25 +91,23 @@ class MoveStopsCommand extends Command
                     $priceField = $qb->getRootAliases()[0] . '.price';
 
                     $qb
-                        ->andWhere($priceField . ($positionSide === Side::Buy ? ' > :priceFrom' : ' < :priceFrom'))
+                        ->andWhere($priceField . ($positionSide->isLong() ? ' > :priceFrom' : ' < :priceFrom'))
                         ->setParameter(':priceFrom', $priceToBeginFrom)
                         ->orderBy($priceField, $positionSide === Side::Buy ? 'DESC' : 'ASC');
                 }
             );
 
             $price = null;
-            $volume = 0;
+
+            if ($mode === self::OVER_ENTRY_PRICE) {
+                $price = $positionSide->isShort() ? $position->entryPrice + 10 : $position->entryPrice - 10;
+            }
 
             if ($mode === self::OVER_SPECIFIED_PRICE) {
-                $price = $positionSide === Side::Buy ? $moveOverPrice - 1 : $moveOverPrice + 1;
+                $price = $positionSide->isLong() ? $moveOverPrice - 1 : $moveOverPrice + 1;
             }
 
             if ($mode === self::OVER_FIRST_STOP) {
-                $position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide);
-                if (!$position) {
-                    throw new \LogicException('Position not found');
-                }
-
                 $firstStop = $this->stopRepository->findFirstStopUnderPosition($position);
 
                 if (!$firstStop) {
@@ -135,18 +136,13 @@ class MoveStopsCommand extends Command
                 $stop->setPrice($price)->clearOriginalPrice();
 
                 $this->stopRepository->save($stop);
-
-                $volume += $stop->getVolume();
             }
 
             if (!$price) {
                 throw new \LogicException('$price is undefined');
             }
 
-            $io->info(
-//                \sprintf('Stops moved to %s. Moved volume: %.3f', $price, VolumeHelper::round($volume))
-                \sprintf('OK (%d).', count($stops))
-            );
+            $io->info(\sprintf('OK (%d).', count($stops)));
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
@@ -154,5 +150,14 @@ class MoveStopsCommand extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    public function __construct(
+        private readonly StopRepository $stopRepository,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $positionService,
+        string $name = null,
+    ) {
+        parent::__construct($name);
     }
 }
