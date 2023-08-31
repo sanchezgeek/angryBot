@@ -45,15 +45,15 @@ final class PushRelevantBtcUsdtStopsHandlerTest extends AbstractOrderPushHandler
                 new StopFixture(StopBuilder::short(3, 29055, 0.3)->withTD(5)),
             ],
             '$expectedStopAddMethodCalls' => [
-                [$position, $ticker, 29060.0, 0.1],
                 [$position, $ticker, 29055.0, 0.3],
+                [$position, $ticker, 29060.0, 0.1],
             ],
             '$stopsExpectedAfterHandle' => [
 
                 # pushed
-                StopBuilder::short(1, 29060, 0.1)->withTD(10)
-                    ->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
                 StopBuilder::short(3, 29055, 0.3)->withTD(5)
+                    ->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
+                StopBuilder::short(1, 29060, 0.1)->withTD(10)
                     ->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
 
                 # unchanged

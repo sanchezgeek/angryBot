@@ -21,6 +21,7 @@ use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Shared\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
+use Doctrine\ORM\QueryBuilder;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -72,10 +73,13 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 //            ) . PHP_EOL
 //        );
 
-
-        /// !!!! @todo Нужно сделать очистку таблиц (context->'exchange.orderId' is not null)
-
-        $stops = $this->stopRepository->findActive($position->side, $ticker);
+        $stops = $this->stopRepository->findActive(
+            $position->side,
+            $ticker,
+            false,
+            // @todo Consider what to do if ticker already over position entry price. Maybe 'asc' -> 'desc' (in case of SHORT)
+            static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.price', $position->side->isShort() ? 'asc' : 'desc')
+        );
         $ticker = $this->exchangeService->ticker($message->symbol);
 
         foreach ($stops as $stop) {
