@@ -17,7 +17,11 @@ use App\Clock\ClockInterface;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use App\Messenger\DispatchAsync;
+use DateInterval;
+use DateTimeImmutable;
 use Exception;
+
+use function sprintf;
 
 /**
  * @codeCoverageIgnore
@@ -29,6 +33,13 @@ final class SchedulerFactory
     private const MEDIUM = '1500 milliseconds';
     private const SLOW = '2 seconds';
     private const VERY_SLOW = '5 seconds';
+
+    private const CONF = [
+        'short.sl.speed' => self::FAST, // self::VERY_FAST
+        'short.buy.speed' => self::FAST,
+        'long.sl.speed' => self::FAST,
+        'long.buy.speed' => self::FAST,
+    ];
 
     private function __construct()
     {
@@ -43,45 +54,45 @@ final class SchedulerFactory
             RunningWorker::SHORT  => [
                 // SHORT-position | SL
                 PeriodicalJob::infinite(
-                    '2023-02-25T00:00:01.77Z', \DateInterval::createFromDateString(self::VERY_FAST),
+                    '2023-02-25T00:00:01.77Z', DateInterval::createFromDateString(self::CONF['short.sl.speed']),
                     new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Sell)
                 ),
 
                 // SHORT-position | BUY [async]
                 PeriodicalJob::infinite(
-                    '2023-02-25T00:00:01.01Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:01.01Z', DateInterval::createFromDateString(self::CONF['short.buy.speed']),
                     DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Sell))
                 ),
             ],
             RunningWorker::LONG => [
                 // LONG-position | SL
                 PeriodicalJob::infinite(
-                    '2023-02-25T00:00:01.41Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:01.41Z', DateInterval::createFromDateString(self::CONF['long.sl.speed']),
                     new PushRelevantStopOrders(Symbol::BTCUSDT, Side::Buy)
                 ),
 
                 // LONG-position | BUY [async]
                 PeriodicalJob::infinite(
-                    '2023-02-25T00:00:02.11Z', \DateInterval::createFromDateString(self::FAST),
+                    '2023-02-25T00:00:02.11Z', DateInterval::createFromDateString(self::CONF['long.buy.speed']),
                     DispatchAsync::message(new PushRelevantBuyOrders(Symbol::BTCUSDT, Side::Buy))
                 ),
             ],
             RunningWorker::UTILS => [
                 // Cleanup orders
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:05Z', \sprintf('PT%s', ($cleanupPeriod = '15S')),
+                    '2023-02-24T23:49:05Z', sprintf('PT%s', ($cleanupPeriod = '15S')),
                     DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 5, 2, true))
                 ),
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:06Z', \sprintf('PT%s', $cleanupPeriod),
+                    '2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod),
                     DispatchAsync::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3, false))
                 ),
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:07Z', \sprintf('PT%s', $cleanupPeriod),
+                    '2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod),
                     DispatchAsync::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 1, 3, true))
                 ),
                 PeriodicalJob::infinite(
-                    '2023-02-24T23:49:08Z', \sprintf('PT%s', $cleanupPeriod),
+                    '2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod),
                     DispatchAsync::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))
                 ),
 
@@ -100,22 +111,19 @@ final class SchedulerFactory
 
     private static function cache(): array
     {
-        $start = new \DateTimeImmutable('2023-02-25T00:00:01.11Z');
+        $start = new DateTimeImmutable('2023-02-25T00:00:01.11Z');
 
         if (AppContext::procNum() > 0) {
-            $start = $start->add(
-                \DateInterval::createFromDateString(
-                    \sprintf('%d milliseconds', AppContext::procNum() * 650)
-                )
-            );
+            $msOffset = AppContext::procNum() * 900;
+            $start = $start->add(DateInterval::createFromDateString(sprintf('%d milliseconds', $msOffset)));
         }
 
         return [
             /**
-             * Cache for two seconds, because there are two cache workers (so any order worker no need to do request to get ticker)
+             * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
              * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
              */
-            PeriodicalJob::infinite($start, 'PT2S', new UpdateTicker(Symbol::BTCUSDT, new \DateInterval('PT1S'))),
+            PeriodicalJob::infinite($start, 'PT3S', new UpdateTicker(Symbol::BTCUSDT, DateInterval::createFromDateString('2 seconds'))),
         ];
     }
 }
