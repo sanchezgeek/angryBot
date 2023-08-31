@@ -93,9 +93,9 @@ class CreateSLGridByPnlRangeCommand extends Command
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
-            if (!$io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
-                return Command::FAILURE;
-            }
+//            if (!$io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
+//                return Command::FAILURE;
+//            }
         } else {
             throw new InvalidArgumentException('"by_step" mode not implemented yet.');
         }
