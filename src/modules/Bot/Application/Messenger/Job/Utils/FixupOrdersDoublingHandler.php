@@ -77,7 +77,8 @@ final class FixupOrdersDoublingHandler
 
         foreach ($forRemove as $order) {
             $this->entityManager->remove($order);
-            $this->entityManager->flush();
         }
+
+        $this->entityManager->flush();
     }
 }

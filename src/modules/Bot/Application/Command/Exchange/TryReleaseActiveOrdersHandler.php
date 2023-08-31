@@ -21,7 +21,7 @@ final class TryReleaseActiveOrdersHandler
 
     // @todo Всё это лучше вынести в настройки
     // С человекопонятными названиями
-    private const DEFAULT_TRIGGER_DELTA = 9;
+    private const DEFAULT_TRIGGER_DELTA = 20;
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,

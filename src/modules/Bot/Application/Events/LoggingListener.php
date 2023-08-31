@@ -38,9 +38,9 @@ final class LoggingListener implements EventSubscriberInterface
     {
         return [
             TickerUpdated::class => '__invoke',
+//            BuyOrderPushedToExchange::class => '__invoke',
 //            PositionUpdated::class => '__invoke',
-            BuyOrderPushedToExchange::class => '__invoke',
-            ActiveCondStopMovedBack::class => '__invoke',
+//            ActiveCondStopMovedBack::class => '__invoke',
         ];
     }
 }
