@@ -14,6 +14,7 @@ use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Position\Side;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
+use App\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -91,8 +92,8 @@ final class PositionService implements PositionServiceInterface
                 'close_on_trigger' => 'false',
                 'base_price' => $ticker->indexPrice,
                 'order_type' => ExecutionOrderType::Market->value,
-                'qty' => $qty,
-                'stop_px' => $price,
+                'qty' => VolumeHelper::round($qty),
+                'stop_px' => PriceHelper::round($price),
                 'time_in_force' => 'GoodTillCancel',
             ]);
 
@@ -109,10 +110,10 @@ final class PositionService implements PositionServiceInterface
             }
 
             if ($result['ret_code'] !== 0) {
-                var_dump($result);
+                var_dump($result['ret_code']);
             }
 
-            return $result['result']['stop_order_id'];
+            return $result['result']['stop_order_id'] ?? null;
         } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -133,8 +134,8 @@ final class PositionService implements PositionServiceInterface
                 'close_on_trigger' => 'false',
                 'base_price' => $ticker->markPrice,
                 'order_type' => ExecutionOrderType::Market->value,
-                'qty' => $qty,
-                'trigger_price' => $price,
+                'qty' => VolumeHelper::round($qty),
+                'trigger_price' => PriceHelper::round($price),
 //                'stop_px' => $price,
                 'time_in_force' => 'GoodTillCancel',
             ]);
