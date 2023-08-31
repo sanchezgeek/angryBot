@@ -13,6 +13,13 @@ use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 
+use Throwable;
+
+use function end;
+use function explode;
+use function get_class;
+use function sleep;
+
 abstract class AbstractOrdersPusher
 {
     use LoggerTrait;
@@ -40,7 +47,7 @@ abstract class AbstractOrdersPusher
         $this->lastSleep += self::SLEEP_INC;
 
         $this->info(
-            \sprintf(
+            sprintf(
                 'Sleep for %d seconds, because %s',
                 $this->lastSleep,
                 $cause,
@@ -54,11 +61,11 @@ abstract class AbstractOrdersPusher
         }
     }
 
-    protected function logExchangeClientException(\Throwable $exception): void
+    protected function logExchangeClientException(Throwable $exception): void
     {
-        $this->warning(
-            \sprintf('%s received: %s', \get_class($exception), $exception->getMessage()),
-        );
+        $class = explode('\\', get_class($exception));
+
+        $this->warning(sprintf('%s received', end($class)));
     }
 
     private function fakePosition(Side $side, Symbol $symbol): Position

@@ -26,7 +26,7 @@ trait LoggerTrait
     {
         $now = $this->clock->now()->format(self::DT_FORMAT);
 
-        \print_r(\sprintf('%s |!!!!  %s', $now, $message) . PHP_EOL);
+        \print_r(\sprintf('%s | ! %s', $now, $message) . PHP_EOL);
         $this->logger->warning($message, $context);
     }
 }
