@@ -4,19 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Fixture;
 
-use Doctrine\Common\DataFixtures\AbstractFixture as BaseFixture;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ObjectManager;
+use Psr\Container\ContainerInterface;
 
-abstract class AbstractFixture extends BaseFixture
+abstract class AbstractFixture
 {
-    final public function load(ObjectManager $manager): void
-    {
-        // Doesn't support MongoDB and other NOSQL
-        \assert($manager instanceof EntityManagerInterface);
+    abstract public function clear(ContainerInterface $container): void;
 
-        $this->apply($manager);
-    }
-
-    abstract protected function apply(EntityManagerInterface $em): void;
+    abstract public function apply(ContainerInterface $container): void;
 }

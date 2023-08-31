@@ -5,34 +5,62 @@ declare(strict_types=1);
 namespace App\Tests\Mixin;
 
 use App\Tests\Fixture\AbstractFixture;
-use App\Tests\Fixture\Fixtures;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerInterface;
 
 trait DbFixtureTrait
 {
-    private ?Fixtures $fixtures = null;
+    /**
+     * @var AbstractFixture[]
+     */
+    private array $appliedFixtures = [];
 
-    protected function fixtures(): Fixtures
+    protected function beginFixturesTransaction(): void
     {
-        return $this->fixtures ?: $this->fixtures = new Fixtures(fn () => static::getContainer());
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        if ($entityManager->getConnection()->isTransactionActive()) {
+            throw new \RuntimeException('There is an active transaction already.');
+        }
+
+        $entityManager->getConnection()->beginTransaction();
     }
 
     protected function applyDbFixtures(AbstractFixture ...$fixtures): void
     {
-        $collection = $this->fixtures();
-        foreach ($fixtures as $fixture) {
-            $collection->add($fixture);
-        }
+        /** @var ContainerInterface $container */
+        $container = static::getContainer();
 
-        $collection->apply();
+        foreach ($fixtures as $fixture) {
+            $fixture->apply($container);
+            $this->appliedFixtures[] = $fixture;
+        }
     }
 
     /**
      * @after
      */
-    protected function ensureNoFixtures(): void
+    protected function clear(): void
     {
-        $this->fixtures()->clear();
-        self::ensureKernelShutdown();
-        $this->fixtures = null;
+        if ($this->appliedFixtures) {
+            /** @var ContainerInterface $container */
+            $container = static::getContainer();
+
+            foreach ($this->appliedFixtures as $fixture) {
+                $fixture->clear($container);
+            }
+
+            $this->appliedFixtures = [];
+        }
+    }
+
+    protected static function truncateTable(string $table, string $schema = 'public'): void
+    {
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+
+        $connection->executeStatement(\sprintf('TRUNCATE TABLE "%s"."%s" RESTART IDENTITY CASCADE', $schema, $table));
     }
 }

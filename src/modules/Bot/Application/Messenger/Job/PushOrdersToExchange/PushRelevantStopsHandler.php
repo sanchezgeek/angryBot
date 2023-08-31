@@ -51,6 +51,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
+    /**
+     * @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushRelevantBtcUsdtStopsHandlerTest
+     */
     public function __invoke(PushRelevantStopOrders $message): void
     {
         $position = $this->positionService->getPosition($message->symbol, $message->side);
