@@ -13,6 +13,7 @@ final class BuyOrderBuilder
     private int $id;
     private float $price;
     private float $volume;
+    private float $triggerDelta = 1;
     private array $context = [];
 
     public function __construct(Side $positionSide, int $id, float $price, float $volume)
@@ -38,6 +39,6 @@ final class BuyOrderBuilder
 
     public function build(): BuyOrder
     {
-        return new BuyOrder($this->id, $this->price, $this->volume, 1, $this->side, $this->context);
+        return new BuyOrder($this->id, $this->price, $this->volume, $this->triggerDelta, $this->side, $this->context);
     }
 }

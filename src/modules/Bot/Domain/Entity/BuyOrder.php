@@ -85,6 +85,11 @@ class BuyOrder implements HasEvents
         return $this->volume;
     }
 
+    public function getContext(string $name = null): mixed
+    {
+        return $name ? ($this->context[$name] ?? null) : $this->context;
+    }
+
     public function mustBeExecuted(Ticker $ticker): bool
     {
         return $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);

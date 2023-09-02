@@ -17,6 +17,8 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method BuyOrder|null findOneBy(array $criteria, array $orderBy = null)
  * @method BuyOrder[]    findAll()
  * @method BuyOrder[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ *
+ * @see \App\Tests\Functional\Infrastructure\Repository\DoctrineBuyOrderRepositoryTest
  */
 class BuyOrderRepository extends ServiceEntityRepository implements PositionOrderRepository
 {
@@ -95,14 +97,13 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             side: $side,
             exceptOppositeOrders: $exceptOppositeOrders,
             qbModifier: function (QueryBuilder $qb) use ($from, $to, $qbModifier) {
-                $qbModifier($qb);
+                if ($qbModifier) {
+                    $qbModifier($qb);
+                }
 
                 $priceField = $qb->getRootAliases()[0] . '.price';
-
                 $qb
-                    ->andWhere(
-                        \sprintf('%s > :from and %s < :to', $priceField, $priceField)
-                    )
+                    ->andWhere(\sprintf('%s > :from and %s < :to', $priceField, $priceField))
                     ->setParameter(':from', $from)
                     ->setParameter(':to', $to);
             }
