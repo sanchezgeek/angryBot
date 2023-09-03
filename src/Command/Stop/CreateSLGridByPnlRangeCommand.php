@@ -2,6 +2,7 @@
 
 namespace App\Command\Stop;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
@@ -34,7 +35,7 @@ class CreateSLGridByPnlRangeCommand extends Command
     use PositionAwareCommand;
     use AdditionalStopContextAwareCommand;
 
-    private const DEFAULT_TRIGGER_DELTA = 17;
+    public const DEFAULT_TRIGGER_DELTA = 17;
 
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';
@@ -58,6 +59,9 @@ class CreateSLGridByPnlRangeCommand extends Command
         ;
     }
 
+    /**
+     * @see \App\Tests\Functional\Command\Stop\CreateSLGridByPnlRangeCommandTest
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
@@ -78,7 +82,8 @@ class CreateSLGridByPnlRangeCommand extends Command
             return Command::FAILURE;
         }
 
-        $context = ['uniqid' => $uniqueId = uniqid('inc-create', true)];
+        $uniqueId = $this->uniqueIdGenerator->generateUniqueId('inc-sl-grid.');
+        $context = ['uniqid' => $uniqueId];
         if ($additionalContext = $this->getAdditionalStopContext()) {
             $context = array_merge($context, $additionalContext);
         }
@@ -152,6 +157,7 @@ class CreateSLGridByPnlRangeCommand extends Command
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

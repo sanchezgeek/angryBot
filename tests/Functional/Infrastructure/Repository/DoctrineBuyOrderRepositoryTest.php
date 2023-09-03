@@ -89,9 +89,4 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             new BuyOrder(101, 2050, 223.1, 10, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
         ], $this->buyOrderRepository->findActiveInRange($side, 2000, 3000));
     }
-
-    private function positionSideProvider(): array
-    {
-        return [[Side::Sell], [Side::Buy]];
-    }
 }

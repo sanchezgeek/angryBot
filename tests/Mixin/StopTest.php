@@ -11,6 +11,9 @@ use function usort;
 
 trait StopTest
 {
+    use TestWithDoctrineRepository;
+    use PositionOrderTest;
+
     /**
      * @return Stop[]
      */

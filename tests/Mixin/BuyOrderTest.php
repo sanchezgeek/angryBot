@@ -11,6 +11,9 @@ use function usort;
 
 trait BuyOrderTest
 {
+    use TestWithDoctrineRepository;
+    use PositionOrderTest;
+
     /**
      * @return BuyOrder[]
      */

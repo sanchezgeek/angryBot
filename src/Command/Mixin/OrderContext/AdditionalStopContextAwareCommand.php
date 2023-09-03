@@ -16,7 +16,7 @@ trait AdditionalStopContextAwareCommand
     private const NEGATABLE_OPTIONS = [
         'withoutOppositeOrder' => [
             'caption' => 'Without opposite order',
-            'mappedContext' => Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT_NAME,
+            'mappedContext' => Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT,
         ],
     ];
 

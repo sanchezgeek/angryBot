@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Domain\Position\ValueObject\Side;
+use App\Tests\Mixin\PositionOrderTest;
 use PHPUnit\Framework\TestCase;
 
 use function uuid_create;
@@ -16,6 +17,8 @@ use function uuid_create;
  */
 final class BuyOrderTest extends TestCase
 {
+    use PositionOrderTest;
+
     /** @see HasExchangeOrderContext::EXCHANGE_ORDER_ID_CONTEXT */
     private const EXCHANGE_ORDER_ID_CONTEXT = 'exchange.orderId';
 
@@ -112,11 +115,6 @@ final class BuyOrderTest extends TestCase
 
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertSame($exchangeOrderId, $buyOrder->getContext()[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT]);
-    }
-
-    private function positionSideProvider(): array
-    {
-        return [[Side::Sell], [Side::Buy]];
     }
 
     public function testDummy(): void

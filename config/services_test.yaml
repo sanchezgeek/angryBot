@@ -1,3 +1,12 @@
 services:
+    _defaults:
+        public: true
+
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\SymfonyHttpClientStub
+
+    App\Bot\Infrastructure\ByBit\PositionService:
+        class: App\Tests\Stub\Bot\PositionServiceStub
+
+    App\Application\UniqueIdGeneratorInterface:
+        class: App\Tests\Mock\UniqueIdGeneratorStub
