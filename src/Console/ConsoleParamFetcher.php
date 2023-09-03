@@ -6,7 +6,6 @@ namespace App\Console;
 
 use App\Helper\Json;
 use InvalidArgumentException;
-
 use Symfony\Component\Console\Input\InputInterface;
 
 use function is_numeric;
@@ -38,11 +37,13 @@ final class ConsoleParamFetcher
         return $this->fetchIntValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getIntOption(string $name): int
+    public function getIntOption(string $name, string $nullOptionErrorMessage = null): int
     {
         $value = $this->input->getOption($name);
         if ($value === null) {
-            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+            throw new InvalidArgumentException(
+                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+            );
         }
 
         return $this->fetchIntValue($value, $name, self::OPTION_PARAM_CAPTION);
@@ -53,11 +54,13 @@ final class ConsoleParamFetcher
         return $this->fetchFloatValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getFloatOption(string $name): float
+    public function getFloatOption(string $name, string $nullOptionErrorMessage = null): float
     {
         $value = $this->input->getOption($name);
         if ($value === null) {
-            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+            throw new InvalidArgumentException(
+                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+            );
         }
 
         return $this->fetchFloatValue($value, $name, self::OPTION_PARAM_CAPTION);
@@ -68,11 +71,13 @@ final class ConsoleParamFetcher
         return $this->fetchPercentValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getPercentOption(string $name): int
+    public function getPercentOption(string $name, string $nullOptionErrorMessage = null): int
     {
         $value = $this->input->getOption($name);
         if ($value === null) {
-            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+            throw new InvalidArgumentException(
+                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+            );
         }
 
         return $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
@@ -109,7 +114,7 @@ final class ConsoleParamFetcher
 
     private function fetchFloatValue(string $value, string $name, string $paramTypeCaption): float
     {
-        if (!is_numeric($value) || !($floatValue = (float)$value)) {
+        if (!is_numeric($value) || (string)($floatValue = (float)$value) === '') {
             throw new InvalidArgumentException(
                 sprintf('Invalid \'%s\' FLOAT %s provided ("%s" given).', $name, $paramTypeCaption, $value)
             );

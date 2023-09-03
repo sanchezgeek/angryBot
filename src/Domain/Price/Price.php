@@ -9,7 +9,7 @@ use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 
 /**
- * @see \App\Tests\Unit\Domain\Shared\ValueObject\PriceTest
+ * @see \App\Tests\Unit\Domain\Price\PriceTest
  */
 readonly final class Price
 {

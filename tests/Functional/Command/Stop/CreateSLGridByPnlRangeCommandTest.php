@@ -16,10 +16,12 @@ use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\StopTest;
 use App\Tests\Mock\UniqueIdGeneratorStub;
 use App\Tests\Stub\Bot\PositionServiceStub;
+use LogicException;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
+use function get_class;
 use function sprintf;
 
 /**
@@ -45,14 +47,16 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
 
     /**
      * @dataProvider createStopsGridDataProvider
+     *
+     * @todo add symbol in args
      */
     public function testCanCreateStopsGrid(
         Position $position,
         Symbol $symbol,
         Side $side,
         string $forVolume,
-        string $fromPnl,
-        string $toPnl,
+        string $from,
+        string $to,
         int $qnt,
         array $expectedStopsInDb
     ): void {
@@ -61,8 +65,8 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
         $cmd->execute([
             'position_side' => $side->value,
             'forVolume' => $forVolume,
-            '-f' => $fromPnl,
-            '-t' => $toPnl,
+            '-f' => $from,
+            '-t' => $to,
             '-c' => (string)$qnt
         ]);
 
@@ -90,8 +94,8 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$forVolume' => sprintf('%s%%', $volumePart),
-            '$fromPnl' => $fromPnl,
-            '$toPnl' => $toPnl,
+            '$from' => $fromPnl,
+            '$to' => $toPnl,
             '$qnt' => $qnt,
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28710),
@@ -117,8 +121,8 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$forVolume' => (string)$volume,
-            '$fromPnl' => $fromPnl,
-            '$toPnl' => $toPnl,
+            '$from' => $fromPnl,
+            '$to' => $toPnl,
             '$qnt' => $qnt,
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28710),
@@ -144,8 +148,8 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$forVolume' => (string)$volume,
-            '$fromPnl' => (string)$from,
-            '$toPnl' => (string)$to,
+            '$from' => (string)$from,
+            '$to' => (string)$to,
             '$qnt' => $qnt,
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28900),
@@ -159,6 +163,129 @@ final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
                 self::buildExpectedStop($side, 9, $stopVolume, 29060),
                 self::buildExpectedStop($side, 10, $stopVolume, 29080),
             ]
+        ];
+
+        ## for part of the `BTCUSDT SHORT`-position volume (within mixed range)
+        $volumePart = 2; $qnt = 10;
+        $stopVolume = VolumeHelper::round($position->size / $qnt / 100 * $volumePart);
+        yield sprintf(
+            '%d stops for %d%% part of `%s %s` (in mixed %s .. %d range)',
+            $qnt, $volumePart,
+            $symbol->value, $side->title(),
+            $fromPnl = '0%', $to = 29300,
+        ) => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => sprintf('%s%%', $volumePart),
+            '$from' => $fromPnl,
+            '$to' => (string)$to,
+            '$qnt' => $qnt,
+            'expectedStopsInDb' => [
+                self::buildExpectedStop($side, 1, $stopVolume, 29000),
+                self::buildExpectedStop($side, 2, $stopVolume, 29030),
+                self::buildExpectedStop($side, 3, $stopVolume, 29060),
+                self::buildExpectedStop($side, 4, $stopVolume, 29090),
+                self::buildExpectedStop($side, 5, $stopVolume, 29120),
+                self::buildExpectedStop($side, 6, $stopVolume, 29150),
+                self::buildExpectedStop($side, 7, $stopVolume, 29180),
+                self::buildExpectedStop($side, 8, $stopVolume, 29210),
+                self::buildExpectedStop($side, 9, $stopVolume, 29240),
+                self::buildExpectedStop($side, 10, $stopVolume, 29270),
+            ]
+        ];
+    }
+
+    /**
+     * @dataProvider failCases
+     */
+    public function testFailCreateStopsGrid(
+        Position $position,
+        Symbol $symbol,
+        ?Side $side,
+        ?string $forVolume,
+        ?string $from,
+        ?string $to,
+        $qnt,
+        \Throwable $expectedException
+    ): void {
+        $this->positionServiceStub->havePosition($position);
+        $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
+
+        $this->expectException(get_class($expectedException));
+        $this->expectExceptionMessage($expectedException->getMessage());
+
+        $params = [];
+
+        $side !== null && $params['position_side'] = $side->value;
+        $forVolume !== null && $params['forVolume'] = $forVolume;
+        $from !== null && $params['-f'] = $from;
+        $to !== null && $params['-t'] = $to;
+        $qnt !== null && $params['-c'] = (string)$qnt;
+
+        $cmd->execute($params);
+    }
+
+    private function failCases(): iterable
+    {
+        $symbol = Symbol::BTCUSDT;
+        $side = Side::Sell;
+        $position = PositionFactory::short($symbol, 29000, 0.5);
+
+        yield '`volume` >= position size' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0.5',
+            '$from' => '-10%', '$to' => '28900', '$qnt' => 10,
+            'expectedMessage' => new LogicException('$forVolume is greater than whole position size'),
+        ];
+
+        yield '`volume` >= position size (by %)' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '100%',
+            '$from' => '-10%', '$to' => '28900', '$qnt' => 10,
+            'expectedMessage' => new LogicException('$forVolume is greater than whole position size'),
+        ];
+
+        yield '`volume`(%) must be > 0' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0%',
+            '$from' => '-10%', '$to' => '28900', '$qnt' => 10,
+            'expectedMessage' => new LogicException('Percent value must be in 0..100 range. "0.00" given.'),
+        ];
+
+        yield '`volume` must be > 0' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0',
+            '$from' => '-10%', '$to' => '28900', '$qnt' => 10,
+            'expectedMessage' => new LogicException('$forVolume must be greater than zero ("0.00" given)'),
+        ];
+
+        yield '`ordersQnt` must be specified' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0.1', '$from' => '-10%', '$to' => '28900',
+            '$qnt' => null,
+            'expectedMessage' => new LogicException('In \'by_qnt\' mode param "ordersQnt" is required.'),
+        ];
+
+        yield '`ordersQnt` must be >= 1' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0.1', '$from' => '-10%', '$to' => '28900',
+            '$qnt' => 0,
+            'expectedMessage' => new LogicException('$qnt must be >= 1 (0 given)'),
+        ];
+
+        yield '`from` must be ordersQnt must be >= 1' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0.1',
+            '$from' => '0',
+            '$to' => '28900', '$qnt' => 10,
+            'expectedMessage' => new LogicException('Price cannot be less or equals zero.'),
+        ];
+
+        yield '`to` must be ordersQnt must be >= 1' => [
+            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => '0.1',
+            '$from' => '29000',
+            '$to' => '0', '$qnt' => 10,
+            'expectedMessage' => new LogicException('Price cannot be less or equals zero.'),
         ];
     }
 

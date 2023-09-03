@@ -93,10 +93,7 @@ class CreateSLGridByPnlRangeCommand extends Command
         $stopsGrid = new OrdersGrid($priceRange);
 
         if ($mode === self::BY_ORDERS_QNT) {
-            if ($input->getOption('ordersQnt') === null) {
-                throw new LogicException(sprintf('In \'%s\' mode param "%s" is required', $mode, 'ordersQnt'));
-            }
-            $qnt = $this->paramFetcher->getIntOption('ordersQnt');
+            $qnt = $this->paramFetcher->getIntOption('ordersQnt', sprintf('In \'%s\' mode param "%s" is required.', $mode, 'ordersQnt'));
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));

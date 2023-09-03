@@ -71,7 +71,7 @@ final class OrdersGrid
     public function ordersByQnt(float $forVolume, int $qnt): \Generator
     {
         if ($forVolume <= 0) {
-            throw new DomainException(sprintf('$forVolume must be greater than zero ("%.2f" given)', $forVolume));
+            throw new DomainException(sprintf('$forVolume must be greater than zero ("%.2f" given).', $forVolume));
         }
 
         if ($qnt <= 1) {
