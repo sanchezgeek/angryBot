@@ -19,6 +19,8 @@ use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Mixin\BuyOrderTest;
 use App\Tests\Mixin\StopTest;
 
+use function uuid_create;
+
 /**
  * @covers PushRelevantBuyOrdersHandler
  */
@@ -43,7 +45,7 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
     }
 
     /**
-     * @dataProvider pushBuyOrdersTestCases
+     * @dataProvider pushBuyOrdersTestDataProvider
      *
      * @param BuyOrder[] $buyOrdersExpectedAfterHandle
      */
@@ -66,7 +68,7 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
     }
 
-    public function pushBuyOrdersTestCases(): iterable
+    public function pushBuyOrdersTestDataProvider(): iterable
     {
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
@@ -75,6 +77,7 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
                 new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.01)->build()), // must be pushed
                 new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
                 new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.03)->build()), // must be pushed
+                new BuyOrderFixture(BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
             ],
             'expectedAddBuyOrderCalls' => [
                 [$position, $ticker, 29060.0, 0.01],
@@ -82,11 +85,12 @@ final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
             ],
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                BuyOrderBuilder::short(10, 29060, 0.01)->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
-                BuyOrderBuilder::short(30, 29055, 0.03)->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
+                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                BuyOrderBuilder::short(30, 29055, 0.03)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
 
                 ### unchanged ###
                 BuyOrderBuilder::short(20, 29155, 0.002)->build(),
+                BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId),
             ],
             '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
         ];

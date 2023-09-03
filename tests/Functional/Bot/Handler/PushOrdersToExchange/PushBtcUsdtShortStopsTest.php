@@ -25,8 +25,10 @@ use App\Tests\Mixin\StopTest;
  */
 final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
 {
-    private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT_NAME;
+    private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
+    private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
+    private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
     use StopTest;
     use BuyOrderTest;
@@ -74,24 +76,38 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
 
     public function pushStopsTestCases(): iterable
     {
+        $addPriceDelta = self::ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP;
+        $addTriggerDelta = self::ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP;
+
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
             '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()), // must be pushed
+                new StopFixture(StopBuilder::short(1, 29055, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
+                new StopFixture(StopBuilder::short(5, 29030, 0.011)->withTD(10)->build()), // must be pushed (before ticker)
+                new StopFixture(StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()), // must be pushed (by tD)
+                new StopFixture(StopBuilder::short(15, 29061, 0.1)->withTD(10)->build()),
                 new StopFixture(StopBuilder::short(20, 29155, 0.2)->withTD(100)->build()),
-                new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()),  // must be pushed
+                new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()),  // must be pushed (by tD)
             ],
             'expectedStopAddMethodCalls' => [
+                [$position, $ticker, $ticker->indexPrice + $addPriceDelta, 0.011],
                 [$position, $ticker, 29055.0, 0.3],
                 [$position, $ticker, 29060.0, 0.1],
             ],
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                StopBuilder::short(30, 29055, 0.3)->withTD(5)->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
-                StopBuilder::short(10, 29060, 0.1)->withTD(10)->withContext(['exchange.orderId' => $mockedExchangeOrderIds[] = uuid_create()])->build(),
+                // initial price is before ticker => set new price + push
+                StopBuilder::short(5, $ticker->indexPrice + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
+                    ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create())
+                    ->setOriginalPrice(29030),
+                // simple push
+                StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
 
                 ### unchanged ###
+                StopBuilder::short(1, 29055, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
+                StopBuilder::short(15, 29061, 0.1)->withTD(10)->build(),
                 StopBuilder::short(20, 29155, 0.2)->withTD(100)->build(),
             ],
             '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
@@ -144,8 +160,8 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
                 new StopFixture(StopBuilder::short(20, $firstStopPrice = 29055, 0.005)->withTD(10)->build()),
             ],
             'buyOrdersExpectedAfterHandle' => [
-                BuyOrderBuilder::short(1, $firstStopPrice - $distance, 0.005)->withContext(['onlyAfterExchangeOrderExecuted' => $mockedStopExchangeOrderIds[] = uuid_create()])->build(),
-                BuyOrderBuilder::short(2, $secondStopPrice - $distance, 0.001)->withContext(['onlyAfterExchangeOrderExecuted' => $mockedStopExchangeOrderIds[] = uuid_create()])->build(),
+                BuyOrderBuilder::short(1, $firstStopPrice - $distance, 0.005)->build()->setOnlyAfterExchangeOrderExecutedContext($mockedStopExchangeOrderIds[] = uuid_create()),
+                BuyOrderBuilder::short(2, $secondStopPrice - $distance, 0.001)->build()->setOnlyAfterExchangeOrderExecutedContext($mockedStopExchangeOrderIds[] = uuid_create()),
             ],
             '$mockedStopExchangeOrderIds' => $mockedStopExchangeOrderIds
         ];

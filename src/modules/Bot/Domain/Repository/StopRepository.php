@@ -22,6 +22,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository
 {
+    private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
+
     public function __construct(
         private readonly EventBus $eventBus,
         ManagerRegistry $registry,
@@ -57,11 +59,9 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
-        $qb = $this->createQueryBuilder('s');
-
-        $qb
+        $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')
-            ->andWhere("HAS_ELEMENT(s.context, 'exchange.orderId') = false")
+            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
             ->setParameter(':posSide', $side)
         ;
 
@@ -134,7 +134,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, 'exchange.orderId', '$exchangeOrderId') = true")
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$exchangeOrderId') = true")
         ;
 
         return $qb->getQuery()->getOneOrNullResult();

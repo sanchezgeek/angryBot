@@ -29,14 +29,6 @@ final class BuyOrderBuilder
         return new self(Side::Sell, $id, $price, $volume);
     }
 
-    public function withContext(array $context): self
-    {
-        $builder = clone $this;
-        $builder->context = $context;
-
-        return $builder;
-    }
-
     public function build(): BuyOrder
     {
         return new BuyOrder($this->id, $this->price, $this->volume, $this->triggerDelta, $this->side, $this->context);

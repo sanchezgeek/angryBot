@@ -39,7 +39,7 @@ final class BuyOrderPushedToExchange extends LoggableEvent
 
     public function getContext(): array
     {
-        $context = ['exchange.orderId' => $this->order->getExchangeOrderId()];
+        $context = ['exchangeOrderId' => $this->order->getExchangeOrderId()];
 
         if ($this->stopData) {
             $context['`stop`'] = $this->stopData;

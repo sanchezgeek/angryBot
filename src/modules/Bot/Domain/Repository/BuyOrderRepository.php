@@ -3,6 +3,7 @@
 namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
 use App\EventBus\EventBus;
@@ -22,6 +23,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class BuyOrderRepository extends ServiceEntityRepository implements PositionOrderRepository
 {
+    private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
+
     public function __construct(
         private readonly EventBus $eventBus,
         ManagerRegistry $registry,
@@ -57,11 +60,9 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
-        $qb = $this->createQueryBuilder('bo');
-
-        $qb
+        $qb = $this->createQueryBuilder('bo')
             ->andWhere('bo.positionSide = :posSide')
-            ->andWhere("HAS_ELEMENT(bo.context, 'exchange.orderId') = false")
+            ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
             ->setParameter(':posSide', $side)
         ;
 
