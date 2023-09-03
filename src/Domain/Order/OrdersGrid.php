@@ -24,6 +24,9 @@ final class OrdersGrid
         $this->priceRange = $priceRange;
     }
 
+    /**
+     * @todo | Dead code?
+     */
     public static function byPositionPnlRange(Position $position, int $fromPnl, int $toPnl): self
     {
         return new self(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl));

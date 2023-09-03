@@ -40,7 +40,12 @@ final class ConsoleParamFetcher
 
     public function getIntOption(string $name): int
     {
-        return $this->fetchIntValue($this->input->getOption($name), $name, self::OPTION_PARAM_CAPTION);
+        $value = $this->input->getOption($name);
+        if ($value === null) {
+            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+        }
+
+        return $this->fetchIntValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
     public function getFloatArgument(string $name): float
@@ -50,7 +55,12 @@ final class ConsoleParamFetcher
 
     public function getFloatOption(string $name): float
     {
-        return $this->fetchFloatValue($this->input->getOption($name), $name, self::OPTION_PARAM_CAPTION);
+        $value = $this->input->getOption($name);
+        if ($value === null) {
+            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+        }
+
+        return $this->fetchFloatValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
     public function getPercentArgument(string $name): int
@@ -60,7 +70,12 @@ final class ConsoleParamFetcher
 
     public function getPercentOption(string $name): int
     {
-        return $this->fetchPercentValue($this->input->getOption($name), $name, self::OPTION_PARAM_CAPTION);
+        $value = $this->input->getOption($name);
+        if ($value === null) {
+            throw new InvalidArgumentException(sprintf('Option %s is required but not provided.', $name));
+        }
+
+        return $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
     public function getBoolOption(string $name): ?bool

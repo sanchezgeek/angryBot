@@ -226,6 +226,21 @@ final class PriceRangeTest extends TestCase
                     Price::float(29998.13)
                 ]
             ],
+            [
+                PriceRange::create(28710, 28971), 10,
+                [
+                    Price::float(28710),
+                    Price::float(28736.1),
+                    Price::float(28762.2),
+                    Price::float(28788.3),
+                    Price::float(28814.4),
+                    Price::float(28840.5),
+                    Price::float(28866.6),
+                    Price::float(28892.7),
+                    Price::float(28918.8),
+                    Price::float(28944.9),
+                ]
+            ],
         ];
     }
 }

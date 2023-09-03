@@ -11,6 +11,9 @@ use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
+use App\Domain\Price\Price;
+use App\Domain\Price\PriceRange;
+use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -50,8 +53,8 @@ class CreateSLGridByPnlRangeCommand extends Command
         $this
             ->configurePositionArgs()
             ->addArgument('forVolume', InputArgument::REQUIRED, 'Volume value || $ of position size')
-            ->addOption('fromPnl', '-f', InputOption::VALUE_REQUIRED, 'fromPnl (%)')
-            ->addOption('toPnl', '-t', InputOption::VALUE_REQUIRED, 'toPnl (%)')
+            ->addOption('from', '-f', InputOption::VALUE_REQUIRED, '`from` price | PNL%')
+            ->addOption('to', '-t', InputOption::VALUE_REQUIRED, '`to` price | PNL%')
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption('ordersQnt', '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count')
             ->addOption('priceStep', '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
@@ -68,8 +71,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 
         // @todo | tD ?
         // @todo | For price value ?
-        $fromPnl = $this->paramFetcher->getPercentOption('fromPnl');
-        $toPnl = $this->paramFetcher->getPercentOption('toPnl');
+        $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
         $position = $this->getPosition();
@@ -88,7 +90,7 @@ class CreateSLGridByPnlRangeCommand extends Command
             $context = array_merge($context, $additionalContext);
         }
 
-        $stopsGrid = OrdersGrid::byPositionPnlRange($position, $fromPnl, $toPnl);
+        $stopsGrid = new OrdersGrid($priceRange);
 
         if ($mode === self::BY_ORDERS_QNT) {
             if ($input->getOption('ordersQnt') === null) {
@@ -121,9 +123,7 @@ class CreateSLGridByPnlRangeCommand extends Command
             $this->stopService->create($position->side, $order->price()->value(), $order->volume(), self::DEFAULT_TRIGGER_DELTA, $context);
         }
 
-        $io->success(
-            sprintf('Stops grid created. uniqueID: %s', $uniqueId)
-        );
+        $io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
 
         return Command::SUCCESS;
     }
@@ -140,13 +140,31 @@ class CreateSLGridByPnlRangeCommand extends Command
         return $mode;
     }
 
+    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name): Price
+    {
+        try {
+            $pnlValue = $this->paramFetcher->getPercentOption($name);
+            return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
+        } catch (InvalidArgumentException) {
+            return Price::float($this->paramFetcher->getFloatOption($name));
+        }
+    }
+
+    private function getPriceRange(): PriceRange
+    {
+        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('from');
+        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
+        if ($fromPrice->greater($toPrice)) {
+            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
+        }
+        return new PriceRange($fromPrice, $toPrice);
+    }
+
     private function getForVolumeParam(): float
     {
-        $position = $this->getPosition();
-
         try {
             $positionSizePart = $this->paramFetcher->getPercentArgument('forVolume');
-            $forVolume = $position->getVolumePart($positionSizePart);
+            $forVolume = $this->getPosition()->getVolumePart($positionSizePart);
         } catch (InvalidArgumentException) {
             $forVolume = $this->paramFetcher->getFloatArgument('forVolume');
         }

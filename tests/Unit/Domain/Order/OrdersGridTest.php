@@ -216,6 +216,26 @@ final class OrdersGridTest extends TestCase
                     new Order(Price::float(29012.08), 0.008),
                 ]
             ],
+            [
+                '$priceRange' => PriceRange::byPositionPnlRange(
+                    PositionFactory::short(Symbol::BTCUSDT, 29000, 1.5), 10, 100
+                ),
+                '$forVolume' => 0.03,
+                '$qnt' => 10,
+                'expectedOrders' => [
+                    new Order(Price::float(28710), 0.003),
+                    new Order(Price::float(28736.1), 0.003),
+                    new Order(Price::float(28762.2), 0.003),
+                    new Order(Price::float(28788.3), 0.003),
+                    new Order(Price::float(28814.4), 0.003),
+                    new Order(Price::float(28840.5), 0.003),
+                    new Order(Price::float(28866.6), 0.003),
+                    new Order(Price::float(28892.7), 0.003),
+                    new Order(Price::float(28918.8), 0.003),
+                    new Order(Price::float(28944.9), 0.003),
+
+                ]
+            ],
         ];
     }
 }

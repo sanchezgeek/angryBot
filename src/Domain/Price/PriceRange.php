@@ -28,6 +28,9 @@ final readonly class PriceRange
         return new self(Price::float($from), Price::float($to));
     }
 
+    /**
+     * @todo | Dead code?
+     */
     public static function byPositionPnlRange(Position $position, int $fromPnl, int $toPnl): self
     {
         $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPnl);
@@ -86,8 +89,10 @@ final readonly class PriceRange
 
         $priceStep = $delta / $qnt;
 
-        for ($price = $this->from()->value(); $price < $this->to()->value(); $price += $priceStep) {
+        $resultQnt = 0;
+        for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
             yield Price::float($price);
+            $resultQnt++;
         }
     }
 }
