@@ -15,14 +15,20 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
+use DomainException;
+
+use function sprintf;
 
 /**
- * @see \App\Tests\Unit\Domain\Stop\StopTest
+ * @see \App\Tests\Unit\Domain\Entity\StopTest
  */
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents
 {
+    public const MIN_VOLUME = 0.001;
+
     use HasVolume;
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
@@ -85,6 +91,24 @@ class Stop implements HasEvents
     public function getVolume(): float
     {
         return $this->volume;
+    }
+
+    /**
+     * @throws DomainException
+     */
+    public function subVolume(float $value): self
+    {
+        $restVolume = VolumeHelper::round($this->volume - $value);
+
+        if (!($restVolume >= self::MIN_VOLUME)) {
+            throw new DomainException(
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+            );
+        }
+
+        $this->volume = $restVolume;
+
+        return $this;
     }
 
     public function getPositionSide(): Side

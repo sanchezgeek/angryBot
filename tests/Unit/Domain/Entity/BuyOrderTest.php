@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Domain\Entity\BuyOrder;
+namespace App\Tests\Unit\Domain\Entity;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;

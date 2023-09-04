@@ -24,7 +24,7 @@ use function uuid_create;
 /**
  * @covers PushRelevantBuyOrdersHandler
  */
-final class PushBtcUsdtBuyOrdersTest extends PushOrderHandlerTestAbstract
+final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
 {
     use StopTest;
     use BuyOrderTest;

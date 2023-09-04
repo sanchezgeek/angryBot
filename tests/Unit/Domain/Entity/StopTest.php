@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Domain\Stop;
+namespace App\Tests\Unit\Domain\Entity;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -22,6 +22,11 @@ final class StopTest extends TestCase
 
         self::assertEquals(100, $stop->getPnlInPercents($position));
         self::assertEquals(150, $stop->getPnlUsd($position));
+    }
+
+    public function testSub(): void
+    {
+        self::markTestIncomplete('@todo | Should be tested later!');
     }
 
     public function testDummy(): void

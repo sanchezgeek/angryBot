@@ -32,7 +32,7 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
     }
 
     /**
-     * @see \App\Tests\Unit\Domain\Entity\BuyOrder\BuyOrderTest For contexts
+     * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest For contexts
      *
      * @dataProvider positionSideProvider
      */

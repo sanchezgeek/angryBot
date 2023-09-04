@@ -63,7 +63,7 @@ final class PositionStopRangesCollection implements \IteratorAggregate
     }
 
     /**
-     * @return Generator<StopsCollection>
+     * @return StopsCollection[]
      */
     public function getIterator(): Generator
     {

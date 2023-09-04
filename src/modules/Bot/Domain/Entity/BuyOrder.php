@@ -13,6 +13,9 @@ use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest
+ */
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {

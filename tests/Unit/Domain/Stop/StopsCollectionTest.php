@@ -9,6 +9,8 @@ use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\Entity\StopBuilder;
 use PHPUnit\Framework\TestCase;
 
+use function iterator_to_array;
+
 /**
  * @covers StopsCollection
  */
@@ -33,14 +35,11 @@ final class StopsCollectionTest extends TestCase
         $collection->add(StopBuilder::short(3, 29100, 0.02)->build());
         $collection->add(StopBuilder::short(2, 29050, 0.01)->build());
 
-        self::assertEquals(
-            [
-                StopBuilder::short(1, 29000, 0.001)->build(),
-                StopBuilder::short(3, 29100, 0.02)->build(),
-                StopBuilder::short(2, 29050, 0.01)->build(),
-            ],
-            $collection->getItems()
-        );
+        self::assertEquals([
+            StopBuilder::short(1, 29000, 0.001)->build(),
+            StopBuilder::short(3, 29100, 0.02)->build(),
+            StopBuilder::short(2, 29050, 0.01)->build(),
+        ], iterator_to_array($collection));
 
         self::assertEquals(3, $collection->totalCount());
         self::assertEquals(0.031, $collection->totalVolume());

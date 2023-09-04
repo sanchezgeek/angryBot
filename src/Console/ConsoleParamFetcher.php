@@ -27,9 +27,17 @@ final class ConsoleParamFetcher
         return $this->input->getArgument($name);
     }
 
-    public function getStringOption(string $name): string
+    public function getStringOption(string $name, string $nullOptionErrorMessage = null): string
     {
-        return $this->input->getOption($name);
+        $value = $this->input->getOption($name);
+
+        if ($value === null) {
+            throw new InvalidArgumentException(
+                $nullOptionErrorMessage ?: sprintf('Option `%s` is required but not provided.', $name)
+            );
+        }
+
+        return $value;
     }
 
     public function getIntArgument(string $name): int
@@ -40,9 +48,10 @@ final class ConsoleParamFetcher
     public function getIntOption(string $name, string $nullOptionErrorMessage = null): int
     {
         $value = $this->input->getOption($name);
+
         if ($value === null) {
             throw new InvalidArgumentException(
-                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+                $nullOptionErrorMessage ?: sprintf('Option `%s` is required but not provided.', $name)
             );
         }
 
@@ -57,9 +66,10 @@ final class ConsoleParamFetcher
     public function getFloatOption(string $name, string $nullOptionErrorMessage = null): float
     {
         $value = $this->input->getOption($name);
+
         if ($value === null) {
             throw new InvalidArgumentException(
-                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+                $nullOptionErrorMessage ?: sprintf('Option `%s` is required but not provided.', $name)
             );
         }
 
@@ -76,7 +86,7 @@ final class ConsoleParamFetcher
         $value = $this->input->getOption($name);
         if ($value === null) {
             throw new InvalidArgumentException(
-                $nullOptionErrorMessage ?: sprintf('Option %s is required but not provided.', $name)
+                $nullOptionErrorMessage ?: sprintf('Option `%s` is required but not provided.', $name)
             );
         }
 

@@ -8,6 +8,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Domain\Price\PriceRange;
 use App\Helper\VolumeHelper;
+use IteratorAggregate;
+use LogicException;
 
 use function array_map;
 use function array_values;
@@ -15,8 +17,10 @@ use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Stop\StopsCollectionTest
+ *
+ * @template-implements IteratorAggregate<Stop>
  */
-final class StopsCollection
+final class StopsCollection implements IteratorAggregate
 {
     /** @var Stop[] */
     private array $items = [];
@@ -39,14 +43,27 @@ final class StopsCollection
         return $this;
     }
 
+    public function remove(Stop $stop): self
+    {
+        if (!$this->has($stop->getId())) {
+            throw new LogicException(sprintf('Stop with id "%d" not found.', $stop->getId()));
+        }
+
+        unset($this->items[$stop->getId()]);
+
+        return $this;
+    }
+
     public function has(int $id): bool
     {
         return isset($this->items[$id]);
     }
 
-    public function getItems(): array
+    public function getIterator(): \Generator
     {
-        return array_values($this->items);
+        foreach ($this->items as $item) {
+            yield $item;
+        }
     }
 
     public function getMinPrice(): float

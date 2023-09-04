@@ -19,7 +19,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_merge;
 
-#[AsCommand(name: 'sl:grid', description: 'Creates incremental SL\'ses grid.')]
+#[AsCommand(name: 'sl:old-grid', description: 'Creates incremental SL\'ses grid.')]
 class CreateStopGridCommand extends Command
 {
     use ConsoleInputAwareCommand;

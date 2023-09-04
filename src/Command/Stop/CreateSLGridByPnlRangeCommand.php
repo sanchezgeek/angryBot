@@ -9,11 +9,9 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Price\Price;
-use App\Domain\Price\PriceRange;
-use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -29,13 +27,13 @@ use function implode;
 use function in_array;
 use function iterator_to_array;
 use function sprintf;
-use function uniqid;
 
-#[AsCommand(name: 'sl:grid:by-pnl')]
+#[AsCommand(name: 'sl:grid')]
 class CreateSLGridByPnlRangeCommand extends Command
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
+    use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
     public const DEFAULT_TRIGGER_DELTA = 17;
@@ -52,9 +50,8 @@ class CreateSLGridByPnlRangeCommand extends Command
     {
         $this
             ->configurePositionArgs()
+            ->configurePriceRangeArgs()
             ->addArgument('forVolume', InputArgument::REQUIRED, 'Volume value || $ of position size')
-            ->addOption('from', '-f', InputOption::VALUE_REQUIRED, '`from` price | PNL%')
-            ->addOption('to', '-t', InputOption::VALUE_REQUIRED, '`to` price | PNL%')
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption('ordersQnt', '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count')
             ->addOption('priceStep', '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
@@ -70,7 +67,6 @@ class CreateSLGridByPnlRangeCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         // @todo | tD ?
-        // @todo | For price value ?
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
@@ -135,26 +131,6 @@ class CreateSLGridByPnlRangeCommand extends Command
         }
 
         return $mode;
-    }
-
-    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name): Price
-    {
-        try {
-            $pnlValue = $this->paramFetcher->getPercentOption($name);
-            return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
-        } catch (InvalidArgumentException) {
-            return Price::float($this->paramFetcher->getFloatOption($name));
-        }
-    }
-
-    private function getPriceRange(): PriceRange
-    {
-        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('from');
-        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
-        return new PriceRange($fromPrice, $toPrice);
     }
 
     private function getForVolumeParam(): float

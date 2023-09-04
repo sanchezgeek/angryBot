@@ -27,11 +27,11 @@ use function sprintf;
 /**
  * @covers CreateSLGridByPnlRangeCommand
  */
-final class CreateSLGridByPnlRangeCommandTest extends KernelTestCase
+final class CreateStopsGridCommandTest extends KernelTestCase
 {
     use StopTest;
 
-    private const COMMAND_NAME = 'sl:grid:by-pnl';
+    private const COMMAND_NAME = 'sl:grid';
     private const TRIGGER_DELTA = CreateSLGridByPnlRangeCommand::DEFAULT_TRIGGER_DELTA;
     private const UNIQID_CONTEXT = 'awesome-unique-stops-grid';
 
