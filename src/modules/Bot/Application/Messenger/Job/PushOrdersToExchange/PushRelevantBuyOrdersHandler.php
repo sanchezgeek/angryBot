@@ -74,10 +74,10 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         $orders = $this->buyOrderRepository->findActiveInRange(
             side: $side,
-            from: ($side === Side::Sell ? $ticker->indexPrice - 10  : $ticker->indexPrice + 10),
-            to: ($side === Side::Sell ? $ticker->indexPrice + 15  : $ticker->indexPrice - 15),
+            from: ($position->isShort() ? $ticker->indexPrice - 15  : $ticker->indexPrice - 20),
+            to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
             // To get the cheapest orders (to ignore sleep by CannotAffordOrderCost in case of can afford buy less qty)
-            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side === Side::Sell ? 'asc' : 'desc')
+            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side->isShort() ? 'desc' : 'asc')
         );
 
         try {
