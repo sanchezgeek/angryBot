@@ -6,6 +6,7 @@ namespace App\Bot\Domain\Entity;
 
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
+use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
@@ -19,6 +20,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents
 {
+    use HasWithoutOppositeContext;
+
     public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
 
     /**
