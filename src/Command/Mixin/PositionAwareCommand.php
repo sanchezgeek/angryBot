@@ -22,6 +22,17 @@ trait PositionAwareCommand
 
     private function getPosition(): Position
     {
+        // @todo | Retrieve position with `symbol` arg
+        $positionSide = $this->getPositionSide();
+        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
+            throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
+        }
+
+        return $position;
+    }
+
+    private function getPositionSide(): Side
+    {
         $argName = self::POSITION_SIDE_ARGUMENT_NAME;
         $providedPositionSideValue = $this->paramFetcher->getStringArgument($argName);
         if (!$positionSide = Side::tryFrom($providedPositionSideValue)) {
@@ -30,12 +41,7 @@ trait PositionAwareCommand
             );
         }
 
-        // @todo | Retrieve position with `symbol` arg
-        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
-            throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
-        }
-
-        return $position;
+        return $positionSide;
     }
 
     private function configurePositionArgs(): static

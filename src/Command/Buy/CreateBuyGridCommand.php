@@ -6,7 +6,6 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
-use App\Command\Mixin\OrderContext\RawAdditionalOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -43,7 +42,8 @@ class CreateBuyGridCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         try {
-            $position = $this->getPosition();
+            $positionSide = $this->getPositionSide();
+
             $triggerDelta = 1;
             $volume = $input->getArgument('volume');
             $fromPrice = $input->getArgument('from_price');
@@ -81,7 +81,7 @@ class CreateBuyGridCommand extends Command
 
                 $price += $rand;
 
-                $this->buyOrderService->create($position->side, $price, $volume, $triggerDelta, $context);
+                $this->buyOrderService->create($positionSide, $price, $volume, $triggerDelta, $context);
             }
 
             $result = [
