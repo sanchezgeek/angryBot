@@ -14,4 +14,18 @@ trait HasWithoutOppositeContext
 
         return !$withoutOppositeOrder;
     }
+
+    public function setIsWithOppositeOrder(): self
+    {
+        $this->context[self::WITHOUT_OPPOSITE_ORDER_CONTEXT] = false;
+
+        return $this;
+    }
+
+    public function setIsWithoutOppositeOrder(): self
+    {
+        $this->context[self::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+
+        return $this;
+    }
 }
