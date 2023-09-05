@@ -27,11 +27,11 @@ final class ConsoleParamFetcher
         return $this->input->getArgument($name);
     }
 
-    public function getStringOption(string $name, string $nullOptionErrorMessage = null): string
+    public function getStringOption(string $name, bool $required = true, string $nullOptionErrorMessage = null): ?string
     {
         $value = $this->input->getOption($name);
 
-        if ($value === null) {
+        if ($required && $value === null) {
             throw new InvalidArgumentException(
                 $nullOptionErrorMessage ?: sprintf('Option `%s` is required but not provided.', $name)
             );

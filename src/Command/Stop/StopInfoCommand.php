@@ -7,8 +7,10 @@ use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
+use App\Helper\Json;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -16,6 +18,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+
+use function implode;
+use function is_bool;
+use function sprintf;
 
 #[AsCommand(name: 'sl:info')]
 class StopInfoCommand extends Command
@@ -29,7 +35,8 @@ class StopInfoCommand extends Command
     {
         $this
             ->configurePositionArgs()
-            ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', self::DEFAULT_PNL_STEP)
+            ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
+            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback')
         ;
     }
 
@@ -39,6 +46,7 @@ class StopInfoCommand extends Command
 
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
+        $aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
 
         $stops = $this->stopRepository->findActive(
             side: $position->side,
@@ -49,10 +57,17 @@ class StopInfoCommand extends Command
             }
         );
 
-        $rangesCollection = new PositionStopRangesCollection($position, new StopsCollection(...$stops), $pnlStep);
+        if (!$stops) {
+            $io->info('Stops not found!'); return Command::SUCCESS;
+        }
 
+        $rangesCollection = new PositionStopRangesCollection($position, new StopsCollection(...$stops), $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
         foreach ($rangesCollection as $rangeDesc => $stops) {
+            if (!$stops->totalCount()) {
+                continue;
+            }
+
             $usdPnL = $stops->totalUsdPnL($position);
 
             $io->note(
@@ -63,6 +78,28 @@ class StopInfoCommand extends Command
                     new Pnl($usdPnL, 'USDT'),
                 ),
             );
+
+            if ($aggregateWith) {
+                $aggregateResult = [];
+                foreach ($stops as $stop) {
+                    eval('$callbackValue = $stop->' . $aggregateWith . ';');
+                    $key = is_bool($callbackValue) ? ($callbackValue ? 'true' : 'false') : (string)$callbackValue;
+                    $aggregateResult[$key] = $aggregateResult[$key] ?? new StopsCollection();
+                    $aggregateResult[$key]->add($stop);
+                }
+
+                $aggregateInfo = [];
+                foreach ($aggregateResult as $value => $aggregatedStops) {
+                    $rangePart = $aggregatedStops->totalCount() / $stops->totalCount() * 100;
+                    $aggregateInfo[] = Json::encode([
+                        $aggregateWith . ' = ' . $value => [
+                            'qnt' => $aggregatedStops->totalCount(),
+                            'part' => sprintf('%s%%', PriceHelper::round($rangePart, 1))
+                        ],
+                    ]);
+                }
+                $io->info(implode("\n", $aggregateInfo));
+            }
 
             $totalUsdPnL += $usdPnL;
             $totalVolume += $stops->totalVolume();

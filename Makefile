@@ -94,7 +94,8 @@ out: ## Get consumers output
 sl-info: ## Get position SLs info ("s=" - to specify `position_side` "p=" - to specify `pnlStep`, example: sl-info s=sell p=30)
 	@$(eval s ?=)
 	@$(eval p ?= 40)
-	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p)
+	@$(eval a ?= )
+	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)'
 
 ## —— SHORT 🐻 ——
 s-info: ## Get SHORT-position SLs info ("p=" - to specify `pnlStep`, example: s-info p=30)
