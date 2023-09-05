@@ -41,9 +41,12 @@ class EditStopsCommand extends Command
     /** @see RemoveStopsInRangeTest */
     public const ACTION_REMOVE = 'remove';
 
+    public const ACTION_EDIT = 'edit';
+
     private const ACTIONS = [
         self::ACTION_MOVE,
         self::ACTION_REMOVE,
+        self::ACTION_EDIT,
     ];
 
     protected function configure(): void
@@ -53,7 +56,8 @@ class EditStopsCommand extends Command
             ->configurePriceRangeArgs()
             ->addOption('action', '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
             ->addOption('moveToPrice', '-m.t', InputOption::VALUE_REQUIRED, 'Move orders to price | pricePnl%')
-            ->addOption('movePart', '-m.p', InputOption::VALUE_REQUIRED, 'Range volume part (%) || ')
+            ->addOption('movePart', '-m.p', InputOption::VALUE_REQUIRED, 'Range volume part (%)')
+            ->addOption('editCallback', '-e.c', InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
         ;
     }
 
@@ -133,6 +137,16 @@ class EditStopsCommand extends Command
             });
 
             $io->note(\sprintf('removed stops qnt: %d', $stopsInSpecifiedRange->totalCount()));
+        }
+
+        if ($action === self::ACTION_EDIT) {
+            $callback = $this->paramFetcher->getStringOption('editCallback');
+            $this->entityManager->wrapInTransaction(function() use ($stopsInSpecifiedRange, $callback) {
+                foreach ($stopsInSpecifiedRange as $stop) {
+                    eval($callback . ';');
+                    $this->entityManager->persist($stop);
+                }
+            });
         }
 
         return Command::SUCCESS;
