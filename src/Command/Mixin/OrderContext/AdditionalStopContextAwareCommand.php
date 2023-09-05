@@ -14,7 +14,7 @@ trait AdditionalStopContextAwareCommand
     use ConsoleInputAwareCommand;
 
     private const NEGATABLE_OPTIONS = [
-        'withoutOppositeOrder' => [
+        'wOO' => [
             'caption' => 'Without opposite order',
             'mappedContext' => Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT,
         ],

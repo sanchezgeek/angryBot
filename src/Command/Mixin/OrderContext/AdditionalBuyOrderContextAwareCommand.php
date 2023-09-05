@@ -17,7 +17,7 @@ trait AdditionalBuyOrderContextAwareCommand
             'caption' => 'With short stop',
             'mappedContext' => BuyOrder::WITH_SHORT_STOP_CONTEXT,
         ],
-        'withoutOppositeOrder' => [
+        'wOO' => [
             'caption' => 'Without opposite order',
             'mappedContext' => BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT,
         ],
