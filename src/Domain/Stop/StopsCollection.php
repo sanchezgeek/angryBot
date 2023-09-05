@@ -92,7 +92,7 @@ final class StopsCollection implements IteratorAggregate
             $volume += $item->getVolume();
         }
 
-        return VolumeHelper::round($volume);
+        return $volume > 0 ? VolumeHelper::round($volume) : 0;
     }
 
     public function totalUsdPnL(Position $forPosition): float
