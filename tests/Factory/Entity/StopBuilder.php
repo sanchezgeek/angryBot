@@ -29,6 +29,11 @@ final class StopBuilder
         return new self(Side::Sell, $id, $price, $volume);
     }
 
+    public static function long(int $id, float $price, float $volume): self
+    {
+        return new self(Side::Buy, $id, $price, $volume);
+    }
+
     public function withTD(float $triggerDelta): self
     {
         $builder = clone $this;

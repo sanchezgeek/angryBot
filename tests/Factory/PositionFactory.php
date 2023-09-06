@@ -12,7 +12,7 @@ final class PositionFactory
 {
     private const DEFAULT_PRICE = 29000;
     private const DEFAULT_SIZE = 1;
-    private const DEFAULT_LEVERAGE = 0.5;
+    private const DEFAULT_LEVERAGE = 100;
 
     public static function short(
         Symbol $symbol,
@@ -25,6 +25,27 @@ final class PositionFactory
 
         return new Position(
             Side::Sell,
+            $symbol,
+            $at,
+            $size,
+            $positionValue,
+            $liquidationPrice,
+            $positionValue / $leverage,
+            $leverage
+        );
+    }
+
+    public static function long(
+        Symbol $symbol,
+        float $at = self::DEFAULT_PRICE,
+        float $size = self::DEFAULT_SIZE,
+        float $leverage = self::DEFAULT_LEVERAGE
+    ): Position {
+        $positionValue = $at * $size;
+        $liquidationPrice = $at + 1000; // @todo calc
+
+        return new Position(
+            Side::Buy,
             $symbol,
             $at,
             $size,

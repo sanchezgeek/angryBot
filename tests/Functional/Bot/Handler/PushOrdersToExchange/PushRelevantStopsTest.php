@@ -23,7 +23,7 @@ use App\Tests\Mixin\StopTest;
 /**
  * @covers PushRelevantStopsHandler
  */
-final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
+final class PushRelevantStopsTest extends PushOrderHandlerTestAbstract
 {
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
@@ -79,7 +79,7 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
         $addPriceDelta = self::ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP;
         $addTriggerDelta = self::ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP;
 
-        yield [
+        yield 'BTCUSDT SHORT' => [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
             '$stopFixtures' => [
@@ -109,6 +109,41 @@ final class PushBtcUsdtShortStopsTest extends PushOrderHandlerTestAbstract
                 StopBuilder::short(1, 29055, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
                 StopBuilder::short(15, 29061, 0.1)->withTD(10)->build(),
                 StopBuilder::short(20, 29155, 0.2)->withTD(100)->build(),
+            ],
+            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+        ];
+
+        $mockedExchangeOrderIds = [];
+        yield 'BTCUSDT LONG' => [
+            '$position' => $position = PositionFactory::long(self::SYMBOL, 29000),
+            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
+            '$stopFixtures' => [
+                new StopFixture(StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
+                new StopFixture(StopBuilder::long(5, 29070, 0.011)->withTD(10)->build()), // must be pushed (before ticker)
+                new StopFixture(StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()), // must be pushed (by tD)
+                new StopFixture(StopBuilder::long(15, 29039, 0.1)->withTD(10)->build()),
+                new StopFixture(StopBuilder::long(20, 28949, 0.2)->withTD(100)->build()),
+                new StopFixture(StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()),  // must be pushed (by tD)
+            ],
+            'expectedStopAddMethodCalls' => [
+                [$position, $ticker, $ticker->indexPrice - $addPriceDelta, 0.011],
+                [$position, $ticker, 29045.0, 0.3],
+                [$position, $ticker, 29040.0, 0.1],
+            ],
+            'stopsExpectedAfterHandle' => [
+                ### pushed (in right order) ###
+                // initial price is before ticker => set new price + push
+                StopBuilder::long(5, $ticker->indexPrice - $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
+                    ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create())
+                    ->setOriginalPrice(29070),
+                // simple push
+                StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+
+                ### unchanged ###
+                StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
+                StopBuilder::long(15, 29039, 0.1)->withTD(10)->build(),
+                StopBuilder::long(20, 28949, 0.2)->withTD(100)->build(),
             ],
             '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
         ];
