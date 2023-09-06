@@ -7,6 +7,7 @@ use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Mixin\PriceRangeAwareCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -24,14 +25,14 @@ class CreateBuyGridCommand extends Command
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
     use AdditionalBuyOrderContextAwareCommand;
+    use PriceRangeAwareCommand;
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
+            ->configurePriceRangeArgs()
             ->addArgument('volume', InputArgument::REQUIRED, 'Buy volume')
-            ->addArgument('from_price', InputArgument::REQUIRED, 'From price')
-            ->addArgument('to_price', InputArgument::REQUIRED, 'To price')
             ->addArgument('step', InputArgument::REQUIRED, 'Step')
             ->configureBuyOrderAdditionalContexts()
         ;
@@ -42,53 +43,25 @@ class CreateBuyGridCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         try {
-            $positionSide = $this->getPositionSide();
-
             $triggerDelta = 1;
-            $volume = $input->getArgument('volume');
-            $fromPrice = $input->getArgument('from_price');
-            $toPrice = $input->getArgument('to_price');
-            $step = $input->getArgument('step');
-
-            if (!(float)$step) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $step),
-                );
-            }
-            if (!(float)$toPrice) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $toPrice provided (%s)', $toPrice),
-                );
-            }
-            if (!(float)$fromPrice) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $fromPrice provided (%s)', $fromPrice),
-                );
-            }
-            if (!(string)$volume) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $price provided (%s)', $volume),
-                );
-            }
+            $positionSide = $this->getPositionSide();
+            $volume = $this->paramFetcher->getFloatArgument('volume');
+            $step = $this->paramFetcher->getIntArgument('step');
+            $priceRange = $this->getPriceRange();
 
             $context = ['uniqid' => $uniqueId = \uniqid('inc-create', true)];
             if ($additionalContext = $this->getAdditionalBuyOrderContext()) {
                 $context = array_merge($context, $additionalContext);
             }
 
-            for ($price = $toPrice; $price > $fromPrice; $price-=$step) {
+            foreach ($priceRange->byStepIterator($step) as $price) {
                 $rand = round(random_int(-7, 8) * 0.4, 2);
+                $price = $price->sub($rand);
 
-                $price += $rand;
-
-                $this->buyOrderService->create($positionSide, $price, $volume, $triggerDelta, $context);
+                $this->buyOrderService->create($positionSide, $price->value(), $volume, $triggerDelta, $context);
             }
 
-            $result = [
-                \sprintf('BuyOrders uniqueID: %s', $uniqueId),
-            ];
-
-            $io->success($result);
+            $io->success(\sprintf('BuyOrders uniqueID: %s', $uniqueId));
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
