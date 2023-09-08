@@ -53,6 +53,23 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
+    public function findAllByPositionSide(Side $side, callable $qbModifier = null): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.positionSide = :posSide')
+            ->setParameter(':posSide', $side)
+        ;
+
+        if ($qbModifier) {
+            $qbModifier($qb);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return Stop[]
+     */
     public function findActive(
         Side $side,
         ?Ticker $nearTicker = null,

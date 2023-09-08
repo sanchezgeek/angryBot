@@ -1,0 +1,46 @@
+[
+  {
+    "id": 2,
+    "positionSide": "sell",
+    "price": 28922.2,
+    "volume": 0.003,
+    "triggerDelta": 10,
+    "context": {
+      "exchange.orderId": "885e602a-93fa-4a06-90c7-ae9f0d3b3e36"
+    }
+  },
+  {
+    "id": 3,
+    "positionSide": "sell",
+    "price": 28933.3,
+    "volume": 0.002,
+    "triggerDelta": 10,
+    "context": {
+      "withoutOppositeOrder": true
+    }
+  },
+  {
+    "id": 4,
+    "positionSide": "sell",
+    "price": 28931.1,
+    "volume": 0.002,
+    "triggerDelta": 10,
+    "context": []
+  },
+  {
+    "id": 8,
+    "positionSide": "sell",
+    "price": 28951.2,
+    "volume": 0.001,
+    "triggerDelta": 10,
+    "context": []
+  },
+  {
+    "id": 13,
+    "positionSide": "sell",
+    "price": 28972.3,
+    "volume": 0.01,
+    "triggerDelta": 10,
+    "context": []
+  }
+]

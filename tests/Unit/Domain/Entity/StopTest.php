@@ -66,6 +66,67 @@ final class StopTest extends TestCase
         self::assertFalse($stop->isWithOppositeOrder());
     }
 
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testToArray(Side $positionSide): void
+    {
+        $stop = new Stop(
+            $id = 100500,
+            $price = 29000.1,
+            $volume = 0.011,
+            $triggerDelta = 13.1,
+            $positionSide,
+            $context = [
+                'root.string.context' => 'some string context',
+                'root.bool.context' => false,
+                'some.array.context' => [
+                    'inner.string.context' => 'some string context',
+                    'inner.bool.context' => true,
+                ],
+            ],
+        );
+
+        self::assertSame(
+            [
+                'id' => $id,
+                'positionSide' => $positionSide->value,
+                'price' => $price,
+                'volume' => $volume,
+                'triggerDelta' => $triggerDelta,
+                'context' => $context
+            ],
+            $stop->toArray()
+        );
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testFromArray(Side $positionSide): void
+    {
+        $data = [
+            'id' => $id = 100500,
+            'positionSide' => $positionSide->value,
+            'price' => $price = 29000.1,
+            'volume' => $volume = 0.011,
+            'triggerDelta' => $triggerDelta = 13.1,
+            'context' => $context = [
+                'root.string.context' => 'some string context',
+                'root.bool.context' => false,
+                'some.array.context' => [
+                    'inner.string.context' => 'some string context',
+                    'inner.bool.context' => true,
+                ],
+            ]
+        ];
+
+        self::assertEquals(
+            new Stop($id, $price, $volume, $triggerDelta, $positionSide, $context),
+            Stop::fromArray($data)
+        );
+    }
+
     public function testSub(): void
     {
         self::markTestIncomplete('@todo | Should be tested later!');

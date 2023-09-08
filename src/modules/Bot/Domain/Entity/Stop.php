@@ -142,4 +142,28 @@ class Stop implements HasEvents
 
         return $orderCost * $pnl;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'positionSide' => $this->positionSide->value,
+            'price' => $this->price,
+            'volume' => $this->volume,
+            'triggerDelta' => $this->triggerDelta,
+            'context' => $this->context,
+        ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            $data['id'],
+            $data['price'],
+            $data['volume'],
+            $data['triggerDelta'],
+            Side::from($data['positionSide']),
+            $data['context']
+        );
+    }
 }

@@ -48,7 +48,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
     /**
      * @dataProvider createStopsGridDataProvider
      *
-     * @todo add symbol in args
+     * @todo add symbol in command args
      */
     public function testCanCreateStopsGrid(
         Position $position,

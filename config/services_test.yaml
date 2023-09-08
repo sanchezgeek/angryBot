@@ -10,3 +10,6 @@ services:
 
     App\Application\UniqueIdGeneratorInterface:
         class: App\Tests\Mock\UniqueIdGeneratorStub
+
+    App\Clock\ClockInterface:
+        class: \App\Clock\Clock

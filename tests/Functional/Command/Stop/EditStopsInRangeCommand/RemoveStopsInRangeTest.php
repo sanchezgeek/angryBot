@@ -24,7 +24,7 @@ final class RemoveStopsInRangeTest extends AbstractEditStopsInRangeTest
     /**
      * @dataProvider removeStopsFromRangeDataProvider
      *
-     * @todo add symbol in args
+     * @todo add symbol in command args
      */
     public function testCanRemoveStopsFromRange(
         array $initialStops,

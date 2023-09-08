@@ -27,7 +27,7 @@ final class MoveStopsInRangeTest extends AbstractEditStopsInRangeTest
     /**
      * @dataProvider editStopsInRangeDataProvider
      *
-     * @todo add symbol in args
+     * @todo add symbol in command args
      */
     public function testCanEditStopsInRange(
         array $initialStops,
