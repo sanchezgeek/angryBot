@@ -11,6 +11,7 @@ use App\Helper\VolumeHelper;
 use IteratorAggregate;
 use LogicException;
 
+use function array_filter;
 use function array_map;
 use function array_values;
 use function sprintf;
@@ -83,6 +84,11 @@ final class StopsCollection implements IteratorAggregate
     public function totalCount(): int
     {
         return count($this->items);
+    }
+
+    public function filterWithCallback(callable $callback): self
+    {
+        return new self(...array_filter($this->items, $callback));
     }
 
     public function totalVolume(): float

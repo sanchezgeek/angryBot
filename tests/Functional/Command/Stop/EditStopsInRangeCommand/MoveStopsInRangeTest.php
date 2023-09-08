@@ -21,8 +21,6 @@ use function sprintf;
 final class MoveStopsInRangeTest extends AbstractEditStopsInRangeTest
 {
     private const ACTION = EditStopsCommand::ACTION_MOVE;
-    private const MOVE_TO_OPTION = 'm.t';
-    private const MOVE_PART_OPTION = 'm.p';
 
     /**
      * @dataProvider editStopsInRangeDataProvider
@@ -44,7 +42,7 @@ final class MoveStopsInRangeTest extends AbstractEditStopsInRangeTest
 
         $params = ['position_side' => $side->value, '-f' => $from, '-t' => $to, '-a' => self::ACTION];
         foreach ($additionalParams as $name => $value) {
-            $params[sprintf('-%s', $name)] = $value;
+            $params[sprintf('--%s', $name)] = $value;
         }
 
         $this->tester->execute($params);
@@ -80,8 +78,8 @@ final class MoveStopsInRangeTest extends AbstractEditStopsInRangeTest
             '$from' => $fromPnl,
             '$to' => $toPnl,
             '$params' => [
-                self::MOVE_TO_OPTION => '0%',
-                self::MOVE_PART_OPTION => '35%'
+                EditStopsCommand::MOVE_TO_PRICE_OPTION => '0%',
+                EditStopsCommand::MOVE_PART_OPTION => '35%',
             ],
             'expectedStopsInDb' => [
                 new Stop(1, 28890, 0.003, 10, $side),

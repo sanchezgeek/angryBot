@@ -4,6 +4,7 @@ namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
@@ -22,6 +23,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_map;
+use function explode;
 use function implode;
 use function in_array;
 use function sprintf;
@@ -36,28 +39,33 @@ class EditStopsCommand extends Command
 
     private const DEFAULT_TRIGGER_DELTA = 20;
 
-    /** @see MoveStopsInRangeTest */
-    public const ACTION_MOVE = 'move';
-    /** @see RemoveStopsInRangeTest */
-    public const ACTION_REMOVE = 'remove';
+    public const ACTION_OPTION = 'action';
 
+    /** `move`-action options */
+    public const MOVE_PART_OPTION = 'movePart';
+    public const MOVE_TO_PRICE_OPTION = 'moveToPrice';
+
+    /** `edit`-action options */
+    public const EDIT_CALLBACK_OPTION = 'editCallback';
+
+    /** Common options */
+    public const FILTER_CALLBACKS_OPTION = 'filterCallbacks';
+
+    public const ACTION_MOVE = 'move';      /** @see MoveStopsInRangeTest */
+    public const ACTION_REMOVE = 'remove';  /** @see RemoveStopsInRangeTest */
     public const ACTION_EDIT = 'edit';
-
-    private const ACTIONS = [
-        self::ACTION_MOVE,
-        self::ACTION_REMOVE,
-        self::ACTION_EDIT,
-    ];
+    private const ACTIONS = [self::ACTION_MOVE, self::ACTION_REMOVE, self::ACTION_EDIT];
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
             ->configurePriceRangeArgs()
-            ->addOption('action', '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
-            ->addOption('moveToPrice', '-m.t', InputOption::VALUE_REQUIRED, 'Move orders to price | pricePnl%')
-            ->addOption('movePart', '-m.p', InputOption::VALUE_REQUIRED, 'Range volume part (%)')
-            ->addOption('editCallback', '-e.c', InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
+            ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
+            ->addOption(self::MOVE_TO_PRICE_OPTION, null, InputOption::VALUE_REQUIRED, 'Move orders to price | pricePnl%')
+            ->addOption(self::MOVE_PART_OPTION, null, InputOption::VALUE_REQUIRED, 'Range volume part (%)')
+            ->addOption(self::EDIT_CALLBACK_OPTION, null, InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
+            ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
         ;
     }
 
@@ -80,13 +88,19 @@ class EditStopsCommand extends Command
             }
         );
         $stopsInSpecifiedRange = (new StopsCollection(...$stops))->grabFromRange($priceRange);
+        $stopsInSpecifiedRange = $this->applyFilters($stopsInSpecifiedRange);
 
         if ($action === self::ACTION_MOVE) {
-            $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('moveToPrice');
-            $movePart = $this->paramFetcher->getPercentOption('movePart');
+            $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::MOVE_TO_PRICE_OPTION);
+            $movePart = $this->paramFetcher->getPercentOption(self::MOVE_PART_OPTION);
             if ($movePart <= 0 || $movePart > 100) {
                 throw new InvalidArgumentException(
-                    sprintf('Invalid \'%s\' PERCENT %s provided: value must be in 1%% .. 100%% range ("%s" given).', 'movePart', 'option', $movePart)
+                    sprintf(
+                        'Invalid \'%s\' PERCENT %s provided: value must be in 1%% .. 100%% range ("%s" given).',
+                        self::MOVE_PART_OPTION,
+                        'option',
+                        $movePart,
+                    )
                 );
             }
             $needMoveVolume = VolumeHelper::round($stopsInSpecifiedRange->totalVolume() * $movePart / 100);
@@ -117,6 +131,7 @@ class EditStopsCommand extends Command
                     $this->entityManager->remove($stopToRemove);
                 }
 
+                // @todo some uniqueid to context
                 $this->stopService->create(
                     $this->getPosition()->side,
                     $toPrice->value(),
@@ -125,7 +140,6 @@ class EditStopsCommand extends Command
                 );
             });
 
-            // @todo some uniqueid to context
             $io->note(\sprintf('removed stops qnt: %d', $stopsToRemove->totalCount()));
         }
 
@@ -140,13 +154,15 @@ class EditStopsCommand extends Command
         }
 
         if ($action === self::ACTION_EDIT) {
-            $callback = $this->paramFetcher->getStringOption('editCallback');
-            $this->entityManager->wrapInTransaction(function() use ($stopsInSpecifiedRange, $callback) {
+            $editCallback = $this->paramFetcher->getStringOption(self::EDIT_CALLBACK_OPTION);
+            $this->entityManager->wrapInTransaction(function() use ($stopsInSpecifiedRange, $editCallback) {
                 foreach ($stopsInSpecifiedRange as $stop) {
-                    eval($callback . ';');
+                    eval('$stop->' . $editCallback . ';');
                     $this->entityManager->persist($stop);
                 }
             });
+
+            $io->note(\sprintf('modified stops qnt: %d', $stopsInSpecifiedRange->totalCount()));
         }
 
         return Command::SUCCESS;
@@ -154,7 +170,7 @@ class EditStopsCommand extends Command
 
     private function getAction(): string
     {
-        $action = $this->paramFetcher->getStringOption('action');
+        $action = $this->paramFetcher->getStringOption(self::ACTION_OPTION);
         if (!in_array($action, self::ACTIONS, true)) {
             throw new InvalidArgumentException(
                 sprintf('Invalid $action provided (%s)', $action),
@@ -162,6 +178,25 @@ class EditStopsCommand extends Command
         }
 
         return $action;
+    }
+
+    private function applyFilters(StopsCollection $stops): StopsCollection
+    {
+        $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
+        if ($filterCallbacksOption && $filterCallbacks = array_map('trim', explode(',', $filterCallbacksOption))) {
+            return $stops->filterWithCallback(static function (Stop $stop) use ($filterCallbacks) {
+                foreach ($filterCallbacks as $stopFilterCallback) {
+                    eval('$callbackResult = $stop->' . $stopFilterCallback . ';');
+                    if ($callbackResult !== true) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+
+        return $stops;
     }
 
     public function __construct(
