@@ -62,6 +62,9 @@ class CreateBuyGridCommand extends Command
             }
 
             $io->success(\sprintf('BuyOrders uniqueID: %s', $uniqueId));
+            $io->info(
+                \sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit buy -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $uniqueId)
+            );
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
