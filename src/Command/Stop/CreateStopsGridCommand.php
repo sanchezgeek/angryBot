@@ -28,8 +28,9 @@ use function in_array;
 use function iterator_to_array;
 use function sprintf;
 
+/** @see CreateStopsGridCommandTest */
 #[AsCommand(name: 'sl:grid')]
-class CreateSLGridByPnlRangeCommand extends Command
+class CreateStopsGridCommand extends Command
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -46,22 +47,26 @@ class CreateSLGridByPnlRangeCommand extends Command
         self::BY_ORDERS_QNT,
     ];
 
+    public const ORDERS_QNT_OPTION = 'ordersQnt';
+    public const MODE_OPTION = 'mode';
+    public const FOR_VOLUME_OPTION = 'forVolume';
+    public const PRICE_STEP_OPTION = 'priceStep';
+
+    private const DEFAULT_ORDERS_QNT = '10';
+
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
             ->configurePriceRangeArgs()
-            ->addArgument('forVolume', InputArgument::REQUIRED, 'Volume value || $ of position size')
-            ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
-            ->addOption('ordersQnt', '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count')
-            ->addOption('priceStep', '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
+            ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
+            ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
+            ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
+            ->addOption(self::PRICE_STEP_OPTION, '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
             ->configureStopAdditionalContexts()
         ;
     }
 
-    /**
-     * @see \App\Tests\Functional\Command\Stop\CreateSLGridByPnlRangeCommandTest
-     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
@@ -89,7 +94,10 @@ class CreateSLGridByPnlRangeCommand extends Command
         $stopsGrid = new OrdersGrid($priceRange);
 
         if ($mode === self::BY_ORDERS_QNT) {
-            $qnt = $this->paramFetcher->getIntOption('ordersQnt', sprintf('In \'%s\' mode param "%s" is required.', $mode, 'ordersQnt'));
+            $qnt = $this->paramFetcher->getIntOption(
+                self::ORDERS_QNT_OPTION,
+                sprintf('In \'%s\' mode param "%s" is required.', $mode, self::ORDERS_QNT_OPTION)
+            );
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
@@ -123,7 +131,7 @@ class CreateSLGridByPnlRangeCommand extends Command
 
     private function getModeParam(): string
     {
-        $mode = $this->paramFetcher->getStringOption('mode');
+        $mode = $this->paramFetcher->getStringOption(self::MODE_OPTION);
         if (!in_array($mode, self::MODES, true)) {
             throw new InvalidArgumentException(
                 sprintf('Invalid $mode provided (%s)', $mode),
@@ -136,10 +144,10 @@ class CreateSLGridByPnlRangeCommand extends Command
     private function getForVolumeParam(): float
     {
         try {
-            $positionSizePart = $this->paramFetcher->getPercentArgument('forVolume');
+            $positionSizePart = $this->paramFetcher->getPercentArgument(self::FOR_VOLUME_OPTION);
             $forVolume = $this->getPosition()->getVolumePart($positionSizePart);
         } catch (InvalidArgumentException) {
-            $forVolume = $this->paramFetcher->getFloatArgument('forVolume');
+            $forVolume = $this->paramFetcher->getFloatArgument(self::FOR_VOLUME_OPTION);
         }
 
         return $forVolume;

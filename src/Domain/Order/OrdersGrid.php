@@ -79,6 +79,10 @@ final class OrdersGrid
         }
 
         $volume = VolumeHelper::round($forVolume / $qnt);
+        if ($volume === VolumeHelper::MIN_VOLUME && $volume * $qnt > $forVolume) {
+            $qnt = (int)($forVolume / $volume);
+            $volume = VolumeHelper::round($forVolume / $qnt);
+        }
 
         foreach ($this->getPriceRange()->byQntIterator($qnt) as $priceItem) {
             yield new Order($priceItem, $volume);

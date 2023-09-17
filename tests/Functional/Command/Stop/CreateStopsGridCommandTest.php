@@ -9,7 +9,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Command\Stop\CreateSLGridByPnlRangeCommand;
+use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
@@ -25,14 +25,14 @@ use function get_class;
 use function sprintf;
 
 /**
- * @covers CreateSLGridByPnlRangeCommand
+ * @covers CreateStopsGridCommand
  */
 final class CreateStopsGridCommandTest extends KernelTestCase
 {
     use StopTest;
 
     private const COMMAND_NAME = 'sl:grid';
-    private const TRIGGER_DELTA = CreateSLGridByPnlRangeCommand::DEFAULT_TRIGGER_DELTA;
+    private const TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;
     private const UNIQID_CONTEXT = 'awesome-unique-stops-grid';
 
     private PositionServiceStub $positionServiceStub;
@@ -57,19 +57,28 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         string $forVolume,
         string $from,
         string $to,
-        int $qnt,
+        array $commandParams,
         array $expectedStopsInDb
     ): void {
+        // Arrange
         $this->positionServiceStub->havePosition($position);
         $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
-        $cmd->execute([
+        $params = [
             'position_side' => $side->value,
             'forVolume' => $forVolume,
             '-f' => $from,
             '-t' => $to,
-            '-c' => (string)$qnt
-        ]);
+        ];
+        if ($commandParams) {
+            foreach ($commandParams as $name => $value) {
+                $params[sprintf('--%s', $name)] = $value;
+            }
+        }
 
+        // Act
+        $cmd->execute($params);
+
+        // Assert
         $cmd->assertCommandIsSuccessful();
         $uniq = self::UNIQID_CONTEXT;
         self::assertStringContainsString(sprintf('[OK] Stops grid created. uniqueID: %s', $uniq), $cmd->getDisplay());
@@ -96,7 +105,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => sprintf('%s%%', $volumePart),
             '$from' => $fromPnl,
             '$to' => $toPnl,
-            '$qnt' => $qnt,
+            '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28710),
                 self::buildExpectedStop($side, 2, $stopVolume, 28736.1),
@@ -123,7 +132,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => (string)$volume,
             '$from' => $fromPnl,
             '$to' => $toPnl,
-            '$qnt' => $qnt,
+            '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28710),
                 self::buildExpectedStop($side, 2, $stopVolume, 28736.1),
@@ -150,7 +159,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => (string)$volume,
             '$from' => (string)$from,
             '$to' => (string)$to,
-            '$qnt' => $qnt,
+            '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 28900),
                 self::buildExpectedStop($side, 2, $stopVolume, 28920),
@@ -178,7 +187,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => sprintf('%s%%', $volumePart),
             '$from' => $fromPnl,
             '$to' => (string)$to,
-            '$qnt' => $qnt,
+            '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
                 self::buildExpectedStop($side, 1, $stopVolume, 29000),
                 self::buildExpectedStop($side, 2, $stopVolume, 29030),
@@ -190,6 +199,79 @@ final class CreateStopsGridCommandTest extends KernelTestCase
                 self::buildExpectedStop($side, 8, $stopVolume, 29210),
                 self::buildExpectedStop($side, 9, $stopVolume, 29240),
                 self::buildExpectedStop($side, 10, $stopVolume, 29270),
+            ]
+        ];
+
+        $volumePart = 5; $qnt = 12;
+        yield sprintf(
+            '[%d stops (but recalculated to 5)] for %d%% part of `%s %s` (in mixed %s .. %d range)',
+            $qnt, $volumePart,
+            $symbol->value, $side->title(),
+            $fromPnl = '0%', $to = 29300,
+        ) => [
+            '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => sprintf('%s%%', $volumePart),
+            '$from' => $fromPnl,
+            '$to' => (string)$to,
+            '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
+            'expectedStopsInDb' => [
+                self::buildExpectedStop($side, 1, 0.001, 29000),
+                self::buildExpectedStop($side, 2, 0.001, 29060),
+                self::buildExpectedStop($side, 3, 0.001, 29120),
+                self::buildExpectedStop($side, 4, 0.001, 29180),
+                self::buildExpectedStop($side, 5, 0.001, 29240),
+            ]
+        ];
+
+        $volumePart = 10;
+        yield sprintf(
+            '[without passing qnt option] for %d%% part of `%s %s` (in mixed %s .. %d range)',
+            $volumePart,
+            $symbol->value, $side->title(),
+            $fromPnl = '0%', $to = 29300,
+        ) => [
+            '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => sprintf('%s%%', $volumePart),
+            '$from' => $fromPnl,
+            '$to' => (string)$to,
+            '$commandParams' => [],
+            'expectedStopsInDb' => [
+                self::buildExpectedStop($side, 1, 0.001, 29000),
+                self::buildExpectedStop($side, 2, 0.001, 29030),
+                self::buildExpectedStop($side, 3, 0.001, 29060),
+                self::buildExpectedStop($side, 4, 0.001, 29090),
+                self::buildExpectedStop($side, 5, 0.001, 29120),
+                self::buildExpectedStop($side, 6, 0.001, 29150),
+                self::buildExpectedStop($side, 7, 0.001, 29180),
+                self::buildExpectedStop($side, 8, 0.001, 29210),
+                self::buildExpectedStop($side, 9, 0.001, 29240),
+                self::buildExpectedStop($side, 10, 0.001, 29270),
+            ]
+        ];
+
+        $volumePart = 20;
+        yield sprintf(
+            '[without passing qnt option] for %d%% part of `%s %s` (in mixed %s .. %d range)',
+            $volumePart,
+            $symbol->value, $side->title(),
+            $fromPnl = '0%', $to = 29300,
+        ) => [
+            '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
+            '$forVolume' => sprintf('%s%%', $volumePart),
+            '$from' => $fromPnl,
+            '$to' => (string)$to,
+            '$commandParams' => [],
+            'expectedStopsInDb' => [
+                self::buildExpectedStop($side, 1, 0.002, 29000),
+                self::buildExpectedStop($side, 2, 0.002, 29030),
+                self::buildExpectedStop($side, 3, 0.002, 29060),
+                self::buildExpectedStop($side, 4, 0.002, 29090),
+                self::buildExpectedStop($side, 5, 0.002, 29120),
+                self::buildExpectedStop($side, 6, 0.002, 29150),
+                self::buildExpectedStop($side, 7, 0.002, 29180),
+                self::buildExpectedStop($side, 8, 0.002, 29210),
+                self::buildExpectedStop($side, 9, 0.002, 29240),
+                self::buildExpectedStop($side, 10, 0.002, 29270),
             ]
         ];
     }
@@ -256,13 +338,6 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => '0',
             '$from' => '-10%', '$to' => '28900', '$qnt' => 10,
             'expectedMessage' => new LogicException('$forVolume must be greater than zero ("0.00" given)'),
-        ];
-
-        yield '`ordersQnt` must be specified' => [
-            '$position' => $position, '$symbol' => $symbol, '$side' => $side,
-            '$forVolume' => '0.1', '$from' => '-10%', '$to' => '28900',
-            '$qnt' => null,
-            'expectedMessage' => new LogicException('In \'by_qnt\' mode param "ordersQnt" is required.'),
         ];
 
         yield '`ordersQnt` must be >= 1' => [

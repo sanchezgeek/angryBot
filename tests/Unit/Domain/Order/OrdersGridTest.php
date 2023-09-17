@@ -236,6 +236,19 @@ final class OrdersGridTest extends TestCase
 
                 ]
             ],
+            [
+                '$priceRange' => PriceRange::create(28710, 28971),
+                '$forVolume' => 0.005,
+                '$qnt' => 10,
+                'expectedOrders' => [
+                    new Order(Price::float(28710), 0.001),
+                    new Order(Price::float(28762.2), 0.001),
+                    new Order(Price::float(28814.4), 0.001),
+                    new Order(Price::float(28866.6), 0.001),
+                    new Order(Price::float(28918.8), 0.001),
+
+                ]
+            ],
         ];
     }
 }
