@@ -29,6 +29,11 @@ final class BuyOrderBuilder
         return new self(Side::Sell, $id, $price, $volume);
     }
 
+    public static function long(int $id, float $price, float $volume): self
+    {
+        return new self(Side::Buy, $id, $price, $volume);
+    }
+
     public function build(): BuyOrder
     {
         return new BuyOrder($this->id, $this->price, $this->volume, $this->triggerDelta, $this->side, $this->context);

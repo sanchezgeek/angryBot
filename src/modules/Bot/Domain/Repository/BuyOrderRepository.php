@@ -4,6 +4,7 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
 use App\EventBus\EventBus;
@@ -24,6 +25,7 @@ use Doctrine\Persistence\ManagerRegistry;
 class BuyOrderRepository extends ServiceEntityRepository implements PositionOrderRepository
 {
     private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
+    private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
 
     public function __construct(
         private readonly EventBus $eventBus,
@@ -109,6 +111,19 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
                     ->setParameter(':to', $to);
             }
         );
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function findOppositeToStopByExchangeOrderId(Side $side, string $exchangeOrderId): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
     }
 
     public function getNextId(): int

@@ -6,43 +6,45 @@ namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+use function count;
+
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
-    private const MAX_ORDER_MUST_LEFT = 3;
-    private const DEFAULT_RELEASE_OVER_DISTANCE = 85;
-
-    // @todo Всё это лучше вынести в настройки
-    // С человекопонятными названиями
+    private const MIN_LEFT_ORDERS_QNT = 3;
     private const DEFAULT_TRIGGER_DELTA = 20;
+    private const DEFAULT_RELEASE_OVER_DISTANCE = 70;
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
+        private readonly BuyOrderRepository $buyOrderRepository,
         private readonly EventDispatcherInterface $events,
     ) {
     }
 
     public function __invoke(TryReleaseActiveOrders $command): void
     {
-        // @todo также надо удалять oppositeBuyOrders. Иначе будет нежданчик
+        $claimedOrderVolume = $command->forVolume;
 
         $activeOrders = $this->exchangeService->activeConditionalOrders($command->symbol);
+        if (!count($activeOrders)) {
+            return;
+        }
 
         $ticker = $this->exchangeService->ticker($command->symbol);
 
-        $claimedOrderVolume = $command->forVolume;
-
         foreach ($activeOrders as $key => $order) {
-            if (!$command->force && \count($activeOrders) < self::MAX_ORDER_MUST_LEFT) {
+            if (!$command->force && \count($activeOrders) < self::MIN_LEFT_ORDERS_QNT) {
                 return;
             }
 
@@ -69,19 +71,24 @@ final class TryReleaseActiveOrdersHandler
         }
     }
 
-    private function release(ActiveStopOrder $order, ?Stop $stop): void
+    private function release(ActiveStopOrder $exchangeStop, ?Stop $existedStop): void
     {
-        $this->exchangeService->closeActiveConditionalOrder($order);
+        $this->exchangeService->closeActiveConditionalOrder($exchangeStop);
+        $side = $exchangeStop->positionSide;
 
-        if ($stop) {
-            $stop->clearExchangeOrderId();
-            $stop->setTriggerDelta($stop->getTriggerDelta() + 3); // Increase triggerDelta little bit
+        if ($existedStop) {
+            $existedStop->clearExchangeOrderId();
+            $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + 3); // Increase triggerDelta little bit
+            $this->stopRepository->save($existedStop);
 
-            $this->stopRepository->save($stop);
-
-            $this->events->dispatch(new ActiveCondStopMovedBack($stop));
+            $this->events->dispatch(new ActiveCondStopMovedBack($existedStop));
         } else {
-            $this->stopService->create($order->positionSide, $order->triggerPrice, $order->volume, self::DEFAULT_TRIGGER_DELTA);
+            $this->stopService->create($side, $exchangeStop->triggerPrice, $exchangeStop->volume, self::DEFAULT_TRIGGER_DELTA);
+        }
+
+        $oppositeOrders = $this->buyOrderRepository->findOppositeToStopByExchangeOrderId($side, $exchangeStop->orderId);
+        foreach ($oppositeOrders as $oppositeOrder) {
+            $this->buyOrderRepository->remove($oppositeOrder);
         }
     }
 }
