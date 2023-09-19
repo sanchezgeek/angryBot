@@ -27,13 +27,17 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+/**
+ * @see PushBtcUsdtStopsTest
+ */
 #[AsMessageHandler]
 final class PushRelevantStopsHandler extends AbstractOrdersPusher
 {
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
-    private const BUY_ORDER_TRIGGER_DELTA = 1;
-    private const BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 38;
+    public const BUY_ORDER_TRIGGER_DELTA = 1;
+    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 108;
+    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 121;
 
     public function __construct(
         private readonly HedgeService $hedgeService,
@@ -52,9 +56,6 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
-    /**
-     * @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushBtcUsdtShortStopsTest
-     */
     public function __invoke(PushRelevantStopOrders $message): void
     {
         $position = $this->positionService->getPosition($message->symbol, $message->side);
@@ -63,15 +64,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         $ticker = $this->exchangeService->ticker($message->symbol);
-
-//        \print_r(
-//            \sprintf(
-//                '%s | %s | %s',
-//                (new \DateTimeImmutable())->format('m/d H:i:s.v'),
-//                $message->side->value,
-//                'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . AppContext::workerHash()
-//            ) . PHP_EOL
-//        );
+//        \print_r(\sprintf('%s | %s | %s', (new \DateTimeImmutable())->format('m/d H:i:s.v'), $message->side->value, 'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . AppContext::workerHash()) . PHP_EOL);
 
         $stops = $this->stopRepository->findActive(
             $position->side,
@@ -148,7 +141,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
         $side = $stop->getPositionSide();
         $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
-        $distance = self::BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
+        $distance = $this->getBuyOrderOppositePriceDistance($position->side);
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
@@ -198,15 +191,15 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
 
         if ($stop->getVolume() >= 0.006) {
             $orders[] = [
-                'volume' => VolumeHelper::round($stop->getVolume() / 3.5),
-                'price' => PriceHelper::round(
-                    $side === Side::Sell ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2
-                ),
-            ];
-            $orders[] = [
                 'volume' => VolumeHelper::round($stop->getVolume() / 4.5),
                 'price' => PriceHelper::round(
                     $side === Side::Sell ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8
+                ),
+            ];
+            $orders[] = [
+                'volume' => VolumeHelper::round($stop->getVolume() / 3.5),
+                'price' => PriceHelper::round(
+                    $side === Side::Sell ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2
                 ),
             ];
         }
@@ -222,5 +215,10 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         return $orders;
+    }
+
+    private function getBuyOrderOppositePriceDistance(Side $side): float
+    {
+        return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
     }
 }

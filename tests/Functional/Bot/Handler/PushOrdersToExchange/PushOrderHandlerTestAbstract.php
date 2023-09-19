@@ -68,14 +68,4 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
         }
         return implode(', ', $descriptions);
     }
-
-    /**
-     * @param array<BuyOrder> $orders
-     */
-    protected function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId, ...$orders): void
-    {
-        foreach ($orders as $order) {
-            $order->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
-        }
-    }
 }
