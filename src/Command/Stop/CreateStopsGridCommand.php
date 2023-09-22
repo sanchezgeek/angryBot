@@ -37,7 +37,7 @@ class CreateStopsGridCommand extends Command
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
-    public const DEFAULT_TRIGGER_DELTA = 17;
+    public const DEFAULT_TRIGGER_DELTA = '17';
 
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';
@@ -47,10 +47,11 @@ class CreateStopsGridCommand extends Command
         self::BY_ORDERS_QNT,
     ];
 
-    public const ORDERS_QNT_OPTION = 'ordersQnt';
-    public const MODE_OPTION = 'mode';
     public const FOR_VOLUME_OPTION = 'forVolume';
+    public const MODE_OPTION = 'mode';
+    public const ORDERS_QNT_OPTION = 'ordersQnt';
     public const PRICE_STEP_OPTION = 'priceStep';
+    public const TRIGGER_DELTA_OPTION = 'triggerDelta';
 
     private const DEFAULT_ORDERS_QNT = '10';
 
@@ -63,6 +64,7 @@ class CreateStopsGridCommand extends Command
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
             ->addOption(self::PRICE_STEP_OPTION, '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
+            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta', self::DEFAULT_TRIGGER_DELTA)
             ->configureStopAdditionalContexts()
         ;
     }
@@ -75,6 +77,7 @@ class CreateStopsGridCommand extends Command
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
+        $triggerDelta = $this->paramFetcher->getFloatOption(self::TRIGGER_DELTA_OPTION);
         $position = $this->getPosition();
 
         if ($forVolume >= $position->size) {
@@ -121,7 +124,7 @@ class CreateStopsGridCommand extends Command
         }
 
         foreach ($orders as $order) {
-            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), self::DEFAULT_TRIGGER_DELTA, $context);
+            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);
         }
 
         $io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));

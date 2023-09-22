@@ -87,8 +87,22 @@ class EditStopsCommand extends Command
                 $qb->orderBy($alias . '.volume', 'ASC')->addOrderBy($alias . '.price', $this->getPosition()->side->isShort() ? 'ASC' : 'DESC');
             }
         );
-        $stopsInSpecifiedRange = (new StopsCollection(...$stops))->grabFromRange($priceRange);
-        $stopsInSpecifiedRange = $this->applyFilters($stopsInSpecifiedRange);
+        $stopsCollection = new StopsCollection(...$stops);
+        $stopsInSpecifiedRange = ($stopsCollection)->grabFromRange($priceRange);
+        $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
+
+        if (!$io->confirm(
+            sprintf(
+                'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
+                $action,
+                $filteredStops->totalCount(),
+                $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
+                $filteredStops->volumePart($stopsCollection->totalVolume()),
+                $filteredStops->volumePart($this->getPosition()->size)
+            )
+        )) {
+            return Command::FAILURE;
+        }
 
         if ($action === self::ACTION_MOVE) {
             $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::MOVE_TO_PRICE_OPTION);
@@ -103,15 +117,15 @@ class EditStopsCommand extends Command
                     )
                 );
             }
-            $needMoveVolume = VolumeHelper::round($stopsInSpecifiedRange->totalVolume() * $movePart / 100);
+            $needMoveVolume = VolumeHelper::round($filteredStops->totalVolume() * $movePart / 100);
 
             $movedVolume = 0;
             $stopsToRemove = new StopsCollection();
             while ($needMoveVolume > 0) {
-                foreach ($stopsInSpecifiedRange as $stop) {
+                foreach ($filteredStops as $stop) {
                     if ($stop->getVolume() <= $needMoveVolume) {
                         $stopsToRemove->add($stop);
-                        $stopsInSpecifiedRange->remove($stop);
+                        $filteredStops->remove($stop);
                         $needMoveVolume -= $stop->getVolume();
                     } else {
                         try {
@@ -144,8 +158,8 @@ class EditStopsCommand extends Command
         }
 
         if ($action === self::ACTION_REMOVE) {
-            $this->entityManager->wrapInTransaction(function() use ($stopsInSpecifiedRange) {
-                foreach ($stopsInSpecifiedRange as $stop) {
+            $this->entityManager->wrapInTransaction(function() use ($filteredStops) {
+                foreach ($filteredStops as $stop) {
                     $this->entityManager->remove($stop);
                 }
             });
@@ -155,8 +169,8 @@ class EditStopsCommand extends Command
 
         if ($action === self::ACTION_EDIT) {
             $editCallback = $this->paramFetcher->getStringOption(self::EDIT_CALLBACK_OPTION);
-            $this->entityManager->wrapInTransaction(function() use ($stopsInSpecifiedRange, $editCallback) {
-                foreach ($stopsInSpecifiedRange as $stop) {
+            $this->entityManager->wrapInTransaction(function() use ($filteredStops, $editCallback) {
+                foreach ($filteredStops as $stop) {
                     eval('$stop->' . $editCallback . ';');
                     $this->entityManager->persist($stop);
                 }

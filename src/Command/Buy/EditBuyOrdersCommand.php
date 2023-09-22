@@ -67,17 +67,19 @@ class EditBuyOrdersCommand extends Command
         }
 
         $buyOrders = $this->applyFilters(new BuyOrdersCollection(...$orders));
+        $totalCount = $buyOrders->totalCount();
+        $totalVolume = $buyOrders->totalVolume();
 
-        if (!$buyOrders->totalCount()) {
+        if (!$totalCount) {
             $io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
-        if ($buyOrders->totalCount() === count($orders)) {
+        if ($totalCount === count($orders)) {
             $io->error('All orders matched provided conditions.');
             return Command::FAILURE;
         }
 
-        if (!$io->confirm(sprintf('You\'re about to %s %d BuyOrders. Continue?', $action, $buyOrders->totalCount()))) {
+        if (!$io->confirm(sprintf('You\'re about to %s %d BuyOrders (%.3f). Continue?', $action, $totalCount, $totalVolume))) {
             return Command::FAILURE;
         }
 
@@ -88,7 +90,7 @@ class EditBuyOrdersCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('removed BuyOrders qnt: %d', $buyOrders->totalCount()));
+            $io->note(\sprintf('removed BuyOrders qnt: %d (%.3f)', $totalCount, $totalVolume));
         }
 
         return Command::SUCCESS;
