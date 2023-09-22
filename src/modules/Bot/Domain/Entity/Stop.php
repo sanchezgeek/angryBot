@@ -135,12 +135,14 @@ class Stop implements HasEvents
 
     public function getPnlUsd(Position $position): float
     {
-        $pnl = $this->getPnlInPercents($position) / 100;
+        $delta = $this->price - $position->entryPrice;
 
-        $positionPart = $this->volume / $position->size;
-        $orderCost = $position->positionMargin * $positionPart;
-
-        return $orderCost * $pnl;
+        // @todo | or it's right only for BTCUSDT contracts?
+        return $delta * $this->getVolume();
+//        $pnl = $this->getPnlInPercents($position) / 100;
+//        $positionPart = $this->volume / $position->size;
+//        $orderCost = $position->size * ($position->entryPrice / 100) * $positionPart;
+//        return $orderCost * $pnl;
     }
 
     public function toArray(): array

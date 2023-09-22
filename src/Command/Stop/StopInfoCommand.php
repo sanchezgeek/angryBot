@@ -3,6 +3,7 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -19,6 +20,13 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_combine;
+use function array_fill;
+use function array_filter;
+use function array_keys;
+use function array_merge;
+use function array_replace;
+use function count;
 use function implode;
 use function is_bool;
 use function sprintf;
@@ -31,6 +39,10 @@ class StopInfoCommand extends Command
 
     private const DEFAULT_PNL_STEP = 20;
 
+    private SymfonyStyle $io;
+    private string $aggregateWith;
+    private array $aggOrder = [];
+
     protected function configure(): void
     {
         $this
@@ -40,25 +52,31 @@ class StopInfoCommand extends Command
         ;
     }
 
+    protected function initialize(InputInterface $input, OutputInterface $output)
+    {
+        $this->withInput($input);
+        $this->io = new SymfonyStyle($input, $output);
+
+        $this->aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
-        $aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
+
+        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
+        if ($isHedge && Hedge::create($position, $oppositePosition)->isSupportPosition($position)) {
+            $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
+        }
 
         $stops = $this->stopRepository->findActive(
             side: $position->side,
-            qbModifier: function (QueryBuilder $qb) use ($position) {
-                $priceField = $qb->getRootAliases()[0] . '.price';
-
-                $qb->orderBy($priceField, $position->side->isShort() ? 'DESC' : 'ASC');
-            }
+            qbModifier: static fn (QueryBuilder $qb) => $qb->orderBy($qb->getRootAliases()[0] . '.price', $position->side->isShort() ? 'DESC' : 'ASC')
         );
 
         if (!$stops) {
-            $io->info('Stops not found!'); return Command::SUCCESS;
+            $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
         $rangesCollection = new PositionStopRangesCollection($position, new StopsCollection(...$stops), $pnlStep);
@@ -68,49 +86,65 @@ class StopInfoCommand extends Command
                 continue;
             }
 
-            $usdPnL = $stops->totalUsdPnL($position);
-
-            $io->note(
+            $this->io->note(
                 \sprintf(
                     '[%s] | %.1f%% (%s)',
                     $rangeDesc,
-                    $stops->positionSizePart($position),
-                    new Pnl($usdPnL, 'USDT'),
-                ),
+                    $stops->volumePart($position->size),
+                    new Pnl($usdPnL = $stops->totalUsdPnL($position), 'USDT')
+                )
             );
-
-            if ($aggregateWith) {
-                $aggregateResult = [];
-                foreach ($stops as $stop) {
-                    eval('$callbackValue = $stop->' . $aggregateWith . ';');
-                    $key = is_bool($callbackValue) ? ($callbackValue ? 'true' : 'false') : (string)$callbackValue;
-                    $aggregateResult[$key] = $aggregateResult[$key] ?? new StopsCollection();
-                    $aggregateResult[$key]->add($stop);
-                }
-
-                $aggregateInfo = [];
-                foreach ($aggregateResult as $value => $aggregatedStops) {
-                    $rangePart = $aggregatedStops->totalCount() / $stops->totalCount() * 100;
-                    $aggregateInfo[] = Json::encode([
-                        $aggregateWith . ' = ' . $value => [
-                            'qnt' => $aggregatedStops->totalCount(),
-                            'part' => sprintf('%s%%', PriceHelper::round($rangePart, 1))
-                        ],
-                    ]);
-                }
-                $io->info(implode("\n", $aggregateInfo));
-            }
+            $this->printAggregateInfo($stops);
 
             $totalUsdPnL += $usdPnL;
             $totalVolume += $stops->totalVolume();
         }
 
-        $io->note([
+        $this->io->note([
             \sprintf('total PNL: %s', new Pnl($totalUsdPnL)),
             \sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100),
         ]);
 
         return Command::SUCCESS;
+    }
+
+    private function printAggregateInfo(StopsCollection $stops): void
+    {
+        if (!$this->aggregateWith) {
+            return;
+        }
+
+        $aggResult = [];
+        foreach ($stops as $stop) {
+            eval('$callbackValue = $stop->' . $this->aggregateWith . ';');
+            $key = is_bool($callbackValue) ? ($callbackValue ? 'true' : 'false') : (string)$callbackValue;
+            $aggResult[$key] = $aggResult[$key] ?? new StopsCollection();
+            $aggResult[$key]->add($stop);
+        }
+
+        if ($this->aggOrder) {
+            $aggResult = array_filter(
+                array_replace(array_combine($this->aggOrder, array_fill(0, count($this->aggOrder), null)), $aggResult),
+                static fn ($value) => $value !== null
+            );
+        }
+        $this->aggOrder = array_merge($this->aggOrder, array_keys($aggResult));
+
+        $aggInfo = [];
+        foreach ($aggResult as $value => $aggregatedStops) {
+            $cPart = $aggregatedStops->totalCount() / $stops->totalCount() * 100;
+            $vPart = $aggregatedStops->totalVolume() / $stops->totalVolume() * 100;
+            $aggKey = $this->aggregateWith . ' = ' . $value;
+            $aggInfo[] = Json::encode([
+                $aggKey => [
+                    'qnt' => $aggregatedStops->totalCount(),
+                    'cPart' => sprintf('%s%%', PriceHelper::round($cPart, 1)),
+                    'vPart' => sprintf('%s%%', PriceHelper::round($vPart, 1)),
+                ],
+            ]);
+        }
+
+        $this->io->info(implode("\n", $aggInfo));
     }
 
     public function __construct(

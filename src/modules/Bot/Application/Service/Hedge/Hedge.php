@@ -10,7 +10,7 @@ use App\Bot\Domain\Position;
 
 final readonly class Hedge
 {
-    public function __construct(
+    private function __construct(
         public Position $mainPosition,
         public Position $supportPosition,
     ) {
