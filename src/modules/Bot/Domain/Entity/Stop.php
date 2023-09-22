@@ -19,6 +19,7 @@ use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
+use function round;
 use function sprintf;
 
 /**
@@ -98,7 +99,7 @@ class Stop implements HasEvents
      */
     public function subVolume(float $value): self
     {
-        $restVolume = VolumeHelper::round($this->volume - $value);
+        $restVolume = $this->volume - $value;
 
         if (!($restVolume >= self::MIN_VOLUME)) {
             throw new DomainException(
@@ -106,7 +107,7 @@ class Stop implements HasEvents
             );
         }
 
-        $this->volume = $restVolume;
+        $this->volume = VolumeHelper::round($restVolume);
 
         return $this;
     }
@@ -130,15 +131,16 @@ class Stop implements HasEvents
 
     public function getPnlInPercents(Position $position): float
     {
-        return PnlHelper::getPnlInPercents($position, $this->price);
+        return round(PnlHelper::getPnlInPercents($position, $this->price), 2);
     }
 
     public function getPnlUsd(Position $position): float
     {
+        $sign = $position->side->isShort() ? -1 : +1;
         $delta = $this->price - $position->entryPrice;
 
         // @todo | or it's right only for BTCUSDT contracts?
-        return $delta * $this->getVolume();
+        return $sign * $delta * $this->getVolume();
 //        $pnl = $this->getPnlInPercents($position) / 100;
 //        $positionPart = $this->volume / $position->size;
 //        $orderCost = $position->size * ($position->entryPrice / 100) * $positionPart;

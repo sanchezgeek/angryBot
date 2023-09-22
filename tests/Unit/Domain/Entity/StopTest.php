@@ -10,7 +10,10 @@ use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\PositionOrderTest;
+use DomainException;
 use PHPUnit\Framework\TestCase;
+
+use function sprintf;
 
 /**
  * @covers Stop
@@ -21,14 +24,38 @@ final class StopTest extends TestCase
 
     private const WITHOUT_OPPOSITE_ORDER_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
 
-    public function testPnl(): void
+    public function testShortPnl(): void
     {
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100);
 
         $stop = StopBuilder::short(1, 29700, 0.5)->build();
-
         self::assertEquals(100, $stop->getPnlInPercents($position));
         self::assertEquals(150, $stop->getPnlUsd($position));
+
+        $stop = StopBuilder::short(1, 29600, 0.5)->build();
+        self::assertEquals(133.33, $stop->getPnlInPercents($position));
+        self::assertEquals(200, $stop->getPnlUsd($position));
+
+        $stop = StopBuilder::short(1, 29000, 0.5)->build();
+        self::assertEquals(333.33, $stop->getPnlInPercents($position));
+        self::assertEquals(500, $stop->getPnlUsd($position));
+    }
+
+    public function testLongPnl(): void
+    {
+        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
+
+        $stop = StopBuilder::long(1, 29700, 0.5)->build();
+        self::assertEquals(-100, $stop->getPnlInPercents($position));
+        self::assertEquals(-150, $stop->getPnlUsd($position));
+
+        $stop = StopBuilder::long(1, 29600, 0.5)->build();
+        self::assertEquals(-133.33, $stop->getPnlInPercents($position));
+        self::assertEquals(-200, $stop->getPnlUsd($position));
+
+        $stop = StopBuilder::long(1, 29000, 0.5)->build();
+        self::assertEquals(-333.33, $stop->getPnlInPercents($position));
+        self::assertEquals(-500, $stop->getPnlUsd($position));
     }
 
     /**
@@ -127,9 +154,33 @@ final class StopTest extends TestCase
         );
     }
 
-    public function testSub(): void
+    public function testCanAddVolume(): void
     {
-        self::markTestIncomplete('@todo | Should be tested later!');
+        $stop = StopBuilder::short(1, 29600, 0.5)->build();
+
+        $stop->addVolume(0.01);
+
+        self::assertSame(0.51, $stop->getVolume());
+    }
+
+    public function testCanSubVolume(): void
+    {
+        $stop = StopBuilder::short(1, 29600, 0.5)->build();
+
+        $stop->subVolume(0.01);
+
+        self::assertSame(0.49, $stop->getVolume());
+    }
+
+    public function testFailSubVolume(): void
+    {
+        $stop = StopBuilder::short(1, 29600, 0.5)->build();
+        $subVolume = 0.5;
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage(sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $subVolume, 0));
+
+        $stop->subVolume($subVolume);
     }
 
     public function testDummy(): void
