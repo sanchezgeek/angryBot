@@ -32,7 +32,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
     use StopTest;
 
     private const COMMAND_NAME = 'sl:grid';
-    private const TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;
+    private const DEFAULT_TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;
     private const UNIQID_CONTEXT = 'awesome-unique-stops-grid';
 
     private PositionServiceStub $positionServiceStub;
@@ -364,8 +364,10 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
     }
 
-    private static function buildExpectedStop(Side $side, int $id, float $volume, float $price, float $tD = self::TRIGGER_DELTA): Stop
+    private static function buildExpectedStop(Side $side, int $id, float $volume, float $price, float $tD = null): Stop
     {
+        $tD = $tD ?: (float) self::DEFAULT_TRIGGER_DELTA;
+
         return new Stop($id, $price, $volume, $tD, $side, ['uniqid' => self::UNIQID_CONTEXT]);
     }
 }

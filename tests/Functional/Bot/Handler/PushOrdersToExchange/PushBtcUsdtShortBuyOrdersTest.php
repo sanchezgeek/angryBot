@@ -38,10 +38,20 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
     {
         parent::setUp();
 
-        $this->handler = new PushRelevantBuyOrdersHandler(self::getBuyOrderRepository(), $this->stopRepository, $this->stopService, $this->messageBus, $this->eventDispatcher, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock);
-
         self::truncateStops();
         self::truncateBuyOrders();
+
+        $this->handler = new PushRelevantBuyOrdersHandler(
+            self::getBuyOrderRepository(),
+            $this->stopRepository,
+            $this->stopService,
+            $this->messageBus,
+            $this->eventDispatcher,
+            $this->exchangeServiceMock,
+            $this->positionServiceStub,
+            $this->loggerMock,
+            $this->clockMock
+        );
     }
 
     /**
@@ -126,6 +136,7 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
                 new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
                 new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.003)->build()),
                 new BuyOrderFixture(BuyOrderBuilder::short(40, 29060, 0.005)->build()),
+                new BuyOrderFixture(BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder()),
             ],
             'stopsExpectedAfterHandle' => [
                 /**
@@ -140,6 +151,6 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
 
     public function testDummy(): void
     {
-        self::markTestIncomplete('cases: short_stop, ....');
+        self::markTestIncomplete('cases: short_stop, ...');
     }
 }

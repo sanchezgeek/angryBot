@@ -16,6 +16,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 use function count;
 
+/** @see TryReleaseActiveOrdersHandlerTest */
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
