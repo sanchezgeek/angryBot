@@ -3,7 +3,7 @@ services:
         public: true
 
     Symfony\Contracts\HttpClient\HttpClientInterface:
-        class: App\Tests\Stub\SymfonyHttpClientStub
+        class: App\Tests\Stub\Request\SymfonyHttpClientStub
 
     App\Bot\Infrastructure\ByBit\PositionService:
         class: App\Tests\Stub\Bot\PositionServiceStub
@@ -12,4 +12,4 @@ services:
         class: App\Tests\Mock\UniqueIdGeneratorStub
 
     App\Clock\ClockInterface:
-        class: \App\Clock\Clock
+        class: App\Clock\Clock
