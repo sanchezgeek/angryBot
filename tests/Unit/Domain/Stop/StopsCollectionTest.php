@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 use function iterator_to_array;
 
 /**
- * @covers StopsCollection
+ * @covers \App\Domain\Stop\StopsCollection
  */
 final class StopsCollectionTest extends TestCase
 {

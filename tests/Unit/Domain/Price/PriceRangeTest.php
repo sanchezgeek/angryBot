@@ -13,7 +13,7 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers PriceRange
+ * @covers \App\Domain\Price\PriceRange
  */
 final class PriceRangeTest extends TestCase
 {

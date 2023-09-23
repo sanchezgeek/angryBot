@@ -8,7 +8,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Fixture\BuyOrderFixture;
-use App\Tests\Mixin\BuyOrderTest;
+use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -20,7 +20,7 @@ use function uuid_create;
 final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
 {
     use TestWithDbFixtures;
-    use BuyOrderTest;
+    use BuyOrdersTester;
 
     private BuyOrderRepository $buyOrderRepository;
 

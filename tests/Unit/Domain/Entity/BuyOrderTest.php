@@ -7,17 +7,17 @@ namespace App\Tests\Unit\Domain\Entity;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Domain\Position\ValueObject\Side;
-use App\Tests\Mixin\PositionOrderTest;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
 
 use function uuid_create;
 
 /**
- * @covers BuyOrder
+ * @covers \App\Bot\Domain\Entity\BuyOrder
  */
 final class BuyOrderTest extends TestCase
 {
-    use PositionOrderTest;
+    use PositionSideAwareTest;
 
     /** @see HasExchangeOrderContext::EXCHANGE_ORDER_ID_CONTEXT */
     private const EXCHANGE_ORDER_ID_CONTEXT = 'exchange.orderId';

@@ -13,7 +13,7 @@ use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\StopsTester;
 use App\Tests\Mock\UniqueIdGeneratorStub;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use LogicException;
@@ -25,11 +25,11 @@ use function get_class;
 use function sprintf;
 
 /**
- * @covers CreateStopsGridCommand
+ * @covers \App\Command\Stop\CreateStopsGridCommand
  */
 final class CreateStopsGridCommandTest extends KernelTestCase
 {
-    use StopTest;
+    use StopsTester;
 
     private const COMMAND_NAME = 'sl:grid';
     private const DEFAULT_TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;

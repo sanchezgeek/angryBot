@@ -6,13 +6,14 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
 use function usort;
 
-trait StopTest
+trait StopsTester
 {
     use TestWithDoctrineRepository;
-    use PositionOrderTest;
+    use PositionSideAwareTest;
 
     /**
      * @return Stop[]

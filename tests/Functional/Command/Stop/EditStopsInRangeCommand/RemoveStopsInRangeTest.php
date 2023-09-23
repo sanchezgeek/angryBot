@@ -15,9 +15,9 @@ use App\Tests\Fixture\StopFixture;
 use function array_map;
 
 /**
- * @covers EditStopsCommand::ACTION_REMOVE
+ * @covers \App\Command\Stop\EditStopsCommand::ACTION_REMOVE
  */
-final class RemoveStopsInRangeTest extends AbstractEditStopsInRangeTest
+final class RemoveStopsInRangeTest extends EditStopsInRangeTestAbstract
 {
     private const ACTION = EditStopsCommand::ACTION_REMOVE;
 

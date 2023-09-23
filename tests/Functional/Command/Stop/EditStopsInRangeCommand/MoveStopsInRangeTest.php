@@ -16,9 +16,9 @@ use function array_map;
 use function sprintf;
 
 /**
- * @covers EditStopsCommand::ACTION_MOVE
+ * @covers \App\Command\Stop\EditStopsCommand::ACTION_MOVE
  */
-final class MoveStopsInRangeTest extends AbstractEditStopsInRangeTest
+final class MoveStopsInRangeTest extends EditStopsInRangeTestAbstract
 {
     private const ACTION = EditStopsCommand::ACTION_MOVE;
 

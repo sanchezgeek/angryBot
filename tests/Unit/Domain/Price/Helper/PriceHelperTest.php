@@ -8,7 +8,7 @@ use App\Domain\Price\Helper\PriceHelper;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers PriceHelper
+ * @covers \App\Domain\Price\Helper\PriceHelper
  */
 final class PriceHelperTest extends TestCase
 {

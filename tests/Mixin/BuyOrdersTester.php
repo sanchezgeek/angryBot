@@ -6,13 +6,14 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
 use function usort;
 
-trait BuyOrderTest
+trait BuyOrdersTester
 {
     use TestWithDoctrineRepository;
-    use PositionOrderTest;
+    use PositionSideAwareTest;
 
     /**
      * @return BuyOrder[]

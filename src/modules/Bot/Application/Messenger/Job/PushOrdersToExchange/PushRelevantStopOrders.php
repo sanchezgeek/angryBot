@@ -7,9 +7,12 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 
-final class PushRelevantStopOrders
+/**
+ * @codeCoverageIgnore
+ */
+final readonly class PushRelevantStopOrders
 {
-    public function __construct(public readonly Symbol $symbol, public readonly Side $side)
+    public function __construct(public Symbol $symbol, public Side $side)
     {
     }
 }

@@ -14,7 +14,7 @@ use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers OrdersGrid
+ * @covers \App\Domain\Order\OrdersGrid
  */
 final class OrdersGridTest extends TestCase
 {

@@ -13,7 +13,7 @@ use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers PositionStopRangesCollection
+ * @covers \App\Domain\Stop\PositionStopRangesCollection
  */
 final class PositionStopRangesCollectionTest extends TestCase
 {

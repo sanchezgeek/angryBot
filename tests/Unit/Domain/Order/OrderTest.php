@@ -9,7 +9,7 @@ use App\Domain\Price\Price;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers Order
+ * @covers \App\Domain\Order\Order
  */
 final class OrderTest extends TestCase
 {

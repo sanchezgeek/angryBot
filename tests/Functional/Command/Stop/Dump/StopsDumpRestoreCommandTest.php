@@ -7,7 +7,7 @@ namespace App\Tests\Functional\Command\Stop\Dump;
 use App\Bot\Domain\Entity\Stop;
 use App\Command\Stop\Dump\StopsDumpRestoreCommand;
 use App\Domain\Position\ValueObject\Side;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use DateTimeImmutable;
@@ -23,7 +23,7 @@ use function sprintf;
 final class StopsDumpRestoreCommandTest extends KernelTestCase
 {
     use TestWithDbFixtures;
-    use StopTest;
+    use StopsTester;
 
     private const COMMAND_NAME = 'sl:dump:restore';
 

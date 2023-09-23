@@ -19,8 +19,8 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Fixture\StopFixture;
-use App\Tests\Mixin\BuyOrderTest;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -31,8 +31,8 @@ use function uuid_create;
 final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
 {
     use TestWithDbFixtures;
-    use StopTest;
-    use BuyOrderTest;
+    use StopsTester;
+    use BuyOrdersTester;
 
     protected EventDispatcherInterface $eventDispatcher;
     protected StopService $stopService;

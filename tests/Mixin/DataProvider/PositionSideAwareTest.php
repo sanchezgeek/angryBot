@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mixin;
+namespace App\Tests\Mixin\DataProvider;
 
 use App\Domain\Position\ValueObject\Side;
 
-trait PositionOrderTest
+trait PositionSideAwareTest
 {
     /**
      * @return Side[]

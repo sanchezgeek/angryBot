@@ -26,11 +26,6 @@ abstract class AbstractOrdersPusher
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
-    /**
-     * @var PositionData[]
-     */
-    private array $positionsData = [];
-
     public function __construct(
         protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,

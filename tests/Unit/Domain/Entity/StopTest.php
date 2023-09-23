@@ -9,18 +9,18 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
-use App\Tests\Mixin\PositionOrderTest;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use DomainException;
 use PHPUnit\Framework\TestCase;
 
 use function sprintf;
 
 /**
- * @covers Stop
+ * @covers \App\Bot\Domain\Entity\Stop
  */
 final class StopTest extends TestCase
 {
-    use PositionOrderTest;
+    use PositionSideAwareTest;
 
     private const WITHOUT_OPPOSITE_ORDER_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
 

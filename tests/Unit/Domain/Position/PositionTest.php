@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 use function sprintf;
 
 /**
- * @covers Position
+ * @covers \App\Bot\Domain\Position
  */
 final class PositionTest extends TestCase
 {

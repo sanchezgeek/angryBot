@@ -18,13 +18,14 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
-use App\Tests\Mixin\BuyOrderTest;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\StopsTester;
 
 use function array_map;
 
 /**
- * @covers PushRelevantStopsHandler
+ * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
+ * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopsHandler
  */
 final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
 {
@@ -34,8 +35,8 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
-    use StopTest;
-    use BuyOrderTest;
+    use StopsTester;
+    use BuyOrdersTester;
 
     private const SYMBOL = Symbol::BTCUSDT;
 

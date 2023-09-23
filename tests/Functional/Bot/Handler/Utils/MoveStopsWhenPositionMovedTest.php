@@ -15,18 +15,18 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * @covers MoveStopOrdersWhenPositionMovedHandler
+ * @covers \App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMovedHandler
  */
 final class MoveStopsWhenPositionMovedTest extends KernelTestCase
 {
     use TestWithDbFixtures;
-    use StopTest;
+    use StopsTester;
 
     private const SYMBOL = Symbol::BTCUSDT;
 

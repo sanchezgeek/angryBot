@@ -11,7 +11,7 @@ use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\Json;
 use App\Tests\Fixture\StopFixture;
-use App\Tests\Mixin\StopTest;
+use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use DateTimeImmutable;
@@ -33,7 +33,7 @@ use function uuid_create;
 final class StopsDumpCommandTest extends KernelTestCase
 {
     use TestWithDbFixtures;
-    use StopTest;
+    use StopsTester;
 
     private const COMMAND_NAME = 'sl:dump';
 
