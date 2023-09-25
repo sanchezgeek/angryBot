@@ -14,7 +14,7 @@ final readonly class DispatchAsyncJobHandler
     {
     }
 
-    public function __invoke(DispatchAsync $job): void
+    public function __invoke(Async $job): void
     {
         $this->messageBus->dispatch($job->message);
     }
