@@ -13,15 +13,13 @@ final class PositionUpdated extends LoggableEvent
     {
     }
 
-    public function getLog(): string
+    public function getLog(): ?string
     {
-        return \sprintf(
-            '--#%s#-- | %.3f | $%.2f (liq: $%.2f | volume: %.2f USDT)',
-            $this->position->getCaption(),
-            $this->position->size,
-            $this->position->entryPrice,
-            $this->position->liquidationPrice,
-            $this->position->positionValue,
-        );
+        if ($this->position->isLong()) {
+            return null;
+        }
+
+        return $this->position->positionValue > 26500 ? 'true' : 'false';
+//        return \sprintf('--#%s#-- | volume: %.2f USDT', $this->position->getCaption(), $this->position->positionValue);
     }
 }
