@@ -30,7 +30,7 @@ use function random_int;
 
 /** @see PushBtcUsdtShortBuyOrdersTest */
 #[AsMessageHandler]
-final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
+final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 17;
 
@@ -51,7 +51,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
-    public function __invoke(PushRelevantBuyOrders $message): void
+    public function __invoke(PushBuyOrders $message): void
     {
         $position = $this->positionService->getPosition($message->symbol, $message->side);
         if (!$position && $message->side->isLong()) {
@@ -97,7 +97,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 //                    );
 //                }
 //                // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
-//                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushRelevantStopsHandler) окажется неработоспособной
+//                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
 //                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
 //            }
         }

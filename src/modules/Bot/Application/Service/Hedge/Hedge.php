@@ -34,7 +34,7 @@ final readonly class Hedge
     }
 
     /**
-     * PushRelevantBuyOrdersHandler will create small stops with `under_position`
+     * PushBuyOrdersHandler will create small stops with `under_position`
      */
     public function needKeepSupportSize(): bool
     {

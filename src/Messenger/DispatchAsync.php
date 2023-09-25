@@ -6,7 +6,7 @@ namespace App\Messenger;
 
 final class DispatchAsync
 {
-    public function __construct(public object $message)
+    private function __construct(public object $message)
     {
     }
 

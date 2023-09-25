@@ -27,11 +27,9 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-/**
- * @see PushBtcUsdtStopsTest
- */
+/** @see PushBtcUsdtStopsTest */
 #[AsMessageHandler]
-final class PushRelevantStopsHandler extends AbstractOrdersPusher
+final class PushStopsHandler extends AbstractOrdersPusher
 {
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
@@ -55,7 +53,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 
-    public function __invoke(PushRelevantStopOrders $message): void
+    public function __invoke(PushStops $message): void
     {
         $position = $this->positionService->getPosition($message->symbol, $message->side);
         if (!$position) {
@@ -170,7 +168,7 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop);
             }
             // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
-            // Пока что добавил отлов CannotAffordOrderCost в PushRelevantBuyOrdersHandler при попытке купить
+            // Пока что добавил отлов CannotAffordOrderCost в PushBuyOrdersHandler при попытке купить
         }
 
         $context = ['onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId()];

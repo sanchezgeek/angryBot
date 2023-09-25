@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\Utils;
 
-use App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved;
-use App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMovedHandler;
+use App\Bot\Application\Messenger\Job\Utils\MoveStops;
+use App\Bot\Application\Messenger\Job\Utils\MoveStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -21,9 +21,9 @@ use App\Tests\Stub\Bot\PositionServiceStub;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * @covers \App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMovedHandler
+ * @covers \App\Bot\Application\Messenger\Job\Utils\MoveStopsHandler
  */
-final class MoveStopsWhenPositionMovedTest extends KernelTestCase
+final class MoveStopsTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
@@ -33,7 +33,7 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
     protected PositionServiceInterface $positionServiceStub;
     protected ExchangeServiceInterface $exchangeServiceMock;
 
-    private MoveStopOrdersWhenPositionMovedHandler $handler;
+    private MoveStopsHandler $handler;
 
     public static function setUpBeforeClass(): void
     {
@@ -47,7 +47,7 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceStub = new PositionServiceStub();
 
-        $this->handler = new MoveStopOrdersWhenPositionMovedHandler(self::getStopRepository(), $this->exchangeServiceMock, $this->positionServiceStub);
+        $this->handler = new MoveStopsHandler(self::getStopRepository(), $this->exchangeServiceMock, $this->positionServiceStub);
 
         self::ensureTableIsEmpty(Stop::class);
     }
@@ -72,21 +72,21 @@ final class MoveStopsWhenPositionMovedTest extends KernelTestCase
         $initialStops = self::getCurrentStopsSnapshot();
 
         # first run (nothing's changed)
-        ($this->handler)(new MoveStopOrdersWhenPositionMoved($position->side));
+        ($this->handler)(new MoveStops($position->side));
         self::seeStopsInDb(...$initialStops);
 
         # position moved
         $this->positionServiceStub->havePosition(PositionFactory::short(self::SYMBOL, $newPositionEntryPrice), true);
 
         // Act I
-        ($this->handler)(new MoveStopOrdersWhenPositionMoved($position->side));
+        ($this->handler)(new MoveStops($position->side));
 
         // Assert I (stops moved)
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
         $currentStops = self::getCurrentStopsSnapshot();
 
         // Act II
-        ($this->handler)(new MoveStopOrdersWhenPositionMoved($position->side));
+        ($this->handler)(new MoveStops($position->side));
 
         // Assert II (nothing's gonna changed)
         self::seeStopsInDb(...$currentStops);

@@ -10,7 +10,7 @@ use App\Domain\Position\ValueObject\Side;
 /**
  * @codeCoverageIgnore
  */
-final readonly class PushRelevantBuyOrders
+final readonly class PushBuyOrders
 {
     public function __construct(public Symbol $symbol, public Side $side)
     {

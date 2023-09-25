@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrdersHandler;
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -23,9 +23,9 @@ use function uuid_create;
 
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
- * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrdersHandler
+ * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
  */
-final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
+final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
 {
     use StopsTester;
     use BuyOrdersTester;
@@ -33,7 +33,7 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
     private const SYMBOL = Symbol::BTCUSDT;
     private const DEFAULT_STOP_TD = 17;
 
-    private PushRelevantBuyOrdersHandler $handler;
+    private PushBuyOrdersHandler $handler;
 
     protected function setUp(): void
     {
@@ -42,7 +42,7 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
         self::truncateStops();
         self::truncateBuyOrders();
 
-        $this->handler = new PushRelevantBuyOrdersHandler(
+        $this->handler = new PushBuyOrdersHandler(
             self::getBuyOrderRepository(),
             $this->stopRepository,
             $this->stopService,
@@ -72,7 +72,7 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
-        ($this->handler)(new PushRelevantBuyOrders($position->symbol, $position->side));
+        ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
 
         self::assertSame($expectedAddBuyOrderCallsStack, $this->positionServiceStub->getAddBuyOrderCallsStack());
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
@@ -121,7 +121,7 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->havePosition($position);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
-        ($this->handler)(new PushRelevantBuyOrders($position->symbol, $position->side));
+        ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
 
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
     }

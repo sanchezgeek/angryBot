@@ -8,9 +8,9 @@ use App\Bot\Infrastructure\ByBit\ExchangeService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
-final class UpdateTickerHandler
+final readonly class UpdateTickerHandler
 {
-    public function __construct(private readonly ExchangeService $exchangeService)
+    public function __construct(private ExchangeService $exchangeService)
     {
     }
 

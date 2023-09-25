@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
-use Exception;
-
 final readonly class PeriodicalJob implements JobScheduleInterface
 {
-    public function __construct(private \DatePeriod $period, private object $job)
+    private function __construct(private \DatePeriod $period, private object $job)
     {
     }
 
-    /**
-     * @throws Exception if invalid date or period
-     */
-    public static function infinite($start, $interval, object $job): self
+    public static function create($start, $interval, object $job): self
     {
         $interval = $interval instanceof \DateInterval ? $interval : new \DateInterval($interval);
         $start = $start instanceof \DateTimeImmutable ? $start : new \DateTimeImmutable($start);

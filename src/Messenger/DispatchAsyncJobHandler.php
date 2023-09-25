@@ -8,9 +8,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
-final class DispatchAsyncJobHandler
+final readonly class DispatchAsyncJobHandler
 {
-    public function __construct(private readonly MessageBusInterface $messageBus)
+    public function __construct(private MessageBusInterface $messageBus)
     {
     }
 

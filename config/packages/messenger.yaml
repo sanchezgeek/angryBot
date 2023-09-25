@@ -17,7 +17,7 @@ framework:
 
         routing:
             # buy
-            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantBuyOrders: async_high
+            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders: async_high
 
             # from cron
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
@@ -25,10 +25,7 @@ framework:
 
             # utils
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
-            App\Bot\Application\Messenger\Job\Utils\MoveStopOrdersWhenPositionMoved: async
-
-#            # cache
-#            App\Bot\Application\Messenger\Job\Cache\UpdateTicker: cache
+            App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
 # when@test:
 #    framework:

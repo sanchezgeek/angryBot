@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrders;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopsHandler;
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -26,13 +26,13 @@ use function array_map;
 
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
- * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopsHandler
+ * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
  */
-final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
+final class PushStopsTest extends PushOrderHandlerTestAbstract
 {
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
-    private const BUY_ORDER_TRIGGER_DELTA = PushRelevantStopsHandler::BUY_ORDER_TRIGGER_DELTA;
+    private const BUY_ORDER_TRIGGER_DELTA = PushStopsHandler::BUY_ORDER_TRIGGER_DELTA;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
@@ -41,7 +41,7 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
 
     private const SYMBOL = Symbol::BTCUSDT;
 
-    private PushRelevantStopsHandler $handler;
+    private PushStopsHandler $handler;
 
     protected function setUp(): void
     {
@@ -50,7 +50,7 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
         /** @var CreateBuyOrderHandler $createBuyOrderHandler */
         $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
 
-        $this->handler = new PushRelevantStopsHandler($this->hedgeService, $this->stopRepository, $createBuyOrderHandler, $this->stopService, $this->messageBus, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock, 0);
+        $this->handler = new PushStopsHandler($this->hedgeService, $this->stopRepository, $createBuyOrderHandler, $this->stopService, $this->messageBus, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock, 0);
 
         self::truncateStops();
         self::truncateBuyOrders();
@@ -74,7 +74,7 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
         $this->applyDbFixtures(...$stopsFixtures);
 
-        ($this->handler)(new PushRelevantStopOrders($position->symbol, $position->side));
+        ($this->handler)(new PushStops($position->symbol, $position->side));
 
         self::assertSame($expectedStopAddMethodCalls, $this->positionServiceStub->getAddStopCallsStack());
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
@@ -172,7 +172,7 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedStopExchangeOrderIds);
         $this->applyDbFixtures(...$stops);
 
-        ($this->handler)(new PushRelevantStopOrders($position->symbol, $position->side));
+        ($this->handler)(new PushStops($position->symbol, $position->side));
 
         self::seeBuyOrdersInDb(...self::cloneBuyOrders(...$buyOrdersExpectedAfterHandle));
     }
@@ -274,8 +274,8 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
         $stopVolume = $stop->getVolume();
 
         $baseDistance = $side->isLong()
-            ? PushRelevantStopsHandler::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
-            : PushRelevantStopsHandler::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
+            ? PushStopsHandler::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
+            : PushStopsHandler::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
         ;
         $baseDistance = $side->isLong() ? $baseDistance : -$baseDistance;
 

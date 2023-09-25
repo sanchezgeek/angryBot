@@ -13,7 +13,7 @@ use App\Domain\Price\Price;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
-final class MoveStopOrdersWhenPositionMovedHandler
+final class MoveStopsHandler
 {
     /**
      * @var Price[]
@@ -33,7 +33,7 @@ final class MoveStopOrdersWhenPositionMovedHandler
     /**
      * @see \App\Tests\Functional\Bot\Handler\Utils\MoveStopsWhenPositionMovedTest
      */
-    public function __invoke(MoveStopOrdersWhenPositionMoved $message): void
+    public function __invoke(MoveStops $message): void
     {
         $side = $message->positionSide;
 
