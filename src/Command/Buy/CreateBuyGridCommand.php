@@ -2,8 +2,9 @@
 
 namespace App\Command\Buy;
 
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -43,8 +44,7 @@ class CreateBuyGridCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         try {
-            $triggerDelta = 1;
-            $positionSide = $this->getPositionSide();
+            $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
             $step = $this->paramFetcher->getIntArgument('step');
             $priceRange = $this->getPriceRange();
@@ -56,9 +56,10 @@ class CreateBuyGridCommand extends Command
 
             foreach ($priceRange->byStepIterator($step) as $price) {
                 $rand = round(random_int(-7, 8) * 0.4, 2);
-                $price = $price->sub($rand);
 
-                $this->buyOrderService->create($positionSide, $price->value(), $volume, $triggerDelta, $context);
+                $this->createBuyOrderHandler->handle(
+                    new CreateBuyOrderEntryDto($side, $volume, $price->sub($rand)->value(), $context)
+                );
             }
 
             $io->success(\sprintf('BuyOrders uniqueID: %s', $uniqueId));
@@ -75,7 +76,7 @@ class CreateBuyGridCommand extends Command
     }
 
     public function __construct(
-        private readonly BuyOrderService $buyOrderService,
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

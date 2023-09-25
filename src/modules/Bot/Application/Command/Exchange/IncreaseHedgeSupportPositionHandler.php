@@ -51,7 +51,6 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        ;
         if (!$mainPosition = $this->positionService->getOppositePosition($supportedPosition)) {
             return;
         }

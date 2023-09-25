@@ -47,7 +47,6 @@ final class PushBtcUsdtShortBuyOrdersTest extends PushOrderHandlerTestAbstract
             $this->stopRepository,
             $this->stopService,
             $this->messageBus,
-            $this->eventDispatcher,
             $this->exchangeServiceMock,
             $this->positionServiceStub,
             $this->loggerMock,

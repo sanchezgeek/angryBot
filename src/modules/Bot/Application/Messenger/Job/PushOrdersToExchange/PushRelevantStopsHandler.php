@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
@@ -11,7 +13,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
-use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -22,7 +23,6 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use Doctrine\ORM\QueryBuilder;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -42,10 +42,9 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
     public function __construct(
         private readonly HedgeService $hedgeService,
         private readonly StopRepository $stopRepository,
-        private readonly BuyOrderService $buyOrderService,
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
-        private readonly EventDispatcherInterface $events,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -64,7 +63,6 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         $ticker = $this->exchangeService->ticker($message->symbol);
-//        \print_r(\sprintf('%s | %s | %s', (new \DateTimeImmutable())->format('m/d H:i:s.v'), $message->side->value, 'ind: ' . $ticker->indexPrice . '; upd: ' . $ticker->updatedBy . '; context: ' . AppContext::workerHash()) . PHP_EOL);
 
         $stops = $this->stopRepository->findActive(
             $position->side,
@@ -84,6 +82,12 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
                 || (abs($price - $ticker->indexPrice) <= ($this->slForcedTriggerDelta ?: $td))
             ) {
                 if ($indexAlreadyOverStop) {
+                    // @todo Надо всё таки ещё ращ проработать эту ситуацию (
+                    //  1) отловить ту ошибку
+                    //  2) понять обработано ли оно в действительности
+                    //  3) если что-то не так - добиться желаемого поведения
+                    //  4) на ошибку завести отдельный exception и работать именно с exception (потому что возможно в дальнейшем просто относительно результата ->addStop это всё не будет работать)
+                    //)
                     $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 15 : $ticker->indexPrice - 15;
                     $stop->setPrice($newPrice)->setTriggerDelta($td + 7);
                 }
@@ -98,32 +102,17 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         try {
             if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
                 $stop->setExchangeOrderId($exchangeOrderId);
-
-                if (
-                    $stop->getVolume() <= 0.005
-                    && !$stop->isSupportFromMainHedgePositionStopOrder()
-                ) {
-                    $this->stopRepository->remove($stop);
-                }
-
 //                $this->events->dispatch(new StopPushedToExchange($stop));
                 if ($stop->isWithOppositeOrder()) {
                     $this->createOpposite($position, $stop, $ticker);
                 }
-
-//                $this->info(\sprintf('%sSL%s %.3f | $%.2f (oppositeBuyOrders: %s)', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $stop->getVolume(), $stop->getPrice(), $oppositeBuyOrderData = Json::encode($oppositeBuyOrderData)), ['exchange.orderId' => $exchangeOrderId, 'oppositeBuyOrders' => $oppositeBuyOrderData]);
-//                $this->info(\sprintf('%sSL%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
             }
         } catch (ApiRateLimitReached $e) {
             $this->logExchangeClientException($e);
-
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
             $this->logExchangeClientException($e);
-
-            $this->messageBus->dispatch(
-                TryReleaseActiveOrders::forStop($ticker->symbol, $stop)
-            );
+            $this->messageBus->dispatch(TryReleaseActiveOrders::forStop($ticker->symbol, $stop));
         } finally {
             $this->stopRepository->save($stop);
         }
@@ -146,7 +135,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
 
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
+//        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
+        $isHedge = false;
         if ($isHedge) {
             $hedge = Hedge::create($position, $oppositePosition);
             // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)
@@ -205,12 +195,8 @@ final class PushRelevantStopsHandler extends AbstractOrdersPusher
         }
 
         foreach ($orders as $order) {
-            $this->buyOrderService->create(
-                $side,
-                $order['price'],
-                $order['volume'],
-                self::BUY_ORDER_TRIGGER_DELTA,
-                $context,
+            $this->createBuyOrderHandler->handle(
+                new CreateBuyOrderEntryDto($side, $order['volume'], $order['price'], $context)
             );
         }
 

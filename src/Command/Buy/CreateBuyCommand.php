@@ -2,9 +2,8 @@
 
 namespace App\Command\Buy;
 
-use App\Bot\Application\Service\Orders\BuyOrderService;
-use App\Bot\Infrastructure\ByBit\PositionService;
-use App\Domain\Position\ValueObject\Side;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,14 +14,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'buy:single')]
 class CreateBuyCommand extends Command
 {
-    public function __construct(
-        private readonly BuyOrderService $buyOrderService,
-        private readonly PositionService $positionService,
-        string $name = null,
-    ) {
-        parent::__construct($name);
-    }
-
     protected function configure(): void
     {
         $this
@@ -38,8 +29,7 @@ class CreateBuyCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $positionSide = $input->getArgument('position_side');
-            $triggerDelta = $input->getArgument('trigger_delta') ?? null;
+            $side = $input->getArgument('position_side');
             $volume = $input->getArgument('volume');
             $price = $input->getArgument('price');
 
@@ -59,16 +49,9 @@ class CreateBuyCommand extends Command
                 );
             }
 
-            $this->buyOrderService->create(
-                Side::tryFrom($positionSide),
-                $price,
-                $volume,
-                $triggerDelta
+            $this->createBuyOrderHandler->handle(
+                new CreateBuyOrderEntryDto($side, $volume, $price)
             );
-
-//            $io->success(
-//                \sprintf('Result transfer cost: %d', $cost),
-//            );
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
@@ -76,5 +59,12 @@ class CreateBuyCommand extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    public function __construct(
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        string $name = null,
+    ) {
+        parent::__construct($name);
     }
 }

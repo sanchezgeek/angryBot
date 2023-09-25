@@ -90,6 +90,16 @@ class EditStopsCommand extends Command
         $stopsCollection = new StopsCollection(...$stops);
         $stopsInSpecifiedRange = ($stopsCollection)->grabFromRange($priceRange);
         $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
+        if (!$filteredStops->totalCount()) {
+            $io->info('Stops by specified criteria not found!');
+            return Command::SUCCESS;
+        }
+
+        if ($stopsInSpecifiedRange->totalCount() !== $filteredStops->totalCount()) {
+            $io->info(sprintf('Stops in specified range qnt: %d', $stopsInSpecifiedRange->totalCount()));
+        }
+
+        $io->info(sprintf('Filtered stops qnt: %d', $filteredStops->totalCount()));
 
         if (!$io->confirm(
             sprintf(

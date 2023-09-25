@@ -65,6 +65,7 @@ final class StopsCollectionTest extends TestCase
             ),
             $collection->grabFromRange($range)
         );
+        self::assertEquals(0.032, $collection->totalVolume());
     }
 
     public function testFailAddAgain(): void

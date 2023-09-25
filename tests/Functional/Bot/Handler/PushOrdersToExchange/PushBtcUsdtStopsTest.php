@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushRelevantStopsHandler;
 use App\Bot\Application\Service\Orders\BuyOrderService;
@@ -46,10 +47,10 @@ final class PushBtcUsdtStopsTest extends PushOrderHandlerTestAbstract
     {
         parent::setUp();
 
-        /** @var BuyOrderService $buyOrderService */
-        $buyOrderService = self::getContainer()->get(BuyOrderService::class);
+        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
+        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
 
-        $this->handler = new PushRelevantStopsHandler($this->hedgeService, $this->stopRepository, $buyOrderService, $this->stopService, $this->messageBus, $this->eventDispatcher, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock, 0);
+        $this->handler = new PushRelevantStopsHandler($this->hedgeService, $this->stopRepository, $createBuyOrderHandler, $this->stopService, $this->messageBus, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock, 0);
 
         self::truncateStops();
         self::truncateBuyOrders();

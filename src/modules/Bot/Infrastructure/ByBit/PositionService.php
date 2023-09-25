@@ -28,7 +28,7 @@ final class PositionService implements PositionServiceInterface
 //    private const URL = 'https://api-testnet.bybit.com';
     private const URL = 'https://api.bybit.com';
 
-    private const POSITION_TTL = '10 seconds';
+    private const POSITION_TTL = '6 seconds';
 
     private BybitLinear $api;
 
@@ -101,10 +101,6 @@ final class PositionService implements PositionServiceInterface
 
             if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
                 throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
-            }
-
-            if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
-                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
             }
 
             if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {

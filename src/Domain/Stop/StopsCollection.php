@@ -124,7 +124,6 @@ final class StopsCollection implements IteratorAggregate
         foreach ($this->items as $key => $item) {
             if ($range->isPriceInRange($item->getPrice())) {
                 $stops->add($item);
-                unset($this->items[$key]);
             }
         }
 

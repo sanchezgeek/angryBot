@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
-use App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
@@ -22,7 +21,6 @@ use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -44,7 +42,6 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
-        private readonly EventDispatcherInterface $events,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
@@ -57,16 +54,16 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
     public function __invoke(PushRelevantBuyOrders $message): void
     {
         $position = $this->positionService->getPosition($message->symbol, $message->side);
-        // need make fake
-        if (!$position) {
-            return;
+        if (!$position && $message->side->isLong()) {
+            // Fake position
+            $ticker = $this->exchangeService->ticker($message->symbol);
+            $position = new Position($message->side, $message->symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
         }
 
         $side = $position->side;
         $ticker = $this->exchangeService->ticker($message->symbol);
 
         if (!$this->canAffordBuy($ticker)) {
-//            $this->info(\sprintf('Skip relevant buy orders check at $%.2f price (can not afford)', $ticker->indexPrice));
             return;
         }
         $this->cannotAffordAtPrice = null;
@@ -92,19 +89,17 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
 //            $this->logExchangeClientException($e);
 
-            $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-            if ($isHedge) {
-                $hedge = Hedge::create($position, $oppositePosition);
-
-                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
-                    $this->messageBus->dispatch(
-                        new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)
-                    );
-                }
-                // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
-                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushRelevantStopsHandler) окажется неработоспособной
-                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
-            }
+//            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
+//                $hedge = Hedge::create($position, $oppositePosition);
+//                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
+//                    $this->messageBus->dispatch(
+//                        new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty)
+//                    );
+//                }
+//                // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
+//                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushRelevantStopsHandler) окажется неработоспособной
+//                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
+//            }
         }
     }
 
@@ -121,19 +116,12 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
                 if ($order->getVolume() <= 0.005) {
                     $this->buyOrderRepository->remove($order);
-                } else {
-                    $this->buyOrderRepository->save($order);
                 }
-
 //                $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
                 if ($order->isWithOppositeOrder()) {
                     $this->createStop($position, $ticker, $order);
                 }
-
-//                $this->info(\sprintf('%sBuy%s %.3f | $%.2f (stop: $%.2f with "%s" strategy (%s))', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign, $order->getVolume(), $order->getPrice(), $stopData['triggerPrice'], $stopData['strategy']->value, $stopData['description']), ['exchange.orderId' => $exchangeOrderId, '`stop`' => $stopData]);
-
-//                $this->info(\sprintf('%sBuy%s', $sign = ($position->side === Side::Sell ? '---' : '+++'), $sign));
             }
         } catch (ApiRateLimitReached $e) {
             $this->logExchangeClientException($e);
@@ -145,6 +133,8 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
             $this->messageBus->dispatch(
                 TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $order)
             );
+        } finally {
+            $this->buyOrderRepository->save($order);
         }
     }
 
@@ -304,7 +294,7 @@ final class PushRelevantBuyOrdersHandler extends AbstractOrdersPusher
 
         if (
             $this->cannotAffordAt !== null
-            && ($this->clock->now()->getTimestamp() - $this->cannotAffordAt->getTimestamp()) > $refreshSeconds
+            && ($this->clock->now()->getTimestamp() - $this->cannotAffordAt->getTimestamp()) >= $refreshSeconds
         ) {
             return true;
         }
