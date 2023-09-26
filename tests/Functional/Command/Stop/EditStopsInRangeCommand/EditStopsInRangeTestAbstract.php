@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Command\Stop\EditStopsInRangeCommand;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;

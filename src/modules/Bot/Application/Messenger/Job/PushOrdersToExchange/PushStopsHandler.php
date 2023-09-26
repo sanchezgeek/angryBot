@@ -22,12 +22,13 @@ use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
-use Doctrine\ORM\QueryBuilder;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-/** @see PushBtcUsdtStopsTest */
+/** @see PushStopsTest */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
@@ -37,39 +38,18 @@ final class PushStopsHandler extends AbstractOrdersPusher
     public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 108;
     public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 121;
 
-    public function __construct(
-        private readonly HedgeService $hedgeService,
-        private readonly StopRepository $stopRepository,
-        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-        private readonly StopService $stopService,
-        private readonly MessageBusInterface $messageBus,
-        ExchangeServiceInterface $exchangeService,
-        PositionServiceInterface $positionService,
-        LoggerInterface $logger,
-        ClockInterface $clock,
-
-        private readonly float $slForcedTriggerDelta
-    ) {
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
-    }
-
     public function __invoke(PushStops $message): void
     {
-        $position = $this->positionService->getPosition($message->symbol, $message->side);
-        if (!$position) {
+        if (!($position = $this->positionService->getPosition($message->symbol, $message->side))) {
             return;
         }
 
-        $ticker = $this->exchangeService->ticker($message->symbol);
-
-        $stops = $this->stopRepository->findActive(
-            $position->side,
-            $ticker,
-            false,
-            // @todo Consider what to do if ticker already over position entry price. Maybe 'asc' -> 'desc' (in case of SHORT)
-            static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.price', $position->side->isShort() ? 'asc' : 'desc')
+        $stops = $this->repository->findActive(
+            side: $position->side,
+            nearTicker: $this->exchangeService->ticker($message->symbol),
+            qbModifier: static fn (QB $qb) => QueryHelper::addOrder($qb, 'price', $position->isShort() ? 'ASC' : 'DESC')
         );
-        $ticker = $this->exchangeService->ticker($message->symbol);
+        $ticker = $this->exchangeService->ticker($message->symbol); // For case if ticker changed while DB query
 
         foreach ($stops as $stop) {
             $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
@@ -112,7 +92,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             $this->logExchangeClientException($e);
             $this->messageBus->dispatch(TryReleaseActiveOrders::forStop($ticker->symbol, $stop));
         } finally {
-            $this->stopRepository->save($stop);
+            $this->repository->save($stop);
         }
     }
 
@@ -204,5 +184,21 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private function getBuyOrderOppositePriceDistance(Side $side): float
     {
         return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
+    }
+
+    public function __construct(
+        private readonly HedgeService $hedgeService,
+        private readonly StopRepository $repository,
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        private readonly StopService $stopService,
+        private readonly MessageBusInterface $messageBus,
+        ExchangeServiceInterface $exchangeService,
+        PositionServiceInterface $positionService,
+        LoggerInterface $logger,
+        ClockInterface $clock,
+
+        private readonly float $slForcedTriggerDelta
+    ) {
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 }

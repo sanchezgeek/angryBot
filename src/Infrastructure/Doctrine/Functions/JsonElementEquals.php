@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Doctrine\Functions;
+namespace App\Infrastructure\Doctrine\Functions;
 
 use Doctrine\ORM\Query\AST\Functions;
 use Doctrine\ORM\Query\Lexer;

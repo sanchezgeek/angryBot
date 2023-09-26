@@ -11,8 +11,8 @@ doctrine:
         auto_mapping: true
         dql:
             string_functions:
-                HAS_ELEMENT: \App\Doctrine\Functions\HasElement
-                JSON_ELEMENT_EQUALS: \App\Doctrine\Functions\JsonElementEquals
+                HAS_ELEMENT: \App\Infrastructure\Doctrine\Functions\HasElement
+                JSON_ELEMENT_EQUALS: \App\Infrastructure\Doctrine\Functions\JsonElementEquals
         mappings:
             Bot:
                 is_bundle: false

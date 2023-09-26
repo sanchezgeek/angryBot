@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -16,6 +17,22 @@ use function sprintf;
  */
 final class PositionTest extends TestCase
 {
+    public function testIsShort(): void
+    {
+        $position = new Position(Side::Sell, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+
+        self::assertTrue($position->isShort());
+        self::assertFalse($position->isLong());
+    }
+
+    public function testIsLong(): void
+    {
+        $position = new Position(Side::Buy, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+
+        self::assertTrue($position->isLong());
+        self::assertFalse($position->isShort());
+    }
+
     /**
      * @dataProvider successCasesProvider
      */

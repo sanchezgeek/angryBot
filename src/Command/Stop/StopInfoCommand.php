@@ -79,25 +79,27 @@ class StopInfoCommand extends Command
             $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
-        $rangesCollection = new PositionStopRangesCollection($position, new StopsCollection(...$stops), $pnlStep);
+        $stops = new StopsCollection(...$stops);
+        $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
-        foreach ($rangesCollection as $rangeDesc => $stops) {
-            if (!$stops->totalCount()) {
+        foreach ($rangesCollection as $rangeDesc => $rangeStops) {
+            if (!$rangeStops->totalCount()) {
                 continue;
             }
 
             $this->io->note(
                 \sprintf(
-                    '[%s] | %.1f%% (%s)',
+                    '[%s] | %d | %.1f%% (%s)',
                     $rangeDesc,
-                    $stops->volumePart($position->size),
-                    new Pnl($usdPnL = $stops->totalUsdPnL($position), 'USDT')
+                    $rangeStops->totalCount(),
+                    $rangeStops->volumePart($position->size),
+                    new Pnl($usdPnL = $rangeStops->totalUsdPnL($position), 'USDT')
                 )
             );
-            $this->printAggregateInfo($stops);
+            $this->printAggregateInfo($rangeStops);
 
             $totalUsdPnL += $usdPnL;
-            $totalVolume += $stops->totalVolume();
+            $totalVolume += $rangeStops->totalVolume();
         }
 
         $this->io->note([

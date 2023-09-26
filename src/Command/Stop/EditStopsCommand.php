@@ -12,6 +12,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Stop\StopsCollection;
 use App\Helper\VolumeHelper;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
@@ -78,17 +79,20 @@ class EditStopsCommand extends Command
 
         $priceRange = $this->getPriceRange();
         $action = $this->getAction();
+        $position = $this->getPosition();
 
         $stops = $this->stopRepository->findActive(
-            side: $this->getPosition()->side,
-            qbModifier: function (QueryBuilder $qb) {
-                $qb->orderBy($qb->getRootAliases()[0] . '.volume', 'ASC'); //$qb->orderBy($qb->getRootAliases()[0] . '.price', $this->getPosition()->side->isShort() ? 'ASC' : 'DESC');
-                $alias = $qb->getRootAliases()[0];
-                $qb->orderBy($alias . '.volume', 'ASC')->addOrderBy($alias . '.price', $this->getPosition()->side->isShort() ? 'ASC' : 'DESC');
+            side: $position->side,
+            qbModifier: static function (QueryBuilder $qb) use ($position) {
+                QueryHelper::addOrder($qb, 'volume', 'ASC');
+                QueryHelper::addOrder($qb, 'price', $position->isShort() ? 'ASC' : 'DESC');
+                QueryHelper::addOrder($qb, 'triggerDelta', 'ASC');
             }
         );
+
         $stopsCollection = new StopsCollection(...$stops);
         $stopsInSpecifiedRange = ($stopsCollection)->grabFromRange($priceRange);
+
         $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
         if (!$filteredStops->totalCount()) {
             $io->info('Stops by specified criteria not found!');
@@ -108,14 +112,14 @@ class EditStopsCommand extends Command
                 $filteredStops->totalCount(),
                 $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
                 $filteredStops->volumePart($stopsCollection->totalVolume()),
-                $filteredStops->volumePart($this->getPosition()->size)
+                $filteredStops->volumePart($position->size)
             )
         )) {
             return Command::FAILURE;
         }
 
         if ($action === self::ACTION_MOVE) {
-            $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::MOVE_TO_PRICE_OPTION);
+            $price = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::MOVE_TO_PRICE_OPTION);
             $movePart = $this->paramFetcher->getPercentOption(self::MOVE_PART_OPTION);
             if ($movePart <= 0 || $movePart > 100) {
                 throw new InvalidArgumentException(
@@ -129,19 +133,22 @@ class EditStopsCommand extends Command
             }
             $needMoveVolume = VolumeHelper::round($filteredStops->totalVolume() * $movePart / 100);
 
+            $tD = self::DEFAULT_TRIGGER_DELTA;
             $movedVolume = 0;
-            $stopsToRemove = new StopsCollection();
+            $removed = new StopsCollection();
             while ($needMoveVolume > 0) {
                 foreach ($filteredStops as $stop) {
                     if ($stop->getVolume() <= $needMoveVolume) {
-                        $stopsToRemove->add($stop);
+                        $removed->add($stop);
                         $filteredStops->remove($stop);
                         $needMoveVolume -= $stop->getVolume();
+                        $tD = $stop->getTriggerDelta() > $tD ? $stop->getTriggerDelta() : $tD;
                     } else {
                         try {
                             $stop->subVolume($needMoveVolume);
                             $movedVolume += $needMoveVolume;
                             $needMoveVolume = 0;
+                            $tD = $stop->getTriggerDelta() > $tD ? $stop->getTriggerDelta() : $tD;
                             continue 2;
                         } catch (DomainException) {
                             continue;
@@ -150,21 +157,26 @@ class EditStopsCommand extends Command
                 }
             }
 
-            $this->entityManager->wrapInTransaction(function() use ($stopsToRemove, $movedVolume, $toPrice) {
-                foreach ($stopsToRemove as $stopToRemove) {
+            $total = $removed->totalVolume() + $movedVolume;
+            $this->entityManager->wrapInTransaction(function() use ($filteredStops, $removed, $position, $price, $total, $tD) {
+                foreach ($filteredStops as $stop) {
+                    $this->entityManager->persist($stop);
+                }
+
+                foreach ($removed as $stopToRemove) {
                     $this->entityManager->remove($stopToRemove);
                 }
 
                 // @todo some uniqueid to context
                 $this->stopService->create(
-                    $this->getPosition()->side,
-                    $toPrice->value(),
-                    $stopsToRemove->totalVolume() + $movedVolume,
-                    self::DEFAULT_TRIGGER_DELTA,
+                    $position->side,
+                    $price->value(),
+                    $total,
+                    $tD,
                 );
             });
 
-            $io->note(\sprintf('removed stops qnt: %d', $stopsToRemove->totalCount()));
+            $io->note(\sprintf('removed stops qnt: %d', $removed->totalCount()));
         }
 
         if ($action === self::ACTION_REMOVE) {

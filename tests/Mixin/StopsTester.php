@@ -30,7 +30,9 @@ trait StopsTester
 
     protected static function seeStopsInDb(Stop ...$expectedStops): void
     {
+        self::getEntityManager()->clear();
         $actualStops = self::getStopRepository()->findAll();
+        self::getEntityManager()->clear();
 
         usort($expectedStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
         usort($actualStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());

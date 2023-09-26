@@ -30,7 +30,9 @@ trait BuyOrdersTester
 
     protected static function seeBuyOrdersInDb(BuyOrder ...$expectedBuyOrders): void
     {
+        self::getEntityManager()->clear();
         $actualBuyOrders = self::getBuyOrderRepository()->findAll();
+        self::getEntityManager()->clear();
 
         usort($expectedBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
         usort($actualBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
