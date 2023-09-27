@@ -186,7 +186,7 @@ class EditStopsCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('removed stops qnt: %d', $stopsInSpecifiedRange->totalCount()));
+            $io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
         }
 
         if ($action === self::ACTION_EDIT) {
@@ -198,7 +198,7 @@ class EditStopsCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('modified stops qnt: %d', $stopsInSpecifiedRange->totalCount()));
+            $io->note(\sprintf('modified stops qnt: %d', $filteredStops->totalCount()));
         }
 
         return Command::SUCCESS;

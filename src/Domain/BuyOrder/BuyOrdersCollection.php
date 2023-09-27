@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\BuyOrder;
 
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Domain\Price\PriceRange;
 use App\Helper\VolumeHelper;
 use IteratorAggregate;
 use LogicException;
@@ -13,6 +14,8 @@ use function array_filter;
 use function sprintf;
 
 /**
+ * @see \App\Tests\Unit\Domain\BuyOrder\BuyOrdersCollectionTest
+ *
  * @template-implements IteratorAggregate<BuyOrder>
  */
 final class BuyOrdersCollection implements IteratorAggregate
@@ -79,5 +82,18 @@ final class BuyOrdersCollection implements IteratorAggregate
         }
 
         return $volume > 0 ? VolumeHelper::round($volume) : 0;
+    }
+
+    public function grabFromRange(PriceRange $range): self
+    {
+        $buyOrders = new self();
+
+        foreach ($this->items as $item) {
+            if ($range->isPriceInRange($item->getPrice())) {
+                $buyOrders->add($item);
+            }
+        }
+
+        return $buyOrders;
     }
 }

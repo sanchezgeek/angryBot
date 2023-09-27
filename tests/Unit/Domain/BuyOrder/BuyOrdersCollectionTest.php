@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\BuyOrder;
 
 use App\Domain\BuyOrder\BuyOrdersCollection;
+use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use PHPUnit\Framework\TestCase;
 
@@ -50,6 +51,27 @@ final class BuyOrdersCollectionTest extends TestCase
 
         $collection->add(BuyOrderBuilder::short(100500, 29000, 0.001)->build());
         $collection->add(BuyOrderBuilder::short(100500, 29000, 0.001)->build());
+    }
+
+    public function testGrabFromRange(): void
+    {
+        $collection = new BuyOrdersCollection();
+
+        $collection->add(BuyOrderBuilder::short(1, 29000, 0.001)->build());
+        $collection->add(BuyOrderBuilder::short(3, 29010, 0.001)->build());
+        $collection->add(BuyOrderBuilder::short(2, 29020, 0.02)->build());
+        $collection->add(BuyOrderBuilder::short(4, 29050, 0.01)->build());
+
+        $range = PriceRange::create(29010, 29021);
+
+        self::assertEquals(
+            new BuyOrdersCollection(
+                BuyOrderBuilder::short(3, 29010, 0.001)->build(),
+                BuyOrderBuilder::short(2, 29020, 0.02)->build(),
+            ),
+            $collection->grabFromRange($range)
+        );
+        self::assertEquals(0.032, $collection->totalVolume());
     }
 
     public function testDummy(): void
