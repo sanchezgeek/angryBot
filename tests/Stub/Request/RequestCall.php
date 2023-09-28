@@ -9,7 +9,7 @@ final readonly class RequestCall
     public function __construct(
         public string $method,
         public string $url,
-        public array $params,
+        public ?array $params = null,
         public ?array $body = null,
         public ?array $headers = null,
     ) {

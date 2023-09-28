@@ -9,6 +9,7 @@ use App\Helper\Json;
 use App\Infrastructure\ByBit\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -31,6 +32,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 
     private const PRIVATE_REQUESTS = [
         GetPositionsRequest::class => true,
+        PlaceOrderRequest::class => true,
     ];
 
     public function __construct(
@@ -61,7 +63,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
     {
         if (($isPost = ($method = $request->method()) === Request::METHOD_POST)) {
             $options = [
-                'body' => $request->data(),
+                'body' => Json::encode($request->data()),
                 'headers' => [
                     'Accept: application/json',
                     'Content-Type: application/json'
@@ -92,7 +94,6 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
                 'X-BAPI-TIMESTAMP' => $timestamp,
                 'X-BAPI-RECV-WINDOW' => self::BAPI_RECOMMENDED_RECV_WINDOW,
             ]);
-
         }
 
         return $options;

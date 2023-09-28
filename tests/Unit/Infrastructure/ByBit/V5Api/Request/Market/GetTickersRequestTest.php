@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class GetTickersRequestTest extends TestCase
 {
-    public function testGetTickersRequest(): void
+    public function testCreateGetTickersRequest(): void
     {
         $request = new GetTickersRequest(
             $category = 'linear',

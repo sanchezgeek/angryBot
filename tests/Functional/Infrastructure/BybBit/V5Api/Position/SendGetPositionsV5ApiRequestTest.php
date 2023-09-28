@@ -6,22 +6,22 @@ namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Position;
 
 use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
-use App\Tests\Mock\Response\ByBit\ByBitResponses;
+use App\Tests\Mock\Response\ByBit\PositionResponses;
 
 /**
  * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
  */
-final class GetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
+final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {
     public function testSendGetPositionsRequest(): void
     {
         // Arrange
         $request = new GetPositionsRequest('linear', 'BTCUSDT');
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), ByBitResponses::positions());
+        $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
-        $expectedResponseBody = ByBitResponses::SAMPLE_POSITIONS_RESPONSE;
-        $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
+        $expectedResponseBody = PositionResponses::SAMPLE_POSITIONS_RESPONSE;
+        $expectedPrivateHeaders = $this->expectedHeaders($request);
 
         // Act
         $actualResponse = $this->client->send($request);
@@ -32,7 +32,8 @@ final class GetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];
         self::assertSame($request->method(), $requestCall->method);
+        self::assertSame($request->data(), $requestCall->params);
         self::assertSame($requestUrl, $requestCall->url);
-        self::assertSame($expectedPrivateHeaders, $requestCall->headers);
+        self::assertEqualsCanonicalizing($expectedPrivateHeaders, $requestCall->headers);
     }
 }

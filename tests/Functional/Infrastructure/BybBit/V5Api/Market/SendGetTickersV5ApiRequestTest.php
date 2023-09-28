@@ -6,22 +6,22 @@ namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Market;
 
 use App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
-use App\Tests\Mock\Response\ByBit\ByBitResponses;
+use App\Tests\Mock\Response\ByBit\MarketResponses;
 
 /**
  * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
  */
-final class GetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
+final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {
     public function testSendGetTickersRequest(): void
     {
         // Arrange
         $request = new GetTickersRequest('linear', 'BTCUSDT');
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), ByBitResponses::tickers());
+        $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 
-        $expectedResponseBody = ByBitResponses::SAMPLE_TICKERS_RESPONSE;
-        $expectedPrivateHeaders = $this->expectedPublicHeaders();
+        $expectedResponseBody = MarketResponses::SAMPLE_TICKERS_RESPONSE;
+        $expectedPrivateHeaders = $this->expectedHeaders($request);
 
         // Act
         $actualResponse = $this->client->send($request);
@@ -32,7 +32,8 @@ final class GetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];
         self::assertSame($request->method(), $requestCall->method);
+        self::assertSame($request->data(), $requestCall->params);
         self::assertSame($requestUrl, $requestCall->url);
-        self::assertSame($expectedPrivateHeaders, $requestCall->headers);
+        self::assertEqualsCanonicalizing($expectedPrivateHeaders, $requestCall->headers);
     }
 }

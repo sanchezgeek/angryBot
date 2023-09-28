@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class GetPositionsRequestTest extends TestCase
 {
-    public function testGetPositionsRequest(): void
+    public function testCreateGetPositionsRequest(): void
     {
         $request = new GetPositionsRequest(
             $category = 'linear',

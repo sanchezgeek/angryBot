@@ -73,6 +73,11 @@ class SymfonyHttpClientStub extends MockHttpClient
         return $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response);
     }
 
+    public function matchPost(string $url, ResponseInterface $response): self
+    {
+        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response);
+    }
+
     public function matchMethodAndUrl(string $methodRegExp, string $urlRegexp, ResponseInterface $response): self
     {
         $methodRegExp = $this->ensureRegexp($methodRegExp);
@@ -101,8 +106,9 @@ class SymfonyHttpClientStub extends MockHttpClient
     {
         $urlParts = parse_url($url);
 
-        $params = [];
+        $params = null;
         if ($query = $urlParts['query'] ?? null) {
+            $params = [];
             parse_str($query, $params);
         }
 
