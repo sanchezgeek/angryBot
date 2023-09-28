@@ -10,17 +10,8 @@ final readonly class RequestCall
         public string $method,
         public string $url,
         public array $params,
-        public ?array $body,
+        public ?array $body = null,
+        public ?array $headers = null,
     ) {
-    }
-
-    public static function get(string $url, array $params): self
-    {
-        return new self('GET', $url, $params, null);
-    }
-
-    public static function post(string $url, array $params, array $body): self
-    {
-        return new self('POST', $url, $params, $body);
     }
 }
