@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\V5Api\Request;
+namespace App\Infrastructure\ByBit\V5Api\Request\Market;
 
 use App\Infrastructure\ByBit\AbstractByBitApiRequest;
 use Symfony\Component\HttpFoundation\Request;
 
-final readonly class GetTickerRequest extends AbstractByBitApiRequest
+/**
+ * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequestTest
+ */
+final readonly class GetTickersRequest extends AbstractByBitApiRequest
 {
     public function method(): string
     {

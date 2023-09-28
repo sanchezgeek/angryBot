@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\V5Api\Request;
+namespace App\Infrastructure\ByBit\V5Api\Request\Position;
 
 use App\Infrastructure\ByBit\AbstractByBitApiRequest;
 use Symfony\Component\HttpFoundation\Request;
 
-final readonly class GetPositionRequest extends AbstractByBitApiRequest
+/**
+ * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequestTest
+ */
+final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 {
     public function method(): string
     {

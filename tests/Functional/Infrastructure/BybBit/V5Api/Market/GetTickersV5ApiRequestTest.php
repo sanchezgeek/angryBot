@@ -2,18 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Public;
+namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Market;
 
-use App\Infrastructure\ByBit\V5Api\Request\GetTickerRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mock\Response\ByBit\ByBitResponses;
 
+/**
+ * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
+ */
 final class GetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {
-    public function testSendTickersRequest(): void
+    public function testSendGetTickersRequest(): void
     {
         // Arrange
-        $request = new GetTickerRequest('linear', 'BTCUSDT');
+        $request = new GetTickersRequest('linear', 'BTCUSDT');
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), ByBitResponses::tickers());
 

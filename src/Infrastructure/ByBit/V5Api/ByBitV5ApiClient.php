@@ -8,7 +8,7 @@ use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Infrastructure\ByBit\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\ByBitApiClientInterface;
-use App\Infrastructure\ByBit\V5Api\Request\GetPositionRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -20,13 +20,17 @@ use function hash_hmac;
 use function http_build_query;
 use function sprintf;
 
+/**
+ * @see \App\Tests\Functional\Infrastructure\BybBit\V5Api\Market\GetTickersV5ApiRequestTest
+ * @see \App\Tests\Functional\Infrastructure\BybBit\V5Api\Position\GetPositionsV5ApiRequestTest
+ */
 final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 {
     private const BAPI_RECOMMENDED_RECV_WINDOW = '5000';
     private const BAPI_SIGN_TYPE = '2';
 
     private const PRIVATE_REQUESTS = [
-        GetPositionRequest::class => true,
+        GetPositionsRequest::class => true,
     ];
 
     public function __construct(

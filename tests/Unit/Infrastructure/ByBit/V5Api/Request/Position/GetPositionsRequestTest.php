@@ -2,17 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request;
+namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Position;
 
-use App\Infrastructure\ByBit\V5Api\Request\GetPositionRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
-final class GetPositionRequestTest extends TestCase
+/**
+ * @covers \App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest
+ */
+final class GetPositionsRequestTest extends TestCase
 {
-    public function testRequest(): void
+    public function testGetPositionsRequest(): void
     {
-        $request = new GetPositionRequest(
+        $request = new GetPositionsRequest(
             $category = 'linear',
             $symbol = 'BTCUSDT'
         );

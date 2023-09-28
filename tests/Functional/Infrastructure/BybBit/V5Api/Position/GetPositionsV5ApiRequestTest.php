@@ -2,18 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Private;
+namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Position;
 
-use App\Infrastructure\ByBit\V5Api\Request\GetPositionRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mock\Response\ByBit\ByBitResponses;
 
+/**
+ * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
+ */
 final class GetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {
-    public function testSendPositionsRequest(): void
+    public function testSendGetPositionsRequest(): void
     {
         // Arrange
-        $request = new GetPositionRequest('linear', 'BTCUSDT');
+        $request = new GetPositionsRequest('linear', 'BTCUSDT');
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), ByBitResponses::positions());
 

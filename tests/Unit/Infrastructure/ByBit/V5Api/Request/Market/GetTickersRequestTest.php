@@ -2,17 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request;
+namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market;
 
-use App\Infrastructure\ByBit\V5Api\Request\GetTickerRequest;
+use App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
-final class GetTickerV5ApiRequestTest extends TestCase
+/**
+ * @covers \App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest
+ */
+final class GetTickersRequestTest extends TestCase
 {
-    public function testRequest(): void
+    public function testGetTickersRequest(): void
     {
-        $request = new GetTickerRequest(
+        $request = new GetTickersRequest(
             $category = 'linear',
             $symbol = 'BTCUSDT'
         );
