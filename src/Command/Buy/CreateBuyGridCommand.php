@@ -9,6 +9,7 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -49,7 +50,7 @@ class CreateBuyGridCommand extends Command
             $step = $this->paramFetcher->getIntArgument('step');
             $priceRange = $this->getPriceRange();
 
-            $context = ['uniqid' => $uniqueId = \uniqid('inc-create', true)];
+            $context = ['uniqid' => $uniqueId = uniqid('inc-create', true)];
             if ($additionalContext = $this->getAdditionalBuyOrderContext()) {
                 $context = array_merge($context, $additionalContext);
             }
@@ -62,13 +63,13 @@ class CreateBuyGridCommand extends Command
                 );
             }
 
-            $io->success(\sprintf('BuyOrders uniqueID: %s', $uniqueId));
+            $io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
             $io->info(
-                \sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit buy -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $uniqueId)
+                sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit %s -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $side->value, $uniqueId)
             );
 
             return Command::SUCCESS;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $io->error($e->getMessage());
 
             return Command::FAILURE;
