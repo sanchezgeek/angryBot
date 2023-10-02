@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit;
+namespace App\Infrastructure\ByBit\API;
 
 interface ByBitApiClientInterface
 {

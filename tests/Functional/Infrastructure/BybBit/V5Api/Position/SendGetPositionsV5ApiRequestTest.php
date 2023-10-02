@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Position;
 
-use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mock\Response\ByBit\PositionResponses;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
+ * @covers \App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
  */
 final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {

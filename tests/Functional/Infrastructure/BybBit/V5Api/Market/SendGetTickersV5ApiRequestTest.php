@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Market;
 
-use App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mock\Response\ByBit\MarketResponses;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
+ * @covers \App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
  */
 final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {

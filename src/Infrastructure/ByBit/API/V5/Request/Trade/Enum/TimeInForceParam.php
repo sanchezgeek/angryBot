@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\ByBit\V5Api\Request\Trade\Enum;
+namespace App\Infrastructure\ByBit\API\V5\Request\Trade\Enum;
 
 /**
  * @see https://bybit-exchange.github.io/docs/v5/order/create-order

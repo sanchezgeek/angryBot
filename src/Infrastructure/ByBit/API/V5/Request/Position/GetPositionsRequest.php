@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\V5Api\Request\Market;
+namespace App\Infrastructure\ByBit\API\V5\Request\Position;
 
-use App\Infrastructure\ByBit\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequestTest
+ * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequestTest
  */
-final readonly class GetTickersRequest extends AbstractByBitApiRequest
+final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 {
     public function method(): string
     {
@@ -19,7 +19,7 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function url(): string
     {
-        return '/v5/market/tickers';
+        return '/v5/position/list';
     }
 
     public function data(): array

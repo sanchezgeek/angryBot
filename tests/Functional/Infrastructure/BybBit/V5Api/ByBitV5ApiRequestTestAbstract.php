@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\V5Api;
 
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient;
-use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\JsonTrait;
 use App\Tests\Stub\Request\SymfonyHttpClientStub;
 use PHPUnit\Framework\TestCase;

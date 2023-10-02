@@ -6,15 +6,15 @@ namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TriggerByParam;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mock\Response\ByBit\TradeResponses;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\ByBitV5ApiClient
+ * @covers \App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
  */
 final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {

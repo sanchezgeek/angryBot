@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\V5Api\Request\Trade;
+namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -50,6 +50,27 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
             //1: hedge-mode Buy side
             //2: hedge-mode Sell side
         ];
+    }
+
+    public static function immediatelyTriggeredByIndexPrice(
+        string $category,
+        string $symbol,
+        Side $side,
+        float $qty,
+        float $triggerPrice,
+    ): self {
+        return new self(
+            $category,
+            $symbol,
+            $side,
+            ExecutionOrderType::Market,
+            TriggerByParam::IndexPrice,
+            TimeInForceParam::GTC,
+            false,
+            false,
+            $qty,
+            $triggerPrice
+        );
     }
 
     /**

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market;
 
-use App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequest
+ * @covers \App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest
  */
 final class GetTickersRequestTest extends TestCase
 {

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Position;
 
-use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest
+ * @covers \App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest
  */
 final class GetPositionsRequestTest extends TestCase
 {

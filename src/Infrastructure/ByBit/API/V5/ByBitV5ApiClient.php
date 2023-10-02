@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\V5Api;
+namespace App\Infrastructure\ByBit\API\V5;
 
 use App\Clock\ClockInterface;
 use App\Helper\Json;
-use App\Infrastructure\ByBit\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\ByBitApiClientInterface;
-use App\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequest;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;

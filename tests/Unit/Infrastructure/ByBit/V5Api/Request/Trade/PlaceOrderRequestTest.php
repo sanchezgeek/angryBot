@@ -6,9 +6,9 @@ namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\Enum\TriggerByParam;
-use App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use function ucfirst;
 
 /**
- * @covers \App\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequest
+ * @covers \App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest
  */
 final class PlaceOrderRequestTest extends TestCase
 {
