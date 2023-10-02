@@ -19,8 +19,8 @@ enum StopCreate: string
 
     public const BIG_SL_VOLUME_STARTS_FROM = 0.006;
 
-    private const REGULAR_ORDER_STOP_DISTANCE = 95;
-    private const ADDITION_ORDER_STOP_DISTANCE = 73;
+    private const REGULAR_ORDER_STOP_DISTANCE = 145;
+    private const ADDITION_ORDER_STOP_DISTANCE = 123;
 
 //    private const REGULAR_ORDER_STOP_DISTANCE = 791;
 //    private const ADDITION_ORDER_STOP_DISTANCE = 753;

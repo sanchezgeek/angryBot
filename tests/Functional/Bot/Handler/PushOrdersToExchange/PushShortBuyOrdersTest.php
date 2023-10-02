@@ -142,9 +142,9 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
                 /**
                  * @see \App\Bot\Domain\Strategy\StopCreate::getDefaultStrategyStopOrderDistance
                  */
-                StopBuilder::short(1, 29133, 0.001)->withTD(self::DEFAULT_STOP_TD)->build(), // + 73
-                StopBuilder::short(2, 29128, 0.003)->withTD(self::DEFAULT_STOP_TD)->build(), // + 73
-                StopBuilder::short(3, 29155, 0.005)->withTD(self::DEFAULT_STOP_TD)->build(), // + 95
+                StopBuilder::short(1, 29183, 0.001)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(2, 29178, 0.003)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(3, 29205, 0.005)->withTD(self::DEFAULT_STOP_TD)->build(),
             ],
         ];
     }
