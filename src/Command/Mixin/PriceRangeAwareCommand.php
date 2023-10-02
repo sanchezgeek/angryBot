@@ -32,13 +32,21 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
-    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name): Price
+    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
     {
         try {
             $pnlValue = $this->paramFetcher->getPercentOption($name);
             return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
-            return Price::float($this->paramFetcher->getFloatOption($name));
+            try {
+                return Price::float($this->paramFetcher->getFloatOption($name));
+            } catch (InvalidArgumentException $e) {
+                if ($required) {
+                    throw $e;
+                }
+
+                return null;
+            }
         }
     }
 

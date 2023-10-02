@@ -7,7 +7,9 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
+use App\Domain\Price\PriceRange;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
@@ -30,20 +32,27 @@ class EditBuyOrdersCommand extends Command
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
+    use PriceRangeAwareCommand;
 
     public const ACTION_OPTION = 'action';
 
     public const FILTER_CALLBACKS_OPTION = 'filterCallbacks';
 
+    /** `edit`-action options */
+    public const EDIT_CALLBACK_OPTION = 'editCallback';
+
     public const ACTION_REMOVE = 'remove';
-    private const ACTIONS = [self::ACTION_REMOVE];
+    public const ACTION_EDIT = 'edit';
+    private const ACTIONS = [self::ACTION_REMOVE, self::ACTION_EDIT];
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
+            ->configurePriceRangeArgs()
             ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
             ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
+            ->addOption(self::EDIT_CALLBACK_OPTION, null, InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
         ;
     }
 
@@ -66,7 +75,22 @@ class EditBuyOrdersCommand extends Command
             $io->info('BuyOrders not found!'); return Command::SUCCESS;
         }
 
-        $buyOrders = $this->applyFilters(new BuyOrdersCollection(...$orders));
+        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
+        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
+
+        $buyOrdersCollection = new BuyOrdersCollection(...$orders);
+
+        if ($toPrice && $fromPrice) {
+            if ($fromPrice->greater($toPrice)) {
+                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
+            }
+
+            $priceRange = new PriceRange($fromPrice, $toPrice);
+
+            $buyOrdersCollection = $buyOrdersCollection->grabFromRange($priceRange);
+        }
+
+        $buyOrders = $this->applyFilters($buyOrdersCollection);
         $totalCount = $buyOrders->totalCount();
         $totalVolume = $buyOrders->totalVolume();
 
@@ -91,6 +115,18 @@ class EditBuyOrdersCommand extends Command
             });
 
             $io->note(\sprintf('removed BuyOrders qnt: %d (%.3f)', $totalCount, $totalVolume));
+        }
+
+        if ($action === self::ACTION_EDIT) {
+            $editCallback = $this->paramFetcher->getStringOption(self::EDIT_CALLBACK_OPTION);
+            $this->entityManager->wrapInTransaction(function() use ($buyOrders, $editCallback) {
+                foreach ($buyOrders as $buyOrder) {
+                    eval('$buyOrder->' . $editCallback . ';');
+                    $this->entityManager->persist($buyOrder);
+                }
+            });
+
+            $io->note(\sprintf('modified BuyOrders qnt: %d', $buyOrders->totalCount()));
         }
 
         return Command::SUCCESS;

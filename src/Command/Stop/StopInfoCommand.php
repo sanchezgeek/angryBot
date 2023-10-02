@@ -66,8 +66,12 @@ class StopInfoCommand extends Command
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-        if ($isHedge && Hedge::create($position, $oppositePosition)->isSupportPosition($position)) {
-            $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
+
+        if ($isHedge) {
+            $isSupportPosition = Hedge::create($position, $oppositePosition)->isSupportPosition($position);
+            if ($isSupportPosition) {
+                $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
+            }
         }
 
         $stops = $this->stopRepository->findActive(
