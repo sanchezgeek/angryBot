@@ -2,21 +2,24 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Market;
+namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Common;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mock\Response\ByBit\MarketResponses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @covers \App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
  */
-final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
+final class SendPublicV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
 {
-    public function testSendGetTickersRequest(): void
+    use PositionSideAwareTest;
+
+    public function testSendPublicGetRequest(): void
     {
         // Arrange
         $request = new GetTickersRequest(AssetCategory::linear, Symbol::BTCUSDT);

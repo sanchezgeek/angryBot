@@ -16,8 +16,8 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 
 use function array_merge;
+use function assert;
 use function date_create_immutable;
-use function get_class;
 use function hash_hmac;
 use function http_build_query;
 use function sprintf;
@@ -64,47 +64,52 @@ abstract class ByBitV5ApiRequestTestAbstract extends TestCase
     /**
      * @todo | Maybe need to revert to `expectedPrivateHeaders` and `expectedPublicHeaders`
      */
-    protected function expectedHeaders(AbstractByBitApiRequest $request): array
+    protected function expectedPublicHeaders(AbstractByBitApiRequest $request): array
     {
         $params = $request->data();
+        $method = $request->method();
 
-        if (($isPost = ($method = $request->method()) === Request::METHOD_POST)) {
+        if ($method === Request::METHOD_POST) {
             $headers = [
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
                 'Content-Length' => (string)strlen(self::jsonEncode($params))
             ];
         } else {
-            $method !== Request::METHOD_GET && throw new RuntimeException(
+            assert($method === Request::METHOD_GET, new RuntimeException(
                 sprintf('Unknown request type (`%s` verb)', $method)
-            );
+            ));
 
             $headers = [
                 'Accept' => 'application/json',
             ];
         }
 
-        if (isset(self::PRIVATE_REQUESTS[get_class($request)])) {
-            $encoded = $isPost ? self::jsonEncode($params) : http_build_query($params);
-            $timestamp = (string)($this->apiRequestCallTimestamp * 1000);
-            $reqvWindow = self::EXPECTED_RECV_WINDOW;
-
-            $apiKey = self::API_KEY;
-            $apiSecret = self::API_SECRET;
-            $paramsForSignature = $timestamp . $apiKey . $reqvWindow . $encoded;
-            $signature = hash_hmac('sha256', $paramsForSignature, $apiSecret);
-
-            $headers = array_merge($headers, [
-                'Accept' => 'application/json',
-                'X-BAPI-API-KEY' => $apiKey,
-                'X-BAPI-SIGN' => $signature,
-                'X-BAPI-SIGN-TYPE' => self::EXPECTED_BAPI_SIGN_TYPE,
-                'X-BAPI-TIMESTAMP' => $timestamp,
-                'X-BAPI-RECV-WINDOW' => self::EXPECTED_RECV_WINDOW,
-            ]);
-        }
-
         return $headers;
+    }
+
+    protected function expectedPrivateHeaders(AbstractByBitApiRequest $request): array
+    {
+        $commonHeaders = $this->expectedPublicHeaders($request);
+
+        $params = $request->data();
+        $encoded = $request->method() === Request::METHOD_POST ? self::jsonEncode($params) : http_build_query($params);
+        $timestamp = (string)($this->apiRequestCallTimestamp * 1000);
+        $reqvWindow = self::EXPECTED_RECV_WINDOW;
+
+        $apiKey = self::API_KEY;
+        $apiSecret = self::API_SECRET;
+        $paramsForSignature = $timestamp . $apiKey . $reqvWindow . $encoded;
+        $signature = hash_hmac('sha256', $paramsForSignature, $apiSecret);
+
+        return array_merge($commonHeaders, [
+            'Accept' => 'application/json',
+            'X-BAPI-API-KEY' => $apiKey,
+            'X-BAPI-SIGN' => $signature,
+            'X-BAPI-SIGN-TYPE' => self::EXPECTED_BAPI_SIGN_TYPE,
+            'X-BAPI-TIMESTAMP' => $timestamp,
+            'X-BAPI-RECV-WINDOW' => self::EXPECTED_RECV_WINDOW,
+        ]);
     }
 
     protected function getFullRequestUrl(AbstractByBitApiRequest $request): string

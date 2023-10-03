@@ -9,6 +9,7 @@ use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mock\Response\ByBit\PositionResponses;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @covers \App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
@@ -23,7 +24,7 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
         $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
         $expectedResponseBody = PositionResponses::SAMPLE_POSITIONS_RESPONSE;
-        $expectedPrivateHeaders = $this->expectedHeaders($request);
+        $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
 
         // Act
         $actualResponse = $this->client->send($request);
@@ -33,7 +34,8 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];
-        self::assertSame($request->method(), $requestCall->method);
+        self::assertSame(Request::METHOD_GET, $request->method());
+        self::assertSame(Request::METHOD_GET, $requestCall->method);
         self::assertSame($request->data(), $requestCall->params);
         self::assertSame($requestUrl, $requestCall->url);
         self::assertEqualsCanonicalizing($expectedPrivateHeaders, $requestCall->headers);
