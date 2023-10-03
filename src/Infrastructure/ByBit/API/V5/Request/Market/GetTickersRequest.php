@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -24,12 +26,10 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        return ['category' => $this->category, 'symbol' => $this->symbol];
+        return ['category' => $this->category->value, 'symbol' => $this->symbol->value];
     }
 
-    public function __construct(
-        private string $category,
-        private string $symbol,
-    ) {
+    public function __construct(private AssetCategory $category, private Symbol $symbol)
+    {
     }
 }

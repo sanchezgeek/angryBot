@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
@@ -25,17 +27,12 @@ final class PlaceOrderRequestTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testCreatePlaceBuyOrderImmediatelyTriggeredByIndexPriceRequest(Side $side): void
+    public function testCreateImmediatelyTriggeredByIndexPriceOrderRequest(Side $side): void
     {
-        $request = new PlaceOrderRequest(
-            $category = 'linear',
-            $symbol = 'BTCUSDT',
+        $request = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+            $category = AssetCategory::linear,
+            $symbol = Symbol::BTCUSDT,
             $side,
-            $orderType = ExecutionOrderType::Market,
-            $triggerBy = TriggerByParam::IndexPrice,
-            $timeInForce = TimeInForceParam::GTC,
-            false,
-            false,
             0.01,
             30000.1
         );
@@ -43,12 +40,12 @@ final class PlaceOrderRequestTest extends TestCase
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertSame([
-            'category' => $category,
-            'symbol' => $symbol,
+            'category' => $category->value,
+            'symbol' => $symbol->value,
             'side' => ucfirst($side->value),
-            'orderType' => $orderType->value,
-            'triggerBy' => $triggerBy->value,
-            'timeInForce' => $timeInForce->value,
+            'orderType' => ExecutionOrderType::Market->value,
+            'triggerBy' => TriggerBy::IndexPrice->value,
+            'timeInForce' => TimeInForce::GTC->value,
             'reduceOnly' => false,
             'closeOnTrigger' => false,
             'qty' => '0.01',
@@ -59,17 +56,15 @@ final class PlaceOrderRequestTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testCreatePlaceStopConditionalOrderTriggeredByIndexPrice(Side $side): void
+    public function testCreateStopConditionalOrderTriggeredByIndexPriceOrderRequest(Side $positionSide): void
     {
-        $request = new PlaceOrderRequest(
-            $category = 'linear',
-            $symbol = 'BTCUSDT',
-            $side,
-            $orderType = ExecutionOrderType::Market,
-            $triggerBy = TriggerByParam::IndexPrice,
-            $timeInForce = TimeInForceParam::GTC,
-            true,
-            false,
+        $category = AssetCategory::linear;
+        $symbol = Symbol::BTCUSDT;
+
+        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+            $category,
+            $symbol,
+            $positionSide,
             0.01,
             30000.1
         );
@@ -77,12 +72,12 @@ final class PlaceOrderRequestTest extends TestCase
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertSame([
-            'category' => $category,
-            'symbol' => $symbol,
-            'side' => ucfirst($side->value),
-            'orderType' => $orderType->value,
-            'triggerBy' => $triggerBy->value,
-            'timeInForce' => $timeInForce->value,
+            'category' => $category->value,
+            'symbol' => $symbol->value,
+            'side' => ucfirst($positionSide->getOpposite()->value),
+            'orderType' => ExecutionOrderType::Market->value,
+            'triggerBy' => TriggerBy::IndexPrice->value,
+            'timeInForce' => TimeInForce::GTC->value,
             'reduceOnly' => true,
             'closeOnTrigger' => false,
             'qty' => '0.01',

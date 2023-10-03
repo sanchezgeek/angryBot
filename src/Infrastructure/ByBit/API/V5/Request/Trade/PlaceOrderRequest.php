@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
 use function assert;
 use function sprintf;
+use function ucfirst;
 
 /**
  * @see https://bybit-exchange.github.io/docs/v5/order/create-order
@@ -32,57 +35,69 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         return '/v5/order/create';
     }
 
+    public static function buyOrderImmediatelyTriggeredByIndexPrice(
+        AssetCategory $category,
+        Symbol $symbol,
+        Side $positionSide,
+        float $qty,
+        float $price,
+    ): self {
+        $orderType = ExecutionOrderType::Market;
+        $triggerBy = TriggerBy::IndexPrice;
+        $timeInForce = TimeInForce::GTC;
+
+        $side = $positionSide;
+
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, false, false, $qty, $price);
+    }
+
+    public static function stopConditionalOrderTriggeredByIndexPrice(
+        AssetCategory $category,
+        Symbol $symbol,
+        Side $positionSide,
+        float $qty,
+        float $price,
+    ): self {
+        $orderType = ExecutionOrderType::Market;
+        $triggerBy = TriggerBy::IndexPrice;
+        $timeInForce = TimeInForce::GTC;
+
+        $side = $positionSide->getOpposite();
+
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $price);
+    }
+
     public function data(): array
     {
         return [
-            'category' => $this->category,
-            'symbol' => $this->symbol,
+            'category' => $this->category->value,
+            'symbol' => $this->symbol->value,
             'side' => ucfirst($this->side->value),
             'orderType' => $this->orderType->value,
             'triggerBy' => $this->triggerBy->value,
-            'timeInForce' => $this->timeInForceParam->value,
+            'timeInForce' => $this->timeInForce->value,
             'reduceOnly' => $this->reduceOnly,
             'closeOnTrigger' => $this->closeOnTrigger,
             'qty' => (string)$this->qty,
             'triggerPrice' => (string)$this->triggerPrice,
-//            'positionIdx' Used to identify positions in different position modes. Under hedge-mode, this param is required (USDT perps & Inverse contracts have hedge mode)
-            //0: one-way mode
-            //1: hedge-mode Buy side
-            //2: hedge-mode Sell side
+            // @todo | research 'positionIdx'
+            // Used to identify positions in different position modes. Under hedge-mode, this param is required (USDT perps & Inverse contracts have hedge mode)
+            // 0: one-way mode
+            // 1: hedge-mode Buy side
+            // 2: hedge-mode Sell side
         ];
-    }
-
-    public static function immediatelyTriggeredByIndexPrice(
-        string $category,
-        string $symbol,
-        Side $side,
-        float $qty,
-        float $triggerPrice,
-    ): self {
-        return new self(
-            $category,
-            $symbol,
-            $side,
-            ExecutionOrderType::Market,
-            TriggerByParam::IndexPrice,
-            TimeInForceParam::GTC,
-            false,
-            false,
-            $qty,
-            $triggerPrice
-        );
     }
 
     /**
      * @todo | Research minOrderQty API-param
      */
-    public function __construct(
-        private string $category,
-        private string $symbol,
+    private function __construct(
+        private AssetCategory $category,
+        private Symbol $symbol,
         private Side $side,
         private ExecutionOrderType $orderType,
-        private TriggerByParam $triggerBy,
-        private TimeInForceParam $timeInForceParam,
+        private TriggerBy $triggerBy,
+        private TimeInForce $timeInForce,
         private bool $reduceOnly,
         private bool $closeOnTrigger,
         private float $qty,

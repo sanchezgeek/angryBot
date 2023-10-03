@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Infrastructure\ByBit\API\V5\Request\Trade\Enum;
+namespace App\Infrastructure\ByBit\API\V5\Enum\Order;
 
-enum TriggerByParam: string
+enum TriggerBy: string
 {
     case LastPrice = 'LastPrice';
     case IndexPrice = 'IndexPrice';

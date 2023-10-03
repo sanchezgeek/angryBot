@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\V5Api\Trade;
 
-use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TimeInForceParam;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\Enum\TriggerByParam;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Functional\Infrastructure\BybBit\V5Api\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -26,15 +25,10 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
     public function testSendPlaceBuyOrderRequest(Side $side): void
     {
         // Arrange
-        $request = new PlaceOrderRequest(
-            'linear',
-            'BTCUSDT',
+        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+            AssetCategory::linear,
+            Symbol::BTCUSDT,
             $side,
-            ExecutionOrderType::Market,
-            TriggerByParam::IndexPrice,
-            TimeInForceParam::GTC,
-            false,
-            false,
             0.01,
             30000.1
         );
