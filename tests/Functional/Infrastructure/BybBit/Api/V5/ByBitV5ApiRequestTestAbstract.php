@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\V5Api;
+namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5;
 
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;

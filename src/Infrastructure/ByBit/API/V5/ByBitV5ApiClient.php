@@ -22,8 +22,12 @@ use function http_build_query;
 use function sprintf;
 
 /**
- * @see \App\Tests\Functional\Infrastructure\BybBit\V5Api\Market\GetTickersV5ApiRequestTest
- * @see \App\Tests\Functional\Infrastructure\BybBit\V5Api\Position\GetPositionsV5ApiRequestTest
+ * @see SendPrivateV5ApiRequestTest
+ * @see SendPublicV5ApiRequestTest
+ *
+ * @see SendGetTickersV5ApiRequestTest
+ * @see SendGetPositionsV5ApiRequestTest
+ * @see SendPlaceBuyOrderV5ApiRequestTest
  */
 final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 {
