@@ -36,7 +36,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
-        $this->matchPost($expectedRequest = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+        $this->matchPost(PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
             $category,
             $symbol,
             $positionSide,
@@ -49,7 +49,6 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
-        $this->assertHttpClientCalls($expectedRequest);
     }
 
     private function addBuyOrderTestCases(): iterable

@@ -31,14 +31,13 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         ?Position $expectedPosition
     ): void {
         // Arrange
-        $this->matchGet($expectedRequest = new GetPositionsRequest($category, $symbol), $apiResponse);
+        $this->matchGet(new GetPositionsRequest($category, $symbol), $apiResponse);
 
         // Act
         $position = $this->service->getPosition($symbol, $positionSide);
 
         // Assert
         self::assertEquals($expectedPosition, $position);
-        $this->assertHttpClientCalls($expectedRequest);
     }
 
     private function getPositionTestCases(): iterable

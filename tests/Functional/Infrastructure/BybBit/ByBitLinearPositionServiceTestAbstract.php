@@ -31,6 +31,11 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
     protected SymfonyHttpClientStub $httpClientStub;
     protected ByBitLinearPositionService $service;
 
+    /**
+     * @var AbstractByBitApiRequest[]
+     */
+    private array $expectedApiRequestsAfterTest = [];
+
     protected function setUp(): void
     {
         $clockMock = $this->createMock(ClockInterface::class);
@@ -66,6 +71,8 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
     {
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), $resultResponse);
+
+        $this->expectedApiRequestsAfterTest[] = $request;
     }
 
     /**
@@ -75,14 +82,21 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
     {
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchPost($requestUrl, $resultResponse);
+
+        $this->expectedApiRequestsAfterTest[] = $request;
     }
 
-    protected function assertHttpClientCalls(AbstractByBitApiRequest ...$expectedRequests): void
+    /**
+     * @after
+     *
+     * @todo | tests | make some kind of mixin to work with api
+     */
+    protected function assertResultHttpClientCalls(): void
     {
         $actualRequestCalls = $this->httpClientStub->getRequestCalls();
-        self::assertCount(count($expectedRequests), $actualRequestCalls);
+        self::assertCount(count($this->expectedApiRequestsAfterTest), $actualRequestCalls);
 
-        foreach ($expectedRequests as $key => $expectedRequest) {
+        foreach ($this->expectedApiRequestsAfterTest as $key => $expectedRequest) {
             $actualRequestCall = $actualRequestCalls[$key];
             if ($expectedRequest->method() === Request::METHOD_POST) {
                 self::assertSame($expectedRequest->method(), $actualRequestCall->method);
