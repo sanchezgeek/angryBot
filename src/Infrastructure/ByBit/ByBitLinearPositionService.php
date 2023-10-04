@@ -10,6 +10,8 @@ use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 
 // @todo | apiV5 | add separated cached service
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequestTest;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
@@ -28,9 +30,11 @@ use RuntimeException;
 use function sprintf;
 
 /**
- * @see ByBitPositionServiceTest
+ * @see ByBitLinearPositionServiceTest
+ *
+ * @todo | now only for `linear` AssetCategory
  */
-final readonly class ByBitPositionService implements PositionServiceInterface
+final readonly class ByBitLinearPositionService implements PositionServiceInterface
 {
     public function __construct(private ByBitApiClientInterface $apiClient)
     {
@@ -65,12 +69,25 @@ final readonly class ByBitPositionService implements PositionServiceInterface
 
     public function getOppositePosition(Position $position): ?Position
     {
-        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
+        // @todo | apiV5 | cache?
+        return $this->getPosition($position->symbol, $position->side->getOpposite());
     }
 
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
+        $category = AssetCategory::linear;
+
+        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+            $category,
+            $position->symbol,
+            $position->side,
+            $qty,
+            $price
+        );
+
+        $result = $this->apiClient->send($request);
+
+        return $result['orderId'];
     }
 
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
