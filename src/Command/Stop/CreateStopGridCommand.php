@@ -2,10 +2,10 @@
 
 namespace App\Command\Stop;
 
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Infrastructure\ByBit\PositionService;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -167,7 +167,7 @@ class CreateStopGridCommand extends Command
     public function __construct(
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
-        PositionService $positionService,
+        PositionServiceInterface $positionService,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

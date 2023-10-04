@@ -5,7 +5,7 @@ services:
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub
 
-    App\Bot\Infrastructure\ByBit\PositionService:
+    App\Bot\Application\Service\Exchange\PositionServiceInterface:
         class: App\Tests\Stub\Bot\PositionServiceStub
 
     App\Application\UniqueIdGeneratorInterface:

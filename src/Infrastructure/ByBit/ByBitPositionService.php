@@ -4,46 +4,77 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit;
 
+// @todo | apiV5 | handle errors from ByBitApiCallResult and throw exceptions
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
+
+// @todo | apiV5 | add separated cached service
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use Lin\Bybit\BybitLinear;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Contracts\Cache\CacheInterface;
+use App\Helper\VolumeHelper;
+use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 
-final class ByBitPositionService
+use RuntimeException;
+
+use function sprintf;
+
+/**
+ * @see ByBitPositionServiceTest
+ */
+final readonly class ByBitPositionService implements PositionServiceInterface
 {
-    public function __construct(
-        private readonly string $apiKey,
-        private readonly string $apiSecret,
-        private readonly CacheInterface $cache,
-        private readonly EventDispatcherInterface $events,
-    ) {
-//        $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
+    public function __construct(private ByBitApiClientInterface $apiClient)
+    {
     }
 
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        // TODO: Implement getPosition() method.
+        $request = new GetPositionsRequest(AssetCategory::linear, $symbol);
+
+        $result = $this->apiClient->send($request);
+
+        // @todo | check format layer + throw some exception
+
+        $position = null;
+        foreach ($result['list'] as $item) {
+            if ($item['avgPrice'] !== 0 && \strtolower($item['side']) === $side->value) {
+                $position = new Position(
+                    $side,
+                    $symbol,
+                    VolumeHelper::round((float)$item['avgPrice'], 2), // @todo | apiV5 | research `entryPrice` param
+                    (float)$item['size'],
+                    VolumeHelper::round((float)$item['positionValue'], 2),
+                    (float)$item['liqPrice'],
+                    (float)$item['positionMM'], // @todo | apiV5 | research `margin` param
+                    (float)$item['leverage'],
+                );
+            }
+        }
+
+        return $position;
     }
 
     public function getOppositePosition(Position $position): ?Position
     {
-        // TODO: Implement getOppositePosition() method.
+        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
     }
 
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        // TODO: Implement addStop() method.
+        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
     }
 
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        // TODO: Implement addBuyOrder() method.
+        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
     }
 }

@@ -19,6 +19,7 @@ use function array_merge;
 use function get_class;
 use function hash_hmac;
 use function http_build_query;
+use function is_array;
 use function sprintf;
 
 /**
@@ -57,7 +58,17 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
                 $this->getOptions($request)
             );
 
-            return $response->toArray();
+            $responseBody = $response->toArray();
+
+            if (($retCode = $responseBody['retCode'] ?? null) !== 0) {
+                // @todo | apiV5 | return ByBitApiCallResult result object instead of simple array
+            }
+
+            if (!is_array($result = $responseBody['result'] ?? null)) {
+                // @todo | apiV5 | return ByBitApiCallResult result object instead of simple array
+            }
+
+            return $result;
         } catch (TransportExceptionInterface $e) {
             var_dump($e->getMessage());die;
         }

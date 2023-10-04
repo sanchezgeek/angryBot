@@ -34,6 +34,9 @@ services:
     App\Messenger\SchedulerTransport\Scheduler:
         factory: [ 'App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
 
+    App\Bot\Application\Service\Exchange\PositionServiceInterface:
+        alias: App\Bot\Infrastructure\ByBit\PositionService
+
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'

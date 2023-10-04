@@ -23,14 +23,14 @@ final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 
-        $expectedResponseBody = MarketResponses::SAMPLE_TICKERS_RESPONSE;
+        $expectedResult = MarketResponses::SAMPLE_TICKERS_RESPONSE['result'];
         $expectedPrivateHeaders = $this->expectedPublicHeaders($request);
 
         // Act
-        $actualResponse = $this->client->send($request);
+        $actualResult = $this->client->send($request);
 
         // Assert
-        self::assertSame($expectedResponseBody, $actualResponse);
+        self::assertSame($expectedResult, $actualResult);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];
