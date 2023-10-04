@@ -15,9 +15,12 @@ use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\ByBitPositionService;
 use App\Tests\Mock\Response\ByBit\PositionResponseBuilder;
 use App\Tests\Stub\Request\SymfonyHttpClientStub;
+use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-use function date_create_immutable;
+use Symfony\Component\HttpClient\Response\MockResponse;
+
+use function sprintf;
 
 /**
  * @covers \App\Infrastructure\ByBit\ByBitPositionService
@@ -35,7 +38,7 @@ final class ByBitPositionServiceTest extends KernelTestCase
     protected function setUp(): void
     {
         $clockMock = $this->createMock(ClockInterface::class);
-        $clockMock->method('now')->willReturn(date_create_immutable());
+        $clockMock->method('now')->willReturn(new DateTimeImmutable());
 
         $this->httpClientStub = new SymfonyHttpClientStub(self::HOST);
 
@@ -52,37 +55,62 @@ final class ByBitPositionServiceTest extends KernelTestCase
         );
     }
 
-    public function testGetPosition(): void
-    {
-        $symbol = Symbol::BTCUSDT;
-        $category = AssetCategory::linear;
-        $positionSide = Side::Sell;
-
+    /**
+     * @dataProvider getPositionTestCases
+     */
+    public function testGetPosition(
+        Symbol $symbol,
+        AssetCategory $category,
+        Side $positionSide,
+        MockResponse $apiResponse,
+        ?Position $expectedPosition
+    ): void {
         $expectedRequest = new GetPositionsRequest($category, $symbol);
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-
-        $expectedPosition = new Position(
-            $positionSide,
-            $symbol,
-            $entryPrice = 30000,
-            $size = 1.1,
-            $value = 33000,
-            $liqPrice = 31000,
-            $margin = 330,
-            $leverage = 100,
-        );
-
-        $response = (new PositionResponseBuilder($category))
-            ->addPosition($symbol, $positionSide, $entryPrice, $size, $value, $margin, $leverage, $liqPrice)
-            ->build();
-
-        $this->httpClientStub->matchGet($requestUrl, $expectedRequest->data(), $response);
+        $this->httpClientStub->matchGet($requestUrl, $expectedRequest->data(), $apiResponse);
 
         // Act
         $position = $this->service->getPosition($symbol, $positionSide);
 
         // Assert
         self::assertEquals($expectedPosition, $position);
+    }
+
+    private function getPositionTestCases(): iterable
+    {
+        $symbol = Symbol::BTCUSDT;
+        $category = AssetCategory::linear;
+        $positionSide = Side::Sell;
+
+        yield sprintf('have %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->addPosition(
+                $symbol,
+                $positionSide,
+                $entryPrice = 30000,
+                $size = 1.1,
+                $value = 33000,
+                $margin = 330,
+                $leverage = 100,
+                $liqPrice = 31000,
+            )->build(),
+            '$expectedPosition' => new Position(
+                $positionSide,
+                $symbol,
+                $entryPrice,
+                $size,
+                $value,
+                $liqPrice,
+                $margin,
+                $leverage,
+            ),
+        ];
+
+        yield sprintf('have no position (%s %s, %s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->build(),
+            '$expectedPosition' => null,
+        ];
     }
 
     /**
