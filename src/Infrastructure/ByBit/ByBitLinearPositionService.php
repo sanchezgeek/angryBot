@@ -25,10 +25,6 @@ use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 
-use RuntimeException;
-
-use function sprintf;
-
 /**
  * @see ByBitLinearPositionServiceTest
  *
@@ -36,13 +32,15 @@ use function sprintf;
  */
 final readonly class ByBitLinearPositionService implements PositionServiceInterface
 {
+    private const ASSET_CATEGORY = AssetCategory::linear;
+
     public function __construct(private ByBitApiClientInterface $apiClient)
     {
     }
 
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        $request = new GetPositionsRequest(AssetCategory::linear, $symbol);
+        $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
         $result = $this->apiClient->send($request);
 
@@ -75,10 +73,8 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        $category = AssetCategory::linear;
-
         $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
-            $category,
+            self::ASSET_CATEGORY,
             $position->symbol,
             $position->side,
             $qty,
@@ -92,6 +88,16 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        throw new RuntimeException(sprintf('%s not implemented yet.', __METHOD__));
+        $request = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+            self::ASSET_CATEGORY,
+            $position->symbol,
+            $position->side,
+            $qty,
+            $price
+        );
+
+        $result = $this->apiClient->send($request);
+
+        return $result['orderId'];
     }
 }
