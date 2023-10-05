@@ -26,14 +26,14 @@ final class SendPublicV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 
-        $expectedResult = MarketResponses::SAMPLE_TICKERS_RESPONSE['result'];
+        $expectedResult = $this->okRequestResult(MarketResponses::SAMPLE_TICKERS_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPublicHeaders($request);
 
         // Act
         $result = $this->client->send($request);
 
         // Assert
-        self::assertSame($expectedResult, $result);
+        self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];

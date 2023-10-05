@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5;
 
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
@@ -115,5 +116,10 @@ abstract class ByBitV5ApiRequestTestAbstract extends TestCase
     protected function getFullRequestUrl(AbstractByBitApiRequest $request): string
     {
         return self::HOST . $request->url();
+    }
+
+    protected function okRequestResult(array $data): ByBitApiCallResult
+    {
+        return ByBitApiCallResult::ok($data);
     }
 }

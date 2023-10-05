@@ -30,14 +30,14 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
-        $expectedResult = PositionResponses::SAMPLE_POSITIONS_RESPONSE['result'];
+        $expectedResult = $this->okRequestResult(PositionResponses::SAMPLE_POSITIONS_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
 
         // Act
         $result = $this->client->send($request);
 
         // Assert
-        self::assertSame($expectedResult, $result);
+        self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];
@@ -62,14 +62,14 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK());
 
-        $expectedResult = TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result'];
+        $expectedResult = $this->okRequestResult(TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
 
         // Act
         $result = $this->client->send($request);
 
         // Assert
-        self::assertSame($expectedResult, $result);
+        self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];

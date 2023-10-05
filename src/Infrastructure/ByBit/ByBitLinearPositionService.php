@@ -4,17 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit;
 
-// @todo | apiV5 | handle errors from ByBitApiCallResult and throw exceptions
-use App\Bot\Application\Exception\ApiRateLimitReached;
-use App\Bot\Application\Exception\CannotAffordOrderCost;
-use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
-
 // @todo | apiV5 | add separated cached service
-use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade\PlaceOrderRequestTest;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
+use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -22,8 +17,14 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use RuntimeException;
+
+use function get_class;
+use function sprintf;
 
 /**
  * @see ByBitLinearPositionServiceTest
@@ -42,12 +43,11 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
     {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
-        $result = $this->apiClient->send($request);
-
         // @todo | check format layer + throw some exception
+        $data = $this->apiClient->send($request)->data();
 
         $position = null;
-        foreach ($result['list'] as $item) {
+        foreach ($data['list'] as $item) {
             if ($item['avgPrice'] !== 0 && \strtolower($item['side']) === $side->value) {
                 $position = new Position(
                     $side,
@@ -67,10 +67,15 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
     public function getOppositePosition(Position $position): ?Position
     {
-        // @todo | apiV5 | cache?
+        // @todo | apiV5 | cache? | or on uper level ?
         return $this->getPosition($position->symbol, $position->side->getOpposite());
     }
 
+    /**
+     * @return ?string Created stop order id or NULL if creation failed
+     *
+     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached
+     */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
         $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
@@ -83,7 +88,17 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
         $result = $this->apiClient->send($request);
 
-        return $result['orderId'];
+        if (!$result->isSuccess()) {
+            throw match (($err = $result->error())) {
+                ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
+                ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
+                default => new RuntimeException(
+                    sprintf('%s | %s API request: unknown err code (%d)', __CLASS__, $err->code(), get_class($request))
+                )
+            };
+        }
+
+        return $result->data()['orderId'];
     }
 
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
@@ -98,6 +113,6 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
         $result = $this->apiClient->send($request);
 
-        return $result['orderId'];
+        return $result->data()['orderId'];
     }
 }

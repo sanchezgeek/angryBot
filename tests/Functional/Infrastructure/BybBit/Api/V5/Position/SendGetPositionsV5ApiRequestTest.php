@@ -23,14 +23,14 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
         $requestUrl = $this->getFullRequestUrl($request);
         $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
-        $expectedResult = PositionResponses::SAMPLE_POSITIONS_RESPONSE['result'];
+        $expectedResult = $this->okRequestResult(PositionResponses::SAMPLE_POSITIONS_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
 
         // Act
         $result = $this->client->send($request);
 
         // Assert
-        self::assertSame($expectedResult, $result);
+        self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
         $requestCall = $this->httpClientStub->getRequestCalls()[0];

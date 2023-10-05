@@ -8,15 +8,19 @@ use App\Clock\ClockInterface;
 use App\Helper\Json;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use LogicException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Throwable;
 
 use function array_merge;
 use function get_class;
+use function gettype;
 use function hash_hmac;
 use function http_build_query;
 use function is_array;
@@ -49,28 +53,37 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
     ) {
     }
 
-    public function send(AbstractByBitApiRequest $request): array
+    /**
+     * @throws Throwable
+     */
+    public function send(AbstractByBitApiRequest $request): ByBitApiCallResult
     {
         try {
-            $response = $this->httpClient->request(
-                $request->method(),
-                $this->host . $request->url(),
-                $this->getOptions($request)
-            );
+            $url = $this->host . $request->url();
 
+            $response = $this->httpClient->request($request->method(), $url, $this->getOptions($request));
             $responseBody = $response->toArray();
 
             if (($retCode = $responseBody['retCode'] ?? null) !== 0) {
-                // @todo | apiV5 | return ByBitApiCallResult result object instead of simple array
+                if (!($error = ApiV5Error::tryFrom($retCode))) {
+                    throw new \RuntimeException(sprintf('Received unknown retCode (%d)', $retCode));
+                }
+
+                return ByBitApiCallResult::err($error);
             }
 
-            if (!is_array($result = $responseBody['result'] ?? null)) {
-                // @todo | apiV5 | return ByBitApiCallResult result object instead of simple array
+            if (!($result = $responseBody['result'] ?? null)) {
+                throw new LogicException(sprintf('%s: received response with retCode = 0, but without `result` key. Please check API contract.', __METHOD__));
             }
 
-            return $result;
-        } catch (TransportExceptionInterface $e) {
-            var_dump($e->getMessage());die;
+            if (!is_array($result)) {
+                throw new LogicException(sprintf('%s: received `result` must be type of array (%s given).', __METHOD__, gettype($result)));
+            }
+
+            return ByBitApiCallResult::ok($result);
+        } catch (\Throwable $e) {
+            var_dump(sprintf('%s: get %s exception (%s) when do %s request call.', __METHOD__, get_class($e), $e->getMessage(), $url));
+            throw $e;
         }
     }
 
