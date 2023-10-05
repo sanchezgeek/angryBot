@@ -14,18 +14,16 @@ use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\ByBitLinearPositionService;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionServiceTestAbstract;
 use App\Tests\Mock\Response\ByBit\TradeResponseBuilder;
 use RuntimeException;
 use Symfony\Component\HttpClient\Response\MockResponse;
-
 use Throwable;
 
 use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService
+ * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService::addStop
  */
 final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 {

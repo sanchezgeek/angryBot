@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit;
 
-// @todo | apiV5 | add separated cached service
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Contracts\Cache\CacheInterface;
-
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
@@ -27,8 +23,6 @@ use RuntimeException;
 use function sprintf;
 
 /**
- * @see ByBitLinearPositionServiceTest
- *
  * @todo | now only for `linear` AssetCategory
  */
 final readonly class ByBitLinearPositionService implements PositionServiceInterface
@@ -39,6 +33,9 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
     {
     }
 
+    /**
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\GetPositionTest
+     */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
@@ -67,14 +64,14 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
 
     public function getOppositePosition(Position $position): ?Position
     {
-        // @todo | apiV5 | cache? | or on uper level ?
         return $this->getPosition($position->symbol, $position->side->getOpposite());
     }
 
     /**
      * @return ?string Created stop order id or NULL if creation failed
-     *
      * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\AddStopTest
      */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
@@ -101,6 +98,12 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
         return $result->data()['orderId'];
     }
 
+    /**
+     * @return ?string Created stop order id or NULL if creation failed
+     * @throws MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\AddBuyOrderTest
+     */
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
         $request = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(

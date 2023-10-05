@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit;
+namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService;
 
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
@@ -19,9 +19,6 @@ use function assert;
 use function count;
 use function sprintf;
 
-/**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService
- */
 abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
 {
     private const HOST = 'https://api-testnet.bybit.com';

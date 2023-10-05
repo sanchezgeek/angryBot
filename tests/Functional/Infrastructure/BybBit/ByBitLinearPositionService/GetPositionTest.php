@@ -9,14 +9,14 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
-use App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionServiceTestAbstract;
 use App\Tests\Mock\Response\ByBit\PositionResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function sprintf;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService
+ * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService::getPosition
+ * @todo | apiV5 | cover getOppositePosition
  */
 final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 {
@@ -69,6 +69,8 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
                 $leverage,
             ),
         ];
+
+        // @todo | apiV5 | 'have position on other side'
 
         yield sprintf('have no position (%s %s, %s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
