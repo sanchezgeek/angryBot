@@ -25,6 +25,8 @@ use function ucfirst;
  */
 final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 {
+    public const URL = '/v5/order/create';
+
     public function method(): string
     {
         return Request::METHOD_POST;
@@ -32,7 +34,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
     public function url(): string
     {
-        return '/v5/order/create';
+        return self::URL;
     }
 
     public static function buyOrderImmediatelyTriggeredByIndexPrice(

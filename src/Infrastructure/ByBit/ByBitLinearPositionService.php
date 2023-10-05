@@ -23,7 +23,6 @@ use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use RuntimeException;
 
-use function get_class;
 use function sprintf;
 
 /**
@@ -93,7 +92,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
                 ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
                 ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
                 default => new RuntimeException(
-                    sprintf('%s | %s API request: unknown err code (%d)', __CLASS__, $err->code(), get_class($request))
+                    sprintf('%s | make `%s`: unknown err code (%d)', __METHOD__, $request->url(), $err->code())
                 )
             };
         }
