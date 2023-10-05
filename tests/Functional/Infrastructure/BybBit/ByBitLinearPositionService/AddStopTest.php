@@ -81,6 +81,8 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         ), $apiResponse);
 
         $exception = null;
+
+        // Act
         try {
             $this->service->addStop($position, $ticker, $price, $volume);
         } catch (Throwable $exception) {

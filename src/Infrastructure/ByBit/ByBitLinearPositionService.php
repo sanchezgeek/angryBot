@@ -9,6 +9,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Exception\CannotAffordOrderCost;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
@@ -111,6 +112,17 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
         );
 
         $result = $this->apiClient->send($request);
+
+        if (!$result->isSuccess()) {
+            throw match (($err = $result->error())) {
+                ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
+                ApiV5Error::CannotAffordOrderCost => CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty),
+                ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
+                default => new RuntimeException(
+                    sprintf('%s | make `%s`: unknown err code (%d)', __METHOD__, $request->url(), $err->code())
+                )
+            };
+        }
 
         return $result->data()['orderId'];
     }

@@ -7,7 +7,7 @@ use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
 enum ApiV5Error: int implements ApiErrorInterface
 {
     case ApiRateLimitReached = 10006;
-    case CannotAffordOrderCost = 2;
+    case CannotAffordOrderCost = 110044; // @todo | apiV5 | 110044?
     case MaxActiveCondOrdersQntReached = 110009;
 
     public function code(): int
