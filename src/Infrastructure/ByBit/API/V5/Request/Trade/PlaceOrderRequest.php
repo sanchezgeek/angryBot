@@ -82,7 +82,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
             'closeOnTrigger' => $this->closeOnTrigger,
             'qty' => (string)$this->qty,
             'triggerPrice' => (string)$this->triggerPrice,
-            // @todo | research 'positionIdx'
+            // @todo | apiV5 | research 'positionIdx'
             // Used to identify positions in different position modes. Under hedge-mode, this param is required (USDT perps & Inverse contracts have hedge mode)
             // 0: one-way mode
             // 1: hedge-mode Buy side
@@ -91,7 +91,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
     }
 
     /**
-     * @todo | Research minOrderQty API-param
+     * @todo | apiV5 | Research minOrderQty API-param
      */
     private function __construct(
         private AssetCategory $category,

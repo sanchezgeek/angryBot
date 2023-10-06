@@ -37,6 +37,9 @@ services:
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
         alias: App\Bot\Infrastructure\ByBit\PositionService
 
+    App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
+        alias: App\Bot\Infrastructure\ByBit\ExchangeService
+
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'

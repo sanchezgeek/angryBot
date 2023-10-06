@@ -6,5 +6,5 @@ interface ApiErrorInterface
 {
     public function code(): int;
     public function desc(): string;
-    // @todo + received message from api?
+    // @todo | apiV5 | + received message from api?
 }

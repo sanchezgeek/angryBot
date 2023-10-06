@@ -9,6 +9,7 @@ use App\Helper\Json;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
+use App\Infrastructure\ByBit\API\Result\CommonApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
@@ -66,7 +67,9 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 
             if (($retCode = $responseBody['retCode'] ?? null) !== 0) {
                 if (!($error = ApiV5Error::tryFrom($retCode))) {
-                    throw new \RuntimeException(sprintf('Received unknown retCode (%d)', $retCode));
+                    $error = new CommonApiError($retCode, $responseBody['retMsg']);
+                    // @todo | apiV5 | return common error and process on upper levels?
+                    // throw new \RuntimeException(sprintf('Received unknown retCode (%d)', $retCode));
                 }
 
                 return ByBitApiCallResult::err($error);
