@@ -112,6 +112,6 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
             $body['result']['list'][] = $item;
         }
 
-        return self::make($this->statusCode, $body);
+        return self::make($body, $this->statusCode);
     }
 }

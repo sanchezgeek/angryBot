@@ -33,9 +33,6 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
         'time' => 1672211918471
     ];
 
-    /** @todo | apiV5 | research RESPONSE code (always 200?) */
-    private int $statusCode = 200;
-
     private function __construct(private readonly ?ApiV5Error $error, private readonly ?string $orderId)
     {
     }
@@ -52,11 +49,10 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
 
     public function build(): MockResponse
     {
-        $statusCode = $this->statusCode;
-
         if ($this->error) {
             $body = array_replace_recursive(self::SAMPLE_PLACE_ORDER_FAILED_RESPONSE, [
-                'retCode' => $this->error->code()
+                'retCode' => $this->error->code(),
+                'retMsg' => $this->error->desc(),
             ]);
         } else {
             $body = array_replace_recursive(self::SAMPLE_PLACE_ORDER_SUCCESS_RESPONSE, [
@@ -64,6 +60,6 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
             ]);
         }
 
-        return self::make($statusCode, $body);
+        return self::make($body);
     }
 }

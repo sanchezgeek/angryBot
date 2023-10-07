@@ -14,6 +14,7 @@ use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\Exception\ByBitTickerNotFoundException;
 use App\Worker\AppContext;
 use RuntimeException;
@@ -70,9 +71,30 @@ final readonly class ByBitLinearExchangeService
         throw new NotImplementedException('must be implemented later');
     }
 
-    public function closeActiveConditionalOrder(ActiveStopOrder $order)
+    /**
+     * @throws ApiRateLimitReached|RuntimeException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
+     */
+    public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
-        throw new NotImplementedException('must be implemented later');
+        $result = $this->apiClient->send(
+            $request = CancelOrderRequest::byOrderId(self::ASSET_CATEGORY, $order->symbol, $order->orderId)
+        );
+
+        if (!$result->isSuccess()) {
+            match ($error = $result->error()) {
+                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
+                default => $this->processUnknownApiError($request, $error, __METHOD__),
+            };
+        }
+
+        $data = $result->data();
+        if ($data['orderId'] !== $order->orderId) {
+            throw new RuntimeException(
+                sprintf('%s | make `%s`: got another orderId (%s insteadof %s)', __METHOD__, $request->url(), $data['orderId'], $order->orderId)
+            );
+        }
     }
 
     /**

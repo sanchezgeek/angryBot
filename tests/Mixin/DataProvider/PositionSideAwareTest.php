@@ -9,7 +9,7 @@ use App\Domain\Position\ValueObject\Side;
 trait PositionSideAwareTest
 {
     /**
-     * @return Side[]
+     * @return array<array<Side>>
      */
     private function positionSideProvider(): array
     {

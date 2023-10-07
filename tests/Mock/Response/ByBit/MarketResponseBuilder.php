@@ -56,10 +56,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
         'basis' => ''
     ];
 
-//    private AssetCategory $category;
     private array $tickersListItems = [];
-    private int $statusCode = 200;
-
 
     private function __construct(private readonly AssetCategory $category, private readonly ?ApiErrorInterface $error)
     {
@@ -104,7 +101,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
                 'retMsg' => $this->error->desc(),
             ]);
 
-            return self::make($this->statusCode, $body);
+            return self::make($body);
         }
 
         $body['result']['category'] = $this->category->value;
@@ -113,6 +110,6 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
             $body['result']['list'][] = $item;
         }
 
-        return self::make($this->statusCode, $body);
+        return self::make($body);
     }
 }
