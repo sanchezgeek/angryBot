@@ -27,7 +27,7 @@ final class SendPublicV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 
         $expectedResult = $this->okRequestResult(MarketResponses::SAMPLE_TICKERS_RESPONSE['result']);
-        $expectedPrivateHeaders = $this->expectedPublicHeaders($request);
+        $expectedHeaders = $this->expectedPublicHeaders($request);
 
         // Act
         $result = $this->client->send($request);
@@ -41,6 +41,6 @@ final class SendPublicV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         self::assertSame(Request::METHOD_GET, $requestCall->method);
         self::assertSame($request->data(), $requestCall->params);
         self::assertSame($requestUrl, $requestCall->url);
-        self::assertEqualsCanonicalizing($expectedPrivateHeaders, $requestCall->headers);
+        self::assertEqualsCanonicalizing($expectedHeaders, $requestCall->headers);
     }
 }

@@ -39,6 +39,7 @@ final class PlaceOrderRequestTest extends TestCase
 
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
+        self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
             'symbol' => $symbol->value,
@@ -71,6 +72,7 @@ final class PlaceOrderRequestTest extends TestCase
 
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
+        self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
             'symbol' => $symbol->value,

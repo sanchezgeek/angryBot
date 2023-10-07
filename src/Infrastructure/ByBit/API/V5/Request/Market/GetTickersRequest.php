@@ -26,6 +26,11 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
         return self::URL;
     }
 
+    public function isPrivateRequest(): bool
+    {
+        return false;
+    }
+
     public function data(): array
     {
         return ['category' => $this->category->value, 'symbol' => $this->symbol->value];

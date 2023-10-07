@@ -21,6 +21,7 @@ final class GetTickersRequestTest extends TestCase
 
         self::assertSame('/v5/market/tickers', $request->url());
         self::assertSame(Request::METHOD_GET, $request->method());
+        self::assertFalse($request->isPrivateRequest());
         self::assertSame(['category' => $category->value, 'symbol' => $symbol->value], $request->data());
     }
 }

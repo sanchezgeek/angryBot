@@ -24,6 +24,7 @@ final class GetCurrentOrdersRequestTest extends TestCase
 
         self::assertSame('/v5/order/realtime', $request->url());
         self::assertSame(Request::METHOD_GET, $request->method());
+        self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
             'symbol' => $symbol->value,

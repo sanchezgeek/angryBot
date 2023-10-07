@@ -11,8 +11,6 @@ use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\Result\CommonApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use LogicException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
@@ -39,11 +37,6 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 {
     private const BAPI_RECOMMENDED_RECV_WINDOW = '5000';
     private const BAPI_SIGN_TYPE = '2';
-
-    private const PRIVATE_REQUESTS = [
-        GetPositionsRequest::class => true,
-        PlaceOrderRequest::class => true,
-    ];
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -111,7 +104,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
             ];
         }
 
-        if (isset(self::PRIVATE_REQUESTS[get_class($request)])) {
+        if ($request->isPrivateRequest()) {
             $timestamp = $this->clock->now()->getTimestamp() * 1000;
             $reqvWindow = self::BAPI_RECOMMENDED_RECV_WINDOW;
             $encodedParams = $isPost ? Json::encode($request->data()) : http_build_query($request->data());

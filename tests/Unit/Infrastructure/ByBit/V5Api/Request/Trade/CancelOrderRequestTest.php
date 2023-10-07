@@ -29,6 +29,7 @@ final class CancelOrderRequestTest extends TestCase
 
         self::assertSame('/v5/order/cancel', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
+        self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
             'symbol' => $symbol->value,

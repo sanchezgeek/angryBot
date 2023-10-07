@@ -21,6 +21,7 @@ final class GetPositionsRequestTest extends TestCase
 
         self::assertSame('/v5/position/list', $request->url());
         self::assertSame(Request::METHOD_GET, $request->method());
+        self::assertTrue($request->isPrivateRequest());
         self::assertSame(['category' => $category->value, 'symbol' => $symbol->value], $request->data());
     }
 }
