@@ -100,7 +100,8 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
 
         if ($this->error) {
             $body = array_replace_recursive($body, [
-                'retCode' => $this->error->code()
+                'retCode' => $this->error->code(),
+                'retMsg' => $this->error->desc(),
             ]);
 
             return self::make($this->statusCode, $body);

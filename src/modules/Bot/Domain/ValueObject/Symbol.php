@@ -7,4 +7,5 @@ namespace App\Bot\Domain\ValueObject;
 enum Symbol: string
 {
     case BTCUSDT = 'BTCUSDT';
+    case BTCUSD = 'BTCUSD';
 }

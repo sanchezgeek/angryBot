@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final readonly class GetTickersRequest extends AbstractByBitApiRequest
 {
+    public const URL = '/v5/market/tickers';
+
     public function method(): string
     {
         return Request::METHOD_GET;
@@ -21,7 +23,7 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function url(): string
     {
-        return '/v5/market/tickers';
+        return self::URL;
     }
 
     public function data(): array

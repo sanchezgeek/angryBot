@@ -8,10 +8,13 @@ use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
+use App\Infrastructure\ByBit\Exception\ByBitTickerNotFoundException;
 use App\Worker\AppContext;
 use RuntimeException;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
@@ -31,6 +34,8 @@ final readonly class ByBitLinearExchangeService
 
     /**
      * @throws ApiRateLimitReached|RuntimeException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
@@ -39,25 +44,10 @@ final readonly class ByBitLinearExchangeService
         );
 
         if (!$result->isSuccess()) {
-            $error = $result->error();
-            if ($error instanceof ApiV5Error) {
-                throw match ($error) {
-                    ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
-                    default => new RuntimeException(
-                        sprintf('%s | make `%s`: unknown err code (%d)', __METHOD__, $request->url(), $error->code())
-                    )
-                };
-            }
-
-            throw new RuntimeException(
-                sprintf(
-                    '%s | make `%s`: got errCode %d (%s)',
-                    __METHOD__,
-                    $request->url(),
-                    $result->error()->code(),
-                    $result->error()->desc(),
-                )
-            );
+            match ($error = $result->error()) {
+                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
+                default => $this->processUnknownApiError($request, $error, __METHOD__),
+            };
         }
 
         $data = $result->data();
@@ -70,7 +60,7 @@ final readonly class ByBitLinearExchangeService
             }
         }
 
-        \assert($ticker !== null, 'Ticker not found');
+        \assert($ticker !== null, ByBitTickerNotFoundException::forSymbolAndCategory($symbol, self::ASSET_CATEGORY));
 
         return $ticker;
     }
@@ -83,5 +73,15 @@ final readonly class ByBitLinearExchangeService
     public function closeActiveConditionalOrder(ActiveStopOrder $order)
     {
         throw new NotImplementedException('must be implemented later');
+    }
+
+    /**
+     * @todo | apiV5 | trait
+     */
+    private function processUnknownApiError(AbstractByBitApiRequest $request, ApiErrorInterface $err, string $in): void
+    {
+        throw new RuntimeException(
+            sprintf('%s | make `%s`: unknown errCode %d (%s)', $in, $request->url(), $err->code(), $err->desc())
+        );
     }
 }
