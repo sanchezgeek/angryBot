@@ -94,6 +94,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
     public function build(): MockResponse
     {
         $body = self::ROOT_BODY_ARRAY;
+        $body['result']['category'] = $this->category->value;
 
         if ($this->error) {
             $body = array_replace_recursive($body, [
@@ -103,8 +104,6 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
 
             return self::make($body);
         }
-
-        $body['result']['category'] = $this->category->value;
 
         foreach ($this->tickersListItems as $item) {
             $body['result']['list'][] = $item;

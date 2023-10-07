@@ -105,7 +105,6 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
     public function build(): MockResponse
     {
         $body = self::ROOT_BODY_ARRAY;
-
         $body['result']['category'] = $this->category->value;
 
         foreach ($this->positionsListItems as $item) {

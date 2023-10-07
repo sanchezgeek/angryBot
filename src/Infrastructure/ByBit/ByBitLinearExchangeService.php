@@ -8,19 +8,24 @@ use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
+use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Exception\ByBitTickerNotFoundException;
 use App\Worker\AppContext;
 use RuntimeException;
-use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
+use function debug_backtrace;
 use function sprintf;
+use function strtolower;
 
 /**
  * @todo | now only for `linear` AssetCategory
@@ -34,24 +39,14 @@ final readonly class ByBitLinearExchangeService
     }
 
     /**
+     * @todo | apiV5 | RuntimeException -> some CommonApiException
      * @throws ApiRateLimitReached|RuntimeException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
-        $result = $this->apiClient->send(
-            $request = new GetTickersRequest(self::ASSET_CATEGORY, $symbol)
-        );
-
-        if (!$result->isSuccess()) {
-            match ($error = $result->error()) {
-                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
-                default => $this->processUnknownApiError($request, $error, __METHOD__),
-            };
-        }
-
-        $data = $result->data();
+        $data = $this->sendAndProcessCommonErrors(new GetTickersRequest(self::ASSET_CATEGORY, $symbol))->data();
 
         $ticker = null;
         foreach ($data['list'] as $item) {
@@ -66,9 +61,37 @@ final readonly class ByBitLinearExchangeService
         return $ticker;
     }
 
+    /**
+     * @throws ApiRateLimitReached|RuntimeException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
+     */
     public function activeConditionalOrders(Symbol $symbol): array
     {
-        throw new NotImplementedException('must be implemented later');
+        $data = $this->sendAndProcessCommonErrors(GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
+
+        $activeOrders = null;
+
+        foreach ($data['list'] as $item) {
+            $reduceOnly = $item['reduceOnly'];
+            $closeOnTrigger = $item['closeOnTrigger'];
+
+            // Only orders created by bot
+            if (!($reduceOnly && !$closeOnTrigger)) {
+                continue;
+            }
+
+            $activeOrders[] = new ActiveStopOrder(
+                $symbol,
+                Side::from(strtolower($item['side']))->getOpposite(),
+                $item['orderId'],
+                (float)$item['qty'],
+                (float)$item['triggerPrice'],
+                TriggerBy::from($item['triggerBy'])->value,
+            );
+        }
+
+        return $activeOrders;
     }
 
     /**
@@ -78,18 +101,10 @@ final readonly class ByBitLinearExchangeService
      */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
-        $result = $this->apiClient->send(
+        $data = $this->sendAndProcessCommonErrors(
             $request = CancelOrderRequest::byOrderId(self::ASSET_CATEGORY, $order->symbol, $order->orderId)
-        );
+        )->data();
 
-        if (!$result->isSuccess()) {
-            match ($error = $result->error()) {
-                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
-                default => $this->processUnknownApiError($request, $error, __METHOD__),
-            };
-        }
-
-        $data = $result->data();
         if ($data['orderId'] !== $order->orderId) {
             throw new RuntimeException(
                 sprintf('%s | make `%s`: got another orderId (%s insteadof %s)', __METHOD__, $request->url(), $data['orderId'], $order->orderId)
@@ -98,9 +113,38 @@ final readonly class ByBitLinearExchangeService
     }
 
     /**
-     * @todo | apiV5 | trait
+     * @todo | apiV5 | maybe actual for all API-categories (before main errors processing) | for example for ApiRateLimitReached or CommonApiError
+     *
+     * @throws ApiRateLimitReached|RuntimeException
      */
-    private function processUnknownApiError(AbstractByBitApiRequest $request, ApiErrorInterface $err, string $in): void
+    private function sendAndProcessCommonErrors(AbstractByBitApiRequest $request): ByBitApiCallResult
+    {
+        $result = $this->apiClient->send($request);
+
+        if (!$result->isSuccess()) {
+            $this->processCommonTradeRequestsError($result, $request, sprintf('%s::%s', static::class, debug_backtrace()[1]['function']));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @throws ApiRateLimitReached|RuntimeException
+     */
+    private function processCommonTradeRequestsError(
+        ByBitApiCallResult $result,
+        AbstractByBitApiRequest $request,
+        string $calledFrom,
+    ): void {
+        if (!$result->isSuccess()) {
+            match ($error = $result->error()) {
+                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
+                default => $this->throwExceptionOnUnknownApiError($request, $error, $calledFrom),
+            };
+        }
+    }
+
+    private function throwExceptionOnUnknownApiError(AbstractByBitApiRequest $request, ApiErrorInterface $err, string $in): void
     {
         throw new RuntimeException(
             sprintf('%s | make `%s`: unknown errCode %d (%s)', $in, $request->url(), $err->code(), $err->desc())
