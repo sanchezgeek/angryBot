@@ -19,7 +19,7 @@ use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
-final readonly class ByBitLinearExchangeCacheDecoratedService implements TickersCache
+final readonly class ByBitLinearExchangeCacheDecoratedService implements ExchangeServiceInterface, TickersCache
 {
     private const ASSET_CATEGORY = AssetCategory::linear;
 

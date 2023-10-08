@@ -11,6 +11,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\Json;
+use App\Infrastructure\ByBit\TickersCache;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
 use App\Worker\AppContext;
 use Lin\Bybit\BybitLinear;
@@ -18,7 +19,7 @@ use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-final class ExchangeService implements ExchangeServiceInterface
+final class ExchangeService implements ExchangeServiceInterface, TickersCache
 {
     private const URL = 'https://api.bybit.com';
 //    private const URL_ORDERS = 'https://api.bybit.com/v5/order/realtime';
