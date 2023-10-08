@@ -5,6 +5,9 @@ services:
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub
 
+    App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
+        class: App\Tests\Stub\Bot\ExchangeServiceStub
+
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
         class: App\Tests\Stub\Bot\PositionServiceStub
 
