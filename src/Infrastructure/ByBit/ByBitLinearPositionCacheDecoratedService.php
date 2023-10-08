@@ -10,12 +10,15 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface
 {
+    private const ASSET_CATEGORY = AssetCategory::linear;
+
     /** @todo | inject into service? */
     private const POSITION_TTL = '6 seconds';
 
@@ -32,7 +35,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        $key = \sprintf('apiV5_position_data_%s_%s', $symbol->value, $side->value);
+        $key = \sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
 
         return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
             $item->expiresAfter(\DateInterval::createFromDateString(self::POSITION_TTL));

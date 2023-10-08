@@ -9,6 +9,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -19,6 +20,8 @@ use function sleep;
 
 abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends KernelTestCase
 {
+    private const ASSET_CATEGORY = AssetCategory::linear;
+
     protected ArrayAdapter $cache;
     protected PositionServiceInterface $innerService;
     protected EventDispatcherInterface $eventDispatcherMock;
@@ -40,6 +43,6 @@ abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends Kern
 
     protected function getPositionCacheItemKey(Symbol $symbol, Side $side): string
     {
-        return \sprintf('apiV5_position_data_%s_%s', $symbol->value, $side->value);
+        return sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
     }
 }
