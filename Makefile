@@ -91,20 +91,32 @@ out: ## Get consumers output
 
 ## —— Position 📉 ———————————————————————————————————————————————————————————
 
-sl-info: ## Get position SLs info ("s=" - to specify `position_side` "p=" - to specify `pnlStep`, example: sl-info s=sell p=30)
+sl-info: ## Get position SLs info ("s=" - to specify `position_side`, "p=" - to specify `pnlStep`, "sp=" - to specify `showPnl`, example: sl-info s=sell p=30)
 	@$(eval s ?=)
 	@$(eval p ?= 40)
 	@$(eval a ?= )
-	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)'
+	@$(eval sp ?= )
+	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp)
 
 ## —— SHORT 🐻 ——
 s-info: ## Get SHORT-position SLs info ("p=" - to specify `pnlStep`, example: s-info p=30)
 s-info: s=sell
 s-info: sl-info
+
+p-s-info: ## Get SHORT-position SLs info with PNL ("p=" - to specify `pnlStep`, example: s-info p=30)
+p-s-info: s=sell
+p-s-info: sp=--showPnl
+p-s-info: sl-info
+
 ## —— LONG 🐂 ——
 b-info: ## Get LONG-position SLs info ("p=" - to specify `pnlStep`, example: b-info p=30)
 b-info: s=buy
 b-info: sl-info
+
+p-b-info: ## Get LONG-position SLs info with PNL ("p=" - to specify `pnlStep`, example: p-b-info p=30)
+p-b-info: s=buy
+p-b-info: sp=--showPnl
+p-b-info: sl-info
 
 p-info: ## Get position info on price move ("s=" - to specify `position_side` "t=" - to specify `to` price, example: p-info s=sell t=30000)
 	@$(eval s ?=)

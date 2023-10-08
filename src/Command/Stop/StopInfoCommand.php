@@ -38,6 +38,7 @@ class StopInfoCommand extends Command
     use PositionAwareCommand;
 
     private const DEFAULT_PNL_STEP = 20;
+    private const SHOW_PNL_OPTION = 'showPnl';
 
     private SymfonyStyle $io;
     private string $aggregateWith;
@@ -49,6 +50,7 @@ class StopInfoCommand extends Command
             ->configurePositionArgs()
             ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
             ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback')
+            ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
         ;
     }
 
@@ -64,6 +66,7 @@ class StopInfoCommand extends Command
     {
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
+        $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
 
@@ -91,25 +94,32 @@ class StopInfoCommand extends Command
                 continue;
             }
 
-            $this->io->note(
-                \sprintf(
-                    '[%s] | %d | %.1f%% (%s)',
-                    $rangeDesc,
-                    $rangeStops->totalCount(),
-                    $rangeStops->volumePart($position->size),
-                    new Pnl($usdPnL = $rangeStops->totalUsdPnL($position), 'USDT')
-                )
-            );
+            $usdPnL = $rangeStops->totalUsdPnL($position);
+
+            $format = '[%s] | %d | %.1f%%';
+            $args = [
+                $rangeDesc,
+                $rangeStops->totalCount(),
+                $rangeStops->volumePart($position->size),
+            ];
+
+            if ($showPnl) {
+                $format .= ' (%s)';
+                $args[] = new Pnl($usdPnL, 'USDT');
+            }
+
+            $this->io->note(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);
 
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
         }
 
-        $this->io->note([
-            \sprintf('total PNL: %s', new Pnl($totalUsdPnL)),
-            \sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100),
-        ]);
+        if ($showPnl) {
+            $this->io->note(sprintf('total PNL: %s', new Pnl($totalUsdPnL)));
+        }
+
+        $this->io->note(sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100));
 
         return Command::SUCCESS;
     }

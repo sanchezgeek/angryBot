@@ -95,7 +95,7 @@ class EditStopsCommand extends Command
 
         $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
         if (!$filteredStops->totalCount()) {
-            $io->info('Stops by specified criteria not found!');
+//            $io->info('Stops by specified criteria not found!');
             return Command::SUCCESS;
         }
 
@@ -186,7 +186,7 @@ class EditStopsCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
+//            $io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
         }
 
         if ($action === self::ACTION_EDIT) {
