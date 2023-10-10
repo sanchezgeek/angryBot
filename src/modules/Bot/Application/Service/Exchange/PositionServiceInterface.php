@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange;
 
-use App\Bot\Application\Exception\ApiRateLimitReached;
-use App\Bot\Application\Exception\CannotAffordOrderCost;
-use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
 
 interface PositionServiceInterface
 {

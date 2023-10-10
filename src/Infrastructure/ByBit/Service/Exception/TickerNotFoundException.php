@@ -10,7 +10,7 @@ use Exception;
 
 use function sprintf;
 
-final class ByBitTickerNotFoundException extends Exception
+final class TickerNotFoundException extends Exception
 {
     public static function forSymbolAndCategory(Symbol $symbol, AssetCategory $category): self
     {

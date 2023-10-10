@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service;
 
-use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -12,6 +11,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
@@ -20,7 +20,7 @@ use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
-use App\Infrastructure\ByBit\Service\Exception\ByBitTickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\TickerNotFoundException;
 use App\Worker\AppContext;
 use RuntimeException;
 
@@ -60,7 +60,7 @@ final readonly class ByBitLinearExchangeService implements ExchangeServiceInterf
             }
         }
 
-        \assert($ticker !== null, ByBitTickerNotFoundException::forSymbolAndCategory($symbol, self::ASSET_CATEGORY));
+        \assert($ticker !== null, TickerNotFoundException::forSymbolAndCategory($symbol, self::ASSET_CATEGORY));
 
         return $ticker;
     }

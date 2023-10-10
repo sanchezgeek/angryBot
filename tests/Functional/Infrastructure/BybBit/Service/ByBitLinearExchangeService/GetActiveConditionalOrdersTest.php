@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
-use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Result\CommonApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;

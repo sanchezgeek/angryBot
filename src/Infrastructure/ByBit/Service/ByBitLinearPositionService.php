@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service;
 
-use App\Bot\Application\Exception\ApiRateLimitReached;
-use App\Bot\Application\Exception\CannotAffordOrderCost;
-use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -14,10 +11,13 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
 use RuntimeException;
 
 use function sprintf;

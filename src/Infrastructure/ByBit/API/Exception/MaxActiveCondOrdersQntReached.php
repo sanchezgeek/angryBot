@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Exception;
+namespace App\Infrastructure\ByBit\API\Exception;
 
 final class MaxActiveCondOrdersQntReached extends \Exception
 {

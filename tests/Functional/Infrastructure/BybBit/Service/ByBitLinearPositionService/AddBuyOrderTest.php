@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
-use App\Bot\Application\Exception\ApiRateLimitReached;
-use App\Bot\Application\Exception\CannotAffordOrderCost;
-use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBit\TradeResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
