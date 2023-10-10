@@ -75,6 +75,6 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private function tickerCacheKey(Symbol $symbol): string
     {
-        return \sprintf('%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->value);
+        return \sprintf('api_%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->value);
     }
 }

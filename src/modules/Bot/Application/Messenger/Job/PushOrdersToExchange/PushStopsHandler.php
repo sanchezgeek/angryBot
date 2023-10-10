@@ -102,7 +102,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private function createOpposite(Position $position, Stop $stop, Ticker $ticker): array
     {
         // @todo Костыль
-        if ($position->size > 1.6) {
+        if ($position->size > 2) {
             return [];
         }
 

@@ -43,6 +43,16 @@ services:
     App\Infrastructure\ByBit\TickersCache:
         alias: App\Bot\Infrastructure\ByBit\ExchangeService
 
+#    App\Infrastructure\ByBit\ByBitLinearExchangeCacheDecoratedService:
+#        class: App\Infrastructure\ByBit\ByBitLinearExchangeCacheDecoratedService
+#        arguments:
+#            $exchangeService: '@App\Infrastructure\ByBit\ByBitLinearExchangeService'
+#
+#    App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService:
+#        class: App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService
+#        arguments:
+#            $positionService: '@App\Infrastructure\ByBit\ByBitLinearPositionService'
+
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:
             $apiKey: '%env(BYBIT_API_KEY)%'
@@ -69,3 +79,10 @@ services:
     App\Bot\Application\Events\LoggingListener:
         tags:
             - { name: 'kernel.event_subscriber', priority: -100}
+
+    App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient:
+        class: App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
+        arguments:
+            $host: 'https://%env(BYBIT_API_HOST)%'
+            $apiKey: '%env(BYBIT_API_KEY)%'
+            $secretKey: '%env(BYBIT_API_SECRET)%'

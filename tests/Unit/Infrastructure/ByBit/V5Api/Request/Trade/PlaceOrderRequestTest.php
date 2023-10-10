@@ -8,6 +8,8 @@ use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
@@ -29,12 +31,11 @@ final class PlaceOrderRequestTest extends TestCase
      */
     public function testCreateImmediatelyTriggeredByIndexPriceOrderRequest(Side $side): void
     {
-        $request = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+        $request = PlaceOrderRequest::marketOrder(
             $category = AssetCategory::linear,
             $symbol = Symbol::BTCUSDT,
             $side,
             0.01,
-            30000.1
         );
 
         self::assertSame('/v5/order/create', $request->url());
@@ -50,7 +51,7 @@ final class PlaceOrderRequestTest extends TestCase
             'reduceOnly' => false,
             'closeOnTrigger' => false,
             'qty' => '0.01',
-            'triggerPrice' => '30000.1',
+            'positionIdx' => $this->getPositionIdx($side)->value,
         ], $request->data());
     }
 
@@ -83,7 +84,19 @@ final class PlaceOrderRequestTest extends TestCase
             'reduceOnly' => true,
             'closeOnTrigger' => false,
             'qty' => '0.01',
+            'positionIdx' => $this->getPositionIdx($positionSide)->value,
             'triggerPrice' => '30000.1',
+            'triggerDirection' => $this->getConditionalStopTriggerDirection($positionSide)->value,
         ], $request->data());
+    }
+
+    private function getPositionIdx(Side $positionSide): PositionIdx
+    {
+        return $positionSide->isShort() ? PositionIdx::HedgeModeSellSide : PositionIdx::HedgeModeBuySide;
+    }
+
+    private function getConditionalStopTriggerDirection(Side $positionSide): ConditionalOrderTriggerDirection
+    {
+        return $positionSide->isShort() ? ConditionalOrderTriggerDirection::RisesToTriggerPrice : ConditionalOrderTriggerDirection::FallsToTriggerPrice;
     }
 }

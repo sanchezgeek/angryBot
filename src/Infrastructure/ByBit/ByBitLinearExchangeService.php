@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -30,12 +31,15 @@ use function strtolower;
 /**
  * @todo | now only for `linear` AssetCategory
  */
-final readonly class ByBitLinearExchangeService
+final readonly class ByBitLinearExchangeService implements ExchangeServiceInterface
 {
     private const ASSET_CATEGORY = AssetCategory::linear;
 
-    public function __construct(private ByBitApiClientInterface $apiClient, private ?string $workerHash)
+    private string $workerHash;
+
+    public function __construct(private ByBitApiClientInterface $apiClient, ?string $workerHash = null)
     {
+        $this->workerHash = $workerHash ?? AppContext::workerHash();
     }
 
     /**
@@ -51,7 +55,7 @@ final readonly class ByBitLinearExchangeService
         $ticker = null;
         foreach ($data['list'] as $item) {
             if ($item['symbol'] === $symbol->value) {
-                $updatedBy = $this->workerHash ?? AppContext::workerHash();
+                $updatedBy = $this->workerHash;
                 $ticker = new Ticker($symbol, (float)$item['markPrice'], (float)$item['indexPrice'], $updatedBy);
             }
         }
@@ -70,8 +74,7 @@ final readonly class ByBitLinearExchangeService
     {
         $data = $this->sendAndProcessCommonErrors(GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
 
-        $activeOrders = null;
-
+        $activeOrders = [];
         foreach ($data['list'] as $item) {
             $reduceOnly = $item['reduceOnly'];
             $closeOnTrigger = $item['closeOnTrigger'];

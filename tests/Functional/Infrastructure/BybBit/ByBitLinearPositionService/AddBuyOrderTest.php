@@ -42,7 +42,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
-        $this->matchPost(PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+        $this->matchPost(PlaceOrderRequest::marketOrder(
             $category,
             $symbol,
             $positionSide,
@@ -71,7 +71,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
-        $this->matchPost(PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+        $this->matchPost(PlaceOrderRequest::marketOrder(
             $category,
             $symbol,
             $positionSide,

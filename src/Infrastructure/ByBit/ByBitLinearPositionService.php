@@ -16,6 +16,7 @@ use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use RuntimeException;
@@ -53,7 +54,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
                     (float)$item['size'],
                     VolumeHelper::round((float)$item['positionValue'], 2),
                     (float)$item['liqPrice'],
-                    (float)$item['positionMM'], // @todo | apiV5 | research `margin` param
+                    (float)$item['positionBalance'],
                     (float)$item['leverage'],
                 );
             }
@@ -90,7 +91,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
                 ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
                 ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
                 default => new RuntimeException(
-                    sprintf('%s | make `%s`: unknown err code (%d)', __METHOD__, $request->url(), $err->code())
+                    sprintf('%s | make `%s`: unknown err code %d (%s)', __METHOD__, $request->url(), $err->code(), $err->desc())
                 )
             };
         }
@@ -106,12 +107,11 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
      */
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
-        $request = PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+        $request = PlaceOrderRequest::marketOrder(
             self::ASSET_CATEGORY,
             $position->symbol,
             $position->side,
             $qty,
-            $price
         );
 
         $result = $this->apiClient->send($request);
@@ -122,7 +122,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
                 ApiV5Error::CannotAffordOrderCost => CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty),
                 ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
                 default => new RuntimeException(
-                    sprintf('%s | make `%s`: unknown err code (%d)', __METHOD__, $request->url(), $err->code())
+                    sprintf('%s | make `%s`: unknown err code %d (%s)', __METHOD__, $request->url(), $err->code(), $err->desc())
                 )
             };
         }

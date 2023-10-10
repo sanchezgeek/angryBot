@@ -63,7 +63,7 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
             ];
 
             yield sprintf('%s-position immediately BuyOrder', $side->title()) => [
-                PlaceOrderRequest::buyOrderImmediatelyTriggeredByIndexPrice(
+                PlaceOrderRequest::marketOrder(
                     AssetCategory::linear,
                     Symbol::BTCUSDT,
                     $side,

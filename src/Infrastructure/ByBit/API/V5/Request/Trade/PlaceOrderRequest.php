@@ -9,6 +9,8 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
+use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use InvalidArgumentException;
@@ -37,20 +39,20 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         return self::URL;
     }
 
-    public static function buyOrderImmediatelyTriggeredByIndexPrice(
+    public static function marketOrder(
         AssetCategory $category,
         Symbol $symbol,
         Side $positionSide,
         float $qty,
-        float $price,
     ): self {
         $orderType = ExecutionOrderType::Market;
         $triggerBy = TriggerBy::IndexPrice;
         $timeInForce = TimeInForce::GTC;
 
         $side = $positionSide;
+        $pIdx = self::getPositionIdx($positionSide);
 
-        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, false, false, $qty, $price);
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, false, false, $qty, $pIdx);
     }
 
     public static function stopConditionalOrderTriggeredByIndexPrice(
@@ -65,13 +67,32 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         $timeInForce = TimeInForce::GTC;
 
         $side = $positionSide->getOpposite();
+        $posIdx = self::getPositionIdx($positionSide);
+        $tD = $positionSide->isShort()
+            ? ConditionalOrderTriggerDirection::RisesToTriggerPrice
+            : ConditionalOrderTriggerDirection::FallsToTriggerPrice
+        ;
 
-        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $price);
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $posIdx, $price, $tD);
+    }
+
+    private static function getPositionIdx(Side $positionSide): PositionIdx
+    {
+        // @todo | apiV5 | research 'positionIdx'
+        // нужно разобраться как это повлияет, если хэджа не будет
+        // Used to identify positions in different position modes. Under hedge-mode, this param is required (USDT perps & Inverse contracts have hedge mode)
+        // 0: one-way mode
+        // 1: hedge-mode Buy side
+        // 2: hedge-mode Sell side
+        return $positionSide->isShort()
+            ? PositionIdx::HedgeModeSellSide
+            : PositionIdx::HedgeModeBuySide
+        ;
     }
 
     public function data(): array
     {
-        return [
+        $data = [
             'category' => $this->category->value,
             'symbol' => $this->symbol->value,
             'side' => ucfirst($this->side->value),
@@ -81,13 +102,18 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
             'reduceOnly' => $this->reduceOnly,
             'closeOnTrigger' => $this->closeOnTrigger,
             'qty' => (string)$this->qty,
-            'triggerPrice' => (string)$this->triggerPrice,
-            // @todo | apiV5 | research 'positionIdx'
-            // Used to identify positions in different position modes. Under hedge-mode, this param is required (USDT perps & Inverse contracts have hedge mode)
-            // 0: one-way mode
-            // 1: hedge-mode Buy side
-            // 2: hedge-mode Sell side
+            'positionIdx' => $this->positionIdx->value,
         ];
+
+        if ($this->triggerPrice) {
+            $data['triggerPrice'] = (string)$this->triggerPrice;
+        }
+
+        if ($this->triggerDirection) {
+            $data['triggerDirection'] = $this->triggerDirection->value;
+        }
+
+        return $data;
     }
 
     /**
@@ -103,14 +129,18 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         private bool $reduceOnly,
         private bool $closeOnTrigger,
         private float $qty,
-        private float $triggerPrice,
+        private PositionIdx $positionIdx,
+        private ?float $triggerPrice = null,
+        private ?ConditionalOrderTriggerDirection $triggerDirection = null,
     ) {
         assert($this->qty > 0, new InvalidArgumentException(
             sprintf('%s: $qty must be greater than zero (`%f` provided)', __CLASS__, $this->qty)
         ));
 
-        assert($this->triggerPrice > 0, new InvalidArgumentException(
-            sprintf('%s: $triggerPrice must be greater than zero (`%f` provided)', __CLASS__, $this->qty)
-        ));
+        if ($this->triggerPrice !== null) {
+            assert($this->triggerPrice > 0, new InvalidArgumentException(
+                sprintf('%s: $triggerPrice must be greater than zero (`%f` provided)', __CLASS__, $this->qty)
+            ));
+        }
     }
 }

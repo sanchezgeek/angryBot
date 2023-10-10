@@ -128,7 +128,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new RuntimeException(
-                sprintf('%s::%s | make `%s`: unknown err code (%d)', ByBitLinearPositionService::class, 'addStop', PlaceOrderRequest::URL, $error->code())
+                sprintf('%s::%s | make `%s`: unknown err code %d (%s)', ByBitLinearPositionService::class, 'addStop', PlaceOrderRequest::URL, $error->code(), $error->desc())
             ),
         ];
     }
