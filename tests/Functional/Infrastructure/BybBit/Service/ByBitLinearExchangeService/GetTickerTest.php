@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Domain\Ticker;
@@ -11,8 +11,8 @@ use App\Infrastructure\ByBit\API\Result\CommonApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
-use App\Infrastructure\ByBit\ByBitLinearExchangeService;
-use App\Infrastructure\ByBit\Exception\ByBitTickerNotFoundException;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\Exception\ByBitTickerNotFoundException;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBit\MarketResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -21,7 +21,7 @@ use Throwable;
 use function sprintf;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearExchangeService::ticker
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearExchangeService::ticker
  */
 final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
 {

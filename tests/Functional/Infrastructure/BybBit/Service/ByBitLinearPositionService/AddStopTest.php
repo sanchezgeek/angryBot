@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\MaxActiveCondOrdersQntReached;
@@ -12,7 +12,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Infrastructure\ByBit\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBit\TradeResponseBuilder;
 use RuntimeException;
@@ -23,7 +23,7 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService::addStop
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::addStop
  */
 final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
@@ -12,7 +12,7 @@ use App\Infrastructure\ByBit\API\Result\CommonApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
-use App\Infrastructure\ByBit\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBit\Trade\CancelOrderResponseBuilder;
@@ -23,7 +23,7 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearExchangeService::closeActiveConditionalOrder
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearExchangeService::closeActiveConditionalOrder
  */
 final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTestAbstract
 {

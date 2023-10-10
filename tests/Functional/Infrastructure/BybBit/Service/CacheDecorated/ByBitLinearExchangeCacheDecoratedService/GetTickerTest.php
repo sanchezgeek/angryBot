@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Domain\Ticker;
@@ -10,6 +10,9 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 use function usleep;
 
+/**
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService::ticker
+ */
 final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAbstract
 {
     public function testCallInnerServiceWhenNoCachedValueExists(): void

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Domain\Position;
@@ -12,7 +12,7 @@ use App\Domain\Position\ValueObject\Side;
 use function usleep;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService::getOppositePosition
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::getOppositePosition
  */
 final class GetOppositePositionTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {

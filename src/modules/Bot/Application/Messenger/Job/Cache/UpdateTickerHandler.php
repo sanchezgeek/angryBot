@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\Cache;
 
-use App\Infrastructure\ByBit\TickersCache;
+use App\Bot\Application\Service\Exchange\TickersCache;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]

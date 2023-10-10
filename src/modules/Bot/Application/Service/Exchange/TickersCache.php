@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\ByBit;
+namespace App\Bot\Application\Service\Exchange;
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;

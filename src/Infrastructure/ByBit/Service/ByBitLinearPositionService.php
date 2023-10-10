@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit;
+namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
@@ -16,7 +16,6 @@ use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
-use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use RuntimeException;
@@ -35,7 +34,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\GetPositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\GetPositionTest
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
@@ -72,7 +71,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
      * @return ?string Created stop order id or NULL if creation failed
      * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\AddStopTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
@@ -103,7 +102,7 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
      * @return ?string Created stop order id or NULL if creation failed
      * @throws MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService\AddBuyOrderTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddBuyOrderTest
      */
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {

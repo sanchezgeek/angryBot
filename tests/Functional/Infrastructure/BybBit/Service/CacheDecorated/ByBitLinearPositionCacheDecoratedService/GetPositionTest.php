@@ -2,24 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService;
-use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
-use function sleep;
 use function usleep;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService::getPosition
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::getPosition
  */
 final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {

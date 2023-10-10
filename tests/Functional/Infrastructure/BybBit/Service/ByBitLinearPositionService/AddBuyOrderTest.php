@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Exception\CannotAffordOrderCost;
@@ -22,7 +22,7 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService::addBuyOrder
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::addBuyOrder
  */
 final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
 {

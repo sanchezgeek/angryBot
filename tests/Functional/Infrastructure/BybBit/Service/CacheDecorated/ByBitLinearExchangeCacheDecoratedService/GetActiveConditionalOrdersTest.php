@@ -2,16 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 
 use function uuid_create;
 
+/**
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService::activeConditionalOrders
+ */
 final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeCacheDecoratedServiceTestAbstract
 {
     public function testCallInnerService(): void

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
-use App\Infrastructure\ByBit\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

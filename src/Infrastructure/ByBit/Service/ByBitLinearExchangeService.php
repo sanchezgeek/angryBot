@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit;
+namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Exception\ApiRateLimitReached;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -20,7 +20,7 @@ use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
-use App\Infrastructure\ByBit\Exception\ByBitTickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\ByBitTickerNotFoundException;
 use App\Worker\AppContext;
 use RuntimeException;
 
@@ -46,7 +46,7 @@ final readonly class ByBitLinearExchangeService implements ExchangeServiceInterf
      * @todo | apiV5 | RuntimeException -> some CommonApiException
      * @throws ApiRateLimitReached|RuntimeException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\GetTickerTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
@@ -68,7 +68,7 @@ final readonly class ByBitLinearExchangeService implements ExchangeServiceInterf
     /**
      * @throws ApiRateLimitReached|RuntimeException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
     public function activeConditionalOrders(Symbol $symbol): array
     {
@@ -100,7 +100,7 @@ final readonly class ByBitLinearExchangeService implements ExchangeServiceInterf
     /**
      * @throws ApiRateLimitReached|RuntimeException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
      */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {

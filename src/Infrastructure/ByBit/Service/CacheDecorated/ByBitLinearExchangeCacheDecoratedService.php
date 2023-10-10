@@ -2,22 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit;
+namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
-use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\TickersCache;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
-use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
 final readonly class ByBitLinearExchangeCacheDecoratedService implements ExchangeServiceInterface, TickersCache
 {
@@ -32,6 +27,9 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
     ) {
     }
 
+    /**
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
+     */
     public function ticker(Symbol $symbol): Ticker
     {
         $item = $this->cache->getItem(
@@ -62,12 +60,17 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     /**
      * @return ActiveStopOrder[]
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
     public function activeConditionalOrders(Symbol $symbol): array
     {
         return $this->exchangeService->activeConditionalOrders($symbol);
     }
 
+    /**
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\CloseActiveConditionalOrderTest
+     */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
         $this->exchangeService->closeActiveConditionalOrder($order);

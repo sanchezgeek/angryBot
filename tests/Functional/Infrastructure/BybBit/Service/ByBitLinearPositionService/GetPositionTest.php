@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -15,7 +15,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use function sprintf;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionService::getPosition
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::getPosition
  * @todo | apiV5 | cover getOppositePosition
  */
 final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract

@@ -11,6 +11,9 @@ services:
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
         class: App\Tests\Stub\Bot\PositionServiceStub
 
+    App\Bot\Application\Service\Exchange\TickersCache:
+        class: App\Tests\Stub\Bot\ExchangeServiceStub
+
     App\Application\UniqueIdGeneratorInterface:
         class: App\Tests\Mock\UniqueIdGeneratorStub
 

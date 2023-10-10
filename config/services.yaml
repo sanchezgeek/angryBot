@@ -40,18 +40,18 @@ services:
     App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
         alias: App\Bot\Infrastructure\ByBit\ExchangeService
 
-    App\Infrastructure\ByBit\TickersCache:
+    App\Bot\Application\Service\Exchange\TickersCache:
         alias: App\Bot\Infrastructure\ByBit\ExchangeService
 
-#    App\Infrastructure\ByBit\ByBitLinearExchangeCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\ByBitLinearExchangeCacheDecoratedService
+#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
+#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 #        arguments:
-#            $exchangeService: '@App\Infrastructure\ByBit\ByBitLinearExchangeService'
+#            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
 #
-#    App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService
+#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
+#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
 #        arguments:
-#            $positionService: '@App\Infrastructure\ByBit\ByBitLinearPositionService'
+#            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:

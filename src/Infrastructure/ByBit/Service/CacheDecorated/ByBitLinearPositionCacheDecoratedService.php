@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit;
+namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -31,7 +31,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService\GetPositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
@@ -49,7 +49,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
      */
     public function getOppositePosition(Position $position): ?Position
     {
@@ -57,7 +57,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService\AddStopTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddStopTest
      */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {
@@ -65,7 +65,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
      */
     public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
     {

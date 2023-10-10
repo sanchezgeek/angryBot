@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Tests\Factory\TickerFactory;
 
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\ByBitLinearPositionCacheDecoratedService::addStop
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::addStop
  */
-final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
+final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {
     public function testCallInnerServiceToAddStop(): void
     {
@@ -28,12 +28,12 @@ final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $price = 30000;
 
         $this->innerService
-            ->expects(self::once())->method('addBuyOrder')->with($position, $ticker, $price,$volume)
+            ->expects(self::once())->method('addStop')->with($position, $ticker, $price,$volume)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->addBuyOrder($position, $ticker, $price, $volume);
+        $result = $this->service->addStop($position, $ticker, $price, $volume);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

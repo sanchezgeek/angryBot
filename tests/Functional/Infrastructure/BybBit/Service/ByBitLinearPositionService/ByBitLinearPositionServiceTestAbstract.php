@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\ByBitLinearPositionService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
