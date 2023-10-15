@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mock\Response\ByBit;
+namespace App\Tests\Mock\Response\ByBitV5Api;
 
 use App\Tests\Mock\Response\AbstractMockResponseFactory;
 use Symfony\Component\HttpClient\Response\MockResponse;

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Tester;
 
 use App\Clock\ClockInterface;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Tests\Stub\Request\SymfonyHttpClientStub;
 use DateTimeImmutable;
 use RuntimeException;
@@ -100,5 +103,23 @@ trait ByBitV5ApiTester
                 self::assertSame($expectedRequest->data(), $actualRequestCall->params);
             }
         }
+    }
+
+    protected static function unknownV5ApiErrorException(
+        string $requestUrl,
+        ByBitV5ApiError $error,
+        string $host = self::DEFAULT_HOST
+    ): UnknownByBitApiErrorException {
+        $requestUrl = $host . $requestUrl;
+
+        return new UnknownByBitApiErrorException($error->code(), $error->msg(), sprintf('Make `%s` request', $requestUrl));
+    }
+
+    protected static function unexpectedV5ApiErrorException(
+        string $requestUrl,
+        ByBitV5ApiError $error,
+        string $serviceMethod
+    ): UnexpectedApiErrorException {
+        return new UnexpectedApiErrorException($error->code(), $error->msg(), sprintf('%s | make `%s`', $serviceMethod, $requestUrl));
     }
 }

@@ -25,8 +25,11 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private const DEFAULT_TICKER_TTL = '1000 milliseconds';
 
+    /**
+     * @param ByBitLinearExchangeService $exchangeService
+     */
     public function __construct(
-        private ByBitLinearExchangeService $exchangeService,
+        private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
         private CacheInterface $cache,
     ) {

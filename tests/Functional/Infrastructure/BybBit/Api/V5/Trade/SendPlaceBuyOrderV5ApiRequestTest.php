@@ -9,7 +9,7 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
-use App\Tests\Mock\Response\ByBit\TradeResponses;
+use App\Tests\Mock\Response\ByBitV5Api\TradeResponses;
 use Symfony\Component\HttpFoundation\Request;
 
 use function sprintf;

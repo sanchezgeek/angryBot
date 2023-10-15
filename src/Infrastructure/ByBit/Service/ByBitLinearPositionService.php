@@ -105,9 +105,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $price
         );
 
-        $result = $this->sendRequest($request, function(ApiErrorInterface $err) {
-            match ($err->code()) {
-                ApiV5Errors::MaxActiveCondOrdersQntReached->value => throw new MaxActiveCondOrdersQntReached($err->msg()),
+        $result = $this->sendRequest($request, function(ApiErrorInterface $error) {
+            match ($error->code()) {
+                ApiV5Errors::MaxActiveCondOrdersQntReached->value => throw new MaxActiveCondOrdersQntReached($error->msg()),
                 default => null
             };
         });
@@ -135,8 +135,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     {
         $request = PlaceOrderRequest::marketOrder(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
 
-        $result = $this->sendRequest($request, function(ApiErrorInterface $err) use ($position, $qty) {
-            match ($err->code()) {
+        $result = $this->sendRequest($request, function(ApiErrorInterface $error) use ($position, $qty) {
+            match ($error->code()) {
                 ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCost::forBuy(
                     $position->symbol,
                     $position->side,

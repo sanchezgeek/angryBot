@@ -14,7 +14,8 @@ use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
-use App\Tests\Mock\Response\ByBit\MarketResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\MarketResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -28,7 +29,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
     use ByBitV5ApiTester;
 
     private const REQUEST_URL = GetTickersRequest::URL;
-    private const METHOD = ByBitLinearExchangeService::class . '::ticker';
+    private const CALLED_METHOD = 'ByBitLinearExchangeService::ticker';
 
     /**
      * @dataProvider getTickerTestSuccessCases
@@ -125,18 +126,25 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
 
         # Api errors
         $symbol = Symbol::BTCUSDT;
-        $error = ApiV5Errors::ApiRateLimitReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit reached');
+        yield sprintf('API returned %d code (%s)', $error->code(), ApiV5Errors::ApiRateLimitReached->desc()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::error($category, $error)->build(),
-            '$expectedException' => new ApiRateLimitReached(),
+            '$expectedException' => new ApiRateLimitReached($msg),
         ];
 
-        $error = new ByBitV5ApiError(100500, 'Some other error');
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->msg()) => [
+        $error = ByBitV5ApiError::unknown(100500, 'Some other error');
+        yield sprintf('API returned %d code (%s) => UnknownByBitApiErrorException', $error->code(), $error->msg()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::error($category, $error)->build(),
-            '$expectedException' => self::expectedUnknownApiErrorException(self::REQUEST_URL, $error, self::METHOD),
+            '$expectedException' => self::unknownV5ApiErrorException(self::REQUEST_URL, $error),
+        ];
+
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::MaxActiveCondOrdersQntReached, ApiV5Errors::MaxActiveCondOrdersQntReached->desc());
+        yield sprintf('API returned known %d code (%s) => UnexpectedApiErrorException', $error->code(), $error->msg()) => [
+            $symbol, $category,
+            '$apiResponse' => MarketResponseBuilder::error($category, $error)->build(),
+            '$expectedException' => self::unexpectedV5ApiErrorException(self::REQUEST_URL, $error, self::CALLED_METHOD),
         ];
     }
 }

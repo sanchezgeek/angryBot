@@ -8,7 +8,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
-use App\Tests\Mock\Response\ByBit\PositionResponses;
+use App\Tests\Mock\Response\ByBitV5Api\PositionResponses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

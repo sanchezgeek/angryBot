@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mock\Response\ByBit\Trade;
+namespace App\Tests\Mock\Response\ByBitV5Api\Trade;
 
-use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -32,7 +32,7 @@ final class CancelOrderResponseBuilder
         'time' => 1672217377164
     ];
 
-    private function __construct(private readonly ?ApiErrorInterface $error, private readonly ?string $orderId)
+    private function __construct(private readonly ?ByBitV5ApiError $error, private readonly ?string $orderId)
     {
     }
 
@@ -41,7 +41,7 @@ final class CancelOrderResponseBuilder
         return new self(null, $orderId);
     }
 
-    public static function error(ApiErrorInterface $error): self
+    public static function error(ByBitV5ApiError $error): self
     {
         return new self($error, null);
     }

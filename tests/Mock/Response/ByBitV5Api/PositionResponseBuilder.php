@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mock\Response\ByBit;
+namespace App\Tests\Mock\Response\ByBitV5Api;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;

@@ -21,6 +21,7 @@ use DateInterval;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+
 use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface
@@ -30,8 +31,11 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     /** @todo | inject into service? */
     private const POSITION_TTL = '6 seconds';
 
+    /**
+     * @param ByBitLinearPositionService $positionService
+     */
     public function __construct(
-        private ByBitLinearPositionService $positionService,
+        private PositionServiceInterface $positionService,
         private EventDispatcherInterface $events,
         private CacheInterface $cache,
     ) {

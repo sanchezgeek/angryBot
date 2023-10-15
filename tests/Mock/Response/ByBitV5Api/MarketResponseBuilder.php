@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mock\Response\ByBit;
+namespace App\Tests\Mock\Response\ByBitV5Api;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
-use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -58,7 +58,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
 
     private array $tickersListItems = [];
 
-    private function __construct(private readonly AssetCategory $category, private readonly ?ApiErrorInterface $error)
+    private function __construct(private readonly AssetCategory $category, private readonly ?ByBitV5ApiError $error)
     {
     }
 
@@ -67,7 +67,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
         return new self($category, null);
     }
 
-    public static function error(AssetCategory $category, ApiErrorInterface $error): self
+    public static function error(AssetCategory $category, ByBitV5ApiError $error): self
     {
         return new self($category, $error);
     }

@@ -30,17 +30,4 @@ abstract class ByBitLinearExchangeServiceTestAbstract extends KernelTestCase
             self::WORKER_DEBUG_HASH
         );
     }
-
-    /**
-     * @todo | apiV5 | tests | trait
-     */
-    protected static function expectedUnknownApiErrorException(
-        string $requestUrl,
-        ApiErrorInterface $error,
-        string $in,
-    ): Throwable {
-        return new RuntimeException(
-            sprintf('%s | make `%s`: unknown errCode %d (%s)', $in, $requestUrl, $error->code(), $error->msg())
-        );
-    }
 }

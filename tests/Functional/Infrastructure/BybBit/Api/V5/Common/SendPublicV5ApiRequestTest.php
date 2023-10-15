@@ -9,7 +9,7 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
-use App\Tests\Mock\Response\ByBit\MarketResponses;
+use App\Tests\Mock\Response\ByBitV5Api\MarketResponses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

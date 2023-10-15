@@ -9,7 +9,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
-use App\Tests\Mock\Response\ByBit\PositionResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function sprintf;

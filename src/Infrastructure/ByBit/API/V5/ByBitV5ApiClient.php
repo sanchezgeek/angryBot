@@ -74,8 +74,9 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
         }
 
         if (!$result->isSuccess()) {
-            match ($err = $result->error()) {
-                ApiV5Errors::ApiRateLimitReached => throw new ApiRateLimitReached($err->msg()),
+            $error = $result->error();
+            match ($error->code()) {
+                ApiV5Errors::ApiRateLimitReached->value => throw new ApiRateLimitReached($error->msg()),
                 default => null
             };
         }
@@ -104,7 +105,9 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
                 throw new UnknownByBitApiErrorException($retCode, $responseBody['retMsg'], sprintf('Make `%s` request', $url));
             }
 
-            return ByBitApiCallResult::err(new ByBitV5ApiError($error, $responseBody['retMsg']));
+            return ByBitApiCallResult::err(
+                ByBitV5ApiError::knownError($error, $responseBody['retMsg'])
+            );
         }
 
         if (!($result = $responseBody['result'] ?? null)) {
