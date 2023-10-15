@@ -36,7 +36,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
     public const BUY_ORDER_TRIGGER_DELTA = 1;
     public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 108;
-    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 121;
+    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
 
     public function __invoke(PushStops $message): void
     {
