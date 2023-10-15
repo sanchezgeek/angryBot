@@ -28,8 +28,6 @@ final class WorkerExceptionEventListener
         }
 
         $this->printError($exception);
-
-        throw $exception;
     }
 
     protected function printError(Throwable $exception): void
