@@ -57,9 +57,11 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
+     * @inheritDoc
+     *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddStopTest
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
         return $this->positionService->addStop($position, $ticker, $price, $qty);
     }

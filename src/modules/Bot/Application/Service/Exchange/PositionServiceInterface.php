@@ -25,11 +25,9 @@ interface PositionServiceInterface
     public function getOppositePosition(Position $position): ?Position;
 
     /**
-     * @return ?string Created stop order id or NULL if creation failed
-     *
-     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached|CannotAffordOrderCost
+     * @return string Created stop `orderId`
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string;
+    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string;
 
     /**
      * @return ?string Created buy order id or NULL if creation failed

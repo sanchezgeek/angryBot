@@ -10,6 +10,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -18,6 +19,7 @@ use function end;
 use function explode;
 use function get_class;
 use function sleep;
+use function sprintf;
 
 abstract class AbstractOrdersPusher
 {
@@ -59,7 +61,7 @@ abstract class AbstractOrdersPusher
     {
         $class = explode('\\', get_class($exception));
 
-        $this->warning(sprintf('%s received', end($class)));
+        $this->warning(sprintf('%s received ("%s")', end($class), $exception->getMessage()));
     }
 
     private function fakePosition(Side $side, Symbol $symbol): Position

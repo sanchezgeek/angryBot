@@ -82,6 +82,8 @@ final class TryReleaseActiveOrdersHandler
             $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + 3); // Increase triggerDelta little bit
             $this->stopRepository->save($existedStop);
 
+            // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?
+
             $this->events->dispatch(new ActiveCondStopMovedBack($existedStop));
         } else {
             $this->stopService->create($side, $exchangeStop->triggerPrice, $exchangeStop->volume, self::DEFAULT_TRIGGER_DELTA);

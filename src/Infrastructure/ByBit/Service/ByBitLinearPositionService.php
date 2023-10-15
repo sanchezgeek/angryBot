@@ -11,8 +11,10 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
 use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\API\Exception\UnknownApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
 use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
@@ -68,34 +70,33 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
     }
 
     /**
-     * @return ?string Created stop order id or NULL if creation failed
-     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached
+     * @inheritDoc
+     *
+     * @throws AbstractByBitApiException|MaxActiveCondOrdersQntReached|ApiRateLimitReached|UnknownApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
-            self::ASSET_CATEGORY,
-            $position->symbol,
-            $position->side,
-            $qty,
-            $price
+        $result = $this->apiClient->send(
+            $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+                self::ASSET_CATEGORY,
+                $position->symbol,
+                $position->side,
+                $qty,
+                $price
+            )
         );
 
-        $result = $this->apiClient->send($request);
+        $stopOrderId = $result->data()['orderId'] ?? null;
 
-        if (!$result->isSuccess()) {
-            throw match (($err = $result->error())) {
-                ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
-                ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
-                default => new RuntimeException(
-                    sprintf('%s | make `%s`: unknown err code %d (%s)', __METHOD__, $request->url(), $err->code(), $err->desc())
-                )
-            };
+        if (!$stopOrderId) {
+            throw new RuntimeException(
+                sprintf('%s | make `%s`: cannot find `orderId` in response', $request->url(), __METHOD__)
+            );
         }
 
-        return $result->data()['orderId'];
+        return $stopOrderId;
     }
 
     /**

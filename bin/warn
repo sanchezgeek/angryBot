@@ -1,0 +1,3 @@
+#!/bin/sh
+
+cat /srv/app/var/log/dev.log | grep WARN

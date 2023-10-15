@@ -82,7 +82,7 @@ final class PositionService implements PositionServiceInterface
     /**
      * @return string Created stop order id
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
         try {
             $result = $this->api->privates()->postStopOrderCreate([
