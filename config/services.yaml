@@ -35,23 +35,23 @@ services:
         factory: [ 'App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
 
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
-        alias: App\Bot\Infrastructure\ByBit\PositionService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
 
     App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
-        alias: App\Bot\Infrastructure\ByBit\ExchangeService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
     App\Bot\Application\Service\Exchange\TickersCache:
-        alias: App\Bot\Infrastructure\ByBit\ExchangeService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
-#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
-#        arguments:
-#            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
-#
-#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
-#        arguments:
-#            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        arguments:
+            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:
