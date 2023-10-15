@@ -73,7 +73,7 @@ class StopInfoCommand extends Command
         if ($isHedge) {
             $isSupportPosition = Hedge::create($position, $oppositePosition)->isSupportPosition($position);
             if ($isSupportPosition) {
-                $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
+//                $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
             }
         }
 

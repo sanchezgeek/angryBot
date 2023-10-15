@@ -25,7 +25,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-use function abs;
 use function random_int;
 
 /** @see PushBtcUsdtShortBuyOrdersTest */
@@ -234,12 +233,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($orderVolume);
 
-        if (($delta < 0) && (abs($delta) >= $defaultStrategyStopPriceDelta)) {
-            return [
-                'strategy' => StopCreate::SHORT_STOP,
-                'description' => 'position in loss'
-            ];
-        }
+        // if without hedge?
+//        if (($delta < 0) && (abs($delta) >= $defaultStrategyStopPriceDelta)) {
+//            return [
+//                'strategy' => StopCreate::SHORT_STOP,
+//                'description' => 'position in loss'
+//            ];
+//        }
 
         if ($order->isWithShortStop()) {
             return [
