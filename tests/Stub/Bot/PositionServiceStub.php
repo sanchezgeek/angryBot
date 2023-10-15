@@ -63,7 +63,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return $exchangeOrderId;
     }
 
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
     {
         $this->addBuyOrderMethodCalls[] = [$position, $ticker, $price, $qty];
 

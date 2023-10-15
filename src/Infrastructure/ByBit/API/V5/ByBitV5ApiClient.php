@@ -6,16 +6,13 @@ namespace App\Infrastructure\ByBit\API\V5;
 
 use App\Clock\ClockInterface;
 use App\Helper\Json;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
-use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\API\Exception\UnknownApiErrorException;
-use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
-use App\Infrastructure\ByBit\API\Result\CommonApiError;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use LogicException;
+use App\Infrastructure\ByBit\API\Common\ByBitApiCallResult;
+use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -24,7 +21,6 @@ use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Throwable;
 
 use function array_merge;
 use function get_class;
@@ -57,22 +53,14 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
     }
 
     /**
-     * @inheritDoc
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
      */
     public function send(AbstractByBitApiRequest $request): ByBitApiCallResult
     {
         try {
             $result = $this->doSend($request);
-
-            if (!$result->isSuccess()) {
-                match ($result->error()) {
-                    ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
-                    ApiV5Error::MaxActiveCondOrdersQntReached => throw new MaxActiveCondOrdersQntReached(),
-                };
-            }
-
-            return $result;
-        } catch (AbstractByBitApiException $e) {
+        } catch (UnknownByBitApiErrorException $e) {
             throw $e;
         } catch (\Throwable $e) {
             $msg = sprintf(
@@ -84,6 +72,15 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 
             throw new RuntimeException($msg, 0, $e);
         }
+
+        if (!$result->isSuccess()) {
+            match ($err = $result->error()) {
+                ApiV5Errors::ApiRateLimitReached => throw new ApiRateLimitReached($err->msg()),
+                default => null
+            };
+        }
+
+        return $result;
     }
 
     /**
@@ -92,7 +89,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
      * @throws RedirectionExceptionInterface
      * @throws DecodingExceptionInterface
      * @throws ClientExceptionInterface
-     * @throws UnknownApiErrorException
+     * @throws UnknownByBitApiErrorException
      */
     private function doSend(AbstractByBitApiRequest $request): ByBitApiCallResult
     {
@@ -102,20 +99,20 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
         $responseBody = $response->toArray();
 
         if (($retCode = $responseBody['retCode'] ?? null) !== 0) {
-            $error = ApiV5Error::tryFrom($retCode);
+            $error = ApiV5Errors::tryFrom($retCode);
             if (!$error) {
-                throw new UnknownApiErrorException($retCode, $responseBody['retMsg'], sprintf('Make `%s` request', $url));
+                throw new UnknownByBitApiErrorException($retCode, $responseBody['retMsg'], sprintf('Make `%s` request', $url));
             }
 
-            return ByBitApiCallResult::err($error);
+            return ByBitApiCallResult::err(new ByBitV5ApiError($error, $responseBody['retMsg']));
         }
 
         if (!($result = $responseBody['result'] ?? null)) {
-            throw new RuntimeException('Received response with retCode = 0, but `result` key not found in response. Check API contract.');
+            throw BadApiResponseException::common($request, 'retCode = 0, but `result` key not found');
         }
 
         if (!is_array($result)) {
-            throw new RuntimeException(sprintf('Received `result` must be type of array (%s given).', gettype($result)));
+            throw BadApiResponseException::invalidItemType($request, '`result`', $result, 'array');
         }
 
         return ByBitApiCallResult::ok($result);

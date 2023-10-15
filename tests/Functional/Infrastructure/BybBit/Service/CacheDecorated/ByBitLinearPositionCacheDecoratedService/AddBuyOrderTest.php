@@ -28,12 +28,12 @@ final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $price = 30000;
 
         $this->innerService
-            ->expects(self::once())->method('addBuyOrder')->with($position, $ticker, $price,$volume)
+            ->expects(self::once())->method('marketBuy')->with($position, $ticker, $price, $volume)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->addBuyOrder($position, $ticker, $price, $volume);
+        $result = $this->service->marketBuy($position, $ticker, $price, $volume);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

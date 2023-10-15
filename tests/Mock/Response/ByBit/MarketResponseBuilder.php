@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Mock\Response\ByBit;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -99,7 +99,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
         if ($this->error) {
             $body = array_replace_recursive($body, [
                 'retCode' => $this->error->code(),
-                'retMsg' => $this->error->desc(),
+                'retMsg' => $this->error->msg(),
             ]);
 
             return self::make($body);

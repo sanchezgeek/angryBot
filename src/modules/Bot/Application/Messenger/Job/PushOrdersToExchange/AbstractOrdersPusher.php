@@ -6,18 +6,14 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
-use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-use function end;
-use function explode;
-use function get_class;
 use function sleep;
 use function sprintf;
 
@@ -28,6 +24,10 @@ abstract class AbstractOrdersPusher
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
+    /**
+     * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
+     * @param ByBitLinearPositionCacheDecoratedService $positionService
+     */
     public function __construct(
         protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,
@@ -57,17 +57,13 @@ abstract class AbstractOrdersPusher
         }
     }
 
-    protected function logExchangeClientException(Throwable $exception): void
+    protected function logWarning(Throwable $exception): void
     {
-        $class = explode('\\', get_class($exception));
-
-        $this->warning(sprintf('%s received ("%s")', end($class), $exception->getMessage()));
+        $this->warning(sprintf('%s received ("%s")', $this->exceptionShortName($exception), $exception->getMessage()));
     }
 
-    private function fakePosition(Side $side, Symbol $symbol): Position
+    protected function logCritical(Throwable $exception): void
     {
-        $entryPrice = $this->exchangeService->ticker($symbol)->indexPrice;
-
-        return new Position($side, $symbol, $entryPrice, 0, 0, 0, 0, 0);
+        $this->critical(sprintf('%s received ("%s")', $this->exceptionShortName($exception), $exception->getMessage()));
     }
 }

@@ -7,12 +7,12 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBit\TradeResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -22,7 +22,7 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::addBuyOrder
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::marketBuy
  */
 final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
 {
@@ -51,7 +51,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         ), $apiResponse);
 
         // Act
-        $exchangeOrderId = $this->service->addBuyOrder($position, $ticker, $price, $volume);
+        $exchangeOrderId = $this->service->marketBuy($position, $ticker, $price, $volume);
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
@@ -83,7 +83,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
 
         // Act
         try {
-            $this->service->addBuyOrder($position, $ticker, $price, $volume);
+            $this->service->marketBuy($position, $ticker, $price, $volume);
         } catch (Throwable $exception) {
         }
 
@@ -110,22 +110,22 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         $category = AssetCategory::linear;
         $positionSide = Side::Sell;
 
-        $error = ApiV5Error::ApiRateLimitReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::ApiRateLimitReached;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new ApiRateLimitReached(),
         ];
 
-        $error = ApiV5Error::MaxActiveCondOrdersQntReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::MaxActiveCondOrdersQntReached;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new MaxActiveCondOrdersQntReached(),
         ];
 
-        $error = ApiV5Error::CannotAffordOrderCost;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::CannotAffordOrderCost;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => CannotAffordOrderCost::forBuy($symbol, $positionSide, self::ORDER_QTY),

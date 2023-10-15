@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
-use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
@@ -17,14 +16,16 @@ use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
+use function abs;
 use function random_int;
 
 /** @see PushBtcUsdtShortBuyOrdersTest */
@@ -33,22 +34,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 17;
 
-    private ?\DateTimeImmutable $cannotAffordAt = null;
+    private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
-
-    public function __construct(
-        private readonly BuyOrderRepository $buyOrderRepository,
-        private readonly StopRepository $stopRepository,
-        private readonly StopService $stopService,
-        private readonly MessageBusInterface $messageBus,
-
-        ExchangeServiceInterface $exchangeService,
-        PositionServiceInterface $positionService,
-        LoggerInterface $logger,
-        ClockInterface $clock,
-    ) {
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
-    }
 
     public function __invoke(PushBuyOrders $message): void
     {
@@ -83,11 +70,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (CannotAffordOrderCost $e) {
+            $this->logWarning($e);
+
             $this->cannotAffordAtPrice = $ticker->indexPrice;
             $this->cannotAffordAt = $this->clock->now();
-
-//            $this->logExchangeClientException($e);
-
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
 //                $hedge = Hedge::create($position, $oppositePosition);
 //                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
@@ -108,7 +94,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->positionService->addBuyOrder($position, $ticker, $order->getPrice(), $order->getVolume());
+            $exchangeOrderId = $this->positionService->marketBuy($position, $ticker, $order->getPrice(), $order->getVolume());
 
             if ($exchangeOrderId) {
                 $order->setExchangeOrderId($exchangeOrderId);
@@ -123,15 +109,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (ApiRateLimitReached $e) {
-            $this->logExchangeClientException($e);
-
+            $this->logWarning($e);
             $this->sleep($e->getMessage());
-        } catch (MaxActiveCondOrdersQntReached $e) {
-            $this->logExchangeClientException($e);
-
-            $this->messageBus->dispatch(
-                TryReleaseActiveOrders::forBuyOrder($ticker->symbol, $order)
-            );
+        } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
+            $this->logCritical($e);
         } finally {
             $this->buyOrderRepository->save($order);
         }
@@ -306,5 +287,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $range = [$this->cannotAffordAtPrice - 15, $this->cannotAffordAtPrice + 15];
 
         return !($ticker->indexPrice > $range[0] && $ticker->indexPrice < $range[1]);
+    }
+
+    public function __construct(
+        private readonly BuyOrderRepository $buyOrderRepository,
+        private readonly StopRepository $stopRepository,
+        private readonly StopService $stopService,
+
+        ExchangeServiceInterface $exchangeService,
+        PositionServiceInterface $positionService,
+        LoggerInterface $logger,
+        ClockInterface $clock,
+    ) {
+        var_dump(get_class($exchangeService));
+        var_dump(get_class($positionService));
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 }

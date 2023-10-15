@@ -6,7 +6,7 @@ namespace App\Tests\Mock\Response\ByBit;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;

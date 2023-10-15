@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Tester;
 
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
 use App\Tests\Stub\Request\SymfonyHttpClientStub;
 use DateTimeImmutable;

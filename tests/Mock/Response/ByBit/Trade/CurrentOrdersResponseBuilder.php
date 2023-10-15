@@ -6,8 +6,8 @@ namespace App\Tests\Mock\Response\ByBit\Trade;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
@@ -125,7 +125,7 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
         if ($this->error) {
             $body = array_replace_recursive($body, [
                 'retCode' => $this->error->code(),
-                'retMsg' => $this->error->desc(),
+                'retMsg' => $this->error->msg(),
             ]);
 
             return self::make($body);

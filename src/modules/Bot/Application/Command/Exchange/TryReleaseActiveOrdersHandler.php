@@ -11,6 +11,9 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -24,6 +27,9 @@ final class TryReleaseActiveOrdersHandler
     private const DEFAULT_TRIGGER_DELTA = 20;
     private const DEFAULT_RELEASE_OVER_DISTANCE = 70;
 
+    /**
+     * @param ByBitLinearExchangeService $exchangeService
+     */
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
@@ -33,6 +39,10 @@ final class TryReleaseActiveOrdersHandler
     ) {
     }
 
+    /**
+     * @throws UnknownByBitApiErrorException
+     * @throws ApiRateLimitReached
+     */
     public function __invoke(TryReleaseActiveOrders $command): void
     {
         $claimedOrderVolume = $command->forVolume;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBit;
 
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -33,7 +33,7 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
         'time' => 1672211918471
     ];
 
-    private function __construct(private readonly ?ApiV5Error $error, private readonly ?string $orderId)
+    private function __construct(private readonly ?ApiV5Errors $error, private readonly ?string $orderId)
     {
     }
 
@@ -42,7 +42,7 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
         return new self(null, $orderId);
     }
 
-    public static function error(ApiV5Error $error): self
+    public static function error(ApiV5Errors $error): self
     {
         return new self($error, null);
     }
@@ -52,7 +52,7 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
         if ($this->error) {
             $body = array_replace_recursive(self::SAMPLE_PLACE_ORDER_FAILED_RESPONSE, [
                 'retCode' => $this->error->code(),
-                'retMsg' => $this->error->desc(),
+                'retMsg' => $this->error->name(),
             ]);
         } else {
             $body = array_replace_recursive(self::SAMPLE_PLACE_ORDER_SUCCESS_RESPONSE, [

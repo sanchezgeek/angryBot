@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\ByBit\API\V5\Enum\Asset;
+namespace App\Infrastructure\ByBit\API\Common\Emun\Asset;
 
 enum AssetCategory: string
 {

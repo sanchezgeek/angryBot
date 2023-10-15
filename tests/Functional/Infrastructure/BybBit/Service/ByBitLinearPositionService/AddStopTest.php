@@ -7,12 +7,12 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBit\TradeResponseBuilder;
 use RuntimeException;
@@ -109,26 +109,26 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         $category = AssetCategory::linear;
         $positionSide = Side::Sell;
 
-        $error = ApiV5Error::ApiRateLimitReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::ApiRateLimitReached;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new ApiRateLimitReached(),
         ];
 
-        $error = ApiV5Error::MaxActiveCondOrdersQntReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::MaxActiveCondOrdersQntReached;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new MaxActiveCondOrdersQntReached(),
         ];
 
-        $error = ApiV5Error::CannotAffordOrderCost;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::CannotAffordOrderCost;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => TradeResponseBuilder::error($error)->build(),
             '$expectedException' => new RuntimeException(
-                sprintf('%s::%s | make `%s`: unknown err code %d (%s)', ByBitLinearPositionService::class, 'addStop', PlaceOrderRequest::URL, $error->code(), $error->desc())
+                sprintf('%s::%s | make `%s`: unknown err code %d (%s)', ByBitLinearPositionService::class, 'addStop', PlaceOrderRequest::URL, $error->code(), $error->name())
             ),
         ];
     }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API;
+namespace App\Infrastructure\ByBit\API\Common\Request;
 
 abstract readonly class AbstractByBitApiRequest
 {

@@ -7,11 +7,11 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Result\CommonApiError;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -171,15 +171,15 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
         # Ticker not found
         foreach ($this->positionSideProvider() as [$side]) {
             # Api errors
-            $error = ApiV5Error::ApiRateLimitReached;
-            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->desc()) => [
+            $error = ApiV5Errors::ApiRateLimitReached;
+            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->name()) => [
                 $category, $symbol, $side,
                 '$apiResponse' => CurrentOrdersResponseBuilder::error($category, $error)->build(),
                 '$expectedException' => new ApiRateLimitReached(),
             ];
 
-            $error = new CommonApiError(100500, 'Some other get current orders request error');
-            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->desc()) => [
+            $error = new ByBitV5ApiError(100500, 'Some other get current orders request error');
+            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->msg()) => [
                 $category, $symbol, $side,
                 '$apiResponse' => CurrentOrdersResponseBuilder::error($category, $error)->build(),
                 '$expectedException' => self::expectedUnknownApiErrorException(self::REQUEST_URL, $error, self::METHOD),

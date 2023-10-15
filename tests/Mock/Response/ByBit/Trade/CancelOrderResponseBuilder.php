@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBit\Trade;
 
-use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
+use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -51,7 +51,7 @@ final class CancelOrderResponseBuilder
         if ($this->error) {
             $body = array_replace_recursive(self::SAMPLE_CANCEL_ORDER_FAIL_RESPONSE, [
                 'retCode' => $this->error->code(),
-                'retMsg' => $this->error->desc(),
+                'retMsg' => $this->error->msg(),
             ]);
         } else {
             $body = array_replace_recursive(self::SAMPLE_CANCEL_ORDER_SUCCESS_RESPONSE, [

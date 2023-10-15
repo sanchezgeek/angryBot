@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;

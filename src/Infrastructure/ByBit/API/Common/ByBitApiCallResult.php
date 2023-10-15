@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API\Result;
+namespace App\Infrastructure\ByBit\API\Common;
+
+use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 
 use function sprintf;
 
@@ -40,7 +42,7 @@ final readonly class ByBitApiCallResult
     {
         if (!$this->isSuccess()) {
             throw new \LogicException(
-                sprintf('%s: this is error result (%d | %s)!', __METHOD__, $this->error->code(), $this->error->desc())
+                sprintf('%s: this is error result (%d | %s)!', __METHOD__, $this->error->code(), $this->error->msg())
             );
         }
 

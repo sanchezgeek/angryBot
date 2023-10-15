@@ -13,15 +13,14 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
-
-use function sprintf;
 
 final class PositionService implements PositionServiceInterface
 {
@@ -80,93 +79,81 @@ final class PositionService implements PositionServiceInterface
     }
 
     /**
-     * @return string Created stop order id
+     * @inheritDoc
+     *
+     * @throws MaxActiveCondOrdersQntReached
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
      */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        try {
-            $result = $this->api->privates()->postStopOrderCreate([
-                //'order_link_id'=>'xxxxxxxxxxxxxx',
-                'side' => \ucfirst($position->side === Side::Sell ? Side::Buy->value : Side::Sell->value),
-                'symbol' => $position->symbol->value,
-                'trigger_by' => 'IndexPrice',
-                'reduce_only' => 'true',
-                'close_on_trigger' => 'false',
-                'base_price' => $ticker->indexPrice,
-                'order_type' => ExecutionOrderType::Market->value,
-                'qty' => VolumeHelper::round($qty),
-                'stop_px' => PriceHelper::round($price),
-                'time_in_force' => 'GoodTillCancel',
-            ]);
+        $result = $this->api->privates()->postStopOrderCreate([
+            //'order_link_id'=>'xxxxxxxxxxxxxx',
+            'side' => \ucfirst($position->side === Side::Sell ? Side::Buy->value : Side::Sell->value),
+            'symbol' => $position->symbol->value,
+            'trigger_by' => 'IndexPrice',
+            'reduce_only' => 'true',
+            'close_on_trigger' => 'false',
+            'base_price' => $ticker->indexPrice,
+            'order_type' => ExecutionOrderType::Market->value,
+            'qty' => VolumeHelper::round($qty),
+            'stop_px' => PriceHelper::round($price),
+            'time_in_force' => 'GoodTillCancel',
+        ]);
 
-            if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
-                throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
-            }
-
-            if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
-                throw new ApiRateLimitReached($result['ret_msg']);
-            }
-
-            if ($result['ret_code'] !== 0) {
-                $this->dumpError($result['ret_code'], $result['ret_msg']);
-            }
-
-            return $result['result']['stop_order_id'] ?? null;
-        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
-            throw $e;
-        } catch (\Exception $e) {
-            print_r($e->getMessage());
+        if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
+            throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
         }
 
-        return null;
+        if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
+            throw new ApiRateLimitReached($result['ret_msg']);
+        }
+
+        if ($result['ret_code'] !== 0) {
+            throw new UnexpectedApiErrorException($result['ret_code'], $result['ret_msg'], __METHOD__);
+        }
+
+        return $result['result']['stop_order_id'];
     }
 
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    /**
+     * @inheritDoc
+     *
+     * @throws CannotAffordOrderCost
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     */
+    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        try {
-            $result = $this->api->privates()->postOrderCreate([
-                'side' => \ucfirst($position->side === Side::Sell ? Side::Sell->value : Side::Buy->value),
-                'symbol' => $position->symbol->value,
-                'trigger_by' => 'IndexPrice',
-                'reduce_only' => 'false',
-                'close_on_trigger' => 'false',
-                'base_price' => $ticker->markPrice,
-                'order_type' => ExecutionOrderType::Market->value,
-                'qty' => VolumeHelper::round($qty),
-                'trigger_price' => PriceHelper::round($price),
+        $result = $this->api->privates()->postOrderCreate([
+            'side' => \ucfirst($position->side === Side::Sell ? Side::Sell->value : Side::Buy->value),
+            'symbol' => $position->symbol->value,
+            'trigger_by' => 'IndexPrice',
+            'reduce_only' => 'false',
+            'close_on_trigger' => 'false',
+            'base_price' => $ticker->markPrice,
+            'order_type' => ExecutionOrderType::Market->value,
+            'qty' => VolumeHelper::round($qty),
+            'trigger_price' => PriceHelper::round($price),
 //                'stop_px' => $price,
-                'time_in_force' => 'GoodTillCancel',
-            ]);
+            'time_in_force' => 'GoodTillCancel',
+        ]);
 
-            if ($result['ret_code'] === 130033 && $result['ret_msg'] === 'already had 10 working normal stop orders') {
-                throw new MaxActiveCondOrdersQntReached($result['ret_msg']);
-            }
-
-            if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
-                throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
-            }
-
-            if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
-                throw new ApiRateLimitReached($result['ret_msg']);
-            }
-
-            if ($result['ret_code'] !== 0) {
-                $this->dumpError($result['ret_code'], $result['ret_msg']);
-            }
-
-            return $result['result']['order_id'] ?? null;
-        } catch (MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached $e) {
-            throw $e;
-        } catch (\Exception $e) {
-            print_r($e->getMessage());
+        if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
+            throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
         }
 
-        return null;
-    }
+        if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {
+            throw new ApiRateLimitReached($result['ret_msg']);
+        }
 
-    private function dumpError($code, $message): void
-    {
-        var_dump(sprintf('%d: %s', $code, $message));
+        if ($result['ret_code'] !== 0) {
+            throw new UnexpectedApiErrorException($result['ret_code'], $result['ret_msg'], __METHOD__);
+        }
+
+        return $result['result']['order_id'];
     }
 
     public function addStop2(Position $position, Ticker $ticker, float $price): void

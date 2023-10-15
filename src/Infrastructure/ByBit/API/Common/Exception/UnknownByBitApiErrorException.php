@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API\Exception;
+namespace App\Infrastructure\ByBit\API\Common\Exception;
+
+use Exception;
 
 use function sprintf;
 
-final class UnknownApiErrorException extends AbstractByBitApiException
+final class UnknownByBitApiErrorException extends Exception
 {
     public function __construct(int $code, string $message, string $context)
     {

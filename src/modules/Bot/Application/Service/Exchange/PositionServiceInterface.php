@@ -8,9 +8,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
 
 interface PositionServiceInterface
 {
@@ -30,9 +27,7 @@ interface PositionServiceInterface
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string;
 
     /**
-     * @return ?string Created buy order id or NULL if creation failed
-     *
-     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached|CannotAffordOrderCost
+     * @return string Created buy order `orderId`
      */
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string;
+    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string;
 }

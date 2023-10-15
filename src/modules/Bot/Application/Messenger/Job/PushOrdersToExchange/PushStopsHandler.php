@@ -20,16 +20,15 @@ use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-
-use function get_class;
 
 /** @see PushStopsTest */
 #[AsMessageHandler]
@@ -88,13 +87,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 $this->createOpposite($position, $stop, $ticker);
             }
         } catch (ApiRateLimitReached $e) {
-            $this->logExchangeClientException($e);
+            $this->logWarning($e);
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
-            $this->logExchangeClientException($e);
             $this->messageBus->dispatch(TryReleaseActiveOrders::forStop($ticker->symbol, $stop));
-        } catch (AbstractByBitApiException $e) {
-            $this->logExchangeClientException($e);
+        } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
+            $this->logCritical($e);
         } finally {
             $this->repository->save($stop);
         }

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

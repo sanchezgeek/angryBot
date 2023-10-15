@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\Service\Exception;
+namespace App\Infrastructure\ByBit\Service\Exception\Market;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use Exception;
 
 use function sprintf;

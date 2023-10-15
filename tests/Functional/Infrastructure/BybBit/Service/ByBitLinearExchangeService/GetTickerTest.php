@@ -6,13 +6,13 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Result\CommonApiError;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Infrastructure\ByBit\Service\Exception\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBit\MarketResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -125,15 +125,15 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
 
         # Api errors
         $symbol = Symbol::BTCUSDT;
-        $error = ApiV5Error::ApiRateLimitReached;
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = ApiV5Errors::ApiRateLimitReached;
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->name()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::error($category, $error)->build(),
             '$expectedException' => new ApiRateLimitReached(),
         ];
 
-        $error = new CommonApiError(100500, 'Some other error');
-        yield sprintf('API returned %d code (%s)', $error->code(), $error->desc()) => [
+        $error = new ByBitV5ApiError(100500, 'Some other error');
+        yield sprintf('API returned %d code (%s)', $error->code(), $error->msg()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::error($category, $error)->build(),
             '$expectedException' => self::expectedUnknownApiErrorException(self::REQUEST_URL, $error, self::METHOD),

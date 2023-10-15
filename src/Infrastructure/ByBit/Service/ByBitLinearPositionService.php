@@ -10,43 +10,53 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
-use App\Infrastructure\ByBit\API\Exception\AbstractByBitApiException;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\API\Exception\UnknownApiErrorException;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
-use RuntimeException;
-
-use function sprintf;
+use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use function is_array;
 
 /**
  * @todo | now only for `linear` AssetCategory
  */
-final readonly class ByBitLinearPositionService implements PositionServiceInterface
+final class ByBitLinearPositionService implements PositionServiceInterface
 {
+    use ByBitApiCallHandler;
+
     private const ASSET_CATEGORY = AssetCategory::linear;
 
-    public function __construct(private ByBitApiClientInterface $apiClient)
+    public function __construct(ByBitApiClientInterface $apiClient)
     {
+        $this->apiClient = $apiClient;
     }
 
     /**
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\GetPositionTest
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
-        // @todo | check format layer + throw some exception
-        $data = $this->apiClient->send($request)->data();
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
 
         $position = null;
-        foreach ($data['list'] as $item) {
+        foreach ($list as $item) {
             if ($item['avgPrice'] !== 0 && \strtolower($item['side']) === $side->value) {
                 $position = new Position(
                     $side,
@@ -64,6 +74,11 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
         return $position;
     }
 
+    /**
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     */
     public function getOppositePosition(Position $position): ?Position
     {
         return $this->getPosition($position->symbol, $position->side->getOpposite());
@@ -72,61 +87,70 @@ final readonly class ByBitLinearPositionService implements PositionServiceInterf
     /**
      * @inheritDoc
      *
-     * @throws AbstractByBitApiException|MaxActiveCondOrdersQntReached|ApiRateLimitReached|UnknownApiErrorException
+     * @throws MaxActiveCondOrdersQntReached
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */
     public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        $result = $this->apiClient->send(
-            $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
-                self::ASSET_CATEGORY,
-                $position->symbol,
-                $position->side,
-                $qty,
-                $price
-            )
+        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+            self::ASSET_CATEGORY,
+            $position->symbol,
+            $position->side,
+            $qty,
+            $price
         );
 
-        $stopOrderId = $result->data()['orderId'] ?? null;
+        $result = $this->sendRequest($request, function(ApiErrorInterface $err) {
+            match ($err->code()) {
+                ApiV5Errors::MaxActiveCondOrdersQntReached->value => throw new MaxActiveCondOrdersQntReached($err->msg()),
+                default => null
+            };
+        });
 
+        $stopOrderId = $result->data()['orderId'] ?? null;
         if (!$stopOrderId) {
-            throw new RuntimeException(
-                sprintf('%s | make `%s`: cannot find `orderId` in response', $request->url(), __METHOD__)
-            );
+            throw BadApiResponseException::cannotFindKey($request, 'result.`orderId`', __METHOD__);
         }
 
         return $stopOrderId;
     }
 
     /**
-     * @return ?string Created stop order id or NULL if creation failed
-     * @throws MaxActiveCondOrdersQntReached|CannotAffordOrderCost|ApiRateLimitReached
+     * @inheritDoc
+     *
+     * @throws CannotAffordOrderCost
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddBuyOrderTest
      */
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        $request = PlaceOrderRequest::marketOrder(
-            self::ASSET_CATEGORY,
-            $position->symbol,
-            $position->side,
-            $qty,
-        );
+        $request = PlaceOrderRequest::marketOrder(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
 
-        $result = $this->apiClient->send($request);
-
-        if (!$result->isSuccess()) {
-            throw match (($err = $result->error())) {
-                ApiV5Error::ApiRateLimitReached => new ApiRateLimitReached(),
-                ApiV5Error::CannotAffordOrderCost => CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty),
-                ApiV5Error::MaxActiveCondOrdersQntReached => new MaxActiveCondOrdersQntReached(),
-                default => new RuntimeException(
-                    sprintf('%s | make `%s`: unknown err code %d (%s)', __METHOD__, $request->url(), $err->code(), $err->desc())
-                )
+        $result = $this->sendRequest($request, function(ApiErrorInterface $err) use ($position, $qty) {
+            match ($err->code()) {
+                ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCost::forBuy(
+                    $position->symbol,
+                    $position->side,
+                    $qty
+                ),
+                default => null
             };
+        });
+
+        $buyOrderId = $result->data()['orderId'] ?? null;
+        if (!$buyOrderId) {
+            throw BadApiResponseException::cannotFindKey($request, 'result.`orderId`', __METHOD__);
         }
 
-        return $result->data()['orderId'];
+        return $buyOrderId;
     }
 }

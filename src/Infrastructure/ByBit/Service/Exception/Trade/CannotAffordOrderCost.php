@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\Service\Exception;
+namespace App\Infrastructure\ByBit\Service\Exception\Trade;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use Exception;
 
-final class CannotAffordOrderCost extends \Exception
+final class CannotAffordOrderCost extends Exception
 {
     private function __construct(
         public readonly Symbol $symbol,
@@ -16,7 +17,7 @@ final class CannotAffordOrderCost extends \Exception
     ) {
         parent::__construct(
             \sprintf(
-                'CannotAffordOrderCost when try to buy $%.2f on %s %s position.',
+                'CannotAffordOrderCost [buy %.3f, %s %s].',
                 $this->qty,
                 $this->symbol->value,
                 $this->side->title()

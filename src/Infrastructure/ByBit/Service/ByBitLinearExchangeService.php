@@ -9,73 +9,90 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\ByBitApiClientInterface;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Result\ApiErrorInterface;
-use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
-use App\Infrastructure\ByBit\Service\Exception\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Worker\AppContext;
-use RuntimeException;
 
-use function debug_backtrace;
+use function is_array;
 use function sprintf;
 use function strtolower;
 
 /**
  * @todo | now only for `linear` AssetCategory
  */
-final readonly class ByBitLinearExchangeService implements ExchangeServiceInterface
+final class ByBitLinearExchangeService implements ExchangeServiceInterface
 {
+    use ByBitApiCallHandler;
+
     private const ASSET_CATEGORY = AssetCategory::linear;
 
     private string $workerHash;
 
-    public function __construct(private ByBitApiClientInterface $apiClient, ?string $workerHash = null)
+    public function __construct(ByBitApiClientInterface $apiClient, ?string $workerHash = null)
     {
+        $this->apiClient = $apiClient;
         $this->workerHash = $workerHash ?? AppContext::workerHash();
     }
 
     /**
-     * @todo | apiV5 | RuntimeException -> some CommonApiException
-     * @throws ApiRateLimitReached|RuntimeException
+     * @throws TickerNotFoundException
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
-        $data = $this->sendAndProcessCommonErrors(new GetTickersRequest(self::ASSET_CATEGORY, $symbol))->data();
+        $request = new GetTickersRequest(self::ASSET_CATEGORY, $symbol);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
 
         $ticker = null;
-        foreach ($data['list'] as $item) {
+        foreach ($list as $item) {
             if ($item['symbol'] === $symbol->value) {
                 $updatedBy = $this->workerHash;
                 $ticker = new Ticker($symbol, (float)$item['markPrice'], (float)$item['indexPrice'], $updatedBy);
             }
         }
 
-        \assert($ticker !== null, TickerNotFoundException::forSymbolAndCategory($symbol, self::ASSET_CATEGORY));
+        if (!$ticker) {
+            throw TickerNotFoundException::forSymbolAndCategory($symbol, self::ASSET_CATEGORY);
+        }
 
         return $ticker;
     }
 
     /**
-     * @throws ApiRateLimitReached|RuntimeException
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
     public function activeConditionalOrders(Symbol $symbol): array
     {
-        $data = $this->sendAndProcessCommonErrors(GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
+        $data = $this->sendRequest($request = GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
 
         $activeOrders = [];
-        foreach ($data['list'] as $item) {
+        foreach ($list as $item) {
             $reduceOnly = $item['reduceOnly'];
             $closeOnTrigger = $item['closeOnTrigger'];
 
@@ -98,59 +115,19 @@ final readonly class ByBitLinearExchangeService implements ExchangeServiceInterf
     }
 
     /**
-     * @throws ApiRateLimitReached|RuntimeException
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
      */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
-        $data = $this->sendAndProcessCommonErrors(
-            $request = CancelOrderRequest::byOrderId(self::ASSET_CATEGORY, $order->symbol, $order->orderId)
-        )->data();
+        $request = CancelOrderRequest::byOrderId(self::ASSET_CATEGORY, $order->symbol, $order->orderId);
+        $data = $this->sendRequest($request)->data();
 
         if ($data['orderId'] !== $order->orderId) {
-            throw new RuntimeException(
-                sprintf('%s | make `%s`: got another orderId (%s insteadof %s)', __METHOD__, $request->url(), $data['orderId'], $order->orderId)
-            );
+            throw BadApiResponseException::common($request, sprintf('got another orderId (%s insteadof %s)', $data['orderId'], $order->orderId), __METHOD__);
         }
-    }
-
-    /**
-     * @todo | apiV5 | maybe actual for all API-categories (before main errors processing) | for example for ApiRateLimitReached or CommonApiError
-     *
-     * @throws ApiRateLimitReached|RuntimeException
-     */
-    private function sendAndProcessCommonErrors(AbstractByBitApiRequest $request): ByBitApiCallResult
-    {
-        $result = $this->apiClient->send($request);
-
-        if (!$result->isSuccess()) {
-            $this->processCommonTradeRequestsError($result, $request, sprintf('%s::%s', static::class, debug_backtrace()[1]['function']));
-        }
-
-        return $result;
-    }
-
-    /**
-     * @throws ApiRateLimitReached|RuntimeException
-     */
-    private function processCommonTradeRequestsError(
-        ByBitApiCallResult $result,
-        AbstractByBitApiRequest $request,
-        string $calledFrom,
-    ): void {
-        if (!$result->isSuccess()) {
-            match ($error = $result->error()) {
-                ApiV5Error::ApiRateLimitReached => throw new ApiRateLimitReached(),
-                default => $this->throwExceptionOnUnknownApiError($request, $error, $calledFrom),
-            };
-        }
-    }
-
-    private function throwExceptionOnUnknownApiError(AbstractByBitApiRequest $request, ApiErrorInterface $err, string $in): void
-    {
-        throw new RuntimeException(
-            sprintf('%s | make `%s`: unknown errCode %d (%s)', $in, $request->url(), $err->code(), $err->desc())
-        );
     }
 }

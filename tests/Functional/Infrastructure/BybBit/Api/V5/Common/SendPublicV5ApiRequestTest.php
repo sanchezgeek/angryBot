@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Common;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
