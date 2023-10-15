@@ -29,22 +29,25 @@ final class SchedulerFactory
 {
     private const VERY_FAST = '700 milliseconds';
     private const FAST = '1 second';
+    private const MEDIUM = '1500 milliseconds';
     private const SLOW = '2 seconds';
     private const VERY_SLOW = '5 seconds';
 
     private const CONF = [
-        'short.sl'  => self::VERY_FAST, 'short.buy' => self::FAST,
-        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::FAST,
+        'short.sl'  => self::VERY_FAST, 'short.buy' => self::MEDIUM,
+        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::MEDIUM,
     ];
 
     public static function createScheduler(ClockInterface $clock): Scheduler
     {
-        $jobSchedules = match (AppContext::runningWorker()) {
+        $runningWorker = AppContext::runningWorker();
+
+        $jobSchedules = match ($runningWorker) {
             RunningWorker::SHORT => self::short(),
             RunningWorker::LONG  => self::long(),
             RunningWorker::UTILS => self::utils(),
             RunningWorker::CACHE => self::cache(),
-            RunningWorker::ASYNC, RunningWorker::DEFAULT => [],
+            default => [],
         };
 
         return new Scheduler($clock, $jobSchedules);
