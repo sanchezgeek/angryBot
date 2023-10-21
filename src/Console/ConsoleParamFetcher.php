@@ -63,7 +63,7 @@ final class ConsoleParamFetcher
         return $this->fetchFloatValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getFloatOption(string $name, string $nullOptionErrorMessage = null): float
+    public function requiredFloatOption(string $name, string $nullOptionErrorMessage = null): float
     {
         $value = $this->input->getOption($name);
 
@@ -74,6 +74,13 @@ final class ConsoleParamFetcher
         }
 
         return $this->fetchFloatValue($value, $name, self::OPTION_PARAM_CAPTION);
+    }
+
+    public function floatOption(string $name): ?float
+    {
+        $value = $this->input->getOption($name);
+
+        return $value === null ? null : $this->fetchFloatValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
     public function getPercentArgument(string $name): int

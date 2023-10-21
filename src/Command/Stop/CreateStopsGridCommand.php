@@ -77,7 +77,7 @@ class CreateStopsGridCommand extends Command
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
-        $triggerDelta = $this->paramFetcher->getFloatOption(self::TRIGGER_DELTA_OPTION);
+        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
         $position = $this->getPosition();
 
         if ($forVolume >= $position->size) {

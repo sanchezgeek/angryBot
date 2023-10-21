@@ -39,7 +39,7 @@ trait PriceRangeAwareCommand
             return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
             try {
-                return Price::float($this->paramFetcher->getFloatOption($name));
+                return Price::float($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
                 if ($required) {
                     throw $e;

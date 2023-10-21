@@ -39,6 +39,7 @@ class StopInfoCommand extends Command
 
     private const DEFAULT_PNL_STEP = 20;
     private const SHOW_PNL_OPTION = 'showPnl';
+    private const SHOW_POSITION_PNL = 'showPositionPnl';
 
     private SymfonyStyle $io;
     private string $aggregateWith;
@@ -49,8 +50,9 @@ class StopInfoCommand extends Command
         $this
             ->configurePositionArgs()
             ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
-            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback')
+            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
+            ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
         ;
     }
 
@@ -67,6 +69,7 @@ class StopInfoCommand extends Command
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
         $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
+        $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
 
@@ -117,6 +120,12 @@ class StopInfoCommand extends Command
 
         if ($showPnl) {
             $this->io->note(sprintf('total PNL: %s', new Pnl($totalUsdPnL)));
+        }
+
+        if ($showCurrentPositionPnl) {
+            $this->io->note(
+                sprintf('unrealized position PNL: %.1f', $position->unrealizedPnl)
+            );
         }
 
         $this->io->note(sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100));
