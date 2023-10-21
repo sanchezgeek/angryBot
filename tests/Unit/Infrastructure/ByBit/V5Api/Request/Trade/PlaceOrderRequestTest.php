@@ -29,15 +29,16 @@ final class PlaceOrderRequestTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testCreateImmediatelyTriggeredByIndexPriceOrderRequest(Side $side): void
+    public function testPlaceMarketBuyOrderRequest(Side $side): void
     {
-        $request = PlaceOrderRequest::marketOrder(
-            $category = AssetCategory::linear,
-            $symbol = Symbol::BTCUSDT,
-            $side,
-            0.01,
-        );
+        // Arrange
+        $category = AssetCategory::linear;
+        $symbol = Symbol::BTCUSDT;
 
+        // Act
+        $request = PlaceOrderRequest::marketBuy($category, $symbol, $side, 0.01);
+
+        // Assert
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertTrue($request->isPrivateRequest());
@@ -46,12 +47,78 @@ final class PlaceOrderRequestTest extends TestCase
             'symbol' => $symbol->value,
             'side' => ucfirst($side->value),
             'orderType' => ExecutionOrderType::Market->value,
-            'triggerBy' => TriggerBy::IndexPrice->value,
             'timeInForce' => TimeInForce::GTC->value,
             'reduceOnly' => false,
             'closeOnTrigger' => false,
             'qty' => '0.01',
             'positionIdx' => $this->getPositionIdx($side)->value,
+            'triggerBy' => TriggerBy::IndexPrice->value, // @todo | apiV5 | remove + check
+        ], $request->data());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testPlaceMarketCloseOrderRequest(Side $positionSide): void
+    {
+        // Arrange
+        $category = AssetCategory::linear;
+        $symbol = Symbol::BTCUSDT;
+
+        $expectedOrderSide = $positionSide->getOpposite();
+
+        // Act
+        $request = PlaceOrderRequest::marketClose($category, $symbol, $positionSide, 0.01);
+
+        // Assert
+        self::assertSame('/v5/order/create', $request->url());
+        self::assertSame(Request::METHOD_POST, $request->method());
+        self::assertTrue($request->isPrivateRequest());
+        self::assertSame([
+            'category' => $category->value,
+            'symbol' => $symbol->value,
+            'side' => ucfirst($expectedOrderSide->value),
+            'orderType' => ExecutionOrderType::Market->value,
+            'timeInForce' => TimeInForce::GTC->value,
+            'reduceOnly' => true,
+            'closeOnTrigger' => false,
+            'qty' => '0.01',
+            'positionIdx' => $this->getPositionIdx($positionSide)->value,
+            'triggerBy' => TriggerBy::IndexPrice->value, // @todo | apiV5 | remove + check
+        ], $request->data());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testPlaceLimitTpOrderRequest(Side $positionSide): void
+    {
+        // Arrange
+        $category = AssetCategory::linear;
+        $symbol = Symbol::BTCUSDT;
+
+        $expectedOrderSide = $positionSide->getOpposite();
+        $expectedTriggerDirection = $this->getLimitTPTriggerDirection($positionSide);
+
+        // Act
+        $request = PlaceOrderRequest::limitTP($category, $symbol, $positionSide, 0.01, 30000.1);
+
+        // Assert
+        self::assertSame('/v5/order/create', $request->url());
+        self::assertSame(Request::METHOD_POST, $request->method());
+        self::assertTrue($request->isPrivateRequest());
+        self::assertSame([
+            'category' => $category->value,
+            'symbol' => $symbol->value,
+            'side' => ucfirst($expectedOrderSide->value),
+            'orderType' => ExecutionOrderType::Limit->value,
+            'timeInForce' => TimeInForce::GTC->value,
+            'reduceOnly' => true,
+            'closeOnTrigger' => false,
+            'qty' => '0.01',
+            'positionIdx' => $this->getPositionIdx($positionSide)->value,
+            'price' => '30000.1',
+            'triggerDirection' => $expectedTriggerDirection->value,
         ], $request->data());
     }
 
@@ -60,33 +127,34 @@ final class PlaceOrderRequestTest extends TestCase
      */
     public function testCreateStopConditionalOrderTriggeredByIndexPriceOrderRequest(Side $positionSide): void
     {
+        // Arrange
         $category = AssetCategory::linear;
         $symbol = Symbol::BTCUSDT;
 
-        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
-            $category,
-            $symbol,
-            $positionSide,
-            0.01,
-            30000.1
-        );
+        $expectedOrderSide = $positionSide->getOpposite();
+        $expectedTriggerDirection = $this->getConditionalStopTriggerDirection($positionSide);
 
+        // Act
+        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice($category, $symbol, $positionSide, 0.01, 30000.1);
+
+        // Assert
         self::assertSame('/v5/order/create', $request->url());
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertTrue($request->isPrivateRequest());
+
         self::assertSame([
             'category' => $category->value,
             'symbol' => $symbol->value,
-            'side' => ucfirst($positionSide->getOpposite()->value),
+            'side' => ucfirst($expectedOrderSide->value),
             'orderType' => ExecutionOrderType::Market->value,
-            'triggerBy' => TriggerBy::IndexPrice->value,
             'timeInForce' => TimeInForce::GTC->value,
             'reduceOnly' => true,
             'closeOnTrigger' => false,
             'qty' => '0.01',
             'positionIdx' => $this->getPositionIdx($positionSide)->value,
+            'triggerBy' => TriggerBy::IndexPrice->value,
             'triggerPrice' => '30000.1',
-            'triggerDirection' => $this->getConditionalStopTriggerDirection($positionSide)->value,
+            'triggerDirection' => $expectedTriggerDirection->value,
         ], $request->data());
     }
 
@@ -98,5 +166,10 @@ final class PlaceOrderRequestTest extends TestCase
     private function getConditionalStopTriggerDirection(Side $positionSide): ConditionalOrderTriggerDirection
     {
         return $positionSide->isShort() ? ConditionalOrderTriggerDirection::RisesToTriggerPrice : ConditionalOrderTriggerDirection::FallsToTriggerPrice;
+    }
+
+    private function getLimitTPTriggerDirection(Side $positionSide): ConditionalOrderTriggerDirection
+    {
+        return $positionSide->isShort() ? ConditionalOrderTriggerDirection::FallsToTriggerPrice : ConditionalOrderTriggerDirection::RisesToTriggerPrice;
     }
 }

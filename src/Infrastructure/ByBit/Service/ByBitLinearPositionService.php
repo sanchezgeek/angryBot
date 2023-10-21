@@ -67,6 +67,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                     (float)$item['liqPrice'],
                     (float)$item['positionBalance'],
                     (float)$item['leverage'],
+//                    (float)$item['unrealisedPnl'],
                 );
             }
         }
@@ -133,7 +134,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
     {
-        $request = PlaceOrderRequest::marketOrder(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
+        $request = PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
 
         $result = $this->sendRequest($request, function(ApiErrorInterface $error) use ($position, $qty) {
             match ($error->code()) {

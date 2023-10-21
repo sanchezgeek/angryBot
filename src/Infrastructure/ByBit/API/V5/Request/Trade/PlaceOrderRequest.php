@@ -39,7 +39,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         return self::URL;
     }
 
-    public static function marketOrder(
+    public static function marketBuy(
         AssetCategory $category,
         Symbol $symbol,
         Side $positionSide,
@@ -55,6 +55,44 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, false, false, $qty, $pIdx);
     }
 
+    public static function marketClose(
+        AssetCategory $category,
+        Symbol $symbol,
+        Side $positionSide,
+        float $qty,
+    ): self {
+        $orderType = ExecutionOrderType::Market;
+        $triggerBy = TriggerBy::IndexPrice;
+        $timeInForce = TimeInForce::GTC;
+
+        $side = $positionSide->getOpposite();
+        $pIdx = self::getPositionIdx($positionSide);
+
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $pIdx);
+    }
+
+    public static function limitTP(
+        AssetCategory $category,
+        Symbol $symbol,
+        Side $positionSide,
+        float $qty,
+        float $price,
+    ): self {
+        $orderType = ExecutionOrderType::Limit;
+        $triggerBy = TriggerBy::IndexPrice;
+        $timeInForce = TimeInForce::GTC;
+
+        $side = $positionSide->getOpposite();
+        $posIdx = self::getPositionIdx($positionSide);
+
+        $triggerDirection = $positionSide->isShort()
+            ? ConditionalOrderTriggerDirection::FallsToTriggerPrice
+            : ConditionalOrderTriggerDirection::RisesToTriggerPrice
+        ;
+
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $posIdx, $price, $triggerDirection);
+    }
+
     public static function stopConditionalOrderTriggeredByIndexPrice(
         AssetCategory $category,
         Symbol $symbol,
@@ -68,12 +106,12 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
         $side = $positionSide->getOpposite();
         $posIdx = self::getPositionIdx($positionSide);
-        $tD = $positionSide->isShort()
+        $triggerDirection = $positionSide->isShort()
             ? ConditionalOrderTriggerDirection::RisesToTriggerPrice
             : ConditionalOrderTriggerDirection::FallsToTriggerPrice
         ;
 
-        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $posIdx, $price, $tD);
+        return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $posIdx, $price, $triggerDirection);
     }
 
     private static function getPositionIdx(Side $positionSide): PositionIdx
@@ -97,7 +135,6 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
             'symbol' => $this->symbol->value,
             'side' => ucfirst($this->side->value),
             'orderType' => $this->orderType->value,
-            'triggerBy' => $this->triggerBy->value,
             'timeInForce' => $this->timeInForce->value,
             'reduceOnly' => $this->reduceOnly,
             'closeOnTrigger' => $this->closeOnTrigger,
@@ -105,8 +142,19 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
             'positionIdx' => $this->positionIdx->value,
         ];
 
+        // Limit orders executed only by LastPrice
+        if ($this->orderType !== ExecutionOrderType::Limit) {
+            $data['triggerBy'] = $this->triggerBy->value;
+        }
+
         if ($this->triggerPrice) {
-            $data['triggerPrice'] = (string)$this->triggerPrice;
+            $price = (string)$this->triggerPrice;
+
+            if ($this->orderType === ExecutionOrderType::Limit) {
+                $data['price'] = $price;
+            } else {
+                $data['triggerPrice'] = $price;
+            }
         }
 
         if ($this->triggerDirection) {
@@ -136,6 +184,12 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         assert($this->qty > 0, new InvalidArgumentException(
             sprintf('%s: $qty must be greater than zero (`%f` provided)', __CLASS__, $this->qty)
         ));
+
+        if ($this->orderType === ExecutionOrderType::Limit) {
+            assert($this->triggerPrice !== null, new InvalidArgumentException(
+                sprintf('%s: $triggerPrice must be set for limit order', __CLASS__)
+            ));
+        }
 
         if ($this->triggerPrice !== null) {
             assert($this->triggerPrice > 0, new InvalidArgumentException(
