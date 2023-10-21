@@ -29,17 +29,15 @@ trait LoggerTrait
 
     protected function warning(string $message, array $context = []): void
     {
-        $this->print(sprintf('@ %s', $message));
         $this->logger->warning($message, $context);
     }
 
     protected function critical(string $message, array $context = []): void
     {
-        $this->print(sprintf('! %s', $message));
         $this->logger->critical($message, $context);
     }
 
-    private function print(string $message): void
+    protected function print(string $message): void
     {
         $dateTime = $this->clock->now()->format(self::DT_FORMAT);
         print_r(sprintf('%s | %s', $dateTime, $message) . PHP_EOL);

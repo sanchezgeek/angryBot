@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
+use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -72,6 +73,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $firstLongStopTriggerPrice = 30000,
                     $firstLongStopQty = 0.1,
                     $firstLongStopTriggerBy = TriggerBy::IndexPrice,
+                    ExecutionOrderType::Market,
                     true,
                     false,
                 )
@@ -82,6 +84,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $secondLongStopTriggerPrice = 32000,
                     $secondLongStopQty = 0.3,
                     $secondLongStopTriggerBy = TriggerBy::MarkPrice,
+                    ExecutionOrderType::Market,
                     true,
                     false,
                 )
@@ -93,6 +96,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $shortStopTriggerPrice = 33000,
                     $shortStopQty = 0.4,
                     $shortStopTriggerBy = TriggerBy::LastPrice,
+                    ExecutionOrderType::Market,
                     true,
                     false,
                 )
@@ -104,7 +108,20 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     31000,
                     0.01,
                     TriggerBy::IndexPrice,
+                    ExecutionOrderType::Market,
                     false,
+                    false,
+                )
+                # `Limit` orders
+                ->withOrder(
+                    $symbol,
+                    Side::Sell,
+                    uuid_create(),
+                    31100,
+                    0.01,
+                    TriggerBy::IndexPrice,
+                    ExecutionOrderType::Limit,
+                    true,
                     false,
                 )->build(),
             '$expectedActiveOrders' => [

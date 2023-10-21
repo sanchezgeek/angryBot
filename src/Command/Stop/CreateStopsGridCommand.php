@@ -37,7 +37,7 @@ class CreateStopsGridCommand extends Command
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
-    public const DEFAULT_TRIGGER_DELTA = '17';
+    public const DEFAULT_TRIGGER_DELTA = '37';
 
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';

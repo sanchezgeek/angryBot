@@ -31,7 +31,7 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
     use BuyOrdersTester;
 
     private const SYMBOL = Symbol::BTCUSDT;
-    private const DEFAULT_STOP_TD = 17;
+    private const DEFAULT_STOP_TD = 37;
 
     private PushBuyOrdersHandler $handler;
 

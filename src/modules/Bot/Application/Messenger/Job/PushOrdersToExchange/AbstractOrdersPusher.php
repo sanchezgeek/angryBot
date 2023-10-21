@@ -57,13 +57,28 @@ abstract class AbstractOrdersPusher
         }
     }
 
-    protected function logWarning(Throwable $exception): void
+    protected function logWarning(Throwable $exception, bool $withLog = true): void
     {
-        $this->warning(sprintf('%s received ("%s")', $this->exceptionShortName($exception), $exception->getMessage()));
+        $message = $this->buildLogMessage($exception);
+        $this->print(sprintf('@ %s', $message));
+
+        if ($withLog) {
+            $this->warning($message);
+        }
     }
 
-    protected function logCritical(Throwable $exception): void
+    protected function logCritical(Throwable $exception, bool $withLog = true): void
     {
-        $this->critical(sprintf('%s received ("%s")', $this->exceptionShortName($exception), $exception->getMessage()));
+        $message = $this->buildLogMessage($exception);
+        $this->print(sprintf('! %s', $message));
+
+        if ($withLog) {
+            $this->critical($message);
+        }
+    }
+
+    private function buildLogMessage(Throwable $exception): string
+    {
+        return sprintf('%s received ("%s")', $this->exceptionShortName($exception), $exception->getMessage());
     }
 }

@@ -27,12 +27,13 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 use function abs;
 use function random_int;
+use function sprintf;
 
 /** @see PushBtcUsdtShortBuyOrdersTest */
 #[AsMessageHandler]
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
-    private const STOP_ORDER_TRIGGER_DELTA = 17;
+    private const STOP_ORDER_TRIGGER_DELTA = 37;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -70,7 +71,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-            $this->logWarning($e);
+            $this->logWarning($e, false);
 
             $this->cannotAffordAtPrice = $ticker->indexPrice;
             $this->cannotAffordAt = $this->clock->now();

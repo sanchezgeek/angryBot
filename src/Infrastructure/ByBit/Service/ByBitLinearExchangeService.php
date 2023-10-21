@@ -7,6 +7,7 @@ namespace App\Infrastructure\ByBit\Service;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
@@ -97,7 +98,10 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             $closeOnTrigger = $item['closeOnTrigger'];
 
             // Only orders created by bot
-            if (!($reduceOnly && !$closeOnTrigger)) {
+            if (
+                !($reduceOnly && !$closeOnTrigger)
+                || ($item['orderType'] ?? null) === ExecutionOrderType::Limit->value
+            ) {
                 continue;
             }
 

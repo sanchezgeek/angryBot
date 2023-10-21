@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBitV5Api\Trade;
 
+use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -100,6 +101,7 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
         float $triggerPrice,
         float $qty,
         TriggerBy $triggerBy,
+        ExecutionOrderType $orderType,
         bool $reduceOnly,
         bool $closeOnTrigger,
     ): self {
@@ -110,6 +112,7 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
             'triggerPrice' => (string)$triggerPrice,
             'qty' => (string)$qty,
             'triggerBy' => $triggerBy->value,
+            'orderType' => $orderType->value,
             'reduceOnly' => $reduceOnly,
             'closeOnTrigger' => $closeOnTrigger,
         ]);
