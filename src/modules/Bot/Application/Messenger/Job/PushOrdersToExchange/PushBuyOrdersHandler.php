@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
@@ -72,8 +73,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         } catch (CannotAffordOrderCost $e) {
 //            $this->logWarning($e, false);
-            $this->cannotAffordAtPrice = $ticker->indexPrice;
-            $this->cannotAffordAt = $this->clock->now();
+
+            $delta = $position->getDeltaWithTicker($ticker);
+
+            if (
+                $delta > 0
+                && (
+                    $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance(
+                        $coin = $position->symbol->getAssociatedAssetCoin())
+                )
+                && $spotWalletBalance->availableBalance > 5.16
+            ) {
+                $this->exchangeAccountService->interTransferFromSpotToContract($coin, 0.15);
+            } else {
+                $this->cannotAffordAtPrice = $ticker->indexPrice;
+                $this->cannotAffordAt = $this->clock->now();
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
 //                $hedge = Hedge::create($position, $oppositePosition);
 //                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
@@ -85,6 +99,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 //                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
 //                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
 //            }
+            }
         }
     }
 
@@ -293,6 +308,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
