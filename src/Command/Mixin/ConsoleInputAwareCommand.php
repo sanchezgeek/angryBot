@@ -9,7 +9,7 @@ use Symfony\Component\Console\Input\InputInterface;
 
 trait ConsoleInputAwareCommand
 {
-    private ConsoleParamFetcher $paramFetcher;
+    protected ConsoleParamFetcher $paramFetcher;
 
     private function withInput(InputInterface $input): static
     {
