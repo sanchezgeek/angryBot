@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -46,6 +47,7 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
             self::getBuyOrderRepository(),
             $this->stopRepository,
             $this->stopService,
+            self::getContainer()->get(ExchangeAccountServiceInterface::class),
             $this->exchangeServiceMock,
             $this->positionServiceStub,
             $this->loggerMock,

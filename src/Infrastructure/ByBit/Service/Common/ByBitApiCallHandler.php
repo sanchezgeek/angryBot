@@ -29,7 +29,8 @@ trait ByBitApiCallHandler
      */
     private function sendRequest(
         AbstractByBitApiRequest $request,
-        Closure $knownApiErrorResolver = null
+        Closure $knownApiErrorResolver = null,
+        string $calledServiceMethod = null,
     ): ByBitApiCallResult {
         $result = $this->apiClient->send($request);
 
@@ -43,7 +44,7 @@ trait ByBitApiCallHandler
             throw new UnexpectedApiErrorException(
                 $error->code(),
                 $error->msg(),
-                $this->context($request, debug_backtrace()[1]['function'])
+                $this->context($request, $calledServiceMethod ?: debug_backtrace()[1]['function'])
             );
         }
 

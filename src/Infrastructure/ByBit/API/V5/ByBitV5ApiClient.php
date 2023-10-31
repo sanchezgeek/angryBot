@@ -95,14 +95,14 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
     private function doSend(AbstractByBitApiRequest $request): ByBitApiCallResult
     {
         $url = $this->host . $request->url();
-
         $response = $this->httpClient->request($request->method(), $url, $this->getOptions($request));
+
         $responseBody = $response->toArray();
 
         if (($retCode = $responseBody['retCode'] ?? null) !== 0) {
             $error = ApiV5Errors::tryFrom($retCode);
             if (!$error) {
-                throw new UnknownByBitApiErrorException($retCode, $responseBody['retMsg'], sprintf('Make `%s` request', $url));
+                throw new UnknownByBitApiErrorException($retCode, $responseBody['retMsg'], sprintf('Make `%s` request', $request->url()));
             }
 
             return ByBitApiCallResult::err(

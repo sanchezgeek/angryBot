@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Mock\Response\ByBitV5Api;
 
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function array_replace_recursive;
 
-final class TradeResponseBuilder implements ResponseBuilderInterface
+final class PlaceOrderResponseBuilder implements ResponseBuilderInterface
 {
     use MockResponseFactoryTrait;
 
@@ -38,9 +37,9 @@ final class TradeResponseBuilder implements ResponseBuilderInterface
     {
     }
 
-    public static function ok(string $orderId): self
+    public static function ok(string $placedOrderId): self
     {
-        return new self(null, $orderId);
+        return new self(null, $placedOrderId);
     }
 
     public static function error(ByBitV5ApiError $error): self

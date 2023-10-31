@@ -15,7 +15,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Mock\Response\ByBitV5Api\TradeResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use RuntimeException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
@@ -102,7 +102,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
         yield sprintf('place %s %s position stop (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => TradeResponseBuilder::ok($exchangeOrderId = uuid_create())->build(),
+            '$apiResponse' => PlaceOrderResponseBuilder::ok($exchangeOrderId = uuid_create())->build(),
             '$expectedExchangeOrderId' => $exchangeOrderId,
         ];
     }
@@ -116,28 +116,28 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         $error = ByBitV5ApiError::knownError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit reached');
         yield sprintf('API returned %d code (%s)', $error->code(), ApiV5Errors::ApiRateLimitReached->desc()) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => TradeResponseBuilder::error($error)->build(),
+            '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => new ApiRateLimitReached($msg),
         ];
 
         $error = ByBitV5ApiError::knownError(ApiV5Errors::MaxActiveCondOrdersQntReached, $msg = 'Max orders');
         yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => TradeResponseBuilder::error($error)->build(),
+            '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => new MaxActiveCondOrdersQntReached($msg),
         ];
 
         $error = ByBitV5ApiError::unknown(100500, 'Some other error');
         yield sprintf('API returned %d code (%s) => UnknownByBitApiErrorException', $error->code(), $error->msg()) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => TradeResponseBuilder::error($error)->build(),
+            '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => self::unknownV5ApiErrorException(self::REQUEST_URL, $error),
         ];
 
         $error = ByBitV5ApiError::knownError(ApiV5Errors::CannotAffordOrderCost, ApiV5Errors::CannotAffordOrderCost->desc());
         yield sprintf('API returned %d code (%s) => UnexpectedApiErrorException', $error->code(), $error->msg()) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => TradeResponseBuilder::error($error)->build(),
+            '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => self::unexpectedV5ApiErrorException(self::REQUEST_URL, $error, self::CALLED_METHOD),
         ];
     }
