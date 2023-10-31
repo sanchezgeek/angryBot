@@ -249,7 +249,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         // To not reduce position size by placing stop orders between position and ticker
         if ($delta > (2 * $defaultStrategyStopPriceDelta)) {
             return [
-                'strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION,
+                'strategy' => StopCreate::UNDER_POSITION,
                 'description' => \sprintf('delta=%.2f -> keep position size on start', $delta)
             ];
         }
