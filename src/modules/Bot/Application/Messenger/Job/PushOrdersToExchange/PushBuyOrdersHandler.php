@@ -71,8 +71,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-            $this->logWarning($e, false);
-
+//            $this->logWarning($e, false);
             $this->cannotAffordAtPrice = $ticker->indexPrice;
             $this->cannotAffordAt = $this->clock->now();
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
