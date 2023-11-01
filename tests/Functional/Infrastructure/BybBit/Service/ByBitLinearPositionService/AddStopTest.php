@@ -14,9 +14,10 @@ use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Mock\Response\ByBitV5Api\ErrorResponseFactory;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
-use RuntimeException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -125,6 +126,13 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
             $symbol, $category, $positionSide,
             '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => new MaxActiveCondOrdersQntReached($msg),
+        ];
+
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::BadRequestParams, $msg = 'expect Rising, but trigger_price[346380000] <= current[346388800]??3');
+        yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => ErrorResponseFactory::error($error->code(), $msg),
+            '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
         ];
 
         $error = ByBitV5ApiError::unknown(100500, 'Some other error');

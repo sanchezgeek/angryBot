@@ -22,8 +22,11 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use function is_array;
+use function preg_match;
+use function sprintf;
 
 /**
  * @todo | now only for `linear` AssetCategory
@@ -89,6 +92,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @inheritDoc
      *
      * @throws MaxActiveCondOrdersQntReached
+     * @throws TickerOverConditionalOrderTriggerPrice
      *
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
@@ -106,11 +110,27 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $price
         );
 
-        $result = $this->sendRequest($request, function(ApiErrorInterface $error) {
-            match ($error->code()) {
-                ApiV5Errors::MaxActiveCondOrdersQntReached->value => throw new MaxActiveCondOrdersQntReached($error->msg()),
-                default => null
-            };
+        $result = $this->sendRequest($request, static function (ApiErrorInterface $error) use ($position) {
+            $code = $error->code();
+            $msg = $error->msg();
+
+            if ($code === ApiV5Errors::MaxActiveCondOrdersQntReached->value) {
+                throw new MaxActiveCondOrdersQntReached($msg);
+            }
+
+            if (
+                $code === ApiV5Errors::BadRequestParams->value
+                && preg_match(
+                    sprintf(
+                        '/expect %s, but trigger_price\[\d+\] %s current\[\d+\]/',
+                        $position->isShort() ? 'Rising' : 'Falling',
+                        $position->isShort() ? '<=' : '>='
+                    ),
+                    $msg
+                )
+            ) {
+                throw new TickerOverConditionalOrderTriggerPrice($msg);
+            }
         });
 
         $stopOrderId = $result->data()['orderId'] ?? null;
@@ -136,7 +156,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     {
         $request = PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
 
-        $result = $this->sendRequest($request, function(ApiErrorInterface $error) use ($position, $qty) {
+        $result = $this->sendRequest($request, static function(ApiErrorInterface $error) use ($position, $qty) {
             match ($error->code()) {
                 ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCost::forBuy(
                     $position->symbol,
