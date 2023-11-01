@@ -6,10 +6,11 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -25,10 +26,12 @@ abstract class AbstractOrdersPusher
     protected int $lastSleep = 0;
 
     /**
+     * @param ByBitOrderService $orderService
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
      * @param ByBitLinearPositionCacheDecoratedService $positionService
      */
     public function __construct(
+        protected readonly OrderServiceInterface $orderService,
         protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,
         ClockInterface $clock,

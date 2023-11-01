@@ -7,6 +7,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -310,6 +311,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopService $stopService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
 
+        OrderServiceInterface $orderService,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -320,6 +322,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             var_dump(get_class($positionService));
         }
 
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
+        parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
     }
 }

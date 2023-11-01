@@ -50,7 +50,19 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
         /** @var CreateBuyOrderHandler $createBuyOrderHandler */
         $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
 
-        $this->handler = new PushStopsHandler($this->hedgeService, $this->stopRepository, $createBuyOrderHandler, $this->stopService, $this->messageBus, $this->exchangeServiceMock, $this->positionServiceStub, $this->loggerMock, $this->clockMock, 0);
+        $this->handler = new PushStopsHandler(
+            $this->hedgeService,
+            $this->stopRepository,
+            $createBuyOrderHandler,
+            $this->stopService,
+            $this->messageBus,
+            $this->orderServiceMock,
+            $this->exchangeServiceMock,
+            $this->positionServiceStub,
+            $this->loggerMock,
+            $this->clockMock,
+            0
+        );
 
         self::truncateStops();
         self::truncateBuyOrders();

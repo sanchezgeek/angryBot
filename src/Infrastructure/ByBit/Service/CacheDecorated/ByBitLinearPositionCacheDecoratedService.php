@@ -16,6 +16,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use DateInterval;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -73,6 +74,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      * @inheritDoc
      *
      * @throws MaxActiveCondOrdersQntReached
+     * @throws TickerOverConditionalOrderTriggerPrice
      *
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException

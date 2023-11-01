@@ -48,6 +48,7 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
             $this->stopRepository,
             $this->stopService,
             self::getContainer()->get(ExchangeAccountServiceInterface::class),
+            $this->orderServiceMock,
             $this->exchangeServiceMock,
             $this->positionServiceStub,
             $this->loggerMock,

@@ -9,6 +9,7 @@ use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -23,6 +24,7 @@ use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -73,19 +75,28 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 }
 
                 $this->addStop($position, $ticker, $stop);
+
+                if ($stop->getExchangeOrderId() && $stop->isWithOppositeOrder()) {
+                    $this->createOpposite($position, $stop, $ticker);
+                }
             }
         }
     }
 
     private function addStop(Position $position, Ticker $ticker, Stop $stop): void
     {
+        $qty = $stop->getVolume();
+
         try {
-            $stopOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume());
-            $stop->setExchangeOrderId($stopOrderId);
-            // $this->events->dispatch(new StopPushedToExchange($stop));
-            if ($stop->isWithOppositeOrder()) {
-                $this->createOpposite($position, $stop, $ticker);
+            try {
+                $stopOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $qty);
+            } catch (TickerOverConditionalOrderTriggerPrice $e) {
+                $this->logWarning($e);
+                $stopOrderId = $this->orderService->closeByMarket($position, $qty);
             }
+
+            // $this->events->dispatch(new StopPushedToExchange($stop));
+            $stop->setExchangeOrderId($stopOrderId);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -194,6 +205,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
         private readonly MessageBusInterface $messageBus,
+        OrderServiceInterface $orderService,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
@@ -206,6 +218,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
             var_dump(get_class($positionService));
         }
 
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
+        parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
     }
 }
