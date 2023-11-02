@@ -83,12 +83,12 @@ final class ConsoleParamFetcher
         return $value === null ? null : $this->fetchFloatValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
-    public function getPercentArgument(string $name): int
+    public function getPercentArgument(string $name): float
     {
         return $this->fetchPercentValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getPercentOption(string $name, string $nullOptionErrorMessage = null): int
+    public function getPercentOption(string $name, string $nullOptionErrorMessage = null): float
     {
         $value = $this->input->getOption($name);
         if ($value === null) {
@@ -140,7 +140,7 @@ final class ConsoleParamFetcher
         return $floatValue;
     }
 
-    private function fetchPercentValue(string $value, string $name, string $paramTypeCaption): int
+    private function fetchPercentValue(string $value, string $name, string $paramTypeCaption): float
     {
         if (
             !str_ends_with($value, '%')
@@ -151,7 +151,7 @@ final class ConsoleParamFetcher
             );
         }
 
-        return (int)substr($value, 0, -1);
+        return (float)substr($value, 0, -1);
     }
 
     private function fetchJsonArrayValue(string $value, string $name): array

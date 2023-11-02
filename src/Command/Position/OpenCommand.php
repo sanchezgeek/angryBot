@@ -1,0 +1,242 @@
+<?php
+
+namespace App\Command\Position;
+
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Position;
+use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Order\OrdersGrid;
+use App\Domain\Percent\ValueObject\Percent;
+use App\Domain\Price\Price;
+use App\Domain\Price\PriceRange;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\VolumeHelper;
+use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
+use App\Tests\Factory\TickerFactory;
+use InvalidArgumentException;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+use function explode;
+use function preg_match;
+use function random_int;
+use function round;
+use function sprintf;
+use function var_dump;
+
+#[AsCommand(name: 'open')]
+class OpenCommand extends AbstractCommand
+{
+    use PositionAwareCommand;
+
+    public const SIZE_ARGUMENT = 'size';
+    public const GRID_RANGE_OPTION = 'gridRange';
+    public const STOPS_GRIDS_DEF_OPTION = 'stopGridsDef';
+    public const TRIGGER_DELTA_OPTION = 'triggerDelta';
+
+    private const DEFAULT_GRID_RANGE = '10%|15%';
+    public const DEFAULT_BUY_GRID_QNT = 20;
+
+    private const DEFAULT_STOPS_GRIDS_DEF = '-40|30%,-100|20%,-125|20%,-200|15%';
+    public const DEFAULT_STOP_GRID_QNT = 2;
+    public const DEFAULT_TRIGGER_DELTA = '37';
+
+    private Symbol $symbol;
+
+    protected function configure(): void
+    {
+        $this
+            ->configurePositionArgs()
+            ->addArgument(self::SIZE_ARGUMENT, InputArgument::REQUIRED, 'Position size or %')
+            ->addOption(self::GRID_RANGE_OPTION, 'r', InputOption::VALUE_REQUIRED, 'Grid range', self::DEFAULT_GRID_RANGE)
+            ->addOption(self::STOPS_GRIDS_DEF_OPTION, 's', InputOption::VALUE_REQUIRED, 'Stop grids def', self::DEFAULT_STOPS_GRIDS_DEF)
+            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stops trigger delta', self::DEFAULT_TRIGGER_DELTA)
+        ;
+    }
+
+    protected function initialize(InputInterface $input, OutputInterface $output): void
+    {
+        parent::initialize($input, $output);
+
+        $this->symbol = Symbol::BTCUSDT;
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $positionSide = $this->getPositionSide();
+        $symbolTicker = $this->getTicker($this->symbol);
+        $size = $this->getSizeArgument();
+
+        $expectedPosition = new Position($positionSide, $this->symbol, $symbolTicker->indexPrice, $size, $size * $symbolTicker->indexPrice, 0, 10, 100);
+
+        $this->createStopsGrid($expectedPosition);
+
+        ['range' => $buyGridRange, 'part' => $buyGridPart] = $this->getGridRangeOption($expectedPosition);
+        $buyGridVolume = $buyGridPart->of($size);
+        $buyGridOrdersVolumeSum = $this->createBuyOrdersGrid($buyGridRange, $buyGridVolume, self::DEFAULT_BUY_GRID_QNT);
+
+        // market
+        $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
+        $this->positionService->marketBuy($expectedPosition, $symbolTicker, $symbolTicker->indexPrice, $marketBuyVolume);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @return float Created BuyOrders volume sum
+     */
+    private function createBuyOrdersGrid(PriceRange $gridPriceRange, float $forVolume, int $ordersQnt): float
+    {
+        $context = [];
+        $side = $this->getPositionSide();
+        $buyOrdersGrid = new OrdersGrid($gridPriceRange);
+
+        $volumeSum = 0;
+        foreach ($buyOrdersGrid->ordersByQnt($forVolume, $ordersQnt) as $order) {
+            $rand = round(random_int(-7, 8) * 0.4, 2);
+
+            $this->createBuyOrderHandler->handle(
+                new CreateBuyOrderEntryDto($side, $order->volume(), $order->price()->sub($rand)->value(), $context)
+            );
+
+            $volumeSum += $order->volume();
+        }
+
+        return $volumeSum;
+    }
+
+    private function createStopsGrid(Position $position, int $rangeOrdersQnt = self::DEFAULT_STOP_GRID_QNT): void
+    {
+        $stopsContext = [];
+        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
+
+        $gridDefs = explode(',', $this->paramFetcher->getStringOption(self::STOPS_GRIDS_DEF_OPTION));
+
+        foreach ($gridDefs as $item) {
+            $parts = explode('|', $item);
+            $fromPercent = (float)$parts[0];
+            $toPercent = $fromPercent + 3;
+
+            $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPercent);
+            $toPrice = PnlHelper::getTargetPriceByPnlPercent($position, $toPercent);
+
+            if ($fromPrice->greater($toPrice)) {
+                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
+            }
+
+            $priceRange = new PriceRange($fromPrice, $toPrice);
+
+            $stopsGrid = new OrdersGrid($priceRange);
+
+            $volumePart = Percent::fromString($parts[1]);
+            $forVolume = $volumePart->of($position->size);
+
+            foreach ($stopsGrid->ordersByQnt($forVolume, $rangeOrdersQnt) as $order) {
+                $this->stopService->create(
+                    $position->side,
+                    $order->price()->value(),
+                    $order->volume(),
+                    $triggerDelta,
+                    $stopsContext
+                );
+            }
+        }
+    }
+
+    private function getTicker(Symbol $symbol): Ticker
+    {
+        // $symbolTicker = $this->exchangeService->ticker($symbol);
+        $symbolTicker = TickerFactory::create($symbol, 35000);
+        return $symbolTicker;
+    }
+
+    private function getSizeArgument(): float
+    {
+        $availableBalancePart = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
+
+//        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($this->symbol->getAssociatedAssetCoin());
+        $contractBalance = new WalletBalance(AccountType::CONTRACT, Coin::USDT, 50);
+
+        if (!($contractBalance->availableBalance > 0)) {
+            throw new RuntimeException('Insufficient contract balance');
+        }
+
+        $contractCost = $this->getCurrentContractCost($this->symbol);
+
+        return $availableBalancePart->of($contractBalance->availableBalance / $contractCost);
+    }
+
+    private function getCurrentContractCost(Symbol $symbol): float
+    {
+        $symbolTicker = $this->getTicker($symbol);
+        # price/<margin>?
+        return $symbolTicker->indexPrice / 100 * (1+0.1);
+    }
+
+    /**
+     * @return array{range: PriceRange, part: Percent}
+     */
+    private function getGridRangeOption(Position $expectedPosition): array
+    {
+        $gridRangesDef = $this->paramFetcher->getStringOption(self::GRID_RANGE_OPTION);
+
+        $pattern = '/\d+%\|\d+%/';
+        if (!preg_match($pattern, $gridRangesDef)) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid `%s` def "%s" ("%s" expected)', self::GRID_RANGE_OPTION, $gridRangesDef, $pattern)
+            );
+        }
+
+        $parts = explode('|', $gridRangesDef);
+        $rangePnl = Percent::fromString($parts[0]); $sizePart = Percent::fromString($parts[1]);
+
+        return [
+            'range' => PriceRange::byPositionPnlRange($expectedPosition, -$rangePnl->value(), $rangePnl->value()),
+            'part' => $sizePart
+        ];
+
+        //        $symbolTicker = $this->getTicker($this->symbol);
+        //        $currentPrice = Price::float($symbolTicker->indexPrice);
+        //        $pp100 = $this->get100pp($currentPrice);
+        //
+        //        $from = $currentPrice->sub($rangePnl->of($pp100));
+        //        $to = $currentPrice->add($rangePnl->of($pp100));
+
+        //        $fromPrice = PnlHelper::getTargetPriceByPnlPercent($expectedPosition, -$rangePnl->value());
+        //        $toPrice = PnlHelper::getTargetPriceByPnlPercent($expectedPosition, $rangePnl->value());
+    }
+
+    private function get100pp(Price $price): float
+    {
+        return $price->value() / 100;
+    }
+
+    public function __construct(
+        private readonly ExchangeAccountServiceInterface $accountService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly OrderServiceInterface $tradeService,
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        private readonly StopService $stopService,
+        PositionServiceInterface $positionService,
+        string $name = null,
+    ) {
+        $this->withPositionService($positionService);
+
+        parent::__construct($name);
+    }
+}
