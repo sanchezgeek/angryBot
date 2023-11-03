@@ -16,7 +16,7 @@ enum Symbol: string
         self::BTCUSD->value => Coin::BTC, // inverse?
     ];
 
-    public function getAssociatedAssetCoin(): Coin
+    public function associatedCoin(): Coin
     {
         return self::ASSOCIATED_COINS[$this->value];
     }

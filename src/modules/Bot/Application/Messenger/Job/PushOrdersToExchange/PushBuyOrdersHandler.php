@@ -36,21 +36,21 @@ use function sprintf;
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
+    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 8;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
 
     public function __invoke(PushBuyOrders $message): void
     {
-        $position = $this->positionService->getPosition($message->symbol, $message->side);
-        if (!$position && $message->side->isLong()) {
-            // Fake position
-            $ticker = $this->exchangeService->ticker($message->symbol);
-            $position = new Position($message->side, $message->symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
-        }
+        $side = $message->side;
+        $symbol = $message->symbol;
 
-        $side = $position->side;
-        $ticker = $this->exchangeService->ticker($message->symbol);
+        $ticker = $this->exchangeService->ticker($symbol);
+        $position = $this->positionService->getPosition($symbol, $side);
+        if (!$position) {
+            $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
+        }
 
         if (!$this->canAffordBuy($ticker)) {
             return;
@@ -73,17 +73,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-//            $this->logWarning($e, false);
-
-            $delta = $position->getDeltaWithTicker($ticker);
-
             if (
-                $delta > 0
-                && (
-                    $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance(
-                        $coin = $position->symbol->getAssociatedAssetCoin())
-                )
-                && $spotWalletBalance->availableBalance > 5.16
+                $position->getDeltaWithTicker($ticker) > 0
+                && ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
+                && $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
             ) {
                 $this->exchangeAccountService->interTransferFromSpotToContract($coin, 0.15);
             } else {
@@ -111,18 +104,16 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     {
         try {
             $exchangeOrderId = $this->positionService->marketBuy($position, $ticker, $order->getPrice(), $order->getVolume());
+            $order->setExchangeOrderId($exchangeOrderId);
+//            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
-            if ($exchangeOrderId) {
-                $order->setExchangeOrderId($exchangeOrderId);
+            if ($order->isWithOppositeOrder()) {
+                $this->createStop($position, $ticker, $order);
+            }
 
-                if ($order->getVolume() <= 0.005) {
-                    $this->buyOrderRepository->remove($order);
-                }
-//                $this->events->dispatch(new BuyOrderPushedToExchange($order));
-
-                if ($order->isWithOppositeOrder()) {
-                    $this->createStop($position, $ticker, $order);
-                }
+            if ($order->getVolume() <= 0.005) {
+                $this->buyOrderRepository->remove($order);
+                unset($order);
             }
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
@@ -130,14 +121,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
             $this->logCritical($e);
         } finally {
-            $this->buyOrderRepository->save($order);
+            if (isset($order)) {
+                $this->buyOrderRepository->save($order);
+            }
         }
     }
 
-    /**
-     * @return array{id: int, triggerPrice: float, strategy: StopCreate, description: string}
-     */
-    private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): array
+    private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): void
     {
         $triggerPrice = null;
         $side = $position->side;
@@ -203,9 +193,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
         }
 
-        $stopId = $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
-
-        return ['id' => $stopId, 'triggerPrice' => $triggerPrice, 'strategy' => $stopStrategy, 'description' => $description];
+        $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
     }
 
     /**
@@ -226,60 +214,34 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $delta = $position->getDeltaWithTicker($ticker);
 
-        $orderVolume = $order->getVolume();
-
-        $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($orderVolume);
-
-        // if without hedge?
-//        if (($delta < 0) && (abs($delta) >= $defaultStrategyStopPriceDelta)) {
-//            return [
-//                'strategy' => StopCreate::SHORT_STOP,
-//                'description' => 'position in loss'
-//            ];
-//        }
+        // only if without hedge?
+        // if (($delta < 0) && (abs($delta) >= $defaultStrategyStopPriceDelta)) {return ['strategy' => StopCreate::SHORT_STOP, 'description' => 'position in loss'];}
 
         if ($order->isWithShortStop()) {
-            return [
-                'strategy' => StopCreate::SHORT_STOP,
-                'description' => \sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)
-            ];
+            return ['strategy' => StopCreate::SHORT_STOP, 'description' => 'by $order->isWithShortStop() condition'];
         }
-//        $isAdd = $orderVolume <= 0.002; if ($isAdd && (($delta >= 400 && $delta < 500) || ($delta >= 600 && $delta < 800) || ($delta >= 1000 && $delta < 1200))) return ['strategy' => StopCreate::SHORT_STOP, 'description' => \sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)];
 
         // @todo Нужен какой-то определятор состояния трейда
-        // if ($delta >= 2500) {return ['strategy' => StopCreate::AFTER_FIRST_POSITION_STOP, 'description' => \sprintf('delta=%.2f -> to reduce added by mistake on long distance', $delta)];}
         if ($delta >= 1500) {
-            return [
-                'strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION,
-                'description' => \sprintf('delta=%.2f -> increase position size', $delta)
-            ];
+            return ['strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION, 'description' => sprintf('delta=%.2f -> increase position size', $delta)];
         }
 
         if ($delta >= 500) {
-            return [
-                'strategy' => StopCreate::UNDER_POSITION,
-                'description' => \sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)
-            ];
+            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)];
         }
+
+        $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
 
         // To not reduce position size by placing stop orders between position and ticker
         if ($delta > (2 * $defaultStrategyStopPriceDelta)) {
-            return [
-                'strategy' => StopCreate::UNDER_POSITION,
-                'description' => \sprintf('delta=%.2f -> keep position size on start', $delta)
-            ];
-        }
-        if ($delta > $defaultStrategyStopPriceDelta) {
-            return [
-                'strategy' => StopCreate::UNDER_POSITION,
-                'description' => \sprintf('delta=%.2f -> keep position size on start', $delta)
-            ];
+            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> keep position size on start', $delta)];
         }
 
-        return [
-            'strategy' => StopCreate::DEFAULT,
-            'description' => 'by default',
-        ];
+        if ($delta > $defaultStrategyStopPriceDelta) {
+            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> keep position size on start', $delta)];
+        }
+
+        return ['strategy' => StopCreate::DEFAULT, 'description' => 'by default'];
     }
 
     /**
@@ -317,11 +279,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         LoggerInterface $logger,
         ClockInterface $clock,
     ) {
-        if ($_ENV['APP_ENV'] !== 'test') {
-            var_dump(get_class($exchangeService));
-            var_dump(get_class($positionService));
-        }
-
         parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
     }
 }

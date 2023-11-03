@@ -82,16 +82,20 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
 
     public function pushBuyOrdersTestDataProvider(): iterable
     {
+        $mockedExchangeOrderIds = [uuid_create()];
+
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
             '$buyOrdersFixtures' => [
+                new BuyOrderFixture(BuyOrderBuilder::short(5, 29060, 0.005)->build()), // must be pushed and removed
                 new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.01)->build()), // must be pushed
                 new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
                 new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.03)->build()), // must be pushed
                 new BuyOrderFixture(BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
             ],
             'expectedAddBuyOrderCalls' => [
+                [$position, $ticker, 29060.0, 0.005],
                 [$position, $ticker, 29060.0, 0.01],
                 [$position, $ticker, 29055.0, 0.03],
             ],
