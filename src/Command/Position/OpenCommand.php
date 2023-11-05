@@ -5,11 +5,11 @@ namespace App\Command\Position;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -21,10 +21,8 @@ use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
-use App\Tests\Factory\TickerFactory;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -37,7 +35,6 @@ use function preg_match;
 use function random_int;
 use function round;
 use function sprintf;
-use function var_dump;
 
 #[AsCommand(name: 'open')]
 class OpenCommand extends AbstractCommand
@@ -102,7 +99,7 @@ class OpenCommand extends AbstractCommand
      */
     private function createBuyOrdersGrid(PriceRange $gridPriceRange, float $forVolume, int $ordersQnt): float
     {
-        $context = [];
+        $context = [BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
         $side = $this->getPositionSide();
         $buyOrdersGrid = new OrdersGrid($gridPriceRange);
 
@@ -160,17 +157,14 @@ class OpenCommand extends AbstractCommand
 
     private function getTicker(Symbol $symbol): Ticker
     {
-        // $symbolTicker = $this->exchangeService->ticker($symbol);
-        $symbolTicker = TickerFactory::create($symbol, 35000);
-        return $symbolTicker;
+         return $this->exchangeService->ticker($symbol);
     }
 
     private function getSizeArgument(): float
     {
         $availableBalancePart = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
 
-//        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($this->symbol->getAssociatedAssetCoin());
-        $contractBalance = new WalletBalance(AccountType::CONTRACT, Coin::USDT, 50);
+        $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
 
         if (!($contractBalance->availableBalance > 0)) {
             throw new RuntimeException('Insufficient contract balance');
