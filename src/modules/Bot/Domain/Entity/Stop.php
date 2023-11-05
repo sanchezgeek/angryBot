@@ -129,6 +129,11 @@ class Stop implements HasEvents
         return $this;
     }
 
+    public function getContext(string $name = null): mixed
+    {
+        return $name ? ($this->context[$name] ?? null) : $this->context;
+    }
+
     public function getPnlInPercents(Position $position): float
     {
         return round(PnlHelper::getPnlInPercents($position, $this->price), 2);
