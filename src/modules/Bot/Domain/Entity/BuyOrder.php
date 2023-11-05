@@ -91,6 +91,11 @@ class BuyOrder implements HasEvents
         return $this->volume;
     }
 
+    public function getTriggerDelta(): ?float
+    {
+        return $this->triggerDelta;
+    }
+
     public function getContext(string $name = null): mixed
     {
         return $name ? ($this->context[$name] ?? null) : $this->context;

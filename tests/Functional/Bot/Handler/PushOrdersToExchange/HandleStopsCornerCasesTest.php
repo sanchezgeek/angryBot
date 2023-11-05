@@ -44,7 +44,6 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
     private const SYMBOL = Symbol::BTCUSDT;
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
-    private const BUY_ORDER_TRIGGER_DELTA = PushStopsHandler::BUY_ORDER_TRIGGER_DELTA;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 

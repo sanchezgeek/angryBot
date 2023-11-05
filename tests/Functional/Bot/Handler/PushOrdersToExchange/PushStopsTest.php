@@ -32,7 +32,6 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
 {
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
-    private const BUY_ORDER_TRIGGER_DELTA = PushStopsHandler::BUY_ORDER_TRIGGER_DELTA;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
@@ -279,7 +278,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
      */
     private function expectedOppositeOrders(Stop $stop, string $pushedStopExchangeOrderId, int $fromId = 1): array
     {
-        $tD = self::BUY_ORDER_TRIGGER_DELTA;
+        $tD = 1;
 
         $side = $stop->getPositionSide();
         $stopPrice = $stop->getPrice();
@@ -321,7 +320,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
                     $startId++,
                     $buyOrder->getPrice(),
                     $buyOrder->getVolume(),
-                    self::BUY_ORDER_TRIGGER_DELTA,
+                    $buyOrder->getTriggerDelta(),
                     $buyOrder->getPositionSide(),
                     $buyOrder->getContext()
                 );
