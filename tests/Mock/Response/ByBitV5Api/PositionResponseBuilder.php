@@ -86,7 +86,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
             'side' => ucfirst($positionSide->value),
             'avgPrice' => (string)$entryPrice,
             'positionValue' => (string)$positionValue,
-            'positionBalance' => (string)$margin,
+            'positionIM' => (string)$margin,
             'size' => (string)$positionSize,
             'liqPrice' => (string)$liqPrice,
             'leverage' => (string)$leverage,
