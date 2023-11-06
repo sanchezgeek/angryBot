@@ -24,6 +24,7 @@ framework:
             App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
             # utils
+            App\Application\Messenger\CheckPositionIsUnderLiquidation: async_high
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
+use App\Application\Messenger\CheckPositionIsUnderLiquidation;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
@@ -29,13 +30,13 @@ final class SchedulerFactory
 {
     private const VERY_FAST = '700 milliseconds';
     private const FAST = '1 second';
-    private const MEDIUM = '1500 milliseconds';
+    private const MEDIUM = '1200 milliseconds';
     private const SLOW = '2 seconds';
     private const VERY_SLOW = '5 seconds';
 
     private const CONF = [
-        'short.sl'  => self::VERY_FAST, 'short.buy' => self::MEDIUM,
-        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::MEDIUM,
+        'short.sl'  => self::VERY_FAST, 'short.buy' => self::FAST,
+        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::FAST,
     ];
 
     public static function createScheduler(ClockInterface $clock): Scheduler
@@ -71,17 +72,20 @@ final class SchedulerFactory
 
     private static function utils(): array
     {
+        $cleanupPeriod = '15S';
+
         return [
-            # cleanup orders
-            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', ($period = '15S')), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $period), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3, false))),
-            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $period), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $period), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))),
-            # move stops
+            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
+            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3, false))),
+            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
+            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))),
+
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Sell))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Buy))),
-            # release exchange stops
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT4S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
+
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT5S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT4S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
         ];
     }
 
