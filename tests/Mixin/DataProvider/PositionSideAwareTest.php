@@ -43,7 +43,7 @@ trait PositionSideAwareTest
         float $positionValue = 33000,
         float $liquidationPrice = 31000,
         float $margin = 330,
-        float $leverage = 100,
+        int $leverage = 100,
     ): Position {
         return new Position($side, $symbol, $entryPrice, $size, $positionValue, $liquidationPrice, $margin, $leverage);
     }

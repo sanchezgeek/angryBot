@@ -24,7 +24,7 @@ final class Position
         public readonly float $positionValue,
         public readonly float $liquidationPrice,
         public readonly float $initialMargin,
-        public readonly float $positionLeverage,
+        public readonly int $positionLeverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
     }

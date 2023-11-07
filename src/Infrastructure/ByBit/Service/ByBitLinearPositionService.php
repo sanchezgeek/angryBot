@@ -69,7 +69,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                     VolumeHelper::round((float)$item['positionValue'], 2),
                     (float)$item['liqPrice'],
                     (float)$item['positionIM'],
-                    (float)$item['leverage'],
+                    (int)$item['leverage'],
 //                    (float)$item['unrealisedPnl'],
                 );
             }

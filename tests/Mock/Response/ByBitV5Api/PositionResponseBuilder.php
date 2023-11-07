@@ -77,7 +77,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
         float $positionSize,
         float $positionValue,
         float $margin,
-        float $leverage,
+        int $leverage,
         float $liqPrice,
     ): self {
         // @todo | move ucfirst to enum
