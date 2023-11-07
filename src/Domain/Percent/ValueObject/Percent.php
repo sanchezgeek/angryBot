@@ -57,8 +57,13 @@ final class Percent
         return $this->value;
     }
 
+    public function part(): float
+    {
+        return $this->value / 100;
+    }
+
     public function of(float $someValue): float
     {
-        return $someValue * ($this->value / 100);
+        return $someValue * $this->part();
     }
 }

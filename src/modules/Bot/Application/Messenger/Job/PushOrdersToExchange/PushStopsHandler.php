@@ -213,11 +213,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
         private readonly float $slForcedTriggerDelta
     ) {
-        if ($_ENV['APP_ENV'] !== 'test') {
-            var_dump(get_class($exchangeService));
-            var_dump(get_class($positionService));
-        }
-
         parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
     }
 }
