@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
-use App\Domain\Percent\FloatValue;
 use App\Domain\Percent\ValueObject\Percent;
 use App\Domain\Price\Price;
 
@@ -13,13 +12,15 @@ final class CalcPositionLiquidationPriceHandler
     public function handle(CalcPositionLiquidationPriceEntryDto $entryDto): CalcPositionLiquidationPriceResult
     {
         $position = $entryDto->getPosition();
+        $positionSize = $position->size;
+
         $contractBalance = $entryDto->getContractBalance();
-        $currentFreeBalance = $contractBalance->sub(new FloatValue($position->initialMargin));
-        $freeBalanceLiquidationDistance = $currentFreeBalance->value() / $position->size;
+        $freeBalance = $contractBalance->sub($position->initialMargin);
+        $freeBalanceLiquidationDistance = $freeBalance->value() / $positionSize;
 
         // $maintenanceMarginLiquidationDistance = $maintenanceMarginRate->of($position->entryPrice / $position->positionLeverage);
-        $maintenanceMargin = $position->initialMargin / 2;
-        $maintenanceMarginLiquidationDistance = $maintenanceMargin / $position->size;
+        $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
+        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $positionSize;
 
         $resLiquidationDelta = $maintenanceMarginLiquidationDistance + $freeBalanceLiquidationDistance;
 
@@ -35,11 +36,11 @@ final class CalcPositionLiquidationPriceHandler
     {
         $position = $entryDto->getPosition();
         $contractBalance = $entryDto->getContractBalance();
-        $currentFreeBalance = $contractBalance->sub(new FloatValue($position->initialMargin));
-        $freeBalanceLiquidationDistance = $currentFreeBalance->value() / $position->size;
+        $freeBalance = $contractBalance->sub($position->initialMargin);
+        $freeBalanceLiquidationDistance = $freeBalance->value() / $position->size;
 
-        $maintenanceMarginRate = Percent::fromString('0.5%');
-        $initialMarginRate = 1 / $position->positionLeverage;
+        $maintenanceMarginRate = Percent::string('0.5%');
+        $initialMarginRate = 1 / $position->leverage->value();
 
         $liquidationPrice = $position->isShort()
             ? $position->entryPrice * (1 + $initialMarginRate - $maintenanceMarginRate->part()) + $freeBalanceLiquidationDistance

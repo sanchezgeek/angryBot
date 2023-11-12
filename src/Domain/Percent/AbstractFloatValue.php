@@ -6,6 +6,11 @@ namespace App\Domain\Percent;
 
 use App\Domain\Percent\ValueObject\Percent;
 
+use LogicException;
+
+use function get_class;
+use function sprintf;
+
 abstract class AbstractFloatValue implements PercentModifiableValue
 {
     private float $value;
@@ -25,6 +30,8 @@ abstract class AbstractFloatValue implements PercentModifiableValue
      */
     public function add(AbstractFloatValue $otherFloat): static
     {
+        $this->checkType($otherFloat);
+
         $clone = clone $this;
         $clone->value += $otherFloat->value;
 
@@ -33,6 +40,8 @@ abstract class AbstractFloatValue implements PercentModifiableValue
 
     public function sub(AbstractFloatValue $otherFloat): static
     {
+        $this->checkType($otherFloat);
+
         $clone = clone $this;
         $clone->value -= $otherFloat->value;
 
@@ -45,5 +54,25 @@ abstract class AbstractFloatValue implements PercentModifiableValue
         $clone->value += $percent->of($this->value);
 
         return $clone;
+    }
+
+    public function getPercentPart(Percent $percent): AbstractFloatValue
+    {
+        $clone = clone $this;
+        $clone->value = $percent->of($this->value);
+
+        return $clone;
+    }
+
+    private function checkType(AbstractFloatValue $otherFloat): void
+    {
+        $staticClass = static::class;
+        $otherClass = get_class($otherFloat);
+
+        if ($staticClass !== $otherClass) {
+            throw new LogicException(
+                sprintf('%s: subtracted value must be instance of %s (%s given)', self::class, $staticClass, $otherClass)
+            );
+        }
     }
 }

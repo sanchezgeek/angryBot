@@ -7,12 +7,10 @@ namespace App\Application\Messenger;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 use function abs;
-use function get_class;
 
 #[AsMessageHandler]
 final readonly class CheckPositionIsUnderLiquidationHandler
@@ -31,12 +29,6 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
-//        var_dump(
-//            get_class($this->exchangeService),
-//            get_class($this->positionService),
-//            get_class($this->exchangeAccountService),
-//        );
-
         $symbol = $message->symbol;
         $side = $message->side;
 

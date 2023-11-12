@@ -140,7 +140,7 @@ class OpenCommand extends AbstractCommand
 
             $stopsGrid = new OrdersGrid($priceRange);
 
-            $volumePart = Percent::fromString($parts[1]);
+            $volumePart = Percent::string($parts[1]);
             $forVolume = $volumePart->of($position->size);
 
             foreach ($stopsGrid->ordersByQnt($forVolume, $rangeOrdersQnt) as $order) {
@@ -197,7 +197,7 @@ class OpenCommand extends AbstractCommand
         }
 
         $parts = explode('|', $gridRangesDef);
-        $rangePnl = Percent::fromString($parts[0]); $sizePart = Percent::fromString($parts[1]);
+        $rangePnl = Percent::string($parts[0]); $sizePart = Percent::string($parts[1]);
 
         return [
             'range' => PriceRange::byPositionPnlRange($expectedPosition, -$rangePnl->value(), $rangePnl->value()),

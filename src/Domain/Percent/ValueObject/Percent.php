@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Percent\ValueObject;
 
+use App\Domain\Percent\AbstractFloatValue;
+use App\Domain\Percent\IntegerValue;
 use DomainException;
 
 use InvalidArgumentException;
@@ -26,18 +28,18 @@ final class Percent
         $this->value = $value;
     }
 
-    public static function fromString(string $percent): self
+    public static function string(string $percent): self
     {
         if (
             !str_ends_with($percent, '%')
-            || (!is_numeric(substr($percent, 0, -1)))
+            || !is_numeric($value = substr($percent, 0, -1))
         ) {
             throw new InvalidArgumentException(
                 sprintf('Invalid percent string provided ("%s").', $percent)
             );
         }
 
-        $value = (float)substr($percent, 0, -1);
+        $value = (float)$value;
 
         return new self($value);
     }
@@ -62,8 +64,12 @@ final class Percent
         return $this->value / 100;
     }
 
-    public function of(float $someValue): float
+    public function of(int|float|AbstractFloatValue|IntegerValue $value): int|float|AbstractFloatValue|IntegerValue
     {
-        return $someValue * $this->part();
+        if ($value instanceof AbstractFloatValue) {
+            return $value->getPercentPart($this);
+        }
+
+        return $value * $this->part();
     }
 }

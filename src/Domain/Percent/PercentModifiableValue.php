@@ -9,4 +9,5 @@ use App\Domain\Percent\ValueObject\Percent;
 interface PercentModifiableValue
 {
     public function addPercent(Percent $percent): IntegerValue|AbstractFloatValue;
+    public function getPercentPart(Percent $percent): IntegerValue|AbstractFloatValue;
 }
