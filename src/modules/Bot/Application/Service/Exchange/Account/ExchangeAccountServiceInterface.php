@@ -3,7 +3,7 @@
 namespace App\Bot\Application\Service\Exchange\Account;
 
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
+use App\Domain\Coin\Coin;
 
 interface ExchangeAccountServiceInterface
 {

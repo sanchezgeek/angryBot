@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Account;
 
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
 use Symfony\Component\HttpFoundation\Request;
 
 final readonly class GetWalletBalanceRequest extends AbstractByBitApiRequest

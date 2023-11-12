@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange\Exception;
 
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
 use Exception;
 
 use function sprintf;

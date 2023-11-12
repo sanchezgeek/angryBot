@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Domain;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Leverage;
-use App\Domain\Position\Liquidation\PositionLiquidationTrace\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use LogicException;

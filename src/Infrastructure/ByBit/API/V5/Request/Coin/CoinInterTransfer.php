@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Coin;
 
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\Coin;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
+
 use function assert;
 use function sprintf;
 

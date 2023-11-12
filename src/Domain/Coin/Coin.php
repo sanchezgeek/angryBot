@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\ByBit\API\V5\Enum\Account;
+namespace App\Domain\Coin;
 
 /**
  * @see https://bybit-exchange.github.io/docs/v5/account/wallet-balance

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
 use App\Bot\Domain\Position;
-use App\Domain\Position\Liquidation\PositionLiquidationTrace\CoinAmount;
+use App\Domain\Coin\CoinAmount;
 
 final class CalcPositionLiquidationPriceEntryDto
 {
