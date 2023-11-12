@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Domain;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Leverage;
+use App\Domain\Position\Liquidation\PositionLiquidationTrace\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use LogicException;
@@ -16,17 +18,22 @@ use function sprintf;
  */
 final class Position
 {
+    public readonly CoinAmount $initialMargin;
+    public readonly Leverage $leverage;
+
     public function __construct(
         public readonly Side $side,
         public readonly Symbol $symbol,
         public readonly float $entryPrice,
         public readonly float $size,
-        public readonly float $positionValue,
+        public readonly float $value,
         public readonly float $liquidationPrice,
-        public readonly float $initialMargin,
-        public readonly int $positionLeverage,
+        float $initialMargin,
+        int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
+        $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
+        $this->leverage = new Leverage($leverage);
     }
 
     public function getCaption(): string

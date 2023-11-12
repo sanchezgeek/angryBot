@@ -6,6 +6,8 @@ namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Leverage;
+use App\Domain\Position\Liquidation\PositionLiquidationTrace\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
@@ -17,20 +19,53 @@ use function sprintf;
  */
 final class PositionTest extends TestCase
 {
-    public function testIsShort(): void
+    public function testShortPosition(): void
     {
-        $position = new Position(Side::Sell, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+        $side = Side::Sell;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050.1;
+        $value = 100005000;
+        $liquidation = 200500;
+        $initialMargin = 1000;
+        $leverage = 100;
 
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+
+        self::assertEquals($side, $position->side);
         self::assertTrue($position->isShort());
         self::assertFalse($position->isLong());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
     }
 
-    public function testIsLong(): void
+    public function testLongPosition(): void
     {
-        $position = new Position(Side::Buy, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+        $side = Side::Buy;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050;
+        $value = 100005000;
+        $liquidation = 90500;
+        $initialMargin = 1000;
+        $leverage = 100;
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
 
+        self::assertEquals($side, $position->side);
         self::assertTrue($position->isLong());
         self::assertFalse($position->isShort());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
     }
 
     /**

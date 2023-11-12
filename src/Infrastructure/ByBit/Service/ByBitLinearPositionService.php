@@ -60,7 +60,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
         $position = null;
         foreach ($list as $item) {
-            if ($item['avgPrice'] !== 0 && \strtolower($item['side']) === $side->value) {
+            if ((float)$item['avgPrice'] !== 0.0 && \strtolower($item['side']) === $side->value) {
                 $position = new Position(
                     $side,
                     $symbol,

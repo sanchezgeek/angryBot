@@ -14,7 +14,7 @@ final class PnlHelper
 {
     public static function getPnlInPercents(Position $position, float $price): float
     {
-        $sign = $position->side->isShort() ? -1 : +1;
+        $sign = $position->isShort() ? -1 : +1;
         $delta = $price - $position->entryPrice;
 
         return $sign * ($delta / $position->entryPrice) * self::getPositionLeverage($position) * 100;
