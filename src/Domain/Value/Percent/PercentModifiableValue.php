@@ -10,5 +10,6 @@ use App\Domain\Value\Common\IntegerValue;
 interface PercentModifiableValue
 {
     public function addPercent(Percent $percent): IntegerValue|AbstractFloat;
+    public function subPercent(Percent $percent): IntegerValue|AbstractFloat;
     public function getPercentPart(Percent $percent): IntegerValue|AbstractFloat;
 }

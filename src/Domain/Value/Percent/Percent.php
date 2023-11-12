@@ -10,12 +10,18 @@ use DomainException;
 use InvalidArgumentException;
 
 use function is_numeric;
+use function round;
 use function sprintf;
 use function str_ends_with;
 use function substr;
 
+/**
+ * @see \App\Tests\Unit\Domain\Value\Percent\PercentTest
+ */
 final class Percent
 {
+    private const PART_ROUND_PRECISION = 3;
+
     private float $value;
 
     public function __construct(float $value)
@@ -43,16 +49,6 @@ final class Percent
         return new self($value);
     }
 
-    public function sub(Percent $percent): self
-    {
-        return new self($this->value - $percent->value);
-    }
-
-    public function add(Percent $percent): self
-    {
-        return new self($this->value + $percent->value);
-    }
-
     public function value(): float
     {
         return $this->value;
@@ -60,10 +56,10 @@ final class Percent
 
     public function part(): float
     {
-        return $this->value / 100;
+        return round($this->value / 100, self::PART_ROUND_PRECISION);
     }
 
-    public function of(int|float|IntegerValue|AbstractFloat $value): int|float|IntegerValue|AbstractFloat
+    public function of(int|float|IntegerValue|AbstractFloat $value): float|AbstractFloat
     {
         if ($value instanceof AbstractFloat) {
             return $value->getPercentPart($this);

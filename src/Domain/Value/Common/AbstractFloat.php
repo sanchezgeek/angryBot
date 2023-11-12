@@ -9,8 +9,12 @@ use App\Domain\Value\Percent\PercentModifiableValue;
 use LogicException;
 
 use function get_class;
+use function is_object;
 use function sprintf;
 
+/**
+ * @see \App\Tests\Unit\Domain\Value\Common\AbstractFloatTest
+ */
 abstract class AbstractFloat implements PercentModifiableValue
 {
     private float $value;
@@ -25,30 +29,35 @@ abstract class AbstractFloat implements PercentModifiableValue
         return $this->value;
     }
 
-    /**
-     * @todo Move to abstract implementation (and `addPercent` too?)
-     */
-    public function add(AbstractFloat $otherFloat): static
+    final public function add(float|AbstractFloat $otherFloat): static
     {
-        $this->checkType($otherFloat);
+        is_object($otherFloat) && $this->checkType($otherFloat);
 
         $clone = clone $this;
-        $clone->value += $otherFloat->value;
+        $clone->value += is_object($otherFloat) ? $otherFloat->value : $otherFloat;
 
         return $clone;
     }
 
-    public function sub(AbstractFloat $otherFloat): static
+    final public function sub(float|AbstractFloat $otherFloat): static
     {
-        $this->checkType($otherFloat);
+        is_object($otherFloat) && $this->checkType($otherFloat);
 
         $clone = clone $this;
-        $clone->value -= $otherFloat->value;
+        $clone->value -= is_object($otherFloat) ? $otherFloat->value : $otherFloat;
 
         return $clone;
     }
 
-    public function addPercent(Percent $percent): self
+    final public function subPercent(Percent $percent): self
+    {
+        $clone = clone $this;
+        $clone->value -= $percent->of($this->value);
+
+        return $clone;
+    }
+
+    final public function addPercent(Percent $percent): self
     {
         $clone = clone $this;
         $clone->value += $percent->of($this->value);
