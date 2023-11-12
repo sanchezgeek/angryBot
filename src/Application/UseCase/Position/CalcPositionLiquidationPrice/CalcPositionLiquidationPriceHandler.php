@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
-use App\Domain\Percent\ValueObject\Percent;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 
 final class CalcPositionLiquidationPriceHandler
 {

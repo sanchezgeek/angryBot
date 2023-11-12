@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Percent;
+namespace App\Domain\Value\Common;
 
-use App\Domain\Percent\ValueObject\Percent;
-
+use App\Domain\Value\Percent\Percent;
+use App\Domain\Value\Percent\PercentModifiableValue;
 use LogicException;
 
 use function get_class;
 use function sprintf;
 
-abstract class AbstractFloatValue implements PercentModifiableValue
+abstract class AbstractFloat implements PercentModifiableValue
 {
     private float $value;
 
@@ -28,7 +28,7 @@ abstract class AbstractFloatValue implements PercentModifiableValue
     /**
      * @todo Move to abstract implementation (and `addPercent` too?)
      */
-    public function add(AbstractFloatValue $otherFloat): static
+    public function add(AbstractFloat $otherFloat): static
     {
         $this->checkType($otherFloat);
 
@@ -38,7 +38,7 @@ abstract class AbstractFloatValue implements PercentModifiableValue
         return $clone;
     }
 
-    public function sub(AbstractFloatValue $otherFloat): static
+    public function sub(AbstractFloat $otherFloat): static
     {
         $this->checkType($otherFloat);
 
@@ -56,7 +56,7 @@ abstract class AbstractFloatValue implements PercentModifiableValue
         return $clone;
     }
 
-    public function getPercentPart(Percent $percent): AbstractFloatValue
+    public function getPercentPart(Percent $percent): AbstractFloat
     {
         $clone = clone $this;
         $clone->value = $percent->of($this->value);
@@ -64,7 +64,7 @@ abstract class AbstractFloatValue implements PercentModifiableValue
         return $clone;
     }
 
-    private function checkType(AbstractFloatValue $otherFloat): void
+    private function checkType(AbstractFloat $otherFloat): void
     {
         $staticClass = static::class;
         $otherClass = get_class($otherFloat);

@@ -8,10 +8,10 @@ use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLi
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Percent\ValueObject\Percent;
 use App\Domain\Position\Liquidation\PositionLiquidationTrace\CoinAmount;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 use App\Tests\Factory\PositionFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

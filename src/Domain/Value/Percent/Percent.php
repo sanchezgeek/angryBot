@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Percent\ValueObject;
+namespace App\Domain\Value\Percent;
 
-use App\Domain\Percent\AbstractFloatValue;
-use App\Domain\Percent\IntegerValue;
+use App\Domain\Value\Common\AbstractFloat;
+use App\Domain\Value\Common\IntegerValue;
 use DomainException;
-
 use InvalidArgumentException;
 
 use function is_numeric;
@@ -64,9 +63,9 @@ final class Percent
         return $this->value / 100;
     }
 
-    public function of(int|float|AbstractFloatValue|IntegerValue $value): int|float|AbstractFloatValue|IntegerValue
+    public function of(int|float|IntegerValue|AbstractFloat $value): int|float|IntegerValue|AbstractFloat
     {
-        if ($value instanceof AbstractFloatValue) {
+        if ($value instanceof AbstractFloat) {
             return $value->getPercentPart($this);
         }
 
