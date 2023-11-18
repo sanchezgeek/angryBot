@@ -8,16 +8,13 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\Mixin\PositionAwareCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-use function var_dump;
-
 #[AsCommand(name: 'acc:info')]
-class WalletWIPCommand extends Command
+class AccInfoCommand extends Command
 {
     use PositionAwareCommand;
 
@@ -35,11 +32,15 @@ class WalletWIPCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
 
         $symbol = Symbol::BTCUSDT;
-        $coin = $symbol->getAssociatedAssetCoin();
+        $coin = $symbol->associatedCoin();
 
         $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+        $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
 
-        var_dump($spotWalletBalance->availableBalance);
+        var_dump(
+            $spotWalletBalance->availableBalance,
+            $contractWalletBalance->availableBalance
+        );
 
         $transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION);
 
