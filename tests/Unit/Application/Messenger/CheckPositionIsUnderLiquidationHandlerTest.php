@@ -10,6 +10,9 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -19,11 +22,14 @@ use PHPUnit\Framework\TestCase;
 
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
+
     private const DEFAULT_COIN_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_COIN_TRANSFER_AMOUNT;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
     private ExchangeAccountServiceInterface $exchangeAccountService;
+    private StopServiceInterface $stopService;
+    private OrderServiceInterface $orderService;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
 
@@ -32,8 +38,19 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->exchangeService = $this->createMock(ExchangeServiceInterface::class);
         $this->positionService = $this->createMock(PositionServiceInterface::class);
         $this->exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
+        $this->stopService = $this->createMock(StopServiceInterface::class);
+        $this->orderService = $this->createMock(OrderServiceInterface::class);
 
-        $this->handler = new CheckPositionIsUnderLiquidationHandler($this->exchangeService, $this->positionService, $this->exchangeAccountService);
+        $this->handler = new CheckPositionIsUnderLiquidationHandler(
+            $this->exchangeService,
+            $this->positionService,
+            $this->exchangeAccountService,
+            $this->orderService,
+            $this->stopService
+        );
+
+        $this->orderService->expects(self::never())->method(self::anything());
+        $this->stopService->expects(self::never())->method(self::anything());
     }
 
     public function testDoNothingWhenPositionIsNotUnderLiquidation(): void

@@ -7,6 +7,10 @@ namespace App\Application\Messenger;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Orders\StopServiceInterface;
+use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -16,6 +20,8 @@ use function abs;
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
     public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
+    public const STOP_DELTA = 40;
+    public const STOP_TRIGGER_DELTA = 40;
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -24,6 +30,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         private ExchangeServiceInterface $exchangeService,
         private PositionServiceInterface $positionService,
         private ExchangeAccountServiceInterface $exchangeAccountService,
+        private OrderServiceInterface $orderService,
+        private StopServiceInterface $stopService,
     ) {
     }
 
@@ -39,13 +47,19 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
+        $liquidationPrice = $position->liquidationPrice;
         if (
-            abs($position->liquidationPrice - $ticker->markPrice) <= 70
+            abs($liquidationPrice - $ticker->markPrice) <= 70
             && ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
             && $spotBalance->availableBalance > 0
         ) {
             $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, $spotBalance->availableBalance);
 
+//            $liqPrice = Price::float($liquidationPrice);
+//            $price = $position->isShort() ? $liqPrice->sub(self::STOP_DELTA) : $liqPrice->add(self::STOP_DELTA);
+//            $this->stopService->create($position->side, $price->value(), Percent::string('10%')->of($position->size), self::STOP_TRIGGER_DELTA);
+//
+//            $this->orderService->closeByMarket($position, Percent::string('10%')->of($position->size));
             $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
         }
     }
