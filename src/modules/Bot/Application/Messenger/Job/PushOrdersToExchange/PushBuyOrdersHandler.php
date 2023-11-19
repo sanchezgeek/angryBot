@@ -36,7 +36,7 @@ use function sprintf;
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
-    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 8;
+    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 15;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -74,11 +74,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         } catch (CannotAffordOrderCost $e) {
             if (
-                $position->getDeltaWithTicker($ticker) > 0
-                && ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
+//                $position->getDeltaWithTicker($ticker) > 0 &&
+                ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
                 && $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
             ) {
-                $this->exchangeAccountService->interTransferFromSpotToContract($coin, 0.15);
+                $this->exchangeAccountService->interTransferFromSpotToContract($coin, 0.12);
             } else {
                 $this->cannotAffordAtPrice = $ticker->indexPrice;
                 $this->cannotAffordAt = $this->clock->now();
