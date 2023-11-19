@@ -53,8 +53,8 @@ final class PositionServiceStubTest extends TestCase
         );
     }
 
-    public function testAddBuyOrderMethodCalls(): void
+    public function testDummyBuy(): void
     {
-        self::markTestIncomplete('Write me!!!');
+        self::markTestIncomplete('testAddBuyOrderMethodCalls, testCanReplaceSamePosition, testFailSetPositionWhenPositionAlreadyExists');
     }
 }
