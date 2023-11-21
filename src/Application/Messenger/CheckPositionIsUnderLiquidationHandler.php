@@ -19,6 +19,9 @@ use function abs;
 #[AsMessageHandler]
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
+    public const WARNING_LIQUIDATION_DELTA = 90;
+    public const CRITICAL_LIQUIDATION_DELTA = 40;
+
     public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
     public const STOP_DELTA = 40;
     public const STOP_TRIGGER_DELTA = 40;
@@ -48,8 +51,10 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         $liquidationPrice = $position->liquidationPrice;
+        $delta = abs($liquidationPrice - $ticker->markPrice);
+
         if (
-            abs($liquidationPrice - $ticker->markPrice) <= 70
+            $delta <= self::WARNING_LIQUIDATION_DELTA
             && ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
             && $spotBalance->availableBalance > 0
         ) {
@@ -59,8 +64,11 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 //            $price = $position->isShort() ? $liqPrice->sub(self::STOP_DELTA) : $liqPrice->add(self::STOP_DELTA);
 //            $this->stopService->create($position->side, $price->value(), Percent::string('10%')->of($position->size), self::STOP_TRIGGER_DELTA);
 //
-//            $this->orderService->closeByMarket($position, Percent::string('10%')->of($position->size));
             $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+
+            if ($delta <= self::CRITICAL_LIQUIDATION_DELTA) {
+                $this->orderService->closeByMarket($position, Percent::string('10%')->of($position->size));
+            }
         }
     }
 }

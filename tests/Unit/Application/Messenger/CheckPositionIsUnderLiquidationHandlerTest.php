@@ -17,6 +17,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use PHPUnit\Framework\TestCase;
 
@@ -49,20 +50,23 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopService
         );
 
-        $this->orderService->expects(self::never())->method(self::anything());
         $this->stopService->expects(self::never())->method(self::anything());
     }
 
     public function testDoNothingWhenPositionIsNotUnderLiquidation(): void
     {
+        $warningDelta = CheckPositionIsUnderLiquidationHandler::WARNING_LIQUIDATION_DELTA;
+
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
         $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
-        $ticker = new Ticker($symbol, 34929, 34900, 'test');
+        $ticker = new Ticker($symbol, 35000 - $warningDelta - 1, 34900, 'test');
 
         $this->positionService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
         $this->exchangeService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
         $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
+
+        $this->orderService->expects(self::never())->method(self::anything());
 
         ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
     }
@@ -96,6 +100,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
+        if (abs($position->liquidationPrice - $ticker->markPrice) <= 40) {
+            $this->orderService->expects(self::once())->method('closeByMarket')->with($position, Percent::string('10%')->of($position->size));
+        } else {
+            $this->orderService->expects(self::never())->method(self::anything());
+        }
+
         ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
     }
 
@@ -104,33 +114,42 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
         $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
+        $warningDelta = CheckPositionIsUnderLiquidationHandler::WARNING_LIQUIDATION_DELTA;
+        $criticalDelta = CheckPositionIsUnderLiquidationHandler::CRITICAL_LIQUIDATION_DELTA;
+
+        yield 'spot is empty' => [
+            '$position' => $position,
+            '$ticker' => new Ticker($symbol, $position->liquidationPrice - $warningDelta, 34900, 'test'),
+            '$spotAvailableBalance' => 0,
+            '$expectedTransferAmount' => null
+        ];
 
         yield 'transfer 15 usdt' => [
             '$position' => $position,
-            '$ticker' => new Ticker($symbol, 34930, 34900, 'test'),
+            '$ticker' => new Ticker($symbol, $position->liquidationPrice - $warningDelta, 34900, 'test'),
             '$spotAvailableBalance' => 100,
             '$expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
         ];
 
         yield 'transfer all available' => [
             '$position' => $position,
-            '$ticker' => new Ticker($symbol, 34940, 34900, 'test'),
+            '$ticker' => new Ticker($symbol, $position->liquidationPrice - $warningDelta / 2, 34900, 'test'),
             '$spotAvailableBalance' => 7,
             '$expectedTransferAmount' => 7
         ];
 
         yield 'transfer all available [2]' => [
             '$position' => $position,
-            '$ticker' => new Ticker($symbol, 34940, 34900, 'test'),
+            '$ticker' => new Ticker($symbol, $position->liquidationPrice - $warningDelta / 2, 34900, 'test'),
             '$spotAvailableBalance' => 0.1,
             '$expectedTransferAmount' => 0.1
         ];
 
-        yield 'spot is empty' => [
+        yield 'critical => transfer all available [2] + close some position part' => [
             '$position' => $position,
-            '$ticker' => new Ticker($symbol, 34940, 34900, 'test'),
-            '$spotAvailableBalance' => 0,
-            '$expectedTransferAmount' => null
+            '$ticker' => new Ticker($symbol, $position->liquidationPrice - $criticalDelta, 34900, 'test'),
+            '$spotAvailableBalance' => 0.1,
+            '$expectedTransferAmount' => 0.1
         ];
     }
 }
