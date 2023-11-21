@@ -17,7 +17,7 @@ framework:
 
         routing:
             # buy
-            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders: async_high
+            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders: async
 
             # from cron
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
