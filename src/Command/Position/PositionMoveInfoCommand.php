@@ -24,7 +24,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function sprintf;
 
-#[AsCommand(name: 'pos:p-info')]
+#[AsCommand(name: 'p:move-info')]
 class PositionMoveInfoCommand extends Command
 {
     use ConsoleInputAwareCommand;

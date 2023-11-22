@@ -118,16 +118,16 @@ p-b-info: s=buy
 p-b-info: sp=--showPnl
 p-b-info: sl-info
 
-p-info: ## Get position info on price move ("s=" - to specify `position_side` "t=" - to specify `to` price, example: p-info s=sell t=30000)
+pos-m-info: ## Get position info on price movement ("s=" - to specify `position_side` "t=" - to specify `to` price, example: m-info s=sell t=30000)
 	@$(eval s ?=)
 	@$(eval t ?=)
-	@$(PHP_CONT) ./bin/console pos:p-info $(s) -t $(t)
+	@$(PHP_CONT) ./bin/console p:move-info $(s) -t $(t)
 
 ## —— SHORT 🐻 ——
-sh-info: ## Get SHORT-position info ("t=" - to specify `to` price, example: sh-info t=30000)
-sh-info: s=sell
-sh-info: p-info
+sh-m-info: ## Get SHORT-position info on price movement ("t=" - to specify `to` price, example: sh-m-info t=30000)
+sh-m-info: s=sell
+sh-m-info: pos-m-info
 ## —— LONG 🐂 ——
-l-info: ## Get LONG-position info ("t=" - to specify `to` price, example: l-info t=30000)
-l-info: s=buy
-l-info: p-info
+l-m-info: ## Get LONG-position info on price movement ("t=" - to specify `to` price, example: l-m-info t=30000)
+l-m-info: s=buy
+l-m-info: pos-m-info

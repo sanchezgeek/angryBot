@@ -36,7 +36,7 @@ use function random_int;
 use function round;
 use function sprintf;
 
-#[AsCommand(name: 'open')]
+#[AsCommand(name: 'p:open')]
 class OpenCommand extends AbstractCommand
 {
     use PositionAwareCommand;
@@ -75,6 +75,17 @@ class OpenCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        // @todo | need `reopen` option | example p:open 70% -r (remove stops and BO without uniq)
+
+        /*
+         * 0) check current position loss
+         * 1) close current opened position
+         * 2) remove all stops
+         * 3) remove all BO left from previous position (or just bigger than 0.005)
+         * 4) transfer [if possible] lost coin amount from spot to contract
+         * 3) and only than ... $size = $this->getSizeArgument(); ...
+         */
+
         $positionSide = $this->getPositionSide();
         $symbolTicker = $this->getTicker($this->symbol);
         $size = $this->getSizeArgument();
@@ -203,16 +214,6 @@ class OpenCommand extends AbstractCommand
             'range' => PriceRange::byPositionPnlRange($expectedPosition, -$rangePnl->value(), $rangePnl->value()),
             'part' => $sizePart
         ];
-
-        //        $symbolTicker = $this->getTicker($this->symbol);
-        //        $currentPrice = Price::float($symbolTicker->indexPrice);
-        //        $pp100 = $this->get100pp($currentPrice);
-        //
-        //        $from = $currentPrice->sub($rangePnl->of($pp100));
-        //        $to = $currentPrice->add($rangePnl->of($pp100));
-
-        //        $fromPrice = PnlHelper::getTargetPriceByPnlPercent($expectedPosition, -$rangePnl->value());
-        //        $toPrice = PnlHelper::getTargetPriceByPnlPercent($expectedPosition, $rangePnl->value());
     }
 
     private function get100pp(Price $price): float
