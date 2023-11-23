@@ -10,6 +10,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -85,7 +86,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(Symbol $symbol): array
+    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
     {
         $data = $this->sendRequest($request = GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
         if (!is_array($list = $data['list'] ?? null)) {
@@ -113,6 +114,12 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
                 (float)$item['triggerPrice'],
                 TriggerBy::from($item['triggerBy'])->value,
             );
+        }
+
+        if ($priceRange) {
+            $activeOrders = array_values(array_filter($activeOrders, static function(ActiveStopOrder $order) use ($priceRange) {
+                return $priceRange->isPriceInRange($order->triggerPrice);
+            }));
         }
 
         return $activeOrders;

@@ -8,6 +8,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -42,6 +43,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
     public function testCanGetActiveConditionalOrders(
         AssetCategory $category,
         Symbol $symbol,
+        ?PriceRange $priceRange,
         MockResponse $apiResponse,
         array $expectedActiveStopOrders
     ): void {
@@ -50,7 +52,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
         $this->matchGet(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponse);
 
         // Act
-        $activeConditionalOrders = $this->service->activeConditionalOrders($symbol);
+        $activeConditionalOrders = $this->service->activeConditionalOrders($symbol, $priceRange);
 
         // Assert
         self::assertEquals($expectedActiveStopOrders, $activeConditionalOrders);
@@ -62,68 +64,71 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
 
         $symbol = Symbol::BTCUSDT;
 
-        yield sprintf('get active %s stops (%s)', $symbol->value, $category->value) => [
+        $mockResponse = CurrentOrdersResponseBuilder::ok($category)
+            # active LONG conditional stops
+            ->withOrder(
+                $symbol,
+                Side::Sell,
+                $firstLongStopId = uuid_create(),
+                $firstLongStopTriggerPrice = 30000,
+                $firstLongStopQty = 0.1,
+                $firstLongStopTriggerBy = TriggerBy::IndexPrice,
+                ExecutionOrderType::Market,
+                true,
+                false,
+            )
+            ->withOrder(
+                $symbol,
+                Side::Sell,
+                $secondLongStopId = uuid_create(),
+                $secondLongStopTriggerPrice = 32000,
+                $secondLongStopQty = 0.3,
+                $secondLongStopTriggerBy = TriggerBy::MarkPrice,
+                ExecutionOrderType::Market,
+                true,
+                false,
+            )
+            # active SHORT conditional stops
+            ->withOrder(
+                $symbol,
+                Side::Buy,
+                $shortStopId = uuid_create(),
+                $shortStopTriggerPrice = 33000,
+                $shortStopQty = 0.4,
+                $shortStopTriggerBy = TriggerBy::LastPrice,
+                ExecutionOrderType::Market,
+                true,
+                false,
+            )
+            # not conditional stops
+            ->withOrder(
+                $symbol,
+                Side::Sell,
+                uuid_create(),
+                31000,
+                0.01,
+                TriggerBy::IndexPrice,
+                ExecutionOrderType::Market,
+                false,
+                false,
+            )
+            # `Limit` orders
+            ->withOrder(
+                $symbol,
+                Side::Sell,
+                uuid_create(),
+                31100,
+                0.01,
+                TriggerBy::IndexPrice,
+                ExecutionOrderType::Limit,
+                true,
+                false,
+            )->build();
+
+        yield sprintf('get active %s stops (%s) without PriceRange specified', $symbol->value, $category->value) => [
             $category, $symbol,
-            '$apiResponse' => CurrentOrdersResponseBuilder::ok($category)
-                # active LONG conditional stops
-                ->withOrder(
-                    $symbol,
-                    Side::Sell,
-                    $firstLongStopId = uuid_create(),
-                    $firstLongStopTriggerPrice = 30000,
-                    $firstLongStopQty = 0.1,
-                    $firstLongStopTriggerBy = TriggerBy::IndexPrice,
-                    ExecutionOrderType::Market,
-                    true,
-                    false,
-                )
-                ->withOrder(
-                    $symbol,
-                    Side::Sell,
-                    $secondLongStopId = uuid_create(),
-                    $secondLongStopTriggerPrice = 32000,
-                    $secondLongStopQty = 0.3,
-                    $secondLongStopTriggerBy = TriggerBy::MarkPrice,
-                    ExecutionOrderType::Market,
-                    true,
-                    false,
-                )
-                # active SHORT conditional stops
-                ->withOrder(
-                    $symbol,
-                    Side::Buy,
-                    $shortStopId = uuid_create(),
-                    $shortStopTriggerPrice = 33000,
-                    $shortStopQty = 0.4,
-                    $shortStopTriggerBy = TriggerBy::LastPrice,
-                    ExecutionOrderType::Market,
-                    true,
-                    false,
-                )
-                # not conditional stops
-                ->withOrder(
-                    $symbol,
-                    Side::Sell,
-                    uuid_create(),
-                    31000,
-                    0.01,
-                    TriggerBy::IndexPrice,
-                    ExecutionOrderType::Market,
-                    false,
-                    false,
-                )
-                # `Limit` orders
-                ->withOrder(
-                    $symbol,
-                    Side::Sell,
-                    uuid_create(),
-                    31100,
-                    0.01,
-                    TriggerBy::IndexPrice,
-                    ExecutionOrderType::Limit,
-                    true,
-                    false,
-                )->build(),
+            '$priceRange' => null,
+            '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
                 # active LONG conditional stops
                 new ActiveStopOrder(
@@ -150,6 +155,22 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $shortStopQty,
                     $shortStopTriggerPrice,
                     $shortStopTriggerBy->value
+                ),
+            ]
+        ];
+
+        yield sprintf('get active %s stops (%s) with PriceRange specified', $symbol->value, $category->value) => [
+            $category, $symbol,
+            '$priceRange' => PriceRange::create(31500, 32001),
+            '$apiResponse' => $mockResponse,
+            '$expectedActiveOrders' => [
+                new ActiveStopOrder(
+                    $symbol,
+                    Side::Buy,
+                    $secondLongStopId,
+                    $secondLongStopQty,
+                    $secondLongStopTriggerPrice,
+                    $secondLongStopTriggerBy->value
                 ),
             ]
         ];

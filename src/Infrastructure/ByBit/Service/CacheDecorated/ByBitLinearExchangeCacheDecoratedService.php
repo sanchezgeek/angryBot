@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\TickersCache;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
@@ -88,9 +89,9 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(Symbol $symbol): array
+    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
     {
-        return $this->exchangeService->activeConditionalOrders($symbol);
+        return $this->exchangeService->activeConditionalOrders($symbol, $priceRange);
     }
 
     /**

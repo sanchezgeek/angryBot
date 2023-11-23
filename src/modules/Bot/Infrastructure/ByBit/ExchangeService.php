@@ -11,6 +11,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Helper\Json;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
 use App\Worker\AppContext;
@@ -108,7 +109,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         }
     }
 
-    public function activeConditionalOrders(Symbol $symbol): array
+    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
     {
         $params = [
             'symbol' => $symbol->value,
