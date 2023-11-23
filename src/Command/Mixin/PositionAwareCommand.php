@@ -20,12 +20,16 @@ trait PositionAwareCommand
 
     private readonly PositionServiceInterface $positionService;
 
-    private function getPosition(): Position
+    private function getPosition(bool $throwException = true): ?Position
     {
         // @todo | Retrieve position with `symbol` arg
         $positionSide = $this->getPositionSide();
         if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
-            throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
+            if ($throwException) {
+                throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
+            }
+
+            return null;
         }
 
         return $position;

@@ -70,7 +70,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                     (float)$item['liqPrice'],
                     (float)$item['positionIM'],
                     (int)$item['leverage'],
-//                    (float)$item['unrealisedPnl'],
+                    (float)$item['unrealisedPnl'],
                 );
             }
         }

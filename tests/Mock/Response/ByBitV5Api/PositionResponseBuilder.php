@@ -79,6 +79,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
         float $margin,
         int $leverage,
         float $liqPrice,
+        float $unrealizedPnl
     ): self {
         // @todo | move ucfirst to enum
         $this->positionsListItems[] = array_replace(self::POSITIONS_LIST_ITEM, [
@@ -90,6 +91,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
             'size' => (string)$positionSize,
             'liqPrice' => (string)$liqPrice,
             'leverage' => (string)$leverage,
+            'unrealisedPnl' => (string)$unrealizedPnl,
         ]);
 
         return $this;

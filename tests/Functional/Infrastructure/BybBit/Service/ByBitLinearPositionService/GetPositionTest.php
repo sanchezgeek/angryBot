@@ -57,6 +57,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
                 $margin = 330,
                 $leverage = 100,
                 $liqPrice = 31000,
+                $unrealizedPnl = -20
             )->build(),
             '$expectedPosition' => new Position(
                 $positionSide,
@@ -67,6 +68,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
                 $liqPrice,
                 $margin,
                 $leverage,
+                $unrealizedPnl,
             ),
         ];
 
