@@ -90,3 +90,9 @@ services:
     App\Application\Messenger\CheckPositionIsUnderLiquidationHandler:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+#### commands ####
+    App\Command\Position\OpenCommand:
+        class: App\Command\Position\OpenCommand
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

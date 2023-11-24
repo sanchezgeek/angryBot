@@ -11,16 +11,18 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Price\Price;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\VolumeHelper;
+use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -41,6 +43,9 @@ class OpenCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
+    public const DEBUG_OPTION = 'deb';
+
+    public const REOPEN_OPTION = 'reopen';
     public const SIZE_ARGUMENT = 'size';
     public const GRID_RANGE_OPTION = 'gridRange';
     public const STOPS_GRIDS_DEF_OPTION = 'stopGridsDef';
@@ -53,6 +58,7 @@ class OpenCommand extends AbstractCommand
     public const DEFAULT_STOP_GRID_QNT = 2;
     public const DEFAULT_TRIGGER_DELTA = '37';
 
+
     private Symbol $symbol;
 
     protected function configure(): void
@@ -62,7 +68,9 @@ class OpenCommand extends AbstractCommand
             ->addArgument(self::SIZE_ARGUMENT, InputArgument::REQUIRED, 'Position size or %')
             ->addOption(self::GRID_RANGE_OPTION, 'r', InputOption::VALUE_REQUIRED, 'Grid range', self::DEFAULT_GRID_RANGE)
             ->addOption(self::STOPS_GRIDS_DEF_OPTION, 's', InputOption::VALUE_REQUIRED, 'Stop grids def', self::DEFAULT_STOPS_GRIDS_DEF)
-            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stops trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::REOPEN_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reopen position?')
+            ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
         ;
     }
 
@@ -75,19 +83,23 @@ class OpenCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // @todo | need `reopen` option | example p:open 70% -r (remove stops and BO without uniq)
+        // @todo | reopen | remove all BO left from previous position (without `uniq` or just bigger than 0.005)
 
-        /*
-         * 0) check current position loss
-         * 1) close current opened position
-         * 2) remove all stops
-         * 3) remove all BO left from previous position (or just bigger than 0.005)
-         * 4) transfer [if possible] lost coin amount from spot to contract
-         * 3) and only than ... $size = $this->getSizeArgument(); ...
-         */
+        $reopenPosition = $this->paramFetcher->getBoolOption(self::REOPEN_OPTION);
+        if ($reopenPosition && ($closePositionError = $this->closeCurrentPosition()) !== null) {
+            return $closePositionError;
+        }
 
         $positionSide = $this->getPositionSide();
         $symbolTicker = $this->getTicker($this->symbol);
+
+        if ($this->isDebugEnabled()) {
+            $this->io->warning('Debug enabled. Terminate.');
+            return Command::FAILURE;
+        }
+
+        $this->removeCurrentPositionStops();
+
         $size = $this->getSizeArgument();
 
         $expectedPosition = new Position($positionSide, $this->symbol, $symbolTicker->indexPrice, $size, $size * $symbolTicker->indexPrice, 0, 10, 100);
@@ -103,6 +115,50 @@ class OpenCommand extends AbstractCommand
         $this->positionService->marketBuy($expectedPosition, $symbolTicker, $symbolTicker->indexPrice, $marketBuyVolume);
 
         return Command::SUCCESS;
+    }
+
+    private function closeCurrentPosition(): ?int
+    {
+        $position = $this->getPosition(false);
+        if (!$position) {
+            $this->io->warning('Position not found. Skip closeCurrentPosition.');
+            return null;
+        }
+
+        $unrealizedPnl = $position->unrealizedPnl;
+        if (!$this->io->confirm(sprintf('Current unrealized PNL: %.3f', $unrealizedPnl))) {
+            return Command::FAILURE;
+        }
+
+        if ($unrealizedPnl >= 0) {
+            $this->io->warning(sprintf('Current unrealized PNL: %.3f. Reopen denied.', $unrealizedPnl));
+            return Command::FAILURE;
+        }
+
+        if ($this->isDebugEnabled()) {
+            return null;
+        }
+
+        $this->tradeService->closeByMarket($position, $position->size);
+
+        $currentLoss = PriceHelper::round(-$unrealizedPnl, 2);
+        $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
+        if ($contractBalance->availableBalance > 2) {
+            $this->accountService->interTransferFromSpotToContract(
+                $this->symbol->associatedCoin(),
+                min(PriceHelper::round($contractBalance->availableBalance - 1, 2), $currentLoss)
+            );
+        }
+
+        return null;
+    }
+
+    public function removeCurrentPositionStops(): void
+    {
+        foreach ($this->stopRepository->findActive($this->getPositionSide()) as $stop) {
+            $this->entityManager->remove($stop);
+        }
+        $this->entityManager->flush();
     }
 
     /**
@@ -134,7 +190,6 @@ class OpenCommand extends AbstractCommand
         $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
 
         $gridDefs = explode(',', $this->paramFetcher->getStringOption(self::STOPS_GRIDS_DEF_OPTION));
-
         foreach ($gridDefs as $item) {
             $parts = explode('|', $item);
             $fromPercent = (float)$parts[0];
@@ -155,13 +210,7 @@ class OpenCommand extends AbstractCommand
             $forVolume = $volumePart->of($position->size);
 
             foreach ($stopsGrid->ordersByQnt($forVolume, $rangeOrdersQnt) as $order) {
-                $this->stopService->create(
-                    $position->side,
-                    $order->price()->value(),
-                    $order->volume(),
-                    $triggerDelta,
-                    $stopsContext
-                );
+                $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $stopsContext);
             }
         }
     }
@@ -176,7 +225,6 @@ class OpenCommand extends AbstractCommand
         $availableBalancePart = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
 
         $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
-
         if (!($contractBalance->availableBalance > 0)) {
             throw new RuntimeException('Insufficient contract balance');
         }
@@ -216,17 +264,19 @@ class OpenCommand extends AbstractCommand
         ];
     }
 
-    private function get100pp(Price $price): float
+    private function isDebugEnabled(): bool
     {
-        return $price->value() / 100;
+        return $this->paramFetcher->getBoolOption(self::DEBUG_OPTION);
     }
 
     public function __construct(
+        private readonly EntityManagerInterface $entityManager,
         private readonly ExchangeAccountServiceInterface $accountService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly OrderServiceInterface $tradeService,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
+        private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

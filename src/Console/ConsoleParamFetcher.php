@@ -100,13 +100,13 @@ final class ConsoleParamFetcher
         return $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
-    public function getBoolOption(string $name): ?bool
+    public function getBoolOption(string $name): bool
     {
         if ($this->input->getOption($name) !== null) {
             return $this->input->getOption($name) === true;
         }
 
-        return null;
+        return false;
     }
 
     public function getJsonArrayOption(string $name): ?array
