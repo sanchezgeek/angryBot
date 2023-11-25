@@ -86,7 +86,7 @@ final class PositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
         $result = $this->api->privates()->postStopOrderCreate([
             //'order_link_id'=>'xxxxxxxxxxxxxx',

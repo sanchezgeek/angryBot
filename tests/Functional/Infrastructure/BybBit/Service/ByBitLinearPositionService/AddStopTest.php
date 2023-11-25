@@ -25,12 +25,12 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::addStop
+ * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::addConditionalStop
  */
 final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 {
     private const REQUEST_URL = PlaceOrderRequest::URL;
-    private const CALLED_METHOD = 'ByBitLinearPositionService::addStop';
+    private const CALLED_METHOD = 'ByBitLinearPositionService::addConditionalStop';
 
     /**
      * @dataProvider addStopSuccessTestCases
@@ -55,7 +55,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         ), $apiResponse);
 
         // Act
-        $exchangeOrderId = $this->service->addStop($position, $ticker, $price, $volume);
+        $exchangeOrderId = $this->service->addConditionalStop($position, $ticker, $price, $volume);
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
@@ -87,7 +87,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
         // Act
         try {
-            $this->service->addStop($position, $ticker, $price, $volume);
+            $this->service->addConditionalStop($position, $ticker, $price, $volume);
         } catch (Throwable $exception) {
         }
 

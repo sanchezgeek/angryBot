@@ -13,11 +13,11 @@ use App\Tests\Factory\TickerFactory;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::addStop
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::marketBuy
  */
 final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {
-    public function testCallInnerServiceToAddStop(): void
+    public function testCallInnerServiceToMakeBuy(): void
     {
         // Arrange
         $symbol = Symbol::BTCUSDT;

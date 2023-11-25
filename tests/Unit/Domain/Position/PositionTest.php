@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
+use App\Tests\Factory\TickerFactory;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 use function sprintf;
@@ -118,5 +121,24 @@ final class PositionTest extends TestCase
     private function wrongGetVolumeCasesProvider(): array
     {
         return [[-150], [-100], [0], [101], [150]];
+    }
+
+    public function testCanGetDeltaToLiquidation(): void
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $ticker = new Ticker(Symbol::BTCUSDT, 30450, 30600, 'test');
+
+        self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
+    }
+
+    public function testFailGetDeltaToLiquidation(): void
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $ticker = new Ticker(Symbol::BTCUSD, 30450, 30600, 'test');
+
+        self::expectException(LogicException::class);
+        self::expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
+
+        $position->priceDeltaToLiquidation($ticker);
     }
 }

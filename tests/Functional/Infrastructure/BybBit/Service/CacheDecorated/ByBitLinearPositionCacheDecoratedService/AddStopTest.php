@@ -13,7 +13,7 @@ use App\Tests\Factory\TickerFactory;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::addStop
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::addConditionalStop
  */
 final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {
@@ -28,12 +28,12 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
         $price = 30000;
 
         $this->innerService
-            ->expects(self::once())->method('addStop')->with($position, $ticker, $price,$volume)
+            ->expects(self::once())->method('addConditionalStop')->with($position, $ticker, $price,$volume)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->addStop($position, $ticker, $price, $volume);
+        $result = $this->service->addConditionalStop($position, $ticker, $price, $volume);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

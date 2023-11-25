@@ -17,12 +17,14 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
@@ -36,8 +38,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
-    public const STOP_PRICE_MODIFIER_IF_INDEX_OVER_STOP = 15;
-    public const TRIGGER_DELTA_MODIFIER_IF_INDEX_OVER_STOP = 7;
+    public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
+    public const TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 7;
 
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
@@ -53,49 +55,49 @@ final class PushStopsHandler extends AbstractOrdersPusher
             return;
         }
 
-        $stops = $this->repository->findActive(
-            side: $side,
-            nearTicker: $this->exchangeService->ticker($symbol),
-            qbModifier: static fn (QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC')
-        );
-        $ticker = $this->exchangeService->ticker($symbol); // For case if ticker changed while DB query
+        $stops = $this->findStops($side, $symbol);
+        $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
+        $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
         foreach ($stops as $stop) {
             $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
             $price = $stop->getPrice();
 
-            if (
-                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($side, $price))
-                || (abs($price - $ticker->indexPrice) <= ($this->slForcedTriggerDelta ?: $td))
-            ) {
+            if (($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($side, $price)) || (abs($price - $ticker->indexPrice) <= $td)) {
+                $callback = null;
                 if ($indexAlreadyOverStop) {
-                    $newPrice = $side->isShort()
-                        ? $ticker->indexPrice + self::STOP_PRICE_MODIFIER_IF_INDEX_OVER_STOP
-                        : $ticker->indexPrice - self::STOP_PRICE_MODIFIER_IF_INDEX_OVER_STOP
-                    ;
-                    $stop->setPrice($newPrice)->setTriggerDelta($td + self::TRIGGER_DELTA_MODIFIER_IF_INDEX_OVER_STOP);
+                    if ($deltaToLiquidation <= 50) {
+                        $orderService = $this->orderService;
+                        $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
+                    } else {
+                        $newPrice = $side->isShort() ? $ticker->indexPrice + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $ticker->indexPrice - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;
+                        $stop->setPrice($newPrice)->setTriggerDelta($td + self::TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP);
+                    }
                 }
 
-                $this->addStop($position, $ticker, $stop);
+                $this->pushStopToExchange($position, $ticker, $stop, $callback);
 
                 if ($stop->getExchangeOrderId() && $stop->isWithOppositeOrder()) {
                     $this->createOpposite($position, $stop, $ticker);
+//                    $this->events->dispatch(new StopPushedToExchange($stop));
                 }
             }
         }
     }
 
-    private function addStop(Position $position, Ticker $ticker, Stop $stop): void
+    private function pushStopToExchange(Position $position, Ticker $ticker, Stop $stop, ?callable $pushStopCallback = null): void
     {
-        $qty = $stop->getVolume();
+        $positionService = $this->positionService; $orderService = $this->orderService;
+        $pushStopCallback = $pushStopCallback ?: static function() use ($positionService, $orderService, $position, $stop, $ticker) {
+            try {
+                return $positionService->addConditionalStop($position, $ticker, $stop->getPrice(), $stop->getVolume());
+            } catch (TickerOverConditionalOrderTriggerPrice $e) {
+                return $orderService->closeByMarket($position, $stop->getVolume());
+            }
+        };
 
         try {
-            try {
-                $stopOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $qty);
-            } catch (TickerOverConditionalOrderTriggerPrice $e) {
-                $stopOrderId = $this->orderService->closeByMarket($position, $qty);
-            }
-            // $this->events->dispatch(new StopPushedToExchange($stop));
+            $stopOrderId = $pushStopCallback();
             $stop->setExchangeOrderId($stopOrderId);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
@@ -199,6 +201,25 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
     }
 
+    /**
+     * @param Side $side
+     * @param Symbol $symbol
+     * @return Stop[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     * @throws TickerNotFoundException
+     */
+    private function findStops(Side $side, Symbol $symbol): array
+    {
+        return $this->repository->findActive(
+            side: $side,
+            nearTicker: $this->exchangeService->ticker($symbol),
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC')
+        );
+    }
+
     public function __construct(
         private readonly HedgeService $hedgeService,
         private readonly StopRepository $repository,
@@ -210,8 +231,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
-
-        private readonly float $slForcedTriggerDelta
     ) {
         parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
     }

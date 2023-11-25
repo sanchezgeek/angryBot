@@ -53,7 +53,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
         $this->addStopMethodCalls[] = [$position, $ticker, $price, $qty];
 

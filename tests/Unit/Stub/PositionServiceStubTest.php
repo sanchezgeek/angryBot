@@ -35,10 +35,10 @@ final class PositionServiceStubTest extends TestCase
 
         // Act
         $resultExchangeStopOrdersIds = [];
-        $resultExchangeStopOrdersIds[] = $stub->addStop($position, $ticker, 29060, 0.1);
-        $resultExchangeStopOrdersIds[] = $stub->addStop($position, $ticker, 29080, 0.2);
-        $resultExchangeStopOrdersIds[] = $stub->addStop($position, $ticker, 29010, 0.3);
-        $resultExchangeStopOrdersIds[] = $stub->addStop($position, $ticker, 29110, 0.4);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29060, 0.1);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29080, 0.2);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29010, 0.3);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29110, 0.4);
 
         # asser correct result method calls
         self::assertSame($expectedMethodCalls, $stub->getAddStopCallsStack());

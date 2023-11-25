@@ -112,7 +112,7 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
 
         $this->positionServiceMock
             ->expects(self::once())
-            ->method('addStop')
+            ->method('addConditionalStop')
             ->with($position, $ticker, $expectedUpdatedPriceValue, $qty)
             ->willThrowException(
                 new TickerOverConditionalOrderTriggerPrice('Already over trigger price')
