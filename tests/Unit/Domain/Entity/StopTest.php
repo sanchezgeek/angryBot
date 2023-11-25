@@ -23,6 +23,7 @@ final class StopTest extends TestCase
     use PositionSideAwareTest;
 
     private const WITHOUT_OPPOSITE_ORDER_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
+    private const IS_TP_CONTEXT = Stop::IS_TP_CONTEXT;
 
     public function testShortPnl(): void
     {
@@ -91,6 +92,46 @@ final class StopTest extends TestCase
         $stop = new Stop(1, 100500, 123.456, 10, $side);
         $stop->setIsWithoutOppositeOrder();
         self::assertFalse($stop->isWithOppositeOrder());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testIsTakeProfitOrder(Side $side): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, [self::IS_TP_CONTEXT => true]);
+
+        self::assertTrue($stop->isTakeProfitOrder());
+    }
+
+    /**
+     * @dataProvider isNotTakeProfitOrderTestCases
+     */
+    public function testIsNotTakeProfitOrder(Side $side, array $context): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+
+        self::assertFalse($stop->isTakeProfitOrder());
+    }
+
+    /**
+     * @dataProvider isNotTakeProfitOrderTestCases
+     */
+    public function testSetIsTakeProfitOrder(Side $side, array $context): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+        $stop->setIsTakeProfitOrder();
+        self::assertTrue($stop->isTakeProfitOrder());
+    }
+
+    private function isNotTakeProfitOrderTestCases(): iterable
+    {
+        foreach ($this->positionSides() as $positionSide) {
+            yield ['side' => $positionSide, 'context' => []];
+            yield ['side' => $positionSide, 'context' => [self::IS_TP_CONTEXT => false]];
+            yield ['side' => $positionSide, 'context' => [self::IS_TP_CONTEXT => null]];
+            yield ['side' => $positionSide, 'context' => [self::IS_TP_CONTEXT => 'asdasd']];
+        }
     }
 
     /**

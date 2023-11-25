@@ -4,6 +4,8 @@ namespace App\Command\Trade;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Orders\StopServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -31,10 +33,11 @@ class PlaceOrderCommand extends AbstractCommand
     private const TYPE_OPTION = 'type';
     private const MARKET_CLOSE = 'market';
     private const LIMIT_TP = 'limitTP';
+    private const DELAYED_TP = 'delayedTP';
 
-    private const TYPES = [self::MARKET_CLOSE, self::LIMIT_TP];
+    private const TYPES = [self::MARKET_CLOSE, self::LIMIT_TP, self::DELAYED_TP];
 
-    private const LIMIT_TP_PRICE_OPTION = 'limitTpPrice';
+    private const TP_PRICE_OPTION = 'tpPrice';
     private const LIMIT_TP_PRICE_STEP_OPTION = 'step';
 
     public const FOR_VOLUME_OPTION = 'forVolume';
@@ -46,7 +49,7 @@ class PlaceOrderCommand extends AbstractCommand
             ->configurePriceRangeArgs()
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::TYPE_OPTION, '-k', InputOption::VALUE_REQUIRED, 'Type (' . implode(', ', self::TYPES) . ')', self::LIMIT_TP)
-            ->addOption(self::LIMIT_TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%')
+            ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%')
             ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `priceRange`)')
         ;
     }
@@ -72,37 +75,49 @@ class PlaceOrderCommand extends AbstractCommand
             $this->tradeService->closeByMarket($position, $forVolume);
         }
 
-        if ($type === self::LIMIT_TP) {
+        if (in_array($type, [self::LIMIT_TP, self::DELAYED_TP])) {
+            $context = ['uniqid' => $uniqueId = uniqid('place-tp-orders-grid', true)];
+
             try {
                 $priceRange = $this->getPriceRange();
             } catch (\InvalidArgumentException $e) {
-                $price = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::LIMIT_TP_PRICE_OPTION);
+                $price = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::TP_PRICE_OPTION);
             }
 
+            $orders = [];
             if (isset($priceRange)) {
                 $step = $this->paramFetcher->getIntOption(self::LIMIT_TP_PRICE_STEP_OPTION);
 
-                $orders = [];
                 foreach ($priceRange->byStepIterator($step) as $price) {
-                    $orders[] = new Order($price, $forVolume);
+                    $rand = round(random_int(-7, 8) * 0.4, 2);
+                    $orders[] = new Order($price->sub($rand), $forVolume);
                 }
 
-                $msg = sprintf('You\'re about to add %d %.3f limitTPs on %s. Continue?', count($orders), $forVolume, $position->getCaption());
+                $msg = sprintf('You\'re about to add %d %.3f %ss on %s. Continue?', count($orders), $forVolume, $type, $position->getCaption());
                 if (!$this->io->confirm($msg)) {
                     return Command::FAILURE;
-                }
-
-                foreach ($orders as $order) {
-                    $this->tradeService->addLimitTP($position, $order->volume(), $order->price()->value());
                 }
             } elseif (isset($price)) {
-                $msg = sprintf('You\'re about to add limitTP on %s. Continue?', $position->getCaption());
+                $msg = sprintf('You\'re about to add %s on %s. Continue?', $type, $position->getCaption());
                 if (!$this->io->confirm($msg)) {
                     return Command::FAILURE;
                 }
-                $this->tradeService->addLimitTP($position, $forVolume, $price->value());
+                $orders[] = new Order($price, $forVolume);
             } else {
                 throw new InvalidArgumentException('`priceRange` or `price` must be specified');
+            }
+
+            foreach ($orders as $order) {
+                if ($type === self::DELAYED_TP) {
+                    $context = array_merge($context, Stop::getTakeProfitContext());
+                    $this->stopService->create($position->side, $order->price()->value(), $order->volume(), Stop::getTakeProfitTriggerDelta(), $context);
+                } else {
+                    $this->tradeService->addLimitTP($position, $order->volume(), $order->price()->value());
+                }
+            }
+
+            if ($type === self::DELAYED_TP) {
+                $this->io->success(sprintf('DelayedTPs uniqueID: %s', $uniqueId));
             }
         }
 
@@ -154,6 +169,7 @@ class PlaceOrderCommand extends AbstractCommand
 
     public function __construct(
         private readonly OrderServiceInterface $tradeService,
+        private readonly StopServiceInterface $stopService,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

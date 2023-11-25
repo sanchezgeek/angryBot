@@ -4,6 +4,7 @@ namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -89,7 +90,9 @@ class StopInfoCommand extends Command
             $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
-        $stops = new StopsCollection(...$stops);
+        $stops = (new StopsCollection(...$stops))
+//            ->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder())
+        ;
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {

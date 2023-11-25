@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
+namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
@@ -13,11 +13,11 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -27,6 +27,7 @@ use App\Tests\Mixin\TestWithDbFixtures;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -36,16 +37,12 @@ use function uuid_create;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
  */
-final class HandleStopsCornerCasesTest extends KernelTestCase
+final class PushTakeProfitOrdersTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
 
     private const SYMBOL = Symbol::BTCUSDT;
-    private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
-    private const OPPOSITE_BUY_DISTANCE = 38;
-    private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
-    private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
@@ -62,21 +59,19 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
 
     protected function setUp(): void
     {
+        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
+        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
         $this->messageBus = self::getContainer()->get(MessageBusInterface::class);
         $this->eventDispatcher = self::getContainer()->get(EventDispatcherInterface::class);
         $this->hedgeService = self::getContainer()->get(HedgeService::class);
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
+
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
-
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
-
-
-        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
-        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
 
         $this->handler = new PushStopsHandler(
             $this->hedgeService,
@@ -88,51 +83,91 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,
-            $this->clockMock,
-            0
+            $this->clockMock
         );
 
         self::truncateStops();
     }
 
-    public function testCloseByMarketWhenApiReturnedBadRequestError(): void {
-        $this->haveTicker(
-            $ticker = TickerFactory::create(self::SYMBOL, 29050)
-        );
-
-        $position = PositionFactory::short(self::SYMBOL, 29000);
+    /**
+     * @dataProvider pushTakeProfitOrdersTestCases
+     *
+     * @param Stop[] $stopsExpectedAfterHandle
+     */
+    public function testPushRelevantTakeProfitOrders(
+        Position $position,
+        Ticker $ticker,
+        array $stopsFixtures,
+        array $expectedCloseByMarketMethodCalls,
+        array $stopsExpectedAfterHandle,
+        array $mockedExchangeOrderIds
+    ): void {
+        $this->haveTicker($ticker);
         $this->positionServiceMock->method('getPosition')->with(self::SYMBOL, $position->side)->willReturn($position);
+        $this->applyDbFixtures(...$stopsFixtures);
 
-        $this->applyDbFixtures(
-            new StopFixture(StopBuilder::short(5, $originalPrice = 29030, $qty = 0.011)->withTD(10)->build()),
-        );
+        $closeByMarketMethodCalls = [];
+        $this->orderServiceMock->method('closeByMarket')
+            ->willReturnCallback(
+                function($position, $qty) use (&$mockedExchangeOrderIds, &$closeByMarketMethodCalls) {
+                    if (!$nextExchangeOrderId = array_shift($mockedExchangeOrderIds)) {
+                        throw new RuntimeException('Next exchange order id not found in provided stack');
+                    }
+                    $closeByMarketMethodCalls[] = [$position, $qty];
 
-        $expectedUpdatedPriceValue = $ticker->indexPrice + self::ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP;
-        $expectedNewTriggerDelta = 10 + self::ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP;
+                    return $nextExchangeOrderId;
+                }
+            )
+        ;
 
-        $this->positionServiceMock
-            ->expects(self::once())
-            ->method('addConditionalStop')
-            ->with($position, $ticker, $expectedUpdatedPriceValue, $qty)
-            ->willThrowException(
-                new TickerOverConditionalOrderTriggerPrice('Already over trigger price')
-            );
-
-        $this->orderServiceMock
-            ->expects(self::once())
-            ->method('closeByMarket')
-            ->with($position, $qty)
-            ->willReturn(
-                $exchangeOrderId = uuid_create()
-            );
-
-        // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));
 
-        // Assert
-        self::seeStopsInDb(
-            StopBuilder::short(5, $expectedUpdatedPriceValue, $qty)->withTD($expectedNewTriggerDelta)->build()->setOriginalPrice($originalPrice)->setExchangeOrderId($exchangeOrderId)
-        );
+        self::assertSame($expectedCloseByMarketMethodCalls, $closeByMarketMethodCalls);
+        self::assertEmpty($mockedExchangeOrderIds);
+
+        self::seeStopsInDb(...$stopsExpectedAfterHandle);
+    }
+
+    public function pushTakeProfitOrdersTestCases(): iterable
+    {
+        ### BTCUSDT SHORT
+
+        $mockedExchangeOrderIds = [];
+        yield [
+            '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
+            '$ticker' => TickerFactory::create(self::SYMBOL, 29050),
+            '$stopFixtures' => [
+                new StopFixture(StopBuilder::short(10, 29055, 0.1)->build()->setIsTakeProfitOrder()),  // must be pushed
+                new StopFixture(StopBuilder::short(20, 29049, 0.2)->build()->setIsTakeProfitOrder()),  // must not be pushed
+            ],
+            'expectedCloseByMarketMethodCalls' => [
+                [$position, 0.1],
+            ],
+            'stopsExpectedAfterHandle' => [
+                ### pushed ###
+                StopBuilder::short(10, 29055, 0.1)->build()->setIsTakeProfitOrder()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                ### not pushed ###
+                StopBuilder::short(20, 29049, 0.2)->build()->setIsTakeProfitOrder(),
+            ],
+            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+        ];
+
+        $mockedExchangeOrderIds = [];
+        yield [
+            '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
+            '$ticker' => TickerFactory::create(self::SYMBOL, 29000),
+            '$stopFixtures' => [
+                new StopFixture(StopBuilder::short(10, 29099, 0.1)->build()->setIsTakeProfitOrder()),  // must be pushed
+            ],
+            'expectedCloseByMarketMethodCalls' => [
+                [$position, 0.1],
+            ],
+            'stopsExpectedAfterHandle' => [
+                ### pushed ###
+                StopBuilder::short(10, 29099, 0.1)->build()->setIsTakeProfitOrder()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+            ],
+            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+        ];
     }
 
     protected function haveTicker(Ticker $ticker): void

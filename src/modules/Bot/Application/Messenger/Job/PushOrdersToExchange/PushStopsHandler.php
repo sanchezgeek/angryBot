@@ -35,6 +35,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /** @see PushStopsTest */
+/** @see HandleStopsCornerCasesTest */
+/** @see PushTakeProfitOrdersTest */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
@@ -46,6 +48,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
     public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 78;
     public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
+
+    private function isCurrentPriceOverTakeProfit(Side $positionSide, float $currentPrice, $takeProfitPrice): bool
+    {
+        return $positionSide->isShort() ? $currentPrice <= $takeProfitPrice : $currentPrice >= $takeProfitPrice;
+    }
 
     public function __invoke(PushStops $message): void
     {
@@ -59,7 +66,18 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
         $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
+        $orderService = $this->orderService;
         foreach ($stops as $stop) {
+            ### TP
+            if ($stop->isTakeProfitOrder()) {
+                // todo last
+                if ($this->isCurrentPriceOverTakeProfit($side, $ticker->indexPrice, $stop->getPrice())) {
+                    $this->pushStopToExchange($position, $ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                }
+                continue;
+            }
+
+            ### Regular
             $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
             $price = $stop->getPrice();
 
@@ -67,7 +85,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 $callback = null;
                 if ($indexAlreadyOverStop) {
                     if ($deltaToLiquidation <= 50) {
-                        $orderService = $this->orderService;
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
                         $newPrice = $side->isShort() ? $ticker->indexPrice + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $ticker->indexPrice - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;

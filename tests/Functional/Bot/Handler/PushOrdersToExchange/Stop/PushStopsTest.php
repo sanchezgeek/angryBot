@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
+namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
-use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -19,6 +18,7 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
+use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 
@@ -59,8 +59,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
             $this->exchangeServiceMock,
             $this->positionServiceStub,
             $this->loggerMock,
-            $this->clockMock,
-            0
+            $this->clockMock
         );
 
         self::truncateStops();
@@ -106,6 +105,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
                 new StopFixture(StopBuilder::short(15, 29061, 0.1)->withTD(10)->build()),
                 new StopFixture(StopBuilder::short(20, 29155, 0.2)->withTD(100)->build()),
                 new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()),  // must be pushed (by tD)
+                new StopFixture(StopBuilder::short(40, 29049, 0.33)->withTD(5)->build()->setIsTakeProfitOrder()),  // must not be pushed (isTakeProfitOrder)
             ],
             'expectedStopAddMethodCalls' => [
                 [$position, $ticker, $ticker->indexPrice + $addPriceDelta, 0.011],
@@ -126,6 +126,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
                 StopBuilder::short(1, 29055, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
                 StopBuilder::short(15, 29061, 0.1)->withTD(10)->build(),
                 StopBuilder::short(20, 29155, 0.2)->withTD(100)->build(),
+                StopBuilder::short(40, 29049, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
             ],
             '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
         ];
