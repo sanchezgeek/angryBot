@@ -50,6 +50,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $position = $this->positionService->getPosition($symbol, $side);
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
+        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 50) {
+            return;
         }
 
         if (!$this->canAffordBuy($ticker)) {

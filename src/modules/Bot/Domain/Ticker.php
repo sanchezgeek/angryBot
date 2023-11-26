@@ -39,4 +39,9 @@ final class Ticker
 
         throw new LogicException(sprintf('Unexpected positionSide "%s"', $positionSide->value));
     }
+
+    public function isLastPriceOverIndexPrice(Side $positionSide): bool
+    {
+        return $positionSide->isShort() ? $this->lastPrice->value() < $this->indexPrice : $this->lastPrice->value() > $this->indexPrice;
+    }
 }
