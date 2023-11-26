@@ -61,10 +61,10 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(
                 $symbol,
                 $indexPrice = 30000,
-                $lastPrice = 29980,
+                $lastPrice = 29950,
                 $markPrice = 29990,
             )->build(),
-            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice),
+            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice, $lastPrice),
         ];
 
         $symbol = Symbol::BTCUSD;
@@ -76,7 +76,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
                 $lastPrice = 30980,
                 $markPrice = 30990,
             )->build(),
-            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice),
+            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice, $lastPrice),
         ];
     }
 

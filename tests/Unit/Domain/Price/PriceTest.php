@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Price;
 
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use DomainException;
@@ -107,5 +108,46 @@ final class PriceTest extends TestCase
         yield [123.45, 1, Price::float(122.45)];
         yield [123.45, 2.1, Price::float(121.35)];
         yield [123, 2.1, Price::float(120.9)];
+    }
+
+    /**
+     * @dataProvider priceIsOverTakeProfitTestCases
+     */
+    public function testIsPriceOverTakeProfit(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
+    {
+        $result = $price->isPriceOverTakeProfit($positionSide, $takeProfitPrice);
+
+        self::assertEquals($expectedResult, $result);
+    }
+
+    private function priceIsOverTakeProfitTestCases(): iterable
+    {
+        yield 'over SHORT TP (+)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Sell,
+            'takeProfit.price' => 200500,
+            'expectedResult' => true,
+        ];
+
+        yield 'over SHORT TP (-)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Sell,
+            'takeProfit.price' => 200499,
+            'expectedResult' => false,
+        ];
+
+        yield 'over LONG TP (+)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Buy,
+            'takeProfit.price' => 200500,
+            'expectedResult' => true,
+        ];
+
+        yield 'over LONG TP (-)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Buy,
+            'takeProfit.price' => 200501,
+            'expectedResult' => false,
+        ];
     }
 }

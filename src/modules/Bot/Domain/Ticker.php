@@ -8,12 +8,17 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 
+use LogicException;
+
+use function sprintf;
+
 final class Ticker
 {
     public function __construct(
         public readonly Symbol $symbol,
-        public readonly Price  $markPrice,
-        public readonly float  $indexPrice,
+        public readonly Price $markPrice,
+        public readonly float $indexPrice,
+        public readonly Price $lastPrice,
     ) {
     }
 
@@ -32,6 +37,6 @@ final class Ticker
             return $this->indexPrice >= $price;
         }
 
-        throw new \LogicException(\sprintf('Unexpected positionSide "%s"', $positionSide->value));
+        throw new LogicException(sprintf('Unexpected positionSide "%s"', $positionSide->value));
     }
 }

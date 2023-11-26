@@ -75,8 +75,8 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
     public function withTicker(
         Symbol $symbol,
         float $indexPrice,
-        ?float $lastPrice,
-        ?float $markPrice,
+        ?float $lastPrice = null,
+        ?float $markPrice = null,
     ): self {
         $lastPrice = $lastPrice ?? $indexPrice;
         $markPrice = $markPrice ?? $indexPrice;

@@ -135,7 +135,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         $mockedExchangeOrderIds = [];
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
-            '$ticker' => TickerFactory::create(self::SYMBOL, 29050),
+            '$ticker' => TickerFactory::create(self::SYMBOL, 29070, 29060, 29050),
             '$stopFixtures' => [
                 new StopFixture(StopBuilder::short(10, 29055, 0.1)->build()->setIsTakeProfitOrder()),  // must be pushed
                 new StopFixture(StopBuilder::short(20, 29049, 0.2)->build()->setIsTakeProfitOrder()),  // must not be pushed
@@ -155,7 +155,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         $mockedExchangeOrderIds = [];
         yield [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
-            '$ticker' => TickerFactory::create(self::SYMBOL, 29000),
+            '$ticker' => TickerFactory::create(self::SYMBOL, 29020, 29010, 29000),
             '$stopFixtures' => [
                 new StopFixture(StopBuilder::short(10, 29099, 0.1)->build()->setIsTakeProfitOrder()),  // must be pushed
             ],

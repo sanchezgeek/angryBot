@@ -10,6 +10,9 @@ use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \App\Tests\Factory\PositionFactory
+ */
 final class PositionFactoryTest extends TestCase
 {
     public function testShortFactory(): void

@@ -97,7 +97,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
 
         yield 'BTCUSDT SHORT' => [
             '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
-            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
+            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29050, 29050),
             '$stopFixtures' => [
                 new StopFixture(StopBuilder::short(1, 29055, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
                 new StopFixture(StopBuilder::short(5, 29030, 0.011)->withTD(10)->build()), // must be pushed (before ticker)

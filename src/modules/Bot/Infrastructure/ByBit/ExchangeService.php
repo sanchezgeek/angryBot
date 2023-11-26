@@ -79,10 +79,11 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 
         \assert(isset($data['result']), 'Ticker not found');
 
+        $lastPrice = (float)$data['result'][0]['last_price'];
         $markPrice = (float)$data['result'][0]['mark_price'];
         $indexPrice = (float)$data['result'][0]['index_price'];
 
-        $ticker = new Ticker($symbol, Price::float($markPrice), $indexPrice, AppContext::workerHash());
+        $ticker = new Ticker($symbol, Price::float($markPrice), $indexPrice, Price::float($lastPrice));
 
         $this->events->dispatch(new TickerUpdated($ticker));
 

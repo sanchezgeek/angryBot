@@ -67,7 +67,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         $ticker = null;
         foreach ($list as $item) {
             if ($item['symbol'] === $symbol->value) {
-                $ticker = new Ticker($symbol, Price::float((float)$item['markPrice']), (float)$item['indexPrice']);
+                $ticker = new Ticker($symbol, Price::float((float)$item['markPrice']), (float)$item['indexPrice'], Price::float((float)$item['lastPrice']));
             }
         }
 

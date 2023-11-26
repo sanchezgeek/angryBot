@@ -49,11 +49,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
     public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 78;
     public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
 
-    private function isCurrentPriceOverTakeProfit(Side $positionSide, float $currentPrice, $takeProfitPrice): bool
-    {
-        return $positionSide->isShort() ? $currentPrice <= $takeProfitPrice : $currentPrice >= $takeProfitPrice;
-    }
-
     public function __invoke(PushStops $message): void
     {
         $side = $message->side; $symbol = $message->symbol;
@@ -70,8 +65,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         foreach ($stops as $stop) {
             ### TP
             if ($stop->isTakeProfitOrder()) {
-                // todo last
-                if ($this->isCurrentPriceOverTakeProfit($side, $ticker->indexPrice, $stop->getPrice())) {
+                if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
                     $this->pushStopToExchange($position, $ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
                 }
                 continue;

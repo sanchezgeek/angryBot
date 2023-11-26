@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 
@@ -72,5 +73,10 @@ readonly final class Price
     public function pnlFor(Position $position): float
     {
         return PnlHelper::getPnlInPercents($position, $this->value());
+    }
+
+    public function isPriceOverTakeProfit(Side $positionSide, float $takeProfitPrice): bool
+    {
+        return $positionSide->isShort() ? $this->value <= $takeProfitPrice : $this->value >= $takeProfitPrice;
     }
 }
