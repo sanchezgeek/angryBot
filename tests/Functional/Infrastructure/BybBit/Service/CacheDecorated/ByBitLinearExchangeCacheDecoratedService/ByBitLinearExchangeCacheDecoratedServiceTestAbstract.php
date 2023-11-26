@@ -15,7 +15,6 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 abstract class ByBitLinearExchangeCacheDecoratedServiceTestAbstract extends KernelTestCase
 {
     private const ASSET_CATEGORY = AssetCategory::linear;
-    protected const WORKER_DEBUG_HASH = '123456';
 
     protected ArrayAdapter $cache;
     protected ExchangeServiceInterface $innerService;

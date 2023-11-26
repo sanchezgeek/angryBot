@@ -26,8 +26,7 @@ abstract class ByBitLinearExchangeServiceTestAbstract extends KernelTestCase
     protected function setUp(): void
     {
         $this->service = new ByBitLinearExchangeService(
-            $this->initializeApiClient(),
-            self::WORKER_DEBUG_HASH
+            $this->initializeApiClient()
         );
     }
 }

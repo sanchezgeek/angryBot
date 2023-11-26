@@ -79,6 +79,6 @@ final class Position
             throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name, $this->symbol->name));
         }
 
-        return abs($this->liquidationPrice - $ticker->markPrice);
+        return abs($this->liquidationPrice - $ticker->markPrice->value());
     }
 }

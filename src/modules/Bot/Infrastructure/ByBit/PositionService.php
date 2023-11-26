@@ -133,7 +133,7 @@ final class PositionService implements PositionServiceInterface
             'trigger_by' => 'IndexPrice',
             'reduce_only' => 'false',
             'close_on_trigger' => 'false',
-            'base_price' => $ticker->markPrice,
+            'base_price' => $ticker->markPrice->value(),
             'order_type' => ExecutionOrderType::Market->value,
             'qty' => VolumeHelper::round($qty),
             'trigger_price' => PriceHelper::round($price),

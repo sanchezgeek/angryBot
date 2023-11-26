@@ -10,6 +10,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -40,10 +41,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
     private string $workerHash;
 
-    public function __construct(ByBitApiClientInterface $apiClient, ?string $workerHash = null)
+    public function __construct(ByBitApiClientInterface $apiClient)
     {
         $this->apiClient = $apiClient;
-        $this->workerHash = $workerHash ?? AppContext::workerHash();
     }
 
     /**
@@ -67,8 +67,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         $ticker = null;
         foreach ($list as $item) {
             if ($item['symbol'] === $symbol->value) {
-                $updatedBy = $this->workerHash;
-                $ticker = new Ticker($symbol, (float)$item['markPrice'], (float)$item['indexPrice'], $updatedBy);
+                $ticker = new Ticker($symbol, Price::float((float)$item['markPrice']), (float)$item['indexPrice']);
             }
         }
 

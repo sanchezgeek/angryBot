@@ -8,6 +8,8 @@ use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 
+use App\Tests\Factory\TickerFactory;
+
 use function usleep;
 
 /**
@@ -19,7 +21,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     {
         // Arrange
         $symbol = Symbol::BTCUSDT;
-        $ticker = new Ticker($symbol, 30000, 29990, self::WORKER_DEBUG_HASH);
+        $ticker = TickerFactory::create($symbol, 29990, 30000);
 
         $this->innerService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
         $this->eventDispatcherMock->expects(self::once())->method('dispatch')->with(new TickerUpdated($ticker));
@@ -35,7 +37,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     {
         // Arrange
         $symbol = Symbol::BTCUSDT;
-        $ticker = new Ticker($symbol, 30000, 29990, self::WORKER_DEBUG_HASH);
+        $ticker = TickerFactory::create($symbol, 29990, 30000);
         $item = $this->cache->getItem($this->getTickerCacheKey($symbol));
         $item->set($ticker);
         $this->cache->save($item);
@@ -54,8 +56,8 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     {
         // Arrange
         $symbol = Symbol::BTCUSDT;
-        $oldCachedTicker = new Ticker($symbol, 30000, 29990, self::WORKER_DEBUG_HASH);
-        $ticker = new Ticker($symbol, 31000, 30990, self::WORKER_DEBUG_HASH);
+        $oldCachedTicker = TickerFactory::create($symbol,  29990, 30000);
+        $ticker = TickerFactory::create($symbol,  30990, 31000);
 
         $item = $this->cache->getItem($this->getTickerCacheKey($symbol));
         $item->set($oldCachedTicker);

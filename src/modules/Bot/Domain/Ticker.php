@@ -6,14 +6,14 @@ namespace App\Bot\Domain;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 
 final class Ticker
 {
     public function __construct(
         public readonly Symbol $symbol,
-        public readonly float  $markPrice,
+        public readonly Price  $markPrice,
         public readonly float  $indexPrice,
-        public readonly string $updatedBy,
     ) {
     }
 

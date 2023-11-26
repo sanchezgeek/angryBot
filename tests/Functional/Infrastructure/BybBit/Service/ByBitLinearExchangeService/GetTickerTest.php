@@ -13,6 +13,7 @@ use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\MarketResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
@@ -63,7 +64,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
                 $lastPrice = 29980,
                 $markPrice = 29990,
             )->build(),
-            '$expectedPosition' => new Ticker($symbol, $markPrice, $indexPrice, self::WORKER_DEBUG_HASH),
+            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice),
         ];
 
         $symbol = Symbol::BTCUSD;
@@ -75,7 +76,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
                 $lastPrice = 30980,
                 $markPrice = 30990,
             )->build(),
-            '$expectedPosition' => new Ticker($symbol, $markPrice, $indexPrice, self::WORKER_DEBUG_HASH),
+            '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice),
         ];
     }
 

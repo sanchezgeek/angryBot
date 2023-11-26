@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Leverage;
@@ -126,7 +125,7 @@ final class PositionTest extends TestCase
     public function testCanGetDeltaToLiquidation(): void
     {
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
-        $ticker = new Ticker(Symbol::BTCUSDT, 30450, 30600, 'test');
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
 
         self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
     }
@@ -134,10 +133,10 @@ final class PositionTest extends TestCase
     public function testFailGetDeltaToLiquidation(): void
     {
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
-        $ticker = new Ticker(Symbol::BTCUSD, 30450, 30600, 'test');
+        $ticker = TickerFactory::create(Symbol::BTCUSD, 30600,30450);
 
-        self::expectException(LogicException::class);
-        self::expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
 
         $position->priceDeltaToLiquidation($ticker);
     }
