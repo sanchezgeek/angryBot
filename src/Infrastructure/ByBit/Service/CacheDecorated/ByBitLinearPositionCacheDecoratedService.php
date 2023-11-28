@@ -44,7 +44,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetPositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
@@ -62,13 +62,12 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
      */
     public function getOppositePosition(Position $position): ?Position
     {
         return $this->getPosition($position->symbol, $position->side->getOpposite());
     }
-
 
     /**
      * @inheritDoc
@@ -80,7 +79,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddStopTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddStopTest
      */
     public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty): string
     {
@@ -96,7 +95,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
      */
     public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Symbol;

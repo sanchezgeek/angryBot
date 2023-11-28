@@ -43,7 +43,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
@@ -87,7 +87,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
     public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
     {
@@ -99,7 +99,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\CloseActiveConditionalOrderTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\CloseActiveConditionalOrderTest
      */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {

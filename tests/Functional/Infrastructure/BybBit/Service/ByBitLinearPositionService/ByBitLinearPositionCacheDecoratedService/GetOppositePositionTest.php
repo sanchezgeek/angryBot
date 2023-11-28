@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Domain\Position;

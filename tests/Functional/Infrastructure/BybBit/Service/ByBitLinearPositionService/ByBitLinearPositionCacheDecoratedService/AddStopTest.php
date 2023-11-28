@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -13,11 +13,11 @@ use App\Tests\Factory\TickerFactory;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::marketBuy
+ * @covers \App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService::addConditionalStop
  */
-final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
+final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbstract
 {
-    public function testCallInnerServiceToMakeBuy(): void
+    public function testCallInnerServiceToAddStop(): void
     {
         // Arrange
         $symbol = Symbol::BTCUSDT;
@@ -28,12 +28,12 @@ final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $price = 30000;
 
         $this->innerService
-            ->expects(self::once())->method('marketBuy')->with($position, $ticker, $price, $volume)
+            ->expects(self::once())->method('addConditionalStop')->with($position, $ticker, $price,$volume)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->marketBuy($position, $ticker, $price, $volume);
+        $result = $this->service->addConditionalStop($position, $ticker, $price, $volume);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

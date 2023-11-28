@@ -2,12 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-
 use App\Tests\Factory\TickerFactory;
 
 use function usleep;
