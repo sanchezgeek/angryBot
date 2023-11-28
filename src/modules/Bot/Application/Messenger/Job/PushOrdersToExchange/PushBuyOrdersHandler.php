@@ -36,7 +36,10 @@ use function sprintf;
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
-    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 15;
+
+    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 5;
+    private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.09;
+    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.14;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -80,10 +83,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
                 && $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
             ) {
-                $this->exchangeAccountService->interTransferFromSpotToContract($coin, 0.12);
-            } else {
-                $this->cannotAffordAtPrice = $ticker->indexPrice;
-                $this->cannotAffordAt = $this->clock->now();
+                $delta = $position->getDeltaWithTicker($ticker);
+                $amount = $delta < 150 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
+                $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+                return;
+            }
+
+            $this->cannotAffordAtPrice = $ticker->indexPrice;
+            $this->cannotAffordAt = $this->clock->now();
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
 //                $hedge = Hedge::create($position, $oppositePosition);
 //                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
@@ -95,7 +102,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 //                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
 //                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
 //            }
-            }
         }
     }
 
