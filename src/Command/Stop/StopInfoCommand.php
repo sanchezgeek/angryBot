@@ -41,6 +41,7 @@ class StopInfoCommand extends Command
     private const DEFAULT_PNL_STEP = 20;
     private const SHOW_PNL_OPTION = 'showPnl';
     private const SHOW_POSITION_PNL = 'showPositionPnl';
+    private const SHOW_TP = 'showTP';
 
     private SymfonyStyle $io;
     private string $aggregateWith;
@@ -54,6 +55,7 @@ class StopInfoCommand extends Command
             ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
             ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
+            ->addOption(self::SHOW_TP, '-t', InputOption::VALUE_NEGATABLE, 'Show TP orders', false)
         ;
     }
 
@@ -71,6 +73,7 @@ class StopInfoCommand extends Command
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
         $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
         $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
+        $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
 
@@ -90,7 +93,10 @@ class StopInfoCommand extends Command
             $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
-        $stops = (new StopsCollection(...$stops))
+        $stops = (new StopsCollection(...$stops));
+        if (!$showTPs) {
+            $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
+        }
 //            ->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder())
         ;
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
