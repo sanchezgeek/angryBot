@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -39,6 +40,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         Symbol $symbol,
         AssetCategory $category,
         Side $positionSide,
+        TriggerBy $triggerBy,
         MockResponse $apiResponse,
         ?string $expectedExchangeOrderId
     ): void {
@@ -46,19 +48,35 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
-        $this->matchPost(PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+        $this->matchPost(PlaceOrderRequest::stopConditionalOrder(
             $category,
             $symbol,
             $positionSide,
             $volume = 0.1,
-            $price = 30000
+            $price = 30000,
+            $triggerBy
         ), $apiResponse);
 
         // Act
-        $exchangeOrderId = $this->service->addConditionalStop($position, $ticker, $price, $volume);
+        $exchangeOrderId = $this->service->addConditionalStop($position, $ticker, $price, $volume, $triggerBy);
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
+    }
+
+    private function addStopSuccessTestCases(): iterable
+    {
+        $symbol = Symbol::BTCUSDT;
+        $category = AssetCategory::linear;
+        $positionSide = Side::Sell;
+
+        foreach ([TriggerBy::IndexPrice, TriggerBy::MarkPrice, TriggerBy::LastPrice] as $triggerBy) {
+            yield sprintf('[triggerBy=%s] place %s %s position stop (%s)', $triggerBy->value, $symbol->value, $positionSide->title(), $category->value) => [
+                $symbol, $category, $positionSide, $triggerBy,
+                '$apiResponse' => PlaceOrderResponseBuilder::ok($exchangeOrderId = uuid_create())->build(),
+                '$expectedExchangeOrderId' => $exchangeOrderId,
+            ];
+        }
     }
 
     /**
@@ -75,12 +93,13 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
-        $this->matchPost(PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+        $this->matchPost(PlaceOrderRequest::stopConditionalOrder(
             $category,
             $symbol,
             $positionSide,
             $volume = 0.1,
-            $price = 30000
+            $price = 30000,
+            TriggerBy::IndexPrice
         ), $apiResponse);
 
         $exception = null;
@@ -93,19 +112,6 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
         // Assert
         self::assertEquals($expectedException, $exception);
-    }
-
-    private function addStopSuccessTestCases(): iterable
-    {
-        $symbol = Symbol::BTCUSDT;
-        $category = AssetCategory::linear;
-        $positionSide = Side::Sell;
-
-        yield sprintf('place %s %s position stop (%s)', $symbol->value, $positionSide->title(), $category->value) => [
-            $symbol, $category, $positionSide,
-            '$apiResponse' => PlaceOrderResponseBuilder::ok($exchangeOrderId = uuid_create())->build(),
-            '$expectedExchangeOrderId' => $exchangeOrderId,
-        ];
     }
 
     private function addStopFailTestCases(): iterable

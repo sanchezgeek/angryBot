@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Common;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
@@ -94,12 +95,13 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     {
         return [
             [
-                PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+                PlaceOrderRequest::stopConditionalOrder(
                     AssetCategory::linear,
                     Symbol::BTCUSDT,
                     Side::Sell,
                     0.01,
-                    30000.1
+                    30000.1,
+                    TriggerBy::IndexPrice
                 )
             ],
             [

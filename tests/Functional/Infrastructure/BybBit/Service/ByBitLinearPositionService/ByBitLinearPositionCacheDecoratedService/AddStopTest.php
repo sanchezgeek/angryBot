@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Tests\Factory\TickerFactory;
@@ -27,13 +28,15 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
         $volume = 0.1;
         $price = 30000;
 
+        $triggerBy = TriggerBy::MarkPrice;
+
         $this->innerService
-            ->expects(self::once())->method('addConditionalStop')->with($position, $ticker, $price,$volume)
+            ->expects(self::once())->method('addConditionalStop')->with($position, $ticker, $price, $volume, $triggerBy)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->addConditionalStop($position, $ticker, $price, $volume);
+        $result = $this->service->addConditionalStop($position, $ticker, $price, $volume, $triggerBy);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

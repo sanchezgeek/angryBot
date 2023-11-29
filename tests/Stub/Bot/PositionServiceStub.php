@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use LogicException;
 
@@ -53,7 +54,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy = TriggerBy::IndexPrice): string
     {
         $this->addStopMethodCalls[] = [$position, $ticker, $price, $qty];
 

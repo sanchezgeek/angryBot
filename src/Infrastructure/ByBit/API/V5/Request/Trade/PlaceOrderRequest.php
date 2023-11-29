@@ -6,13 +6,13 @@ namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
-use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -93,15 +93,15 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
         return new self($category, $symbol, $side, $orderType, $triggerBy, $timeInForce, true, false, $qty, $posIdx, $price, $triggerDirection);
     }
 
-    public static function stopConditionalOrderTriggeredByIndexPrice(
+    public static function stopConditionalOrder(
         AssetCategory $category,
         Symbol $symbol,
         Side $positionSide,
         float $qty,
         float $price,
+        TriggerBy $triggerBy
     ): self {
         $orderType = ExecutionOrderType::Market;
-        $triggerBy = TriggerBy::IndexPrice;
         $timeInForce = TimeInForce::GTC;
 
         $side = $positionSide->getOpposite();

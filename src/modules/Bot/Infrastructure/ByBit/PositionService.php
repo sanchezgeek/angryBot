@@ -10,6 +10,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
@@ -86,7 +87,7 @@ final class PositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      */
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy = TriggerBy::IndexPrice): string
     {
         $result = $this->api->privates()->postStopOrderCreate([
             //'order_link_id'=>'xxxxxxxxxxxxxx',

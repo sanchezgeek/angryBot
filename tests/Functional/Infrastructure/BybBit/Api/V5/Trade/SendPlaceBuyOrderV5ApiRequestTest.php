@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Trade;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
@@ -53,12 +54,13 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
     {
         foreach ($this->positionSideProvider() as [$side]) {
             yield sprintf('%s-position condition SL', $side->title()) => [
-                PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+                PlaceOrderRequest::stopConditionalOrder(
                     AssetCategory::linear,
                     Symbol::BTCUSDT,
                     $side,
                     0.01,
-                    30000.1
+                    30000.1,
+                    TriggerBy::IndexPrice
                 )
             ];
 
@@ -68,7 +70,6 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
                     Symbol::BTCUSDT,
                     $side,
                     0.01,
-                    30000.1
                 )
             ];
         }

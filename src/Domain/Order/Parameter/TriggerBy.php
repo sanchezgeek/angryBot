@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\ByBit\API\V5\Enum\Order;
+namespace App\Domain\Order\Parameter;
 
 enum TriggerBy: string
 {

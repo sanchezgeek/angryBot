@@ -6,12 +6,12 @@ namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
-use App\Infrastructure\ByBit\API\V5\Enum\Order\TriggerBy;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
@@ -123,9 +123,9 @@ final class PlaceOrderRequestTest extends TestCase
     }
 
     /**
-     * @dataProvider positionSideProvider
+     * @dataProvider createStopConditionalOrderRequestTestCases
      */
-    public function testCreateStopConditionalOrderTriggeredByIndexPriceOrderRequest(Side $positionSide): void
+    public function testCreateStopConditionalOrderRequest(Side $positionSide, TriggerBy $triggerBy): void
     {
         // Arrange
         $category = AssetCategory::linear;
@@ -135,7 +135,7 @@ final class PlaceOrderRequestTest extends TestCase
         $expectedTriggerDirection = $this->getConditionalStopTriggerDirection($positionSide);
 
         // Act
-        $request = PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice($category, $symbol, $positionSide, 0.01, 30000.1);
+        $request = PlaceOrderRequest::stopConditionalOrder($category, $symbol, $positionSide, 0.01, 30000.1, $triggerBy);
 
         // Assert
         self::assertSame('/v5/order/create', $request->url());
@@ -152,10 +152,19 @@ final class PlaceOrderRequestTest extends TestCase
             'closeOnTrigger' => false,
             'qty' => '0.01',
             'positionIdx' => $this->getPositionIdx($positionSide)->value,
-            'triggerBy' => TriggerBy::IndexPrice->value,
+            'triggerBy' => $triggerBy->value,
             'triggerPrice' => '30000.1',
             'triggerDirection' => $expectedTriggerDirection->value,
         ], $request->data());
+    }
+
+    private function createStopConditionalOrderRequestTestCases(): iterable
+    {
+        foreach ($this->positionSides() as $positionSide) {
+            yield ['side' => $positionSide, 'triggerBy' => TriggerBy::IndexPrice];
+            yield ['side' => $positionSide, 'triggerBy' => TriggerBy::MarkPrice];
+            yield ['side' => $positionSide, 'triggerBy' => TriggerBy::LastPrice];
+        }
     }
 
     private function getPositionIdx(Side $positionSide): PositionIdx
