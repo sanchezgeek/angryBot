@@ -11,10 +11,10 @@ use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
@@ -25,15 +25,17 @@ use PHPUnit\Framework\TestCase;
 
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
+    private const CLOSE_BY_MARKET_PERCENT = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_PERCENT;
 
     private const DEFAULT_COIN_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_COIN_TRANSFER_AMOUNT;
+    private const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
     private ExchangeAccountServiceInterface $exchangeAccountService;
     private StopServiceInterface $stopService;
     private OrderServiceInterface $orderService;
-    private StopRepository $stopRepository;
+    private StopRepositoryInterface $stopRepository;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
 
@@ -44,7 +46,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->orderService = $this->createMock(OrderServiceInterface::class);
-//        $this->stopRepository = $this->createMock()
+        $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
@@ -52,10 +54,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService,
             $this->orderService,
             $this->stopService,
-
+            $this->stopRepository,
         );
-
-        $this->stopService->expects(self::never())->method(self::anything());
     }
 
     public function testDoNothingWhenPositionIsNotUnderLiquidation(): void
@@ -91,6 +91,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         $this->positionService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
         $this->exchangeService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
+        $existedStopVolume = (new Percent(self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE))->of($position->size) + 0.001;
+
+        $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([
+            new Stop(10, 100500, $existedStopVolume, 50, $position->side)
+        ]);
+        $this->stopService->expects(self::never())->method(self::anything());
 
         $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
             new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance)
@@ -106,7 +112,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         }
 
         if (abs($position->liquidationPrice - $ticker->markPrice->value()) <= 40) {
-            $this->orderService->expects(self::once())->method('closeByMarket')->with($position, Percent::string('10%')->of($position->size));
+            $this->orderService->expects(self::once())->method('closeByMarket')->with($position, Percent::string(self::CLOSE_BY_MARKET_PERCENT)->of($position->size));
         } else {
             $this->orderService->expects(self::never())->method(self::anything());
         }
@@ -124,37 +130,37 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         yield 'spot is empty' => [
             '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $warningDelta),
-            '$spotAvailableBalance' => 0,
+            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
+            '$spotAvailableBalance' => 0.2,
             '$expectedTransferAmount' => null
         ];
 
         yield 'transfer 15 usdt' => [
             '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $warningDelta),
+            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
             '$spotAvailableBalance' => 100,
             '$expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
         ];
 
         yield 'transfer all available' => [
             '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $warningDelta / 2),
+            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta / 2),
             '$spotAvailableBalance' => 7,
-            '$expectedTransferAmount' => 7
+            '$expectedTransferAmount' => 6.9
         ];
 
         yield 'transfer all available [2]' => [
             '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $warningDelta / 2),
-            '$spotAvailableBalance' => 0.1,
-            '$expectedTransferAmount' => 0.1
+            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta / 2),
+            '$spotAvailableBalance' => 0.21,
+            '$expectedTransferAmount' => 0.11
         ];
 
-        yield 'critical => transfer all available [2] + close some position part' => [
+        yield 'transfer all available [3]' => [
             '$position' => $position,
             '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
-            '$spotAvailableBalance' => 0.1,
-            '$expectedTransferAmount' => 0.1
+            '$spotAvailableBalance' => 0.21,
+            '$expectedTransferAmount' => 0.11
         ];
     }
 }

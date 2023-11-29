@@ -20,7 +20,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Stop[]    findAll()
  * @method Stop[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class StopRepository extends ServiceEntityRepository implements PositionOrderRepository
+class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 

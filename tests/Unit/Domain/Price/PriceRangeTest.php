@@ -243,4 +243,11 @@ final class PriceRangeTest extends TestCase
             ],
         ];
     }
+
+    public function testMiddlePrice(): void
+    {
+        $range = PriceRange::create(37950, 38050);
+
+        self::assertEquals(Price::float(38000), $range->getMiddlePrice());
+    }
 }

@@ -9,17 +9,27 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
-use App\Bot\Domain\Repository\StopRepository;
-use App\Domain\Position\ValueObject\Side;
+use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Exchange\ActiveStopOrder;
+use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\StopRepositoryInterface;
+use App\Bot\Domain\Ticker;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
+use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Tests\Unit\Application\Messenger\CheckPositionIsUnderLiquidationHandlerTest;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 use function abs;
+use function array_filter;
+use function max;
 
+/** @see CheckPositionIsUnderLiquidationHandlerTest */
 #[AsMessageHandler]
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
@@ -27,8 +37,11 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const CRITICAL_LIQUIDATION_DELTA = 30;
 
     public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
-    public const STOP_DELTA = 40;
+
+    public const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = 20;
+    public const MIN_STOP_DELTA_WITH_LIQUIDATION = 30;
     public const STOP_TRIGGER_DELTA = 40;
+    const CLOSE_BY_MARKET_PERCENT = '8%';
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -39,7 +52,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         private ExchangeAccountServiceInterface $exchangeAccountService,
         private OrderServiceInterface $orderService,
         private StopServiceInterface $stopService,
-//        private StopRepository $stopRepository,
+        private StopRepositoryInterface $stopRepository,
     ) {
     }
 
@@ -58,57 +71,77 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
         if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
-            $this->orderService->closeByMarket($position, Percent::string('10%')->of($position->size));
+            $this->orderService->closeByMarket($position, Percent::string(self::CLOSE_BY_MARKET_PERCENT)->of($position->size));
+
+            $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
+            if ($spotBalance->availableBalance > 0.2) {
+                $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - 0.1));
+                $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+            }
         }
 
-        if (
-            $priceDeltaToLiquidation <= self::WARNING_LIQUIDATION_DELTA
-            && ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
-            && $spotBalance->availableBalance > 0
-        ) {
-            $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, $spotBalance->availableBalance);
-            $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+        if ($priceDeltaToLiquidation <= self::WARNING_LIQUIDATION_DELTA) {
+            $this->checkStopsVolume($position, $ticker);
         }
+    }
 
-        return;
+    private function checkStopsVolume(Position $position, Ticker $ticker): void
+    {
+        $priceFrom = $position->liquidationPrice;
+        $priceTo = $ticker->indexPrice;
+        if ($priceFrom > $priceTo) {
+            [$priceFrom, $priceTo] = [$priceTo, $priceFrom];
+        }
+        $priceRange = PriceRange::create($priceFrom, $priceTo);
+        $positionSide = $position->side;
 
-        /**
-         * @todo
-         * 1) проверить есть ли стопы в репозитории между ликвидацией и какой-то предельной допустимой ценой перед ликвидацией (из-за возможной разницы индекса и рын)
-         *      - возможно в кач дельты нужно брать именно дельту в цене
-         * 2) проверить стопы на бирже в том же диапаз
-         * 3) если в итоге меньше опр-ного объёма, - нужно добавить. Желательно для хэндлера. В крайнем случае - по цене маркировки сразу на биржу
-         *
-         * переделать isPriceInRange?
-         */
-
-        $mPrice = 37600;
         $stops = $this->stopRepository->findActive(
             side: $positionSide,
-            qbModifier: function (QueryBuilder $qb) use ($positionSide, $liquidationPrice, $mPrice) {
+            qbModifier: function (QueryBuilder $qb) use ($priceRange) {
                 $priceField = $qb->getRootAliases()[0] . '.price';
-
-                $priceFrom = $liquidationPrice;
-                $priceTo = $mPrice;
-
-                if ($priceFrom > $priceTo) {
-                    [$priceFrom, $priceTo] = [$priceTo, $priceFrom];
-                }
 
                 $qb
                     ->andWhere($priceField . ' BETWEEN :priceFrom AND :priceTo')
-                    ->setParameter(':priceFrom', $priceFrom)
-                    ->setParameter(':priceTo', $priceTo)
+                    ->setParameter(':priceFrom', $priceRange->from()->value())
+                    ->setParameter(':priceTo', $priceRange->to()->value())
                 ;
             }
         );
 
+        /** @todo | переделать isPriceInRange? */
         $stops = new StopsCollection(...$stops);
+        $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
 
-        var_dump($stops->totalCount(), $stops->totalVolume());
+        $delayedStopsVolumePart = $stops->volumePart($position->size);
 
-//            $liqPrice = Price::float($liquidationPrice);
-//            $price = $position->isShort() ? $liqPrice->sub(self::STOP_DELTA) : $liqPrice->add(self::STOP_DELTA);
-//            $this->stopService->create($position->side, $price->value(), Percent::string('10%')->of($position->size), self::STOP_TRIGGER_DELTA);
+        $activeConditionalStops = array_filter(
+            $this->exchangeService->activeConditionalOrders($position->symbol, $priceRange),
+            static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->positionSide === $positionSide,
+        );
+
+        $activeConditionalStopsVolumeSum = 0;
+        foreach ($activeConditionalStops as $activeConditionalStop) {
+            $activeConditionalStopsVolumeSum += $activeConditionalStop->volume;
+        }
+        $activeConditionalStopsVolumePart = VolumeHelper::round(($activeConditionalStopsVolumeSum / $position->size) * 100);
+
+        $totalVolumePart = $delayedStopsVolumePart + $activeConditionalStopsVolumePart;
+
+        $volumePartDelta = self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE - $totalVolumePart;
+        if ($volumePartDelta > 0) {
+            $stopDeltaWithLiquidation = max(
+                self::MIN_STOP_DELTA_WITH_LIQUIDATION,
+                $ticker->isLastPriceOverIndexPrice($positionSide) ? abs($ticker->lastPrice->value() - $ticker->indexPrice) : 0
+            );
+
+            $price = Price::float($position->liquidationPrice);
+            $price = $position->isShort() ? $price->sub($stopDeltaWithLiquidation) : $price->add($stopDeltaWithLiquidation);
+            $this->stopService->create(
+                $positionSide,
+                $price->value(),
+                VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
+                self::STOP_TRIGGER_DELTA,
+            );
+        }
     }
 }

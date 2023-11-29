@@ -95,4 +95,11 @@ final readonly class PriceRange
             $resultQnt++;
         }
     }
+
+    public function getMiddlePrice(): Price
+    {
+        return Price::float(
+            ($this->from->value() + $this->to->value()) / 2
+        );
+    }
 }
