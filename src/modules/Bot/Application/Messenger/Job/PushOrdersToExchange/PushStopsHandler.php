@@ -19,8 +19,10 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
@@ -61,52 +63,57 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
         $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
-        $orderService = $this->orderService;
+        if ($deltaToLiquidation <= 50) {
+            $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
+        } else {
+            $triggerBy = TriggerBy::IndexPrice; $currentPrice = Price::float($ticker->indexPrice);
+        }
+
+        $positionService = $this->positionService; $orderService = $this->orderService;
         foreach ($stops as $stop) {
             ### TP
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
-                    $this->pushStopToExchange($position, $ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                    $this->pushStopToExchange($ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
                 }
                 continue;
             }
 
             ### Regular
             $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
-            $price = $stop->getPrice();
+            $stopPrice = $stop->getPrice();
 
-            if (($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($side, $price)) || (abs($price - $ticker->indexPrice) <= $td)) {
+            if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
                 $callback = null;
-                if ($indexAlreadyOverStop) {
-                    if ($deltaToLiquidation <= 50) {
+                if ($currentPriceOverStop) {
+                    if ($deltaToLiquidation <= 35) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
-                        $newPrice = $side->isShort() ? $ticker->indexPrice + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $ticker->indexPrice - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;
+                        $newPrice = $side->isShort() ? $currentPrice->value() + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $currentPrice->value() - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;
                         $stop->setPrice($newPrice)->setTriggerDelta($td + self::TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP);
                     }
                 }
 
-                $this->pushStopToExchange($position, $ticker, $stop, $callback);
+                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $ticker, $triggerBy) {
+                    try {
+                        return $positionService->addConditionalStop($position, $ticker, $stop->getPrice(), $stop->getVolume(), $triggerBy);
+                    } catch (TickerOverConditionalOrderTriggerPrice $e) {
+                        return $orderService->closeByMarket($position, $stop->getVolume());
+                    }
+                });
 
-                if ($stop->getExchangeOrderId() && $stop->isWithOppositeOrder()) {
-                    $this->createOpposite($position, $stop, $ticker);
+                if ($stop->getExchangeOrderId()) {
+                    if ($stop->isWithOppositeOrder()) {
+                        $this->createOpposite($position, $stop, $ticker);
+                    }
 //                    $this->events->dispatch(new StopPushedToExchange($stop));
                 }
             }
         }
     }
 
-    private function pushStopToExchange(Position $position, Ticker $ticker, Stop $stop, ?callable $pushStopCallback = null): void
+    private function pushStopToExchange(Ticker $ticker, Stop $stop, callable $pushStopCallback): void
     {
-        $positionService = $this->positionService; $orderService = $this->orderService;
-        $pushStopCallback = $pushStopCallback ?: static function() use ($positionService, $orderService, $position, $stop, $ticker) {
-            try {
-                return $positionService->addConditionalStop($position, $ticker, $stop->getPrice(), $stop->getVolume());
-            } catch (TickerOverConditionalOrderTriggerPrice $e) {
-                return $orderService->closeByMarket($position, $stop->getVolume());
-            }
-        };
-
         try {
             $stopOrderId = $pushStopCallback();
             $stop->setExchangeOrderId($stopOrderId);

@@ -40,10 +40,11 @@ final class PositionFactory
         Symbol $symbol,
         float $at = self::DEFAULT_PRICE,
         float $size = self::DEFAULT_SIZE,
-        int $leverage = self::DEFAULT_LEVERAGE
+        int $leverage = self::DEFAULT_LEVERAGE,
+        ?float $liquidationPrice = null,
     ): Position {
         $positionValue = $at * $size;
-        $liquidationPrice = $at + 1000; // @todo calc
+        $liquidationPrice = $at - 1000; // @todo calc
 
         return new Position(
             Side::Buy,

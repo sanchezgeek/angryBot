@@ -79,4 +79,9 @@ readonly final class Price
     {
         return $positionSide->isShort() ? $this->value <= $takeProfitPrice : $this->value >= $takeProfitPrice;
     }
+
+    public function isPriceOverStop(Side $positionSide, float $stopPrice): bool
+    {
+        return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
+    }
 }

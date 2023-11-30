@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Stub;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Stub\Bot\PositionServiceStub;
@@ -24,10 +25,10 @@ final class PositionServiceStubTest extends TestCase
         $mockedExchangeOrdersIds = [uuid_create(), uuid_create(), uuid_create()];
 
         $expectedMethodCalls = [
-            [$position, $ticker, 29060.0, 0.1],
-            [$position, $ticker, 29080.0, 0.2],
-            [$position, $ticker, 29010.0, 0.3],
-            [$position, $ticker, 29110.0, 0.4],
+            [$position, $ticker, 29060.0, 0.1, TriggerBy::IndexPrice],
+            [$position, $ticker, 29080.0, 0.2, TriggerBy::MarkPrice],
+            [$position, $ticker, 29010.0, 0.3, TriggerBy::LastPrice],
+            [$position, $ticker, 29110.0, 0.4, TriggerBy::IndexPrice],
         ];
 
         $stub = new PositionServiceStub();
@@ -35,10 +36,10 @@ final class PositionServiceStubTest extends TestCase
 
         // Act
         $resultExchangeStopOrdersIds = [];
-        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29060, 0.1);
-        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29080, 0.2);
-        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29010, 0.3);
-        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29110, 0.4);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29060, 0.1, TriggerBy::IndexPrice);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29080, 0.2, TriggerBy::MarkPrice);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29010, 0.3, TriggerBy::LastPrice);
+        $resultExchangeStopOrdersIds[] = $stub->addConditionalStop($position, $ticker, 29110, 0.4, TriggerBy::IndexPrice);
 
         # asser correct result method calls
         self::assertSame($expectedMethodCalls, $stub->getAddStopCallsStack());

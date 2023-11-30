@@ -150,4 +150,45 @@ final class PriceTest extends TestCase
             'expectedResult' => false,
         ];
     }
+
+    /**
+     * @dataProvider priceIsOverStopTestCases
+     */
+    public function testIsPriceOverStop(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
+    {
+        $result = $price->isPriceOverStop($positionSide, $takeProfitPrice);
+
+        self::assertEquals($expectedResult, $result);
+    }
+
+    private function priceIsOverStopTestCases(): iterable
+    {
+        yield 'over SHORT SL (+)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Sell,
+            'stop.price' => 200500,
+            'expectedResult' => true,
+        ];
+
+        yield 'over SHORT SL (-)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Sell,
+            'stop.price' => 200501,
+            'expectedResult' => false,
+        ];
+
+        yield 'over LONG SL (+)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Buy,
+            'stop.price' => 200500,
+            'expectedResult' => true,
+        ];
+
+        yield 'over LONG SL (-)' => [
+            'price' => Price::float(200500),
+            'stop.positionSide' => Side::Buy,
+            'stop.price' => 200499,
+            'expectedResult' => false,
+        ];
+    }
 }

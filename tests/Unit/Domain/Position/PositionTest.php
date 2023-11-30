@@ -125,9 +125,12 @@ final class PositionTest extends TestCase
     public function testCanGetDeltaToLiquidation(): void
     {
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
 
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
         self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
+
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,31450);
+        self::assertEquals(450, $position->priceDeltaToLiquidation($ticker));
     }
 
     public function testFailGetDeltaToLiquidation(): void

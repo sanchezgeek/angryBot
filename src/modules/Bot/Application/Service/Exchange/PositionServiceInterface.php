@@ -25,7 +25,7 @@ interface PositionServiceInterface
     /**
      * @return string Created stop `orderId`
      */
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy = TriggerBy::IndexPrice): string;
+    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy): string;
 
     /**
      * @return string Created buy order `orderId`

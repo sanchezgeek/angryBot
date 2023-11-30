@@ -106,7 +106,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
         // Act
         try {
-            $this->service->addConditionalStop($position, $ticker, $price, $volume);
+            $this->service->addConditionalStop($position, $ticker, $price, $volume, TriggerBy::IndexPrice);
         } catch (Throwable $exception) {
         }
 
