@@ -54,9 +54,9 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy): string
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
-        $this->addStopMethodCalls[] = [$position, $ticker, $price, $qty, $triggerBy];
+        $this->addStopMethodCalls[] = [$position, $price, $qty, $triggerBy];
 
         $exchangeOrderId = $this->getNextExchangeOrderId();
         $this->pushedStopsExchangeOrderIds[] = $exchangeOrderId;

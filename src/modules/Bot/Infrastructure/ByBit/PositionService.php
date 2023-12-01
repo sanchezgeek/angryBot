@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Infrastructure\ByBit;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -37,6 +38,7 @@ final class PositionService implements PositionServiceInterface
         private readonly string $apiSecret,
         private readonly CacheInterface $cache,
         private readonly EventDispatcherInterface $events,
+        private readonly ExchangeServiceInterface $exchangeService,
     ) {
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
@@ -87,7 +89,7 @@ final class PositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      */
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy): string
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
         $result = $this->api->privates()->postStopOrderCreate([
             //'order_link_id'=>'xxxxxxxxxxxxxx',
@@ -96,7 +98,7 @@ final class PositionService implements PositionServiceInterface
             'trigger_by' => $triggerBy->value,
             'reduce_only' => 'true',
             'close_on_trigger' => 'false',
-            'base_price' => $ticker->indexPrice,
+            'base_price' => $this->exchangeService->ticker($position->symbol)->indexPrice,
             'order_type' => ExecutionOrderType::Market->value,
             'qty' => VolumeHelper::round($qty),
             'stop_px' => PriceHelper::round($price),

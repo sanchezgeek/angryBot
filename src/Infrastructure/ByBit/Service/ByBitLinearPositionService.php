@@ -102,7 +102,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */
-    public function addConditionalStop(Position $position, Ticker $ticker, float $price, float $qty, TriggerBy $triggerBy): string
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
         $request = PlaceOrderRequest::stopConditionalOrder(
             self::ASSET_CATEGORY,

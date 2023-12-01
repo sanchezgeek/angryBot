@@ -31,12 +31,12 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
         $triggerBy = TriggerBy::MarkPrice;
 
         $this->innerService
-            ->expects(self::once())->method('addConditionalStop')->with($position, $ticker, $price, $volume, $triggerBy)
+            ->expects(self::once())->method('addConditionalStop')->with($position, $price, $volume, $triggerBy)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->addConditionalStop($position, $ticker, $price, $volume, $triggerBy);
+        $result = $this->service->addConditionalStop($position, $price, $volume, $triggerBy);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

@@ -58,7 +58,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         ), $apiResponse);
 
         // Act
-        $exchangeOrderId = $this->service->addConditionalStop($position, $ticker, $price, $volume, $triggerBy);
+        $exchangeOrderId = $this->service->addConditionalStop($position, $price, $volume, $triggerBy);
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
@@ -106,7 +106,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
         // Act
         try {
-            $this->service->addConditionalStop($position, $ticker, $price, $volume, TriggerBy::IndexPrice);
+            $this->service->addConditionalStop($position, $price, $volume, TriggerBy::IndexPrice);
         } catch (Throwable $exception) {
         }
 

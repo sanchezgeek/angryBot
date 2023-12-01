@@ -100,7 +100,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
                 $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $ticker, $triggerBy) {
                     try {
-                        return $positionService->addConditionalStop($position, $ticker, $stop->getPrice(), $stop->getVolume(), $triggerBy);
+                        return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                     } catch (TickerOverConditionalOrderTriggerPrice $e) {
                         return $orderService->closeByMarket($position, $stop->getVolume());
                     }
