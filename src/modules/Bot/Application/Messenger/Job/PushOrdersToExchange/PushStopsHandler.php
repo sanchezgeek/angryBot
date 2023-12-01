@@ -37,9 +37,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-/** @see PushStopsCommonCasesTest */
-/** @see HandleStopsCornerCasesTest */
-/** @see PushTakeProfitOrdersTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {

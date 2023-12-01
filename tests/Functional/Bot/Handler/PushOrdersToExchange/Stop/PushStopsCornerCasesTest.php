@@ -38,7 +38,7 @@ use function uuid_create;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
  */
-final class HandleStopsCornerCasesTest extends KernelTestCase
+final class PushStopsCornerCasesTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
@@ -56,6 +56,7 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
     protected HedgeService $hedgeService;
     protected StopService $stopService;
     protected StopRepository $stopRepository;
+
     protected OrderServiceInterface|MockObject $orderServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;

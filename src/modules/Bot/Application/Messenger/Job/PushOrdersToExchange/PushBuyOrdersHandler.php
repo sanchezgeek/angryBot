@@ -31,13 +31,14 @@ use function abs;
 use function random_int;
 use function sprintf;
 
-/** @see PushBtcUsdtShortBuyOrdersTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases */
 #[AsMessageHandler]
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 53;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 53;
     private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.09;
     private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.54;
 
@@ -54,6 +55,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 50) {
+            // @todo test
             return;
         }
 
@@ -79,13 +81,22 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         } catch (CannotAffordOrderCost $e) {
             if (
-//                $position->getDeltaWithTicker($ticker) > 0 &&
                 ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
                 && $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
             ) {
                 $delta = $position->getDeltaWithTicker($ticker);
                 $amount = $delta < 150 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
                 $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+                return;
+            }
+
+            $positionCurrentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+            if ($positionCurrentPnlPercent >= 100) {
+                if ($positionCurrentPnlPercent < 200) $volume = 0.003;
+                elseif ($positionCurrentPnlPercent < 300) $volume = 0.002;
+                else $volume = 0.001;
+
+                $this->orderService->closeByMarket($position, $volume);
                 return;
             }
 

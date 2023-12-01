@@ -70,7 +70,7 @@ readonly final class Price
         return $this->value <= $price->value;
     }
 
-    public function pnlFor(Position $position): float
+    public function getPnlPercentFor(Position $position): float
     {
         return PnlHelper::getPnlInPercents($position, $this->value());
     }

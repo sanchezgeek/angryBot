@@ -60,7 +60,7 @@ final readonly class PriceRange
 
     public function getPnlRangeForPosition(Position $position): string
     {
-        return sprintf('%.0f%% .. %.0f%%', $this->to()->pnlFor($position), $this->from()->pnlFor($position));
+        return sprintf('%.0f%% .. %.0f%%', $this->to()->getPnlPercentFor($position), $this->from()->getPnlPercentFor($position));
     }
 
     public function getItemsQntByStep(int $priceStep): int

@@ -27,7 +27,7 @@ use function uuid_create;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
  */
-final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
+final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
 {
     use StopsTester;
     use BuyOrdersTester;
@@ -62,7 +62,7 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
      *
      * @param BuyOrder[] $buyOrdersExpectedAfterHandle
      */
-    public function testPushRelevantStopOrders(
+    public function testPushRelevantBuyOrders(
         Position $position,
         Ticker $ticker,
         array $buyOrdersFixtures,
