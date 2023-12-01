@@ -31,17 +31,21 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReach
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\HandleStopsCornerCasesTest;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-/** @see PushStopsTest */
+/** @see PushStopsCommonCasesTest */
 /** @see HandleStopsCornerCasesTest */
 /** @see PushTakeProfitOrdersTest */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
+    public const LIQUIDATION_WARNING_DELTA = 50;
+    public const LIQUIDATION_CRITICAL_DELTA = 35;
+
     public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
     public const TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 7;
 
@@ -63,7 +67,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
         $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
-        if ($deltaToLiquidation <= 50) {
+        if ($deltaToLiquidation <= self::LIQUIDATION_WARNING_DELTA) {
             $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
         } else {
             $triggerBy = TriggerBy::IndexPrice; $currentPrice = Price::float($ticker->indexPrice);
@@ -86,7 +90,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
                 $callback = null;
                 if ($currentPriceOverStop) {
-                    if ($deltaToLiquidation <= 35) {
+                    if ($deltaToLiquidation <= self::LIQUIDATION_CRITICAL_DELTA) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
                         $newPrice = $side->isShort() ? $currentPrice->value() + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $currentPrice->value() - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;

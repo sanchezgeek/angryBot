@@ -13,10 +13,12 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -46,6 +48,8 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
+    private const POSITION_LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
+    private const POSITION_LIQUIDATION_CRITICAL_DELTA = PushStopsHandler::LIQUIDATION_CRITICAL_DELTA;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
@@ -92,25 +96,21 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
         self::truncateStops();
     }
 
-    public function testCloseByMarketWhenApiReturnedBadRequestError(): void {
-        $this->haveTicker(
-            $ticker = TickerFactory::create(self::SYMBOL, 29050)
-        );
-
-        $position = PositionFactory::short(self::SYMBOL, 29000);
-        $this->positionServiceMock->method('getPosition')->with(self::SYMBOL, $position->side)->willReturn($position);
-
-        $this->applyDbFixtures(
-            new StopFixture(StopBuilder::short(5, $originalPrice = 29030, $qty = 0.011)->withTD(10)->build()),
-        );
-
-        $expectedUpdatedPriceValue = $ticker->indexPrice + self::ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP;
-        $expectedNewTriggerDelta = 10 + self::ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP;
+    /**
+     * @dataProvider closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider
+     *
+     * @todo | Maybe move to \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsTest::pushStopsTestCases ?
+     */
+    public function testCloseByMarketWhenApiReturnedBadRequestError(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
+    {
+        $this->haveTicker($ticker);
+        $this->havePosition($position);
+        $this->applyDbFixtures(new StopFixture($stop));
 
         $this->positionServiceMock
             ->expects(self::once())
             ->method('addConditionalStop')
-            ->with($position, $ticker, $expectedUpdatedPriceValue, $qty)
+            ->with($position, $ticker, $stop->getPrice(), $stop->getVolume(), $expectedTriggerBy)
             ->willThrowException(
                 new TickerOverConditionalOrderTriggerPrice('Already over trigger price')
             );
@@ -118,22 +118,78 @@ final class HandleStopsCornerCasesTest extends KernelTestCase
         $this->orderServiceMock
             ->expects(self::once())
             ->method('closeByMarket')
-            ->with($position, $qty)
-            ->willReturn(
-                $exchangeOrderId = uuid_create()
-            );
+            ->with($position, $stop->getVolume())
+            ->willReturn($exchangeOrderId = uuid_create());
 
         // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));
 
         // Assert
         self::seeStopsInDb(
-            StopBuilder::short(5, $expectedUpdatedPriceValue, $qty)->withTD($expectedNewTriggerDelta)->build()->setOriginalPrice($originalPrice)->setExchangeOrderId($exchangeOrderId)
+            (clone $stop)->setExchangeOrderId($exchangeOrderId)
         );
     }
 
-    protected function haveTicker(Ticker $ticker): void
+    public function closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider(): iterable
+    {
+        yield '[BTCUSDT SHORT] liquidation not in critical range' => [
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_WARNING_DELTA + 1),
+            'stop' => StopBuilder::short(5, 29051, 0.011)->withTD(10)->build(),
+            'expectedTriggerBy' => TriggerBy::IndexPrice,
+        ];
+
+        yield '[BTCUSDT SHORT] liquidation in critical range' => [
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_WARNING_DELTA),
+            'stop' => StopBuilder::short(5, 29061, 0.011)->withTD(10)->build(),
+            'expectedTriggerBy' => TriggerBy::MarkPrice,
+        ];
+    }
+
+    /**
+     * @dataProvider closeByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRangeTestDataProvider
+     *
+     * @todo | Maybe move to \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsTest::pushStopsTestCases ?
+     */
+    public function testCloseByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRange(Ticker $ticker, Position $position, Stop $stop): void
+    {
+        $this->haveTicker($ticker);
+        $this->havePosition($position);
+        $this->applyDbFixtures(new StopFixture($stop));
+
+        $this->positionServiceMock->expects(self::never())->method('addConditionalStop');
+        $this->orderServiceMock
+            ->expects(self::once())
+            ->method('closeByMarket')
+            ->with($position, $stop->getVolume())
+            ->willReturn($exchangeOrderId = uuid_create());
+
+        // Act
+        ($this->handler)(new PushStops($position->symbol, $position->side));
+
+        // Assert
+        self::seeStopsInDb(
+            (clone $stop)->setExchangeOrderId($exchangeOrderId)
+        );
+    }
+
+    public function closeByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRangeTestDataProvider(): iterable
+    {
+        yield 'BTCUSDT SHORT' => [
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_CRITICAL_DELTA),
+            'stop' => StopBuilder::short(5, 29060, 0.011)->withTD(10)->build(),
+        ];
+    }
+
+    private function haveTicker(Ticker $ticker): void
     {
         $this->exchangeServiceMock->method('ticker')->with($ticker->symbol)->willReturn($ticker);
+    }
+
+    private function havePosition(Position $position): void
+    {
+        $this->positionServiceMock->method('getPosition')->with($position->symbol, $position->side)->willReturn($position);
     }
 }

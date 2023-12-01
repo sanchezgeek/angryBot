@@ -29,14 +29,14 @@ use function array_map;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
  */
-final class PushStopsTest extends PushOrderHandlerTestAbstract
+final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
 {
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
 
-    private const LIQUIDATION_CRITICAL_DELTA = 50;
+    private const LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
 
     use StopsTester;
     use BuyOrdersTester;
@@ -100,7 +100,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
 
         $mockedExchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29030, 29030);
-        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_CRITICAL_DELTA + 1);
+        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA + 1);
         $triggerBy = TriggerBy::IndexPrice;
         yield 'BTCUSDT SHORT (liquidation not in critical range => by indexPrice)' => [
             '$position' => $position,
@@ -139,7 +139,7 @@ final class PushStopsTest extends PushOrderHandlerTestAbstract
 
         $mockedExchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29010, 29030, 29010);
-        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_CRITICAL_DELTA);
+        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA);
         $triggerBy = TriggerBy::MarkPrice;
         yield 'BTCUSDT SHORT (liquidation in critical range => by marketPrice)' => [
             '$position' => $position,
