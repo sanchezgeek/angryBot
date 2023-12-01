@@ -128,19 +128,20 @@ final class PositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      */
-    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function marketBuy(Position $position, float $qty): string
     {
+        $price = $this->exchangeService->ticker($position->symbol)->markPrice;
+
         $result = $this->api->privates()->postOrderCreate([
             'side' => \ucfirst($position->side === Side::Sell ? Side::Sell->value : Side::Buy->value),
             'symbol' => $position->symbol->value,
             'trigger_by' => 'IndexPrice',
             'reduce_only' => 'false',
             'close_on_trigger' => 'false',
-            'base_price' => $ticker->markPrice->value(),
+            'base_price' => $price->value(),
             'order_type' => ExecutionOrderType::Market->value,
             'qty' => VolumeHelper::round($qty),
-            'trigger_price' => PriceHelper::round($price),
-//                'stop_px' => $price,
+            'trigger_price' => $price->value(),
             'time_in_force' => 'GoodTillCancel',
         ]);
 
@@ -157,26 +158,5 @@ final class PositionService implements PositionServiceInterface
         }
 
         return $result['result']['order_id'];
-    }
-
-    public function addStop2(Position $position, Ticker $ticker, float $price): void
-    {
-        try {
-            $result = $this->api->privates()->postOrderCreate([
-                //'order_link_id'=>'xxxxxxxxxxxxxx',
-                'side' => $position->side === Side::Sell ? Side::Buy->value : Side::Sell->value,
-                'symbol' => $position->symbol->value,
-                'order_type' => 'Limit',
-                'qty' => 0.001,
-                'price' => $price,
-                'time_in_force' => 'GoodTillCancel',
-
-                'reduce_only' => 'false',
-                'close_on_trigger' => 'false',
-            ]);
-            print_r($result);
-        } catch (\Exception $e) {
-            print_r($e->getMessage());
-        }
     }
 }

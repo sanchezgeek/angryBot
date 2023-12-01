@@ -30,5 +30,5 @@ interface PositionServiceInterface
     /**
      * @return string Created buy order `orderId`
      */
-    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string;
+    public function marketBuy(Position $position, float $qty): string;
 }

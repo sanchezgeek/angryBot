@@ -22,18 +22,16 @@ final class AddBuyOrderTest extends ByBitLinearPositionCacheDecoratedServiceTest
         // Arrange
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
-        $ticker = TickerFactory::create($symbol, 29050);
         $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
         $volume = 0.1;
-        $price = 30000;
 
         $this->innerService
-            ->expects(self::once())->method('marketBuy')->with($position, $ticker, $price, $volume)
+            ->expects(self::once())->method('marketBuy')->with($position, $volume)
             ->willReturn($exchangeOrderId = uuid_create())
         ;
 
         // Act
-        $result = $this->service->marketBuy($position, $ticker, $price, $volume);
+        $result = $this->service->marketBuy($position, $volume);
 
         // Assert
         self::assertSame($exchangeOrderId, $result);

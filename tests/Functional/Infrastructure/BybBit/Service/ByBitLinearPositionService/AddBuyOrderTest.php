@@ -57,7 +57,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
         ), $apiResponse);
 
         // Act
-        $exchangeOrderId = $this->service->marketBuy($position, $ticker, $price, $volume);
+        $exchangeOrderId = $this->service->marketBuy($position, $volume);
 
         // Assert
         self::assertEquals($expectedExchangeOrderId, $exchangeOrderId);
@@ -89,7 +89,7 @@ final class AddBuyOrderTest extends ByBitLinearPositionServiceTestAbstract
 
         // Act
         try {
-            $this->service->marketBuy($position, $ticker, $price, $volume);
+            $this->service->marketBuy($position, $volume);
         } catch (Throwable $exception) {
         }
 

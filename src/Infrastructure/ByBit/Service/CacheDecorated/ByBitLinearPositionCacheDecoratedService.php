@@ -98,8 +98,8 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
      */
-    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function marketBuy(Position $position, float $qty): string
     {
-        return $this->positionService->marketBuy($position, $ticker, $price, $qty);
+        return $this->positionService->marketBuy($position, $qty);
     }
 }

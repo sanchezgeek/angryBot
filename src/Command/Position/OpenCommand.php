@@ -112,7 +112,7 @@ class OpenCommand extends AbstractCommand
 
         // market
         $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
-        $this->positionService->marketBuy($expectedPosition, $symbolTicker, $symbolTicker->indexPrice, $marketBuyVolume);
+        $this->positionService->marketBuy($expectedPosition, $marketBuyVolume);
 
         return Command::SUCCESS;
     }

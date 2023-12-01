@@ -155,7 +155,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddBuyOrderTest
      */
-    public function marketBuy(Position $position, Ticker $ticker, float $price, float $qty): string
+    public function marketBuy(Position $position, float $qty): string
     {
         $request = PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
 

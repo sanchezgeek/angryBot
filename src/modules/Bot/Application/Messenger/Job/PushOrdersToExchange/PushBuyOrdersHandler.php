@@ -37,9 +37,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 5;
+    private const USE_SPOT_IF_BALANCE_GREATER_THAN = 53;
     private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.09;
-    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.14;
+    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.54;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
@@ -111,7 +111,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->positionService->marketBuy($position, $ticker, $order->getPrice(), $order->getVolume());
+            $exchangeOrderId = $this->positionService->marketBuy($position, $order->getVolume());
             $order->setExchangeOrderId($exchangeOrderId);
 //            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 

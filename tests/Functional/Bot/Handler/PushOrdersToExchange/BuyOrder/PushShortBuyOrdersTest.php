@@ -96,9 +96,9 @@ final class PushShortBuyOrdersTest extends PushOrderHandlerTestAbstract
                 new BuyOrderFixture(BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
             ],
             'expectedAddBuyOrderCalls' => [
-                [$position, $ticker, 29060.0, 0.005],
-                [$position, $ticker, 29060.0, 0.01],
-                [$position, $ticker, 29055.0, 0.03],
+                [$position, 0.005],
+                [$position, 0.01],
+                [$position, 0.03],
             ],
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
