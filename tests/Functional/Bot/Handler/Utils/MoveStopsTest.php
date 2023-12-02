@@ -59,7 +59,7 @@ final class MoveStopsTest extends KernelTestCase
      *
      * @param Stop[] $stopsExpectedAfterHandle
      */
-    public function testMoveSHORTStopsWhenPositionMoved(
+    public function testMoveShortStopsWhenPositionMoved(
         float $initialPositionEntryPrice,
         float $newPositionEntryPrice,
         array $initialStops,

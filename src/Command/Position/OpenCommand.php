@@ -198,11 +198,7 @@ class OpenCommand extends AbstractCommand
             $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPercent);
             $toPrice = PnlHelper::getTargetPriceByPnlPercent($position, $toPercent);
 
-            if ($fromPrice->greater($toPrice)) {
-                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-            }
-
-            $priceRange = new PriceRange($fromPrice, $toPrice);
+            $priceRange = PriceRange::create($fromPrice, $toPrice);
 
             $stopsGrid = new OrdersGrid($priceRange);
 

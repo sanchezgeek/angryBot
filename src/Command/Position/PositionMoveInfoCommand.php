@@ -46,11 +46,6 @@ class PositionMoveInfoCommand extends Command
 
         $fromPrice = Price::float($this->exchangeService->ticker(Symbol::BTCUSDT)->indexPrice);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
-        $priceRange = new PriceRange($fromPrice, $toPrice);
-
         $buyOrders = $this->buyOrderRepository->findActive(
             side: $position->side,
             qbModifier: function (QueryBuilder $qb) use ($position) {
@@ -59,8 +54,7 @@ class PositionMoveInfoCommand extends Command
             }
         );
 
-        $buyOrders = new BuyOrdersCollection(...$buyOrders);
-        $buyOrders = $buyOrders->grabFromRange($priceRange);
+        $buyOrders = (new BuyOrdersCollection(...$buyOrders))->grabFromRange(PriceRange::create($fromPrice, $toPrice));
 
         $valueSum = $position->size * $position->entryPrice;
         $qtySum = $position->size;

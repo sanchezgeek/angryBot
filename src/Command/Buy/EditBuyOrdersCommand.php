@@ -75,19 +75,12 @@ class EditBuyOrdersCommand extends Command
             $io->info('BuyOrders not found!'); return Command::SUCCESS;
         }
 
-        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
-        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
-
         $buyOrdersCollection = new BuyOrdersCollection(...$orders);
 
+        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
+        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
         if ($toPrice && $fromPrice) {
-            if ($fromPrice->greater($toPrice)) {
-                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-            }
-
-            $priceRange = new PriceRange($fromPrice, $toPrice);
-
-            $buyOrdersCollection = $buyOrdersCollection->grabFromRange($priceRange);
+            $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice));
         }
 
         $buyOrders = $this->applyFilters($buyOrdersCollection);

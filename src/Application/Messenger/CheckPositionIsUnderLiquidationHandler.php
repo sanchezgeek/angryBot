@@ -41,7 +41,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = 20;
     public const MIN_STOP_DELTA_WITH_LIQUIDATION = 30;
     public const STOP_TRIGGER_DELTA = 40;
-    const CLOSE_BY_MARKET_PERCENT = '8%';
+    public const CLOSE_BY_MARKET_PERCENT = '8%';
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -87,12 +87,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     private function checkStopsVolume(Position $position, Ticker $ticker): void
     {
-        $priceFrom = $position->liquidationPrice;
-        $priceTo = $ticker->indexPrice;
-        if ($priceFrom > $priceTo) {
-            [$priceFrom, $priceTo] = [$priceTo, $priceFrom];
-        }
-        $priceRange = PriceRange::create($priceFrom, $priceTo);
+        $priceRange = PriceRange::create($position->liquidationPrice, $ticker->indexPrice);
         $positionSide = $position->side;
 
         $stops = $this->stopRepository->findActive(

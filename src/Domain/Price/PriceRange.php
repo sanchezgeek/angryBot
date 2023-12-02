@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use Generator;
 
@@ -23,24 +24,24 @@ final readonly class PriceRange
         }
     }
 
-    public static function create(float $from, float $to): self
+    public static function create(Price|float $from, Price|float $to): self
     {
-        return new self(Price::float($from), Price::float($to));
+        $from = $from instanceof Price ? $from : Price::float($from);
+        $to = $to instanceof Price ? $to : Price::float($to);
+
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        return new self($from, $to);
     }
 
-    /**
-     * @todo | Dead code?
-     */
     public static function byPositionPnlRange(Position $position, float $fromPnl, float $toPnl): self
     {
         $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPnl);
         $toPrice = PnlHelper::getTargetPriceByPnlPercent($position, $toPnl);
 
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
-
-        return new self($fromPrice, $toPrice);
+        return self::create($fromPrice, $toPrice);
     }
 
     public function isPriceInRange(float $price): bool
@@ -91,7 +92,7 @@ final readonly class PriceRange
 
         $resultQnt = 0;
         for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
-            yield Price::float($price);
+            yield Price::float(PriceHelper::round($price));
             $resultQnt++;
         }
     }

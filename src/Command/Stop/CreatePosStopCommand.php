@@ -82,13 +82,7 @@ class CreatePosStopCommand extends Command
 
         $fromPrice = Price::float($position->liquidationPrice);
         $toPrice = $position->isShort() ? $fromPrice->sub(self::DELTA) : $fromPrice->add(self::DELTA);
-
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
-
-        $priceRange = new PriceRange($fromPrice, $toPrice);
-        $stopsGrid = new OrdersGrid($priceRange);
+        $stopsGrid = new OrdersGrid(PriceRange::create($fromPrice, $toPrice));
 
         $qnt = $this->paramFetcher->getIntOption(self::ORDERS_QNT_OPTION, sprintf('Param "%s" is required.', self::ORDERS_QNT_OPTION));
 

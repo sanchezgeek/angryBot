@@ -54,10 +54,7 @@ trait PriceRangeAwareCommand
     {
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
 
-        return new PriceRange($fromPrice, $toPrice);
+        return PriceRange::create($fromPrice, $toPrice);
     }
 }

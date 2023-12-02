@@ -9,6 +9,8 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 
+use function round;
+
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceTest
  */
@@ -22,27 +24,35 @@ readonly final class Price
             throw new \DomainException('Price cannot be less or equals zero.');
         }
 
+        if ($value < 0.01) {
+            throw new \DomainException('Price cannot be less min available value.');
+        }
+
         $this->value = $value;
     }
 
     public static function float(float $value): self
     {
-        return new self(PriceHelper::round($value));
+        return new self($value);
     }
 
     public function value(): float
     {
-        return $this->value;
+        return round($this->value, 2);
     }
 
-    public function add(float $value): self
+    public function add(Price|float $addValue): self
     {
-        return self::float($this->value + $value);
+        $addValue = $addValue instanceof self ? $addValue->value : $addValue;
+
+        return self::float($this->value + $addValue);
     }
 
-    public function sub(float $value): self
+    public function sub(Price|float $subValue): self
     {
-        return self::float($this->value - $value);
+        $subValue = $subValue instanceof self ? $subValue->value : $subValue;
+
+        return self::float($this->value - $subValue);
     }
 
     public function eq(Price $price): bool
@@ -50,19 +60,19 @@ readonly final class Price
         return $this->value === $price->value;
     }
 
-    public function greater(Price $price): bool
+    public function greaterThan(Price $price): bool
     {
         return $this->value > $price->value;
-    }
-
-    public function less(Price $price): bool
-    {
-        return $this->value < $price->value;
     }
 
     public function greaterOrEquals(Price $price): bool
     {
         return $this->value >= $price->value;
+    }
+
+    public function lessThan(Price $price): bool
+    {
+        return $this->value < $price->value;
     }
 
     public function lessOrEquals(Price $price): bool
