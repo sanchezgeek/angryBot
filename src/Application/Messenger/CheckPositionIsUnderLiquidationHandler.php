@@ -25,7 +25,6 @@ use App\Tests\Unit\Application\Messenger\CheckPositionIsUnderLiquidationHandlerT
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-use function abs;
 use function array_filter;
 use function max;
 
@@ -36,11 +35,13 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const WARNING_LIQUIDATION_DELTA = 90;
     public const CRITICAL_LIQUIDATION_DELTA = 30;
 
-    public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
-
-    public const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = 20;
-    public const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = 30;
+    # for warning actions
+    public const ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE = 22;
     public const ADDITIONAL_STOP_TRIGGER_DELTA = 40;
+    public const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = self::CRITICAL_LIQUIDATION_DELTA + 5;
+
+    # for critical actions
+    public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
     public const CLOSE_BY_MARKET_PERCENT = '8%';
 
     /**
@@ -87,31 +88,31 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     private function checkStopsVolume(Position $position, Ticker $ticker): void
     {
-        $priceRange = PriceRange::create($position->liquidationPrice, $ticker->indexPrice);
         $positionSide = $position->side;
+        $liquidation = Price::float($position->liquidationPrice);
 
-        $stops = $this->stopRepository->findActive(
-            side: $positionSide,
-            qbModifier: function (QueryBuilder $qb) use ($priceRange) {
-                $priceField = $qb->getRootAliases()[0] . '.price';
+        $indexPrice = Price::float($ticker->indexPrice);
+        $markPrice = $ticker->markPrice;
 
-                $qb
-                    ->andWhere($priceField . ' BETWEEN :priceFrom AND :priceTo')
-                    ->setParameter(':priceFrom', $priceRange->from()->value())
-                    ->setParameter(':priceTo', $priceRange->to()->value())
-                ;
-            }
-        );
+        $uppedBoundToCheckExistedStops = $position->isShort() ? $liquidation->sub(self::CRITICAL_LIQUIDATION_DELTA) : $liquidation->add(self::CRITICAL_LIQUIDATION_DELTA);
+        $lowerBoundToCheckExistedStops = $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice->value(), $markPrice->value());
+        $priceRangeToFindExistedStops = PriceRange::create($uppedBoundToCheckExistedStops, $lowerBoundToCheckExistedStops);
+
+        $delayedStops = $this->stopRepository->findActive(side: $positionSide, qbModifier: function (QueryBuilder $qb) use ($priceRangeToFindExistedStops) {
+            $priceField = $qb->getRootAliases()[0] . '.price';
+            $from = $priceRangeToFindExistedStops->from()->value();
+            $to = $priceRangeToFindExistedStops->to()->value();
+            // @todo | research pgsql BETWEEN (if stopPrice equals specified bounds)
+            $qb->andWhere($priceField . ' BETWEEN :priceFrom AND :priceTo')->setParameter(':priceFrom', $from)->setParameter(':priceTo', $to);
+        });
 
         /** @todo | переделать isPriceInRange? */
-        $stops = new StopsCollection(...$stops);
-        $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
-
-        $delayedStopsVolume = $stops->totalVolume();
+        $delayedStops = (new StopsCollection(...$delayedStops))->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
 
         $activeConditionalStops = array_filter(
-            $this->exchangeService->activeConditionalOrders($position->symbol, $priceRange),
-            static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->positionSide === $positionSide,
+            // @todo | cache? | yes: because there are might be some problems with connection | no: because results from cache might be not actual
+            $this->exchangeService->activeConditionalOrders($position->symbol, $priceRangeToFindExistedStops),
+            static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->positionSide === $positionSide,
         );
 
         $activeConditionalStopsVolume = 0;
@@ -119,22 +120,22 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             $activeConditionalStopsVolume += $activeConditionalStop->volume;
         }
 
-        $totalStopsVolume = $delayedStopsVolume + $activeConditionalStopsVolume;
-
+        $totalStopsVolume = $delayedStops->totalVolume() + $activeConditionalStopsVolume;
         $totalStopsVolumePart = round(($totalStopsVolume / $position->size) * 100, 3);
 
-        $volumePartDelta = self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE - $totalStopsVolumePart;
+        $volumePartDelta = self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE - $totalStopsVolumePart;
         if ($volumePartDelta > 0) {
-            $stopDeltaWithLiquidation = max(
+            $markPriceDifferenceWithIndexPrice = $markPrice->differenceWith($indexPrice);
+
+            $additionalStopDeltaWithLiquidation = max(
                 self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION,
-                $ticker->isLastPriceOverIndexPrice($positionSide) ? abs($ticker->lastPrice->value() - $ticker->indexPrice) : 0
+                $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0
             );
 
-            $price = Price::float($position->liquidationPrice);
-            $price = $position->isShort() ? $price->sub($stopDeltaWithLiquidation) : $price->add($stopDeltaWithLiquidation);
+            $additionalStopPrice = $position->isShort() ? $liquidation->sub($additionalStopDeltaWithLiquidation) : $liquidation->add($additionalStopDeltaWithLiquidation);
             $this->stopService->create(
                 $positionSide,
-                $price->value(),
+                $additionalStopPrice->value(),
                 VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
                 self::ADDITIONAL_STOP_TRIGGER_DELTA,
             );

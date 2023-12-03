@@ -35,7 +35,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     private const CLOSE_BY_MARKET_PERCENT = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_PERCENT;
 
     private const DEFAULT_COIN_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_COIN_TRANSFER_AMOUNT;
-    private const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE;
+    private const ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -100,7 +100,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $coin = $symbol->associatedCoin();
 
         $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([
-            new Stop(10, 100500, (new Percent(self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE + 1))->of($position->size), 50, $position->side)
+            new Stop(10, 100500, (new Percent(self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE + 1))->of($position->size), 50, $position->side)
         ]);
         $this->stopService->expects(self::never())->method(self::anything());
 

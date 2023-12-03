@@ -94,4 +94,9 @@ readonly final class Price
     {
         return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
     }
+
+    public function differenceWith(Price $price): PriceMovement
+    {
+        return PriceMovement::fromToTarget($price, $this);
+    }
 }
