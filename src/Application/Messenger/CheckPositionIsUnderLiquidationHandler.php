@@ -27,6 +27,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 use function array_filter;
 use function max;
+use function min;
 
 /** @see CheckPositionIsUnderLiquidationHandlerTest */
 #[AsMessageHandler]
@@ -71,22 +72,45 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
-        if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
-            $this->orderService->closeByMarket($position, Percent::string(self::CLOSE_BY_MARKET_PERCENT)->of($position->size));
-
-            $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
-            if ($spotBalance->availableBalance > 0.2) {
-                $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - 0.1));
-                $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
-            }
-        }
+        $markPrice = $ticker->markPrice;
+        $indexPrice = Price::float($ticker->indexPrice);
+        $liquidation = Price::float($position->liquidationPrice);
 
         if ($priceDeltaToLiquidation <= self::WARNING_LIQUIDATION_DELTA) {
-            $this->checkStopsVolume($position, $ticker);
+            $totalStopsPositionSizePart = $this->getExistedStopsPositionSizePart($position, $ticker);
+            $volumePartDelta = self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE - $totalStopsPositionSizePart;
+            if ($volumePartDelta > 0) {
+                $markPriceDifferenceWithIndexPrice = $markPrice->differenceWith($indexPrice);
+
+                $additionalStopDeltaWithLiquidation = max(
+                    self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION,
+                    $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0
+                );
+
+                if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
+                    $this->orderService->closeByMarket($position, (new Percent($volumePartDelta))->of($position->size));
+                } else {
+                    $additionalStopPrice = $position->isShort() ? $liquidation->sub($additionalStopDeltaWithLiquidation) : $liquidation->add($additionalStopDeltaWithLiquidation);
+                    $this->stopService->create(
+                        $positionSide,
+                        $additionalStopPrice->value(),
+                        VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
+                        self::ADDITIONAL_STOP_TRIGGER_DELTA,
+                    );
+                }
+            }
+
+            if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
+                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
+                if ($spotBalance->availableBalance > 0.3) {
+                    $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - 0.1));
+                    $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+                }
+            }
         }
     }
 
-    private function checkStopsVolume(Position $position, Ticker $ticker): void
+    private function getExistedStopsPositionSizePart(Position $position, Ticker $ticker): float
     {
         $positionSide = $position->side;
         $liquidation = Price::float($position->liquidationPrice);
@@ -121,24 +145,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         $totalStopsVolume = $delayedStops->totalVolume() + $activeConditionalStopsVolume;
-        $totalStopsVolumePart = round(($totalStopsVolume / $position->size) * 100, 3);
 
-        $volumePartDelta = self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE - $totalStopsVolumePart;
-        if ($volumePartDelta > 0) {
-            $markPriceDifferenceWithIndexPrice = $markPrice->differenceWith($indexPrice);
-
-            $additionalStopDeltaWithLiquidation = max(
-                self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION,
-                $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0
-            );
-
-            $additionalStopPrice = $position->isShort() ? $liquidation->sub($additionalStopDeltaWithLiquidation) : $liquidation->add($additionalStopDeltaWithLiquidation);
-            $this->stopService->create(
-                $positionSide,
-                $additionalStopPrice->value(),
-                VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
-                self::ADDITIONAL_STOP_TRIGGER_DELTA,
-            );
-        }
+        // @todo | maybe need update position before calc
+        return ($totalStopsVolume / $position->size) * 100;
     }
 }

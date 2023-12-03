@@ -88,10 +88,14 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
      */
     public function testMakeInterTransferFromSpotAndCloseByMarket(
         Position $position,
-        Ticker $ticker,
         float $spotAvailableBalance,
         ?float $expectedTransferAmount,
     ): void {
+        $liquidationPrice = $position->liquidationPrice;
+
+        $markPrice = $position->isShort() ? $liquidationPrice - self::CRITICAL_LIQUIDATION_DELTA : $liquidationPrice + self::CRITICAL_LIQUIDATION_DELTA;
+        $ticker = TickerFactory::create($position->symbol, $position->isShort() ? $markPrice - 10 : $markPrice + 10, $markPrice);
+
         $this->havePosition($position);
         $this->haveTicker($ticker);
 
@@ -99,9 +103,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
-        $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([
-            new Stop(10, 100500, (new Percent(self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE + 1))->of($position->size), 50, $position->side)
-        ]);
+        $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([]);
         $this->stopService->expects(self::never())->method(self::anything());
 
         $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
@@ -117,11 +119,14 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
-        if (abs($position->liquidationPrice - $ticker->markPrice->value()) <= 40) {
-            $this->orderService->expects(self::once())->method('closeByMarket')->with($position, Percent::string(self::CLOSE_BY_MARKET_PERCENT)->of($position->size));
-        } else {
-            $this->orderService->expects(self::never())->method(self::anything());
-        }
+        $this->orderService
+            ->expects(self::once())
+            ->method('closeByMarket')
+            ->with(
+                $position,
+                (new Percent(self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE))->of($position->size)
+            )
+        ;
 
         ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
     }
@@ -131,41 +136,35 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
         $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
-        $criticalDelta = CheckPositionIsUnderLiquidationHandler::CRITICAL_LIQUIDATION_DELTA;
 
         yield 'spot is empty' => [
             'position' => $position,
-            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
             'spotAvailableBalance' => 0.2,
             'expectedTransferAmount' => null
         ];
 
         yield 'transfer 15 usdt' => [
             'position' => $position,
-            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
             'spotAvailableBalance' => 100,
             'expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
         ];
 
         yield 'transfer all available' => [
             'position' => $position,
-            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta / 2),
             'spotAvailableBalance' => 7,
             'expectedTransferAmount' => 6.9
         ];
 
         yield 'transfer all available [2]' => [
             'position' => $position,
-            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta / 2),
-            'spotAvailableBalance' => 0.21,
-            'expectedTransferAmount' => 0.11
+            'spotAvailableBalance' => 0.31,
+            'expectedTransferAmount' => 0.21
         ];
 
         yield 'transfer all available [3]' => [
             'position' => $position,
-            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
-            'spotAvailableBalance' => 0.21,
-            'expectedTransferAmount' => 0.11
+            'spotAvailableBalance' => 0.31,
+            'expectedTransferAmount' => 0.21
         ];
     }
 
