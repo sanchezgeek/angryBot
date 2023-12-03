@@ -39,8 +39,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
 
     public const MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE = 20;
-    public const MIN_STOP_DELTA_WITH_LIQUIDATION = 30;
-    public const STOP_TRIGGER_DELTA = 40;
+    public const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = 30;
+    public const ADDITIONAL_STOP_TRIGGER_DELTA = 40;
     public const CLOSE_BY_MARKET_PERCENT = '8%';
 
     /**
@@ -107,25 +107,26 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $stops = new StopsCollection(...$stops);
         $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
 
-        $delayedStopsVolumePart = $stops->volumePart($position->size);
+        $delayedStopsVolume = $stops->totalVolume();
 
         $activeConditionalStops = array_filter(
             $this->exchangeService->activeConditionalOrders($position->symbol, $priceRange),
             static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->positionSide === $positionSide,
         );
 
-        $activeConditionalStopsVolumeSum = 0;
+        $activeConditionalStopsVolume = 0;
         foreach ($activeConditionalStops as $activeConditionalStop) {
-            $activeConditionalStopsVolumeSum += $activeConditionalStop->volume;
+            $activeConditionalStopsVolume += $activeConditionalStop->volume;
         }
-        $activeConditionalStopsVolumePart = VolumeHelper::round(($activeConditionalStopsVolumeSum / $position->size) * 100);
 
-        $totalVolumePart = $delayedStopsVolumePart + $activeConditionalStopsVolumePart;
+        $totalStopsVolume = $delayedStopsVolume + $activeConditionalStopsVolume;
 
-        $volumePartDelta = self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE - $totalVolumePart;
+        $totalStopsVolumePart = round(($totalStopsVolume / $position->size) * 100, 3);
+
+        $volumePartDelta = self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE - $totalStopsVolumePart;
         if ($volumePartDelta > 0) {
             $stopDeltaWithLiquidation = max(
-                self::MIN_STOP_DELTA_WITH_LIQUIDATION,
+                self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION,
                 $ticker->isLastPriceOverIndexPrice($positionSide) ? abs($ticker->lastPrice->value() - $ticker->indexPrice) : 0
             );
 
@@ -135,7 +136,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                 $positionSide,
                 $price->value(),
                 VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
-                self::STOP_TRIGGER_DELTA,
+                self::ADDITIONAL_STOP_TRIGGER_DELTA,
             );
         }
     }

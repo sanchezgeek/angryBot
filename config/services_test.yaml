@@ -17,5 +17,15 @@ services:
     App\Application\UniqueIdGeneratorInterface:
         class: App\Tests\Mock\UniqueIdGeneratorStub
 
+    App\Application\Messenger\CheckPositionIsUnderLiquidationHandler:
+        class: App\Application\Messenger\CheckPositionIsUnderLiquidationHandler
+        arguments:
+            $exchangeService: '@App\Bot\Application\Service\Exchange\ExchangeServiceInterface'
+            $positionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface' # use stub instead of service (@see services.yaml)
+            $exchangeAccountService: '@App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface'
+            $orderService: '@App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface'
+            $stopService: '@App\Bot\Application\Service\Orders\StopServiceInterface'
+            $stopRepository: '@App\Bot\Domain\Repository\StopRepositoryInterface'
+
     App\Clock\ClockInterface:
         class: App\Clock\Clock

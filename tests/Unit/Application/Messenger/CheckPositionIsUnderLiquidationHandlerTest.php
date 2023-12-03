@@ -23,8 +23,15 @@ use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
+use function abs;
+
+/**
+ * @group liquidation
+ */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
+    private const CRITICAL_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::CRITICAL_LIQUIDATION_DELTA;
+
     private const CLOSE_BY_MARKET_PERCENT = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_PERCENT;
 
     private const DEFAULT_COIN_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_COIN_TRANSFER_AMOUNT;
@@ -58,43 +65,42 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         );
     }
 
-    public function testDoNothingWhenPositionIsNotUnderLiquidation(): void
+    public function testDoMakeInterTransferWhenPositionIsNotUnderLiquidation(): void
     {
-        $warningDelta = CheckPositionIsUnderLiquidationHandler::WARNING_LIQUIDATION_DELTA;
+        $this->havePosition(
+            $position = new Position(Side::Sell, Symbol::BTCUSDT, 34000, 0.5, 20000, 35000, 200, 100),
+        );
 
-        $symbol = Symbol::BTCUSDT;
-        $side = Side::Sell;
-        $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
-        $ticker = TickerFactory::create($symbol, 34900,35000 - $warningDelta - 1);
+        $this->haveTicker(
+            TickerFactory::create(Symbol::BTCUSDT, 34900, 35000 - self::CRITICAL_LIQUIDATION_DELTA - 1),
+        );
 
-        $this->positionService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
-        $this->exchangeService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
+        // Assert
         $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
-
         $this->orderService->expects(self::never())->method(self::anything());
 
-        ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
+        // Act
+        ($this->handler)(new CheckPositionIsUnderLiquidation($position->symbol, $position->side));
     }
 
     /**
-     * @dataProvider makeInterTransferCases
+     * @dataProvider makeInterTransferFromSpotAndCloseByMarketTestCases
      */
-    public function testMakeInterTransferFromSpotWhenPositionIsUnderLiquidation(
+    public function testMakeInterTransferFromSpotAndCloseByMarket(
         Position $position,
         Ticker $ticker,
         float $spotAvailableBalance,
         ?float $expectedTransferAmount,
     ): void {
+        $this->havePosition($position);
+        $this->haveTicker($ticker);
+
         $side = $position->side;
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
-        $this->positionService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
-        $this->exchangeService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
-        $existedStopVolume = (new Percent(self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE))->of($position->size) + 0.001;
-
         $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([
-            new Stop(10, 100500, $existedStopVolume, 50, $position->side)
+            new Stop(10, 100500, (new Percent(self::MIN_STOPS_POSITION_PART_IN_CRITICAL_RANGE + 1))->of($position->size), 50, $position->side)
         ]);
         $this->stopService->expects(self::never())->method(self::anything());
 
@@ -120,47 +126,56 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
     }
 
-    public function makeInterTransferCases(): iterable
+    public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
     {
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
         $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
-        $warningDelta = CheckPositionIsUnderLiquidationHandler::WARNING_LIQUIDATION_DELTA;
         $criticalDelta = CheckPositionIsUnderLiquidationHandler::CRITICAL_LIQUIDATION_DELTA;
 
         yield 'spot is empty' => [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
-            '$spotAvailableBalance' => 0.2,
-            '$expectedTransferAmount' => null
+            'position' => $position,
+            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
+            'spotAvailableBalance' => 0.2,
+            'expectedTransferAmount' => null
         ];
 
         yield 'transfer 15 usdt' => [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
-            '$spotAvailableBalance' => 100,
-            '$expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
+            'position' => $position,
+            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
+            'spotAvailableBalance' => 100,
+            'expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
         ];
 
         yield 'transfer all available' => [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta / 2),
-            '$spotAvailableBalance' => 7,
-            '$expectedTransferAmount' => 6.9
+            'position' => $position,
+            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta / 2),
+            'spotAvailableBalance' => 7,
+            'expectedTransferAmount' => 6.9
         ];
 
         yield 'transfer all available [2]' => [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta / 2),
-            '$spotAvailableBalance' => 0.21,
-            '$expectedTransferAmount' => 0.11
+            'position' => $position,
+            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta / 2),
+            'spotAvailableBalance' => 0.21,
+            'expectedTransferAmount' => 0.11
         ];
 
         yield 'transfer all available [3]' => [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 34900,$position->liquidationPrice - $criticalDelta),
-            '$spotAvailableBalance' => 0.21,
-            '$expectedTransferAmount' => 0.11
+            'position' => $position,
+            'ticker' => TickerFactory::create($symbol, 34900, $position->liquidationPrice - $criticalDelta),
+            'spotAvailableBalance' => 0.21,
+            'expectedTransferAmount' => 0.11
         ];
+    }
+
+    private function havePosition(Position $position): void
+    {
+        $this->positionService->expects(self::once())->method('getPosition')->with($position->symbol, $position->side)->willReturn($position);
+    }
+
+    public function haveTicker(Ticker $ticker): void
+    {
+        $this->exchangeService->expects(self::once())->method('ticker')->with($ticker->symbol)->willReturn($ticker);
     }
 }
