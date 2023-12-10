@@ -3,9 +3,12 @@
 namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Order\Service\OrderCostHelper;
+use App\Domain\Price\Helper\PriceHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,7 +26,9 @@ class AccInfoCommand extends Command
     protected function configure(): void
     {
         $this
+            ->configurePositionArgs()
             ->addOption(self::TRANSFER_AMOUNT_OPTION, 't', InputOption::VALUE_REQUIRED, 'Transfer amount')
+            ->addOption('funding', null, InputOption::VALUE_NEGATABLE, 'Make funding fee transfer')
         ;
     }
 
@@ -36,6 +41,23 @@ class AccInfoCommand extends Command
 
         $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
         $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
+
+        if ($this->paramFetcher->getBoolOption('funding')) {
+            $prevPeriodRate = PriceHelper::round($this->marketService->getPreviousPeriodFundingRate($symbol), 7);
+            var_dump($prevPeriodRate);
+
+            $position = $this->getPosition();
+            $fee = PriceHelper::round($position->value * $prevPeriodRate, 4);
+
+            if ($fee > 0) {
+                $this->exchangeAccountService->interTransferFromContractToSpot($coin, $fee);
+            } else {
+                $this->exchangeAccountService->interTransferFromSpotToContract($coin, $fee);
+            }
+
+            $io->success('Success!!!');
+            return Command::SUCCESS;
+        }
 
         var_dump(
             $spotWalletBalance->availableBalance,
@@ -53,6 +75,8 @@ class AccInfoCommand extends Command
 
     public function __construct(
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly OrderCostHelper $orderCostHelper,
+        private readonly MarketServiceInterface $marketService,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
