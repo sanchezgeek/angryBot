@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -18,10 +20,12 @@ use App\Tests\Fixture\BuyOrderFixture;
  */
 final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrdersCornerCasesTestAbstract
 {
+    private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = PushBuyOrdersHandler::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
+
     /**
      * @dataProvider doNotCloseByMarketCasesProvider
      */
-    public function testDoNotCloseByMarket(Ticker $ticker, Position $position, float $coinSpotBalanceValue): void
+    public function testDoNotCloseByMarket(Position $position, Ticker $ticker, float $coinSpotBalanceValue): void
     {
         $this->haveTicker($ticker);
         $this->havePosition($position);
@@ -47,21 +51,24 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
 
     public function doNotCloseByMarketCasesProvider(): iterable
     {
-        yield [
-            'ticker' => TickerFactory::create(self::SYMBOL, 29720, 29710, 29701),
-            'position' => PositionFactory::short(self::SYMBOL, 30000),
+        $position = PositionFactory::short(self::SYMBOL, 30000);
+        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY)->value();
+
+        yield 'lastPrice pnl less than min required' => [
+            'position' => $position,
+            'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
             'coinSpotBalanceValue' => 0,
         ];
 
-        yield [
-            'ticker' => TickerFactory::create(self::SYMBOL, 29720, 29710, 29700),
-            'position' => PositionFactory::short(self::SYMBOL, 30000),
+        yield 'lastPrice pnl greater than min required, but spot balance available' => [
+            'position' => $position,
+            'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
             'coinSpotBalanceValue' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
         ];
 
-        yield [
-            'ticker' => TickerFactory::create(self::SYMBOL, 28720, 28710, 28700),
-            'position' => PositionFactory::short(self::SYMBOL, 30000),
+        yield 'lastPrice pnl over min required, but spot balance available' => [
+            'position' => $position,
+            'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
             'coinSpotBalanceValue' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
         ];
     }
@@ -93,44 +100,50 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
 
     public function closeByMarketCasesProvider(): iterable
     {
+        $position = PositionFactory::short(self::SYMBOL, 30000);
+
+        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY)->value();
         yield [
             'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29720, 29710, 29700),
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
             'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.003,
+//            'expectedCloseOrderVolume' => 0.003, # for now 0.001 in all cases
+            'expectedCloseOrderVolume' => 0.001,
         ];
 
+        $percent = 200;
+        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $percent)->value();
         yield [
             'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29420, 29410, 29401),
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
             'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.003,
-        ];
-
-        yield [
-            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29420, 29410, 29400),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.002,
-        ];
-
-        yield [
-            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29120, 29110, 29101),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.002,
-        ];
-
-        yield [
-            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29120, 29110, 29099),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
+//            'expectedCloseOrderVolume' => 0.003, # for now 0.001 in all cases
             'expectedCloseOrderVolume' => 0.001,
         ];
 
         yield [
             'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 28120, 28110, 28099),
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
+//            'expectedCloseOrderVolume' => 0.002, # for now 0.001 in all cases
+            'expectedCloseOrderVolume' => 0.001,
+        ];
+
+        $percent = 300;
+        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $percent)->value();
+        yield [
+            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
+//            'expectedCloseOrderVolume' => 0.002, # for now 0.001 in all cases
+            'expectedCloseOrderVolume' => 0.001,
+        ];
+
+        $percent = 400;
+        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $percent)->value();
+        yield [
+            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
             'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
             'expectedCloseOrderVolume' => 0.001,
         ];

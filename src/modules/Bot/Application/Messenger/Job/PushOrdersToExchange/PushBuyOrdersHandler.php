@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -17,7 +18,10 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
@@ -38,12 +42,35 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 53;
-    private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.09;
-    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.54;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 14;
+    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 143;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 176;
+
+    private const LONG_DISTANCE_TRANSFER_AMOUNT = 6;
+    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 6;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
+
+    public function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
+    {
+        $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
+        if ($indexPnlPercent >= self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN) {
+            return true;
+        }
+
+        return $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN;
+    }
+
+    public function transferToContract(WalletBalance $spotBalance, float $amount): bool
+    {
+        if ($spotBalance->availableBalance < $amount) {
+            return false;
+        }
+
+        $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
+        return true;
+    }
 
     public function __invoke(PushBuyOrders $message): void
     {
@@ -54,7 +81,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $position = $this->positionService->getPosition($symbol, $side);
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
-        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 50) {
+        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 45) {
             // @todo test
             return;
         }
@@ -74,28 +101,52 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         );
 
         try {
+            $boughtOrders = [];
             foreach ($orders as $order) {
                 if ($order->mustBeExecuted($ticker)) {
                     $this->buy($position, $ticker, $order);
+
+                     if ($order->getExchangeOrderId()) {
+                         $boughtOrders[] = new ExchangeOrder($symbol, $order->getVolume(), $ticker->lastPrice);
+                     }
+                }
+            }
+
+            if ($boughtOrders) {
+                $spentCost = 0;
+                foreach ($boughtOrders as $boughtOrder) {
+                    $spentCost += $this->orderCostHelper->getOrderBuyCost($boughtOrder, $position->leverage)->value();
+                }
+
+                if ($spentCost > 0) {
+                    $amount = $spentCost * 1.5;
+                    $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
+                    if ($this->canUseSpot($ticker, $position, $spotBalance)) {
+
+                        $this->transferToContract($spotBalance, $amount);
+                    }
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-            if (
-                ($spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin()))
-                && $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
-            ) {
-                $delta = $position->getDeltaWithTicker($ticker);
-                $amount = $delta < 150 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
-                $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
-                return;
+            $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
+            if ($this->canUseSpot($ticker, $position, $spotBalance)) {
+                $amount = $position->getDeltaWithTicker($ticker) < 150 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
+                // @todo | test
+                $result = $this->transferToContract($spotBalance, $amount);
+                if ($result) {
+                    return;
+                }
             }
 
             $positionCurrentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-            if ($positionCurrentPnlPercent >= 100) {
-                if ($positionCurrentPnlPercent < 200) $volume = 0.003;
-                elseif ($positionCurrentPnlPercent < 300) $volume = 0.002;
-                else $volume = 0.001;
+            if ($positionCurrentPnlPercent >= self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY) {
+//                if ($positionCurrentPnlPercent < 160) $volume = 0.002;
+//                elseif ($positionCurrentPnlPercent < 230) $volume = 0.001;
+//                elseif ($positionCurrentPnlPercent < 245) $volume = 0.002;
+//                else
+                    $volume = 0.001;
 
+                // @todo | test
                 $this->orderService->closeByMarket($position, $volume);
                 return;
             }
@@ -291,6 +342,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly OrderCostHelper $orderCostHelper,
 
         OrderServiceInterface $orderService,
         ExchangeServiceInterface $exchangeService,

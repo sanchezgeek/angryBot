@@ -17,6 +17,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Order\Service\OrderCostHelper;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
@@ -38,6 +39,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     protected BuyOrderRepository $buyOrderRepository;
     protected StopRepository $stopRepository;
     protected StopService $stopService;
+    protected OrderCostHelper $orderCostHelper;
 
     protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
     protected OrderServiceInterface|MockObject $orderServiceMock;
@@ -53,6 +55,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->buyOrderRepository = self::getContainer()->get(BuyOrderRepository::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
         $this->stopService = self::getContainer()->get(StopService::class);
+        $this->orderCostHelper = self::getContainer()->get(OrderCostHelper::class);
 
         $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
@@ -66,6 +69,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             $this->stopRepository,
             $this->stopService,
             $this->exchangeAccountServiceMock,
+            $this->orderCostHelper,
             $this->orderServiceMock,
             $this->exchangeServiceMock,
             $this->positionServiceMock,

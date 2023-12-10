@@ -12,6 +12,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Service\OrderCostHelper;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -49,6 +50,7 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
             $this->stopRepository,
             $this->stopService,
             self::getContainer()->get(ExchangeAccountServiceInterface::class),
+            self::getContainer()->get(OrderCostHelper::class),
             $this->orderServiceMock,
             $this->exchangeServiceMock,
             $this->positionServiceStub,
