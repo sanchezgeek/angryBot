@@ -5,6 +5,7 @@ namespace App\Command\Stop;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
@@ -12,6 +13,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
+use App\Domain\Stop\StopsCollection;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -112,7 +114,8 @@ class CreateStopsGridCommand extends Command
         }
 
         $alreadyStopped = 0;
-        $stops = $this->stopRepository->findActive($position->side);
+        $stops = new StopsCollection(...$this->stopRepository->findActive($position->side));
+        $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
         }
