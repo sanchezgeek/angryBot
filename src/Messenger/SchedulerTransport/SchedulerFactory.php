@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Messenger\SchedulerTransport;
 
 use App\Application\Messenger\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Market\TransferFundingFees;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
@@ -81,12 +82,19 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $longCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
             PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $longCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))),
 
+            # position
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Buy))),
-
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT5S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
-
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Buy))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
+
+            # market
+            PeriodicalJob::create('2023-12-01T00:00:03Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-12-01T00:00:04Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Buy))),
+
+            # orders
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT5S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
         ];
     }
 

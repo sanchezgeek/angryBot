@@ -7,4 +7,6 @@ use App\Bot\Domain\ValueObject\Symbol;
 interface MarketServiceInterface
 {
     public function getPreviousPeriodFundingRate(Symbol $symbol): float;
+
+    public function isNowFundingFeesPaymentTime(): bool;
 }

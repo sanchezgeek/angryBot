@@ -7,6 +7,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
@@ -74,6 +75,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public function __invoke(PushBuyOrders $message): void
     {
+        if ($this->marketService->isNowFundingFeesPaymentTime()) {
+            $this->sleep('funding fees payment time');
+        }
+
         $side = $message->side;
         $symbol = $message->symbol;
 
@@ -346,6 +351,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         OrderServiceInterface $orderService,
         ExchangeServiceInterface $exchangeService,
+        private readonly MarketServiceInterface $marketService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,

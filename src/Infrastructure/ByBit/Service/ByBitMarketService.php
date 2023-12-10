@@ -6,6 +6,7 @@ namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetFundingRateHistoryRequest;
@@ -19,8 +20,10 @@ final class ByBitMarketService implements MarketServiceInterface
 {
     use ByBitApiCallHandler;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        private ClockInterface $clock,
+        ByBitApiClientInterface $apiClient,
+    ) {
         $this->apiClient = $apiClient;
     }
 
@@ -46,5 +49,23 @@ final class ByBitMarketService implements MarketServiceInterface
         }
 
         return $fundingRate;
+    }
+
+    public function isNowFundingFeesPaymentTime(): bool
+    {
+        $fundingFeesPaymentIntervals = [['235945', '240100'], ['075945', '080100'], ['155945', '160100']];
+
+        $now = $this->clock->now()->format('His');
+        if ($now < '010000') {
+            $now += 240000;
+        }
+
+        foreach ($fundingFeesPaymentIntervals as [$from, $to]) {
+            if ($now >= $from && $now <= $to) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

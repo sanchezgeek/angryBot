@@ -7,12 +7,14 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Service\OrderCostHelper;
+use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -36,6 +38,8 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
     private const SYMBOL = Symbol::BTCUSDT;
     private const DEFAULT_STOP_TD = 37;
 
+    private MarketServiceInterface $marketService;
+
     private PushBuyOrdersHandler $handler;
 
     protected function setUp(): void
@@ -45,6 +49,8 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         self::truncateStops();
         self::truncateBuyOrders();
 
+        $this->marketService = self::getContainer()->get(ByBitMarketService::class);
+
         $this->handler = new PushBuyOrdersHandler(
             self::getBuyOrderRepository(),
             $this->stopRepository,
@@ -53,6 +59,7 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
             self::getContainer()->get(OrderCostHelper::class),
             $this->orderServiceMock,
             $this->exchangeServiceMock,
+            $this->marketService,
             $this->positionServiceStub,
             $this->loggerMock,
             $this->clockMock

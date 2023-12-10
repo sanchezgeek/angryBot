@@ -8,6 +8,7 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
@@ -19,6 +20,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Service\OrderCostHelper;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -28,8 +30,6 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 {
-    protected const USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
-
     use TestWithDbFixtures;
     use StopsTester;
     use BuyOrdersTester;
@@ -40,6 +40,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     protected StopRepository $stopRepository;
     protected StopService $stopService;
     protected OrderCostHelper $orderCostHelper;
+    protected MarketServiceInterface $marketService;
 
     protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
     protected OrderServiceInterface|MockObject $orderServiceMock;
@@ -56,6 +57,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->orderCostHelper = self::getContainer()->get(OrderCostHelper::class);
+        $this->marketService = self::getContainer()->get(ByBitMarketService::class);
 
         $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
@@ -72,6 +74,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             $this->orderCostHelper,
             $this->orderServiceMock,
             $this->exchangeServiceMock,
+            $this->marketService,
             $this->positionServiceMock,
             $this->loggerMock,
             $this->clockMock
