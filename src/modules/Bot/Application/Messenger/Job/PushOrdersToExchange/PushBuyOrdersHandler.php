@@ -22,7 +22,9 @@ use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
@@ -43,18 +45,24 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 14;
-    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 143;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 176;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1.8;
+    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 270;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 350;
 
-    private const LONG_DISTANCE_TRANSFER_AMOUNT = 6;
-    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 6;
+    private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.16;
+    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.33;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
 
     public function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
+        $delta = $position->getDeltaWithTicker($ticker);
+
+        if (($delta < 0) && abs($delta) >= 50) {
+            return true;
+        }
+
         $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
         if ($indexPnlPercent >= self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN) {
             return true;
@@ -76,7 +84,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public function __invoke(PushBuyOrders $message): void
     {
         if ($this->marketService->isNowFundingFeesPaymentTime()) {
-            $this->sleep('funding fees payment time');
+            return;
         }
 
         $side = $message->side;
@@ -86,7 +94,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $position = $this->positionService->getPosition($symbol, $side);
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
-        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 45) {
+        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 55) {
             // @todo test
             return;
         }
@@ -124,10 +132,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
 
                 if ($spentCost > 0) {
-                    $amount = $spentCost * 1.5;
+                    $amount = $spentCost * 1.15;
                     $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
                     if ($this->canUseSpot($ticker, $position, $spotBalance)) {
-
                         $this->transferToContract($spotBalance, $amount);
                     }
                 }
@@ -135,7 +142,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } catch (CannotAffordOrderCost $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($this->canUseSpot($ticker, $position, $spotBalance)) {
-                $amount = $position->getDeltaWithTicker($ticker) < 150 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
+                $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
                 // @todo | test
                 $result = $this->transferToContract($spotBalance, $amount);
                 if ($result) {
@@ -143,16 +150,18 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
 
-            $positionCurrentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-            if ($positionCurrentPnlPercent >= self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY) {
-//                if ($positionCurrentPnlPercent < 160) $volume = 0.002;
-//                elseif ($positionCurrentPnlPercent < 230) $volume = 0.001;
-//                elseif ($positionCurrentPnlPercent < 245) $volume = 0.002;
-//                else
-                    $volume = 0.001;
+            $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+            if ($currentPnlPercent >= self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY) {
+                // if ($currentPnlPercent < 160) $volume = 0.002; elseif ($currentPnlPercent < 230) $volume = 0.001; elseif ($currentPnlPercent < 245) $volume = 0.002; else
+                $volume = 0.001;
 
                 // @todo | test
                 $this->orderService->closeByMarket($position, $volume);
+
+                $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
+                $transferToSpotAmount = $expectedProfit * 0.1;
+                $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
+
                 return;
             }
 
