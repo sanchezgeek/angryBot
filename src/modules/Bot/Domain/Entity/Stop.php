@@ -31,6 +31,7 @@ class Stop implements HasEvents
     public const MIN_VOLUME = 0.001;
 
     public const IS_TP_CONTEXT = 'isTakeProfit';
+    public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
     public const TP_TRIGGER_DELTA = 50;
 
     use HasVolume;
@@ -151,6 +152,18 @@ class Stop implements HasEvents
          * @see \App\Bot\Domain\Repository\StopRepository::findActive() + $nearTicker
          */
         $this->setTriggerDelta(self::TP_TRIGGER_DELTA);
+
+        return $this;
+    }
+
+    public function isCloseByMarketContextSet(): bool
+    {
+        return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
+    }
+
+    public function setIsCloseByMarketContext(): self
+    {
+        $this->context[self::CLOSE_BY_MARKET_CONTEXT] = true;
 
         return $this;
     }

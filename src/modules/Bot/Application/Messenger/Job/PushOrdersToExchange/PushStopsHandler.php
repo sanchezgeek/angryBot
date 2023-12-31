@@ -7,6 +7,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -31,13 +32,13 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReach
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\HandleStopsCornerCasesTest;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
@@ -83,12 +84,23 @@ final class PushStopsHandler extends AbstractOrdersPusher
             }
 
             ### Regular
-            $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
+            $td = $this->getStopTriggerDelta($stop);
             $stopPrice = $stop->getPrice();
 
             if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
                 $callback = null;
-                if ($currentPriceOverStop) {
+                if ($stop->isCloseByMarketContextSet()) {
+                    $exchangeAccountService = $this->exchangeAccountService;
+                    $callback = static function () use ($orderService, $position, $stop, $exchangeAccountService) {
+                        $orderId = $orderService->closeByMarket($position, $stop->getVolume());
+
+                        $expectedLoss = $stop->getPnlUsd($position);
+                        $transferAmount = -$expectedLoss;
+                        $exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), PriceHelper::round($transferAmount, 3));
+
+                        return $orderId;
+                    };
+                } elseif ($currentPriceOverStop) {
                     if ($deltaToLiquidation <= self::LIQUIDATION_CRITICAL_DELTA) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
@@ -97,7 +109,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                     }
                 }
 
-                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $ticker, $triggerBy) {
+                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
                     try {
                         return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                     } catch (TickerOverConditionalOrderTriggerPrice $e) {
@@ -124,6 +136,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             $this->logWarning($e);
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
+            // @todo | currentPriceWithLiquidationPriceDifference->delta() + isCurrentPriceOverStopPrice
             $this->messageBus->dispatch(TryReleaseActiveOrders::forStop($ticker->symbol, $stop));
         } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
             $this->logCritical($e);
@@ -222,6 +235,15 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
     }
 
+    private function getStopTriggerDelta(Stop $stop): float
+    {
+        if ($stop->isCloseByMarketContextSet()) {
+            return 0.3;
+        }
+
+        return $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
+    }
+
     /**
      * @param Side $side
      * @param Symbol $symbol
@@ -246,6 +268,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly StopRepository $repository,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MessageBusInterface $messageBus,
         OrderServiceInterface $orderService,
         ExchangeServiceInterface $exchangeService,
