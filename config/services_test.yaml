@@ -4,6 +4,8 @@ services:
 
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub
+        arguments:
+            $baseUri: 'https://%env(BYBIT_API_HOST)%'
 
     App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
         class: App\Tests\Stub\Bot\ExchangeServiceStub

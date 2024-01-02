@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Coin;
 
 use App\Domain\Coin\Coin;
+use App\Domain\Coin\CoinAmount;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use InvalidArgumentException;
@@ -19,6 +20,9 @@ use function sprintf;
 final readonly class CoinInterTransfer extends AbstractByBitApiRequest
 {
     public const URL = '/v5/asset/transfer/inter-transfer';
+
+    private Coin $coin;
+    private float $amount;
 
     public function method(): string
     {
@@ -42,12 +46,14 @@ final readonly class CoinInterTransfer extends AbstractByBitApiRequest
     }
 
     public function __construct(
-        private Coin        $coin,
+        CoinAmount $coinAmount,
         private AccountType $fromAccountType,
         private AccountType $toAccountType,
-        private float       $amount,
         private string      $transferId,
     ) {
+        $this->coin = $coinAmount->coin();
+        $this->amount = $coinAmount->value();
+
         assert($this->transferId, new InvalidArgumentException(
             sprintf('%s: $transferId must be non-empty string (`%s` provided)', __CLASS__, $this->transferId)
         ));

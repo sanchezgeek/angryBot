@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -57,6 +58,7 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
             $this->stopRepository,
             $createBuyOrderHandler,
             $this->stopService,
+            self::getContainer()->get(ExchangeAccountServiceInterface::class),
             $this->messageBus,
             $this->orderServiceMock,
             $this->exchangeServiceMock,

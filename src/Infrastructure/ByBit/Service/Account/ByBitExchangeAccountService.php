@@ -8,6 +8,8 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\Exception\AccountCoinDataNotFound;
 use App\Domain\Coin\Coin;
+use App\Domain\Coin\CoinAmount;
+use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
@@ -56,12 +58,12 @@ final class ByBitExchangeAccountService implements ExchangeAccountServiceInterfa
 
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, $amount);
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 3));
     }
 
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, $amount);
+        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 3));
     }
 
     /**
@@ -69,9 +71,9 @@ final class ByBitExchangeAccountService implements ExchangeAccountServiceInterfa
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    private function interTransfer(Coin $coin, AccountType $fromAccountType, AccountType $toAccountType, float $amount): void
+    private function interTransfer(Coin $coin, AccountType $from, AccountType $to, float $amount): void
     {
-        $request = new CoinInterTransfer($coin, $fromAccountType, $toAccountType, $amount, $transferId = uuid_create());
+        $request = new CoinInterTransfer(new CoinAmount($coin, $amount), $from, $to, $transferId = uuid_create());
 
         $result = $this->sendRequest($request);
 

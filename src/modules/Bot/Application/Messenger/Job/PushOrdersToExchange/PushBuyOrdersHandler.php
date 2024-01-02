@@ -45,9 +45,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1.8;
-    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 270;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 350;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 20.8;
+    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 190;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 210;
+    public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.15;
 
     private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.16;
     private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.33;
@@ -159,7 +160,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->orderService->closeByMarket($position, $volume);
 
                 $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
-                $transferToSpotAmount = $expectedProfit * 0.1;
+                $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
                 $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
 
                 return;

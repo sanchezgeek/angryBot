@@ -35,4 +35,9 @@ final class AppContext
     {
         return (int)$_ENV['PROCESS_NUM'];
     }
+
+    public static function isTest(): bool
+    {
+        return $_ENV['APP_ENV'] === 'test';
+    }
 }

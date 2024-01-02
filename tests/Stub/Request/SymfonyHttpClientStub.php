@@ -28,6 +28,7 @@ class SymfonyHttpClientStub extends MockHttpClient
 {
     use JsonTrait;
 
+    private ?string $baseUri;
     private ResponseInterface $defaultResponse;
 
     /**
@@ -44,6 +45,7 @@ class SymfonyHttpClientStub extends MockHttpClient
     {
         parent::__construct($this->handler(), $baseUri);
 
+        $this->baseUri = $baseUri;
         $this->defaultResponse = new MockResponse('', ['http_code' => 404]);
     }
 
@@ -158,5 +160,10 @@ class SymfonyHttpClientStub extends MockHttpClient
     public function getRequestCalls(): array
     {
         return $this->requestCalls;
+    }
+
+    public function getBaseUri(): ?string
+    {
+        return $this->baseUri;
     }
 }

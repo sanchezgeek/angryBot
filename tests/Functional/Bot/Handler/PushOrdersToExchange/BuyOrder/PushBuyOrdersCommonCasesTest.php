@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -23,6 +22,7 @@ use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 
 use function uuid_create;
 
@@ -34,11 +34,10 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
 {
     use StopsTester;
     use BuyOrdersTester;
+    use ByBitV5ApiRequestsMocker;
 
     private const SYMBOL = Symbol::BTCUSDT;
     private const DEFAULT_STOP_TD = 37;
-
-    private MarketServiceInterface $marketService;
 
     private PushBuyOrdersHandler $handler;
 
@@ -49,8 +48,6 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         self::truncateStops();
         self::truncateBuyOrders();
 
-        $this->marketService = self::getContainer()->get(ByBitMarketService::class);
-
         $this->handler = new PushBuyOrdersHandler(
             self::getBuyOrderRepository(),
             $this->stopRepository,
@@ -59,10 +56,10 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
             self::getContainer()->get(OrderCostHelper::class),
             $this->orderServiceMock,
             $this->exchangeServiceMock,
-            $this->marketService,
+            self::getContainer()->get(ByBitMarketService::class),
             $this->positionServiceStub,
             $this->loggerMock,
-            $this->clockMock
+            $this->clockMock,
         );
     }
 
@@ -77,8 +74,10 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         array $buyOrdersFixtures,
         array $expectedAddBuyOrderCallsStack,
         array $buyOrdersExpectedAfterHandle,
-        array $mockedExchangeOrderIds
+        array $mockedExchangeOrderIds,
     ): void {
+        $this->haveSpotBalance($position->symbol, 0);
+
         $this->haveTicker($ticker);
         $this->positionServiceStub->havePosition($position);
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
@@ -118,7 +117,7 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
                 BuyOrderBuilder::short(20, 29155, 0.002)->build(),
                 BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId),
             ],
-            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds,
         ];
     }
 
@@ -133,6 +132,8 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         array $buyOrdersFixtures,
         array $stopsExpectedAfterHandle,
     ): void {
+        $this->haveSpotBalance($position->symbol, 0);
+
         $this->haveTicker($ticker);
         $this->positionServiceStub->havePosition($position);
         $this->applyDbFixtures(...$buyOrdersFixtures);

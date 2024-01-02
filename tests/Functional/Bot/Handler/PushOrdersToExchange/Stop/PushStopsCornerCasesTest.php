@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -60,6 +61,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     protected OrderServiceInterface|MockObject $orderServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
+    protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
     protected LoggerInterface $loggerMock;
     protected ClockInterface $clockMock;
 
@@ -77,6 +79,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
 
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
+        $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
@@ -86,6 +89,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->stopRepository,
             $createBuyOrderHandler,
             $this->stopService,
+            $this->exchangeAccountServiceMock,
             $this->messageBus,
             $this->orderServiceMock,
             $this->exchangeServiceMock,

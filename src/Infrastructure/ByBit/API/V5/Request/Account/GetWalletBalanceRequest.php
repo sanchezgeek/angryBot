@@ -9,6 +9,9 @@ use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * @see https://bybit-exchange.github.io/docs/v5/account/wallet-balance
+ */
 final readonly class GetWalletBalanceRequest extends AbstractByBitApiRequest
 {
     public function method(): string
