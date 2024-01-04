@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Domain;
 
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Leverage;
@@ -20,6 +21,7 @@ final class Position
 {
     public readonly CoinAmount $initialMargin;
     public readonly Leverage $leverage;
+    public ?Position $oppositePosition = null;
 
     public function __construct(
         public readonly Side $side,
@@ -34,6 +36,25 @@ final class Position
     ) {
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
         $this->leverage = new Leverage($leverage);
+    }
+
+    public function setOppositePosition(Position $oppositePosition): void
+    {
+        if ($this->oppositePosition !== null) {
+            throw new LogicException('Opposite position already set.');
+        }
+
+        $this->oppositePosition = $oppositePosition;
+    }
+
+    public function getHedge(): ?Hedge
+    {
+        return $this->oppositePosition === null ? null : Hedge::create($this, $this->oppositePosition);
+    }
+
+    public function isSupportPosition(): bool
+    {
+        return ($hedge = $this->getHedge()) && $hedge->isSupportPosition($this);
     }
 
     public function getCaption(): string

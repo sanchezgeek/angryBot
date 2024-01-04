@@ -6,7 +6,6 @@ namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -29,6 +28,7 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use function is_array;
 use function preg_match;
 use function sprintf;
+use function strtolower;
 
 /**
  * @todo | now only for `linear` AssetCategory
@@ -61,23 +61,38 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         }
 
         $position = null;
+        $oppositePosition = null;
         foreach ($list as $item) {
-            if ((float)$item['avgPrice'] !== 0.0 && \strtolower($item['side']) === $side->value) {
-                $position = new Position(
-                    $side,
-                    $symbol,
-                    VolumeHelper::round((float)$item['avgPrice'], 2), // @todo | apiV5 | research `entryPrice` param
-                    (float)$item['size'],
-                    VolumeHelper::round((float)$item['positionValue'], 2),
-                    (float)$item['liqPrice'],
-                    (float)$item['positionIM'],
-                    (int)$item['leverage'],
-                    (float)$item['unrealisedPnl'],
-                );
+            if ((float)$item['avgPrice'] !== 0.0) {
+                $itemSide = strtolower($item['side']);
+                if ($itemSide === $side->value) {
+                    $position = $this->parsePositionFromData($item);
+                } elseif ($itemSide === $side->getOpposite()->value) {
+                    $oppositePosition = $this->parsePositionFromData($item);
+                }
             }
         }
 
+        if ($position && $oppositePosition) {
+            $position->setOppositePosition($oppositePosition);
+        }
+
         return $position;
+    }
+
+    private function parsePositionFromData(array $apiData): Position
+    {
+        return new Position(
+            Side::from(strtolower($apiData['side'])),
+            Symbol::from($apiData['symbol']),
+            VolumeHelper::round((float)$apiData['avgPrice'], 2),
+            (float)$apiData['size'],
+            VolumeHelper::round((float)$apiData['positionValue'], 2),
+            (float)$apiData['liqPrice'],
+            (float)$apiData['positionIM'],
+            (int)$apiData['leverage'],
+            (float)$apiData['unrealisedPnl'],
+        );
     }
 
     /**
@@ -110,7 +125,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $position->side,
             $qty,
             $price,
-            $triggerBy
+            $triggerBy,
         );
 
         $result = $this->sendRequest($request, static function (ApiErrorInterface $error) use ($position) {

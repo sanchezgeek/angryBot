@@ -10,7 +10,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
@@ -46,8 +45,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 20.8;
-    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 190;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 210;
+    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 180;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 200;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.15;
 
     private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.16;
@@ -65,11 +64,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
-        if ($indexPnlPercent >= self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN) {
+        if ($indexPnlPercent >= $this->getIndexPricePnlPercentToUseSpot($position)) {
             return true;
         }
 
         return $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN;
+    }
+
+    private function getIndexPricePnlPercentToUseSpot(Position $position): float
+    {
+        return $position->isSupportPosition() ? self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN / 2 : self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN;
+    }
+
+    public function getMinProfitPercentToTakeProfitInCaseOfCannotAffordBuy(Position $position): float
+    {
+        return $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY / 1.6 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
     }
 
     public function transferToContract(WalletBalance $spotBalance, float $amount): bool
@@ -111,7 +120,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             from: ($position->isShort() ? $ticker->indexPrice - 15  : $ticker->indexPrice - 20),
             to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
             // To get the cheapest orders (to ignore sleep by CannotAffordOrderCost in case of can afford buy less qty)
-            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side->isShort() ? 'desc' : 'asc')
+            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side->isShort() ? 'desc' : 'asc'),
         );
 
         try {
@@ -133,7 +142,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
 
                 if ($spentCost > 0) {
-                    $amount = $spentCost * 1.15;
+                    $multiplier = $position->isSupportPosition() ? 0.5 : 1.15;
+                    $amount = $spentCost * $multiplier;
                     $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
                     if ($this->canUseSpot($ticker, $position, $spotBalance)) {
                         $this->transferToContract($spotBalance, $amount);
@@ -152,16 +162,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
 
             $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-            if ($currentPnlPercent >= self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY) {
+            if ($currentPnlPercent >= $this->getMinProfitPercentToTakeProfitInCaseOfCannotAffordBuy($position)) {
                 // if ($currentPnlPercent < 160) $volume = 0.002; elseif ($currentPnlPercent < 230) $volume = 0.001; elseif ($currentPnlPercent < 245) $volume = 0.002; else
-                $volume = 0.001;
+                $this->orderService->closeByMarket($position, $volume = 0.001);
 
-                // @todo | test
-                $this->orderService->closeByMarket($position, $volume);
-
-                $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
-                $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-                $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
+                if (!$position->isSupportPosition()) {
+                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
+                    $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
+                    $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
+                }
 
                 return;
             }
@@ -228,25 +237,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if ($firstPositionStop = $this->stopRepository->findFirstPositionStop($position)) {
                 $basePrice = $firstPositionStop->getPrice();
             }
-        } elseif (
-            (
-                $stopStrategy === StopCreate::AFTER_FIRST_STOP_UNDER_POSITION
-            ) || (
-                $stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION
-                && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM
-            )
-        ) {
+        } elseif ($stopStrategy === StopCreate::AFTER_FIRST_STOP_UNDER_POSITION || ($stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM)) {
             if ($firstStopUnderPosition = $this->stopRepository->findFirstStopUnderPosition($position)) {
                 $basePrice = $firstStopUnderPosition->getPrice();
+            } else {
+                $stopStrategy = StopCreate::UNDER_POSITION;
             }
-        } elseif (
-            (
-                $stopStrategy === StopCreate::UNDER_POSITION
-            ) || (
-                $stopStrategy === StopCreate::ONLY_BIG_SL_UNDER_POSITION
-                && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM
-            )
-        ) {
+        }
+
+        if ($stopStrategy === StopCreate::UNDER_POSITION || ($stopStrategy === StopCreate::ONLY_BIG_SL_UNDER_POSITION && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM)) {
             $positionPrice = \ceil($position->entryPrice);
             if ($ticker->isIndexAlreadyOverStop($side, $positionPrice)) {
                 $basePrice = $side->isLong() ? $ticker->indexPrice - 15 : $ticker->indexPrice + 15;
@@ -286,14 +285,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function getStopStrategy(Position $position, BuyOrder $order, Ticker $ticker): array
     {
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-        if ($isHedge) {
-            $hedge = Hedge::create($position, $oppositePosition);
+        if ($hedge = $position->getHedge()) {
             $hedgeStrategy = $hedge->getHedgeStrategy();
-
             return [
-                'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionOppositeStopCreation : $hedgeStrategy->mainPositionOppositeStopCreation,
-                'description' => $hedgeStrategy->description
+                'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionStopCreation : $hedgeStrategy->mainPositionStopCreation,
+                'description' => $hedgeStrategy->description,
             ];
         }
 
