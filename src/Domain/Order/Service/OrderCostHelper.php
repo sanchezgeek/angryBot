@@ -22,7 +22,6 @@ final class OrderCostHelper
     public function getOrderMargin(ExchangeOrder $order, Leverage $leverage): CoinAmount
     {
         $symbol = $order->getSymbol();
-        $coin = $symbol->associatedCoin();
 
         $qty = $order->getVolume();
         $price = $order->getPrice();
@@ -37,7 +36,7 @@ final class OrderCostHelper
             $cost = $contractCost * $qty;
         }
 
-        return new CoinAmount($coin, $cost);
+        return new CoinAmount($symbol->associatedCoin(), $cost);
     }
 
     public function getOrderBuyCost(ExchangeOrder $order, Leverage $leverage): CoinAmount

@@ -24,10 +24,12 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -44,51 +46,66 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 20.8;
-    public const USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN = 180;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 200;
-    public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.15;
-
-    private const LONG_DISTANCE_TRANSFER_AMOUNT = 0.16;
-    private const SHORT_DISTANCE_TRANSFER_AMOUNT = 0.33;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 8.1;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 160;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 180;
+    public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $cannotAffordAt = null;
     private ?float $cannotAffordAtPrice = null;
 
     public function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        $delta = $position->getDeltaWithTicker($ticker);
-
-        if (($delta < 0) && abs($delta) >= 50) {
-            return true;
-        }
-
         $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
-        if ($indexPnlPercent >= $this->getIndexPricePnlPercentToUseSpot($position)) {
+        $minIndexPricePnlPercentToUseSpot = $position->isSupportPosition() ? self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT / 2 : self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
+
+        if ($indexPnlPercent >= $minIndexPricePnlPercentToUseSpot) {
             return true;
         }
 
         return $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN;
     }
 
-    private function getIndexPricePnlPercentToUseSpot(Position $position): float
+    private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
-        return $position->isSupportPosition() ? self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN / 2 : self::USE_SPOT_IF_INDEX_PNL_PERCENT_GREATER_THAN;
-    }
+        $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+        $minLastPricePnlPercentToTakeProfit = $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT / 1.6 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
 
-    public function getMinProfitPercentToTakeProfitInCaseOfCannotAffordBuy(Position $position): float
-    {
-        return $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY / 1.6 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
+        return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
 
     public function transferToContract(WalletBalance $spotBalance, float $amount): bool
     {
-        if ($spotBalance->availableBalance < $amount) {
-            return false;
+        $availableBalance = $spotBalance->availableBalance - 0.1;
+
+        if ($availableBalance < $amount) {
+            if ($availableBalance < 0.2) {
+                return false;
+            }
+            $amount = $availableBalance - 0.1;
         }
 
         $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
+
         return true;
+    }
+
+    public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
+    {
+        $volumeOrder = $this->canTakeProfit($position, $ticker)
+            ? 'DESC'
+            : 'ASC' // To get the cheapest orders (if can afford buy less qty)
+        ;
+
+        return $this->buyOrderRepository->findActiveInRange(
+            side: $side,
+            from: ($position->isShort() ? $ticker->indexPrice - 15 : $ticker->indexPrice - 20),
+            to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
+            qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrder) {
+                QueryHelper::addOrder($qb, 'volume', $volumeOrder);
+                QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
+            },
+        );
     }
 
     public function __invoke(PushBuyOrders $message): void
@@ -115,13 +132,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $this->cannotAffordAtPrice = null;
         $this->cannotAffordAt = null;
 
-        $orders = $this->buyOrderRepository->findActiveInRange(
-            side: $side,
-            from: ($position->isShort() ? $ticker->indexPrice - 15  : $ticker->indexPrice - 20),
-            to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
-            // To get the cheapest orders (to ignore sleep by CannotAffordOrderCost in case of can afford buy less qty)
-            qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy($qb->getRootAliases()[0] . '.volume', 'asc')->addOrderBy($qb->getRootAliases()[0] . '.price', $side->isShort() ? 'desc' : 'asc'),
-        );
+        $orders = $this->findOrdersNearTicker($side, $position, $ticker);
 
         try {
             $boughtOrders = [];
@@ -153,18 +164,17 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } catch (CannotAffordOrderCost $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($this->canUseSpot($ticker, $position, $spotBalance)) {
-                $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
-                // @todo | test
-                $result = $this->transferToContract($spotBalance, $amount);
-                if ($result) {
+                $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
+                $amount = $orderCost * 1.1; // $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
+                if ($this->transferToContract($spotBalance, $amount)) {
                     return;
                 }
             }
 
-            $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-            if ($currentPnlPercent >= $this->getMinProfitPercentToTakeProfitInCaseOfCannotAffordBuy($position)) {
-                // if ($currentPnlPercent < 160) $volume = 0.002; elseif ($currentPnlPercent < 230) $volume = 0.001; elseif ($currentPnlPercent < 245) $volume = 0.002; else
-                $this->orderService->closeByMarket($position, $volume = 0.001);
+            if ($this->canTakeProfit($position, $ticker)) {
+                $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+                $volume = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
+                $this->orderService->closeByMarket($position, $volume);
 
                 if (!$position->isSupportPosition()) {
                     $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
@@ -285,10 +295,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function getStopStrategy(Position $position, BuyOrder $order, Ticker $ticker): array
     {
-        if ($hedge = $position->getHedge()) {
+        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
             $hedgeStrategy = $hedge->getHedgeStrategy();
             return [
-                'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionStopCreation : $hedgeStrategy->mainPositionStopCreation,
+                'strategy' => $hedgeStrategy->supportPositionStopCreation, // 'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionStopCreation : $hedgeStrategy->mainPositionStopCreation,
                 'description' => $hedgeStrategy->description,
             ];
         }

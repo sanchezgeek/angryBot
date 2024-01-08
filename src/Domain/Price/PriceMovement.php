@@ -39,7 +39,9 @@ readonly class PriceMovement
     {
         if ($this->toTargetPrice->greaterThan($this->fromPrice)) {
             return $relatedToPositionSide->isShort() ? PriceMovementDirection::TO_LOSS : PriceMovementDirection::TO_PROFIT;
-        } elseif ($this->fromPrice->greaterThan($this->toTargetPrice)) {
+        }
+
+        if ($this->fromPrice->greaterThan($this->toTargetPrice)) {
             return $relatedToPositionSide->isShort() ? PriceMovementDirection::TO_PROFIT : PriceMovementDirection::TO_LOSS;
         }
 
