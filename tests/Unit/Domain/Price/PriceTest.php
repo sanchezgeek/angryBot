@@ -8,6 +8,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
+use App\Domain\Price\PriceRange;
 use DomainException;
 use PHPUnit\Framework\TestCase;
 
@@ -271,5 +272,26 @@ final class PriceTest extends TestCase
         $fromPrice = Price::float(200500);
 
         self::assertEquals(PriceMovement::fromToTarget($fromPrice, $currentPrice), $currentPrice->differenceWith($fromPrice));
+    }
+
+    /**
+     * @dataProvider isPriceInRangeTestCases
+     */
+    public function testIsPriceInRange(float $price, PriceRange $priceRange, $expectedResult): void
+    {
+        $result = Price::float($price)->isPriceInRange($priceRange);
+
+        self::assertEquals($expectedResult, $result);
+    }
+
+    public function isPriceInRangeTestCases(): array
+    {
+        return [
+            [100500, PriceRange::create(100500, 200500), true],
+            [200000, PriceRange::create(100500, 200500), true],
+            [200500, PriceRange::create(100500, 200500), true],
+            [100499, PriceRange::create(100500, 200500), false],
+            [200501, PriceRange::create(100500, 200500), false],
+        ];
     }
 }

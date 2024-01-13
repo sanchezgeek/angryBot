@@ -23,6 +23,7 @@ use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
+use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -46,24 +47,24 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 8.1;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 160;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 180;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 28.1;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 490;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 500;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
-    private ?DateTimeImmutable $cannotAffordAt = null;
-    private ?float $cannotAffordAtPrice = null;
+    private ?DateTimeImmutable $lastCannotAffordAt = null;
+    private ?float $lastCannotAffordAtPrice = null;
 
-    public function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
+    private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
-        $minIndexPricePnlPercentToUseSpot = $position->isSupportPosition() ? self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT / 2 : self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
-
-        if ($indexPnlPercent >= $minIndexPricePnlPercentToUseSpot) {
+        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN) {
             return true;
         }
 
-        return $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN;
+        $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
+        $minIndexPricePnlPercentToUseSpot = $position->isSupportPosition() ? self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT / 2 : self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
+
+        return $indexPnlPercent >= $minIndexPricePnlPercentToUseSpot;
     }
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
@@ -74,7 +75,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
 
-    public function transferToContract(WalletBalance $spotBalance, float $amount): bool
+    private function transferToContract(WalletBalance $spotBalance, float $amount): bool
     {
         $availableBalance = $spotBalance->availableBalance - 0.1;
 
@@ -92,7 +93,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
     {
-        $volumeOrder = $this->canTakeProfit($position, $ticker)
+        $volumeOrdering = $this->canTakeProfit($position, $ticker)
             ? 'DESC'
             : 'ASC' // To get the cheapest orders (if can afford buy less qty)
         ;
@@ -101,8 +102,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             side: $side,
             from: ($position->isShort() ? $ticker->indexPrice - 15 : $ticker->indexPrice - 20),
             to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
-            qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrder) {
-                QueryHelper::addOrder($qb, 'volume', $volumeOrder);
+            qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
+                QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
             },
         );
@@ -121,16 +122,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $position = $this->positionService->getPosition($symbol, $side);
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
-        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 55) {
+        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 65) {
             // @todo test
             return;
         }
 
-        if (!$this->canAffordBuy($ticker)) {
+        if (!$this->canBuy($ticker)) {
             return;
         }
-        $this->cannotAffordAtPrice = null;
-        $this->cannotAffordAt = null;
 
         $orders = $this->findOrdersNearTicker($side, $position, $ticker);
 
@@ -185,8 +184,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
-            $this->cannotAffordAtPrice = $ticker->indexPrice;
-            $this->cannotAffordAt = $this->clock->now();
+            $this->lastCannotAffordAtPrice = $ticker->indexPrice;
+            $this->lastCannotAffordAt = $this->clock->now();
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
 //                $hedge = Hedge::create($position, $oppositePosition);
 //                if ($hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()) {
@@ -338,24 +337,24 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     /**
      * To not make extra queries to Exchange (what can lead to a ban due to ApiRateLimitReached)
      */
-    private function canAffordBuy(Ticker $ticker): bool
+    private function canBuy(Ticker $ticker): bool
     {
         $refreshSeconds = 8;
+        $canBuy =
+            ($this->lastCannotAffordAt === null && $this->lastCannotAffordAtPrice === null)
+            || ($this->lastCannotAffordAt !== null && ($this->clock->now()->getTimestamp() - $this->lastCannotAffordAt->getTimestamp()) >= $refreshSeconds)
+            || (
+                $this->lastCannotAffordAtPrice !== null
+                && !Price::float($ticker->indexPrice)->isPriceInRange(
+                    PriceRange::create($this->lastCannotAffordAtPrice - 15, $this->lastCannotAffordAtPrice + 15)
+                )
+            );
 
-        if (
-            $this->cannotAffordAt !== null
-            && ($this->clock->now()->getTimestamp() - $this->cannotAffordAt->getTimestamp()) >= $refreshSeconds
-        ) {
-            return true;
+        if ($canBuy) {
+            $this->lastCannotAffordAt = $this->lastCannotAffordAtPrice = null;
         }
 
-        if ($this->cannotAffordAtPrice === null) {
-            return true;
-        }
-
-        $range = [$this->cannotAffordAtPrice - 15, $this->cannotAffordAtPrice + 15];
-
-        return !($ticker->indexPrice > $range[0] && $ticker->indexPrice < $range[1]);
+        return $canBuy;
     }
 
     public function __construct(

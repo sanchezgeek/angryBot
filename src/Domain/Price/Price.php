@@ -80,6 +80,11 @@ readonly final class Price
         return $this->value <= $price->value;
     }
 
+    public function isPriceInRange(PriceRange $priceRange): bool
+    {
+        return $this->greaterOrEquals($priceRange->from()) && $this->lessOrEquals($priceRange->to());
+    }
+
     public function getPnlPercentFor(Position $position): float
     {
         return PnlHelper::getPnlInPercents($position, $this->value());
