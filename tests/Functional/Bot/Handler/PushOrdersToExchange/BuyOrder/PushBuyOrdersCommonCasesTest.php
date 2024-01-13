@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Service\OrderCostHelper;
@@ -24,6 +25,7 @@ use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 
+use function array_map;
 use function uuid_create;
 
 /**
@@ -145,23 +147,23 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
 
     public function createOppositeStopsTestCases(): iterable
     {
+        /** @var BuyOrder[] $buyOrders */
+        $buyOrders = [
+            BuyOrderBuilder::short(10, 29060, 0.001)->build(),
+            BuyOrderBuilder::short(20, 29155, 0.002)->build(), // not handled
+            BuyOrderBuilder::short(30, 29055, 0.003)->build(),
+            BuyOrderBuilder::short(40, 29060, 0.005)->build(),
+            BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder(),
+        ];
+
         yield [
             '$position' => PositionFactory::short(self::SYMBOL, 29000),
             '$ticker' => TickerFactory::create(self::SYMBOL, 29050),
-            '$buyOrdersFixtures' => [
-                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.001)->build()),
-                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
-                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.003)->build()),
-                new BuyOrderFixture(BuyOrderBuilder::short(40, 29060, 0.005)->build()),
-                new BuyOrderFixture(BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder()),
-            ],
+            '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
             'stopsExpectedAfterHandle' => [
-                /**
-                 * @see \App\Bot\Domain\Strategy\StopCreate::getDefaultStrategyStopOrderDistance
-                 */
-                StopBuilder::short(1, 29183, 0.001)->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(2, 29178, 0.003)->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(3, 29205, 0.005)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(1, $buyOrders[0]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.001), 0.001)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(2, $buyOrders[2]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.003), 0.003)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(3, $buyOrders[3]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.005), 0.005)->withTD(self::DEFAULT_STOP_TD)->build(),
             ],
         ];
     }

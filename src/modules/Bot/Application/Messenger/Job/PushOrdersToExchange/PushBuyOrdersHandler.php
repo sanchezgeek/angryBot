@@ -232,9 +232,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): void
     {
-        $triggerPrice = null;
         $side = $position->side;
         $volume = $buyOrder->getVolume();
+
+        if ($specifiedStopDistance = $buyOrder->getStopDistance()) {
+            $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
+            $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
+        }
+
+        $triggerPrice = null;
 
         $strategy = $this->getStopStrategy($position, $buyOrder, $ticker);
 

@@ -28,6 +28,7 @@ class BuyOrder implements HasEvents
      * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
      */
     public const ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
+    public const STOP_DISTANCE_CONTEXT = 'stopDistance';
 
     use HasVolume;
     use HasExchangeOrderContext;
@@ -116,5 +117,10 @@ class BuyOrder implements HasEvents
         $this->context[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT] = $exchangeOrderId;
 
         return $this;
+    }
+
+    public function getStopDistance(): ?float
+    {
+        return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;
     }
 }
