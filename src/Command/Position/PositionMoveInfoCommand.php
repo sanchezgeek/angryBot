@@ -44,7 +44,7 @@ class PositionMoveInfoCommand extends Command
         $io = new SymfonyStyle($input, $output); $this->withInput($input);
         $position = $this->getPosition();
 
-        $fromPrice = Price::float($this->exchangeService->ticker(Symbol::BTCUSDT)->indexPrice);
+        $fromPrice = $this->exchangeService->ticker(Symbol::BTCUSDT)->indexPrice;
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
         $buyOrders = $this->buyOrderRepository->findActive(
             side: $position->side,

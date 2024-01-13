@@ -116,7 +116,7 @@ class MoveStopsCommand extends Command
                     $ticker = $this->exchangeService->ticker($position->symbol);
 
                     if ($ticker->isIndexAlreadyOverStop($position->side, $guessPrice)) {
-                        $guessPrice = $ticker->indexPrice - 30;
+                        $guessPrice = $ticker->indexPrice->sub(30)->value();
                     }
 
                     throw new \LogicException(

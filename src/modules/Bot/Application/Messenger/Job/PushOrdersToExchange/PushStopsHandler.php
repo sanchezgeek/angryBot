@@ -70,7 +70,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         if ($deltaToLiquidation <= self::LIQUIDATION_WARNING_DELTA) {
             $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
         } else {
-            $triggerBy = TriggerBy::IndexPrice; $currentPrice = Price::float($ticker->indexPrice);
+            $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
         }
 
         $positionService = $this->positionService; $orderService = $this->orderService;

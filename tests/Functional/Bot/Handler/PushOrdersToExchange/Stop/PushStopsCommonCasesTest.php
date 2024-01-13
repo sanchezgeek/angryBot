@@ -117,13 +117,13 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
                 new StopFixture(StopBuilder::short(40, 29029, 0.33)->withTD(5)->build()->setIsTakeProfitOrder()),
             ],
             'expectedStopAddMethodCalls' => [
-                [$position, $ticker->indexPrice + $addPriceDelta, 0.011, $triggerBy],
+                [$position, $ticker->indexPrice->value() + $addPriceDelta, 0.011, $triggerBy],
                 [$position, 29055.0, 0.3, $triggerBy],
                 [$position, 29060.0, 0.1, $triggerBy],
             ],
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                StopBuilder::short(5, $ticker->indexPrice + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build() // initial price is before ticker => set new price + push
+                StopBuilder::short(5, $ticker->indexPrice->value() + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build() // initial price is before ticker => set new price + push
                     ->setOriginalPrice(29030)
                     ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
                 // simple push
@@ -191,14 +191,14 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
                 new StopFixture(StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()),  // must be pushed (by tD)
             ],
             'expectedStopAddMethodCalls' => [
-                [$position, $ticker->indexPrice - $addPriceDelta, 0.011, $triggerBy],
+                [$position, $ticker->indexPrice->value() - $addPriceDelta, 0.011, $triggerBy],
                 [$position, 29045.0, 0.3, $triggerBy],
                 [$position, 29040.0, 0.1, $triggerBy],
             ],
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
                 // initial price is before ticker => set new price + push
-                StopBuilder::long(5, $ticker->indexPrice - $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
+                StopBuilder::long(5, $ticker->indexPrice->value() - $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
                     ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create())
                     ->setOriginalPrice(29070),
                 // simple push

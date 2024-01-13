@@ -20,7 +20,7 @@ class TickerTest extends TestCase
         self::assertEquals(Symbol::BTCUSDT, $ticker->symbol);
         self::assertEquals(Price::float(90500), $ticker->lastPrice);
         self::assertEquals(Price::float(100500), $ticker->markPrice);
-        self::assertEquals(200500, $ticker->indexPrice);
+        self::assertEquals(Price::float(200500), $ticker->indexPrice);
     }
 
     /**

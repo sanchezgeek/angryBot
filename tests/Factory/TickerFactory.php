@@ -17,6 +17,6 @@ final class TickerFactory
         $markPrice = $markPrice ?? $indexPrice - 10;
         $lastPrice = $lastPrice ?? $markPrice - 10;
 
-        return new Ticker($symbol, Price::float($markPrice), $indexPrice, Price::float($lastPrice));
+        return new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
     }
 }

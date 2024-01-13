@@ -90,15 +90,15 @@ class StopVolumeCommand extends Command
                 if (!$io->confirm(\sprintf('ticker.indexPrice already over specified $fromPrice. Do you want to use current ticker.indexPrice as $fromPrice?'))) {
                     return Command::FAILURE;
                 }
-                $fromPrice = $ticker->indexPrice;
+                $fromPrice = $ticker->indexPrice->value();
             }
 
             if (!$fromPrice) {
-                $fromPrice = $ticker->indexPrice;
+                $fromPrice = $ticker->indexPrice->value();
             }
 
             if ($delta) {
-                $toPrice = $position->side === Side::Sell ? $ticker->indexPrice + $delta : $ticker->indexPrice - $delta;
+                $toPrice = $position->side === Side::Sell ? $ticker->indexPrice->value() + $delta : $ticker->indexPrice->value() - $delta;
             }
 
             if ($toPrice && $ticker->isIndexAlreadyOverStop($positionSide, $toPrice)) {
@@ -114,7 +114,7 @@ class StopVolumeCommand extends Command
 
                 $delta = (float)$delta;
 
-                $toPrice = $position->side === Side::Sell ? $ticker->indexPrice + $delta : $ticker->indexPrice - $delta;
+                $toPrice = $position->side === Side::Sell ? $ticker->indexPrice->value() + $delta : $ticker->indexPrice->value() - $delta;
             }
 
             $toPrice = $toPrice ?: $position->entryPrice;

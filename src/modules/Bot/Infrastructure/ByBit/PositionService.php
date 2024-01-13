@@ -98,7 +98,7 @@ final class PositionService implements PositionServiceInterface
             'trigger_by' => $triggerBy->value,
             'reduce_only' => 'true',
             'close_on_trigger' => 'false',
-            'base_price' => $this->exchangeService->ticker($position->symbol)->indexPrice,
+            'base_price' => $this->exchangeService->ticker($position->symbol)->indexPrice->value(),
             'order_type' => ExecutionOrderType::Market->value,
             'qty' => VolumeHelper::round($qty),
             'stop_px' => PriceHelper::round($price),

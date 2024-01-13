@@ -8,40 +8,28 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 
-use LogicException;
-
-use function sprintf;
-
-final class Ticker
+final readonly class Ticker
 {
     public function __construct(
-        public readonly Symbol $symbol,
-        public readonly Price $markPrice,
-        public readonly float $indexPrice,
-        public readonly Price $lastPrice,
+        public Symbol $symbol,
+        public Price $markPrice,
+        public Price $indexPrice,
+        public Price $lastPrice,
     ) {
     }
 
     public function isIndexAlreadyOverStop(Side $positionSide, float $price): bool
     {
-        return $positionSide->isShort() ? $this->indexPrice >= $price : $this->indexPrice <= $price;
+        return $positionSide->isShort() ? $this->indexPrice->greaterOrEquals($price) : $this->indexPrice->lessOrEquals($price);
     }
 
     public function isIndexAlreadyOverBuyOrder(Side $positionSide, float $price): bool
     {
-        if ($positionSide === Side::Sell) {
-            return $this->indexPrice <= $price;
-        }
-
-        if ($positionSide === Side::Buy) {
-            return $this->indexPrice >= $price;
-        }
-
-        throw new LogicException(sprintf('Unexpected positionSide "%s"', $positionSide->value));
+        return $positionSide->isShort() ? $this->indexPrice->lessOrEquals($price) : $this->indexPrice->greaterOrEquals($price);
     }
 
     public function isLastPriceOverIndexPrice(Side $positionSide): bool
     {
-        return $positionSide->isShort() ? $this->lastPrice->value() < $this->indexPrice : $this->lastPrice->value() > $this->indexPrice;
+        return $positionSide->isShort() ? $this->lastPrice->lessThan($this->indexPrice) : $this->lastPrice->greaterThan($this->indexPrice);
     }
 }

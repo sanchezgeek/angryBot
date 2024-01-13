@@ -20,7 +20,7 @@ class TickerFactoryTest extends TestCase
         $ticker = TickerFactory::create(Symbol::BTCUSDT, 100500, 100600, 100700);
 
         self::assertEquals(
-            new Ticker(Symbol::BTCUSDT, Price::float(100600), 100500, Price::float(100700)),
+            new Ticker(Symbol::BTCUSDT, Price::float(100600), Price::float(100500), Price::float(100700)),
             $ticker
         );
     }

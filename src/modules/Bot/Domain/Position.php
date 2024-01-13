@@ -70,8 +70,8 @@ final class Position
     public function getDeltaWithTicker(Ticker $ticker): float
     {
         return $this->side === Side::Sell
-            ? $this->entryPrice - $ticker->indexPrice
-            : $ticker->indexPrice - $this->entryPrice
+            ? $this->entryPrice - $ticker->indexPrice->value()
+            : $ticker->indexPrice->value() - $this->entryPrice
         ;
     }
 

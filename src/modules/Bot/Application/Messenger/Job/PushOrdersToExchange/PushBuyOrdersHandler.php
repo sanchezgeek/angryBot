@@ -22,7 +22,6 @@ use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
-use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
@@ -36,7 +35,6 @@ use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-use function abs;
 use function random_int;
 use function sprintf;
 
@@ -61,7 +59,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             return true;
         }
 
-        $indexPnlPercent = Price::float($ticker->indexPrice)->getPnlPercentFor($position);
+        $indexPnlPercent = $ticker->indexPrice->getPnlPercentFor($position);
         $minIndexPricePnlPercentToUseSpot = $position->isSupportPosition() ? self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT / 2 : self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
 
         return $indexPnlPercent >= $minIndexPricePnlPercentToUseSpot;
@@ -93,15 +91,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
     {
+        $indexPrice = $ticker->indexPrice;
         $volumeOrdering = $this->canTakeProfit($position, $ticker)
             ? 'DESC'
-            : 'ASC' // To get the cheapest orders (if can afford buy less qty)
-        ;
+            : 'ASC'; // To get the cheapest orders (if can afford buy less qty)
 
         return $this->buyOrderRepository->findActiveInRange(
             side: $side,
-            from: ($position->isShort() ? $ticker->indexPrice - 15 : $ticker->indexPrice - 20),
-            to: ($position->isShort() ? $ticker->indexPrice + 20 : $ticker->indexPrice + 15),
+            from: ($position->isShort() ? $indexPrice->value() - 15 : $indexPrice->value() - 20),
+            to: ($position->isShort() ? $indexPrice->value() + 20 : $indexPrice->value() + 15),
             qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
@@ -121,8 +119,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $ticker = $this->exchangeService->ticker($symbol);
         $position = $this->positionService->getPosition($symbol, $side);
         if (!$position) {
-            $position = new Position($side, $symbol, $ticker->indexPrice, 0.05, 1000, 0, 13, 100);
-        } elseif ($ticker->isLastPriceOverIndexPrice($side) && abs($ticker->lastPrice->value() - $ticker->indexPrice) >= 65) {
+            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
+        } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
             // @todo test
             return;
         }
@@ -184,7 +182,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
-            $this->lastCannotAffordAtPrice = $ticker->indexPrice;
+            $this->lastCannotAffordAtPrice = $ticker->indexPrice->value();
             $this->lastCannotAffordAt = $this->clock->now();
 //            if ($isHedge = (($oppositePosition = $this->positionService->getOppositePosition($position)) !== null)) {
 //                $hedge = Hedge::create($position, $oppositePosition);
@@ -263,7 +261,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         if ($stopStrategy === StopCreate::UNDER_POSITION || ($stopStrategy === StopCreate::ONLY_BIG_SL_UNDER_POSITION && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM)) {
             $positionPrice = \ceil($position->entryPrice);
             if ($ticker->isIndexAlreadyOverStop($side, $positionPrice)) {
-                $basePrice = $side->isLong() ? $ticker->indexPrice - 15 : $ticker->indexPrice + 15;
+                $basePrice = $side->isLong() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() + 15;
             } else {
                 $basePrice = $side->isLong() ? $positionPrice - 15 : $positionPrice + 15;
                 $basePrice += random_int(-15, 15);
@@ -351,7 +349,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             || ($this->lastCannotAffordAt !== null && ($this->clock->now()->getTimestamp() - $this->lastCannotAffordAt->getTimestamp()) >= $refreshSeconds)
             || (
                 $this->lastCannotAffordAtPrice !== null
-                && !Price::float($ticker->indexPrice)->isPriceInRange(
+                && !$ticker->indexPrice->isPriceInRange(
                     PriceRange::create($this->lastCannotAffordAtPrice - 15, $this->lastCannotAffordAtPrice + 15)
                 )
             );

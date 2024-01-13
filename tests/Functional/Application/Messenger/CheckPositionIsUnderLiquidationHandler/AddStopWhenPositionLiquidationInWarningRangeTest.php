@@ -88,10 +88,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create($symbol, $tickerMarkPrice - 20, $tickerMarkPrice, $tickerMarkPrice - 20),
             'delayedStops' => $delayedStops = [
-                self::delayedStop($position, Percent::string('12%'), $ticker->indexPrice + 10)
+                self::delayedStop($position, Percent::string('12%'), $ticker->indexPrice->value() + 10)
             ],
             'activeExchangeConditionalStops' => $activeExchangeStops = [
-                self::activeConditionalOrder($position, Percent::string('3%'), $ticker->indexPrice + 20)
+                self::activeConditionalOrder($position, Percent::string('3%'), $ticker->indexPrice->value() + 20)
             ],
             'expectedAdditionalStops' => [
                 self::delayedStop(

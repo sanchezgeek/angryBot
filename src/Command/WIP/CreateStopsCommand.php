@@ -95,7 +95,7 @@ class CreateStopsCommand extends Command
                 throw new \LogicException('Index price already over stop');
             }
 
-            $fromPrice = $ticker->indexPrice;
+            $fromPrice = $ticker->indexPrice->value();
 
             if ($firstStop = $this->stopRepository->findFirstPositionStop($position)) {
                 $toPrice = $firstStop->getPrice();

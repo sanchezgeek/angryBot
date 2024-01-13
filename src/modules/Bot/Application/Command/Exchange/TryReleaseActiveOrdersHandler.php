@@ -67,7 +67,7 @@ final class TryReleaseActiveOrdersHandler
             }
 
             if (
-                abs($order->triggerPrice - $ticker->indexPrice) > $distance
+                $ticker->indexPrice->deltaWith($order->triggerPrice) > $distance
 //                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
 //                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {

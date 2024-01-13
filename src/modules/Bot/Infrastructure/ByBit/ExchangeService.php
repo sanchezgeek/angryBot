@@ -83,7 +83,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         $markPrice = (float)$data['result'][0]['mark_price'];
         $indexPrice = (float)$data['result'][0]['index_price'];
 
-        $ticker = new Ticker($symbol, Price::float($markPrice), $indexPrice, Price::float($lastPrice));
+        $ticker = new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
 
         $this->events->dispatch(new TickerUpdated($ticker));
 

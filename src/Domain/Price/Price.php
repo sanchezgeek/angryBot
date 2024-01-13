@@ -9,6 +9,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 
+use function abs;
 use function round;
 
 /**
@@ -60,24 +61,32 @@ readonly final class Price
         return $this->value === $price->value;
     }
 
-    public function greaterThan(Price $price): bool
+    public function greaterThan(Price|float $price): bool
     {
-        return $this->value > $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value > $price;
     }
 
-    public function greaterOrEquals(Price $price): bool
+    public function greaterOrEquals(Price|float $price): bool
     {
-        return $this->value >= $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value >= $price;
     }
 
-    public function lessThan(Price $price): bool
+    public function lessThan(Price|float $price): bool
     {
-        return $this->value < $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value < $price;
     }
 
-    public function lessOrEquals(Price $price): bool
+    public function lessOrEquals(Price|float $price): bool
     {
-        return $this->value <= $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value <= $price;
     }
 
     public function isPriceInRange(PriceRange $priceRange): bool
@@ -100,8 +109,17 @@ readonly final class Price
         return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
     }
 
-    public function differenceWith(Price $price): PriceMovement
+    public function differenceWith(Price|float $price): PriceMovement
     {
+        $price = $price instanceof self ? $price : self::float($price);
+
         return PriceMovement::fromToTarget($price, $this);
+    }
+
+    public function deltaWith(Price|float $price): float
+    {
+        $price = $price instanceof self ? $price->value : $price;
+
+        return abs($this->value - $price);
     }
 }

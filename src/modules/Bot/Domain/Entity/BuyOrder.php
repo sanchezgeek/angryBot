@@ -10,6 +10,7 @@ use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;
@@ -57,10 +58,10 @@ class BuyOrder implements HasEvents
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
+    public function __construct(int $id, Price|float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = $price;
+        $this->price = $price instanceof Price ? $price->value() : $price;
         $this->volume = $volume;
         $this->triggerDelta = $triggerDelta;
         $this->positionSide = $positionSide;

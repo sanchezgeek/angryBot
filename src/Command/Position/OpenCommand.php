@@ -92,6 +92,7 @@ class OpenCommand extends AbstractCommand
 
         $positionSide = $this->getPositionSide();
         $symbolTicker = $this->getTicker($this->symbol);
+        $indexPrice = $symbolTicker->indexPrice;
 
         if ($this->isDebugEnabled()) {
             $this->io->warning('Debug enabled. Terminate.');
@@ -102,7 +103,7 @@ class OpenCommand extends AbstractCommand
 
         $size = $this->getSizeArgument();
 
-        $expectedPosition = new Position($positionSide, $this->symbol, $symbolTicker->indexPrice, $size, $size * $symbolTicker->indexPrice, 0, 10, 100);
+        $expectedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 100);
 
         $this->createStopsGrid($expectedPosition);
 
@@ -234,7 +235,7 @@ class OpenCommand extends AbstractCommand
     {
         $symbolTicker = $this->getTicker($symbol);
         # price/<margin>?
-        return $symbolTicker->indexPrice / 100 * (1+0.1);
+        return $symbolTicker->indexPrice->value() / 100 * (1+0.1);
     }
 
     /**
