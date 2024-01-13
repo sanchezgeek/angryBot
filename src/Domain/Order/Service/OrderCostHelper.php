@@ -29,10 +29,10 @@ final class OrderCostHelper
         $category = $symbol->associatedCategory();
 
         if ($category === AssetCategory::linear) {
-            $contractCost = $price;
-            $cost = $contractCost / $leverage->value() * $qty;
+            $contractCost = $price->value() / $leverage->value();
+            $cost = $contractCost * $qty;
         } else {
-            $contractCost = 1 / $price;
+            $contractCost = 1 / $price->value();
             $cost = $contractCost * $qty;
         }
 

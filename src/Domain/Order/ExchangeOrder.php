@@ -33,9 +33,9 @@ final class ExchangeOrder // implements OrderInterface
         return $this->volume;
     }
 
-    public function getPrice(): float
+    public function getPrice(): Price
     {
-        return $this->price->value();
+        return $this->price;
     }
 
     /**

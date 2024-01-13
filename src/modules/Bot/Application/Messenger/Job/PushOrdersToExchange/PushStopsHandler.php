@@ -20,10 +20,13 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
@@ -36,6 +39,7 @@ use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Throwable;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
@@ -57,7 +61,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushStops $message): void
     {
+        $positionService = $this->positionService; $orderService = $this->orderService;
         $side = $message->side; $symbol = $message->symbol;
+        $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
 
         if (!($position = $this->positionService->getPosition($symbol, $side))) {
             return;
@@ -73,7 +79,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
             $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
         }
 
-        $positionService = $this->positionService; $orderService = $this->orderService;
         foreach ($stops as $stop) {
             ### TP
             if ($stop->isTakeProfitOrder()) {
@@ -90,13 +95,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
             if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
                 $callback = null;
                 if ($stop->isCloseByMarketContextSet()) {
-                    $exchangeAccountService = $this->exchangeAccountService;
-                    $callback = static function () use ($orderService, $position, $stop, $exchangeAccountService) {
+                    $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
                         $orderId = $orderService->closeByMarket($position, $stop->getVolume());
-
-                        $expectedLoss = $stop->getPnlUsd($position);
-                        $transferAmount = -$expectedLoss;
-                        $exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), PriceHelper::round($transferAmount, 3));
+                        $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), Price::float($stop->getPrice()));
 
                         return $orderId;
                     };
@@ -123,6 +124,21 @@ final class PushStopsHandler extends AbstractOrdersPusher
                     }
 //                    $this->events->dispatch(new StopPushedToExchange($stop));
                 }
+            }
+        }
+
+        if ($stopsClosedByMarket) {
+            $loss = 0;
+            foreach ($stopsClosedByMarket as $order) {
+                if (($expectedLoss = PnlHelper::getPnlInUsdt($position, $order->getPrice(), $order->getVolume())) < 0) {
+                    $loss += -$expectedLoss;
+                }
+            }
+
+            if ($loss > 0) {
+                try {
+                    $this->exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), FloatHelper::round($loss, 3));
+                } catch (Throwable) {}
             }
         }
     }
