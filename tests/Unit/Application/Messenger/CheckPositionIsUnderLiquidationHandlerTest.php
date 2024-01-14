@@ -12,7 +12,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
-use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
@@ -23,18 +22,15 @@ use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
-use function abs;
-
 /**
  * @group liquidation
  */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
-    private const CRITICAL_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::CRITICAL_LIQUIDATION_DELTA;
+    private const CRITICAL_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::CRITICAL_DELTA;
 
-    private const CLOSE_BY_MARKET_PERCENT = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_PERCENT;
-
-    private const DEFAULT_COIN_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_COIN_TRANSFER_AMOUNT;
+    private const DEFAULT_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::DEFAULT_TRANSFER_AMOUNT;
+    private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
     private const ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE;
 
     private ExchangeServiceInterface $exchangeService;
@@ -146,25 +142,13 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         yield 'transfer 15 usdt' => [
             'position' => $position,
             'spotAvailableBalance' => 100,
-            'expectedTransferAmount' => self::DEFAULT_COIN_TRANSFER_AMOUNT,
+            'expectedTransferAmount' => self::DEFAULT_TRANSFER_AMOUNT,
         ];
 
         yield 'transfer all available' => [
             'position' => $position,
-            'spotAvailableBalance' => 7,
-            'expectedTransferAmount' => 6.9
-        ];
-
-        yield 'transfer all available [2]' => [
-            'position' => $position,
-            'spotAvailableBalance' => 0.31,
-            'expectedTransferAmount' => 0.21
-        ];
-
-        yield 'transfer all available [3]' => [
-            'position' => $position,
-            'spotAvailableBalance' => 0.31,
-            'expectedTransferAmount' => 0.21
+            'spotAvailableBalance' => $spotBalance = 7,
+            'expectedTransferAmount' => $spotBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE
         ];
     }
 

@@ -36,10 +36,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
 
-    private const WARNING_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::WARNING_LIQUIDATION_DELTA;
+    private const WARNING_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::WARNING_DELTA;
     private const ACCEPTABLE_STOPS_POSITION_SIZE_PART_BEFORE_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE;
 
-    private const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION;
+    private const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::STOP_CRITICAL_DELTA_BEFORE_LIQUIDATION;
     private const ADDITIONAL_STOP_TRIGGER_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DELTA;
 
     private static int $nextStopId = 1;
@@ -99,8 +99,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
                     # acceptable stops position size part - total stops position size part ... before critical range
                     new Percent(
                         self::ACCEPTABLE_STOPS_POSITION_SIZE_PART_BEFORE_CRITICAL_RANGE
-                        - $this->positionSizePart((new StopsCollection(...$delayedStops))->totalVolume(), $position)
-                        - $this->positionSizePart(array_sum(array_map(static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->volume, $activeExchangeStops)), $position)
+                        - self::positionSizePart((new StopsCollection(...$delayedStops))->totalVolume(), $position)
+                        - self::positionSizePart(array_sum(array_map(static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->volume, $activeExchangeStops)), $position)
                     ),
                     $liquidationPrice - self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION
                 )->setTriggerDelta(self::ADDITIONAL_STOP_TRIGGER_DELTA)
@@ -136,5 +136,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
     {
         $this->exchangeServiceMock->expects(self::once())->method('activeConditionalOrders')->with($symbol)->willReturn($activeStopOrders);
+    }
+
+    public function testDummy(): void
+    {
+        self::markTestIncomplete('add addStopTestCases: when position is under hedge');
     }
 }

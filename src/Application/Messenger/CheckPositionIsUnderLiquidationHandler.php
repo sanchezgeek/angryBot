@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Messenger;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -14,6 +15,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
@@ -24,6 +26,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDeco
 use App\Tests\Unit\Application\Messenger\CheckPositionIsUnderLiquidationHandlerTest;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Throwable;
 
 use function array_filter;
 use function max;
@@ -33,17 +36,16 @@ use function min;
 #[AsMessageHandler]
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
-    public const WARNING_LIQUIDATION_DELTA = 90;
-    public const CRITICAL_LIQUIDATION_DELTA = 30;
+    public const WARNING_DELTA = 120;
+    public const CRITICAL_DELTA = 40;
+    public const STOP_CRITICAL_DELTA_BEFORE_LIQUIDATION = 35;
 
-    # for warning actions
-    public const ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE = 22;
-    public const ADDITIONAL_STOP_TRIGGER_DELTA = 40;
-    public const ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION = self::CRITICAL_LIQUIDATION_DELTA + 5;
+    // @todo | need calc $amount based on Position size (for bigger position DEFAULT_COIN_TRANSFER_AMOUNT will change liquidationPrice very little)
+    public const DEFAULT_TRANSFER_AMOUNT = 12;
+    public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
 
-    # for critical actions
-    public const DEFAULT_COIN_TRANSFER_AMOUNT = 15;
-    public const CLOSE_BY_MARKET_PERCENT = '8%';
+    public const ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE = 25;
+    public const ADDITIONAL_STOP_TRIGGER_DELTA = 35;
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -60,9 +62,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
-        $symbol = $message->symbol;
-        $positionSide = $message->side;
-
+        $acceptablePositionStopsPartBeforeCriticalRange = self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE;
+        $symbol = $message->symbol; $positionSide = $message->side;
         $position = $this->positionService->getPosition($symbol, $positionSide);
         $ticker = $this->exchangeService->ticker($symbol);
 
@@ -70,27 +71,41 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
+        if (!$position->liquidationPrice) {
+            return;
+        }
+
+        $liquidation = Price::float($position->liquidationPrice);
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
-        $markPrice = $ticker->markPrice;
-        $indexPrice = Price::float($ticker->indexPrice);
-        $liquidation = Price::float($position->liquidationPrice);
+        if ($priceDeltaToLiquidation <= self::WARNING_DELTA) {
+            try {
+                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
+                if ($spotBalance->availableBalance > 3) {
+                    $amount = $this->amountToTransferFromSpot($spotBalance, $position);
+                    $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+//                    if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position) && $hedge->getSupportRate()->part() > 0.2) return;
+//                    $acceptablePositionStopsPartBeforeCriticalRange /= 2;
+                }
+            } catch (Throwable $e) {var_dump($e->getMessage());}
 
-        if ($priceDeltaToLiquidation <= self::WARNING_LIQUIDATION_DELTA) {
-            $totalStopsPositionSizePart = $this->getExistedStopsPositionSizePart($position, $ticker);
-            $volumePartDelta = self::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE - $totalStopsPositionSizePart;
+            $criticalDeltaBeforeLiquidation = $this->getStopCriticalDeltaBeforeLiquidation($ticker, $positionSide);
+            $volumeMustBeStopped = $position->size;
+
+            // @todo | maybe need also check that hedge has positive distance
+            if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position)) {
+                $volumeMustBeStopped -= $hedge->supportPosition->size;
+            }
+
+            $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker, $criticalDeltaBeforeLiquidation);
+            $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $volumeMustBeStopped) * 100; // @todo | maybe need update position before calc
+
+            $volumePartDelta = $acceptablePositionStopsPartBeforeCriticalRange - $stoppedPositionPart;
             if ($volumePartDelta > 0) {
-                $markPriceDifferenceWithIndexPrice = $markPrice->differenceWith($indexPrice);
-
-                $additionalStopDeltaWithLiquidation = max(
-                    self::ADDITIONAL_STOP_MIN_DELTA_WITH_POSITION_LIQUIDATION,
-                    $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0
-                );
-
-                if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
+                if ($priceDeltaToLiquidation <= self::CRITICAL_DELTA) {
                     $this->orderService->closeByMarket($position, (new Percent($volumePartDelta))->of($position->size));
                 } else {
-                    $additionalStopPrice = $position->isShort() ? $liquidation->sub($additionalStopDeltaWithLiquidation) : $liquidation->add($additionalStopDeltaWithLiquidation);
+                    $additionalStopPrice = $position->isShort() ? $liquidation->sub($criticalDeltaBeforeLiquidation) : $liquidation->add($criticalDeltaBeforeLiquidation);
                     $this->stopService->create(
                         $positionSide,
                         $additionalStopPrice->value(),
@@ -99,28 +114,20 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                     );
                 }
             }
-
-            if ($priceDeltaToLiquidation <= self::CRITICAL_LIQUIDATION_DELTA) {
-                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
-                if ($spotBalance->availableBalance > 0.3) {
-                    $amount = min(self::DEFAULT_COIN_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - 0.1));
-                    $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
-                }
-            }
         }
     }
 
-    private function getExistedStopsPositionSizePart(Position $position, Ticker $ticker): float
+    private function getStopsVolumeBeforeLiquidation(Position $position, Ticker $ticker, float $criticalDeltaBeforeLiquidation): float
     {
         $positionSide = $position->side;
         $liquidation = Price::float($position->liquidationPrice);
 
-        $indexPrice = Price::float($ticker->indexPrice);
-        $markPrice = $ticker->markPrice;
+        $indexPrice = $ticker->indexPrice; $markPrice = $ticker->markPrice;
 
-        $uppedBoundToCheckExistedStops = $position->isShort() ? $liquidation->sub(self::CRITICAL_LIQUIDATION_DELTA) : $liquidation->add(self::CRITICAL_LIQUIDATION_DELTA);
-        $lowerBoundToCheckExistedStops = $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice->value(), $markPrice->value());
-        $priceRangeToFindExistedStops = PriceRange::create($uppedBoundToCheckExistedStops, $lowerBoundToCheckExistedStops);
+        $priceRangeToFindExistedStops = PriceRange::create(
+            $position->isShort() ? $liquidation->sub($criticalDeltaBeforeLiquidation) : $liquidation->add($criticalDeltaBeforeLiquidation),
+            $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice, $markPrice->value()),
+        );
 
         $delayedStops = $this->stopRepository->findActive(side: $positionSide, qbModifier: function (QueryBuilder $qb) use ($priceRangeToFindExistedStops) {
             $priceField = $qb->getRootAliases()[0] . '.price';
@@ -144,9 +151,22 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             $activeConditionalStopsVolume += $activeConditionalStop->volume;
         }
 
-        $totalStopsVolume = $delayedStops->totalVolume() + $activeConditionalStopsVolume;
+        return $delayedStops->totalVolume() + $activeConditionalStopsVolume;
+    }
 
-        // @todo | maybe need update position before calc
-        return ($totalStopsVolume / $position->size) * 100;
+    public function getStopCriticalDeltaBeforeLiquidation(Ticker $ticker, Side $positionSide): float
+    {
+        $markPriceDifferenceWithIndexPrice = $ticker->markPrice->differenceWith($ticker->indexPrice);
+
+        return max(
+            self::STOP_CRITICAL_DELTA_BEFORE_LIQUIDATION,
+            $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0,
+        );
+    }
+
+    private function amountToTransferFromSpot(WalletBalance $spotBalance, Position $position): float
+    {
+        // @todo | need calc $amount based on Position size (for bigger position DEFAULT_TRANSFER_AMOUNT will change liquidationPrice very little)
+        return min(self::DEFAULT_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE));
     }
 }
