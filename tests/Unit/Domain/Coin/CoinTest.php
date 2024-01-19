@@ -23,7 +23,7 @@ final class CoinTest extends TestCase
     private function precisionProvider(): array
     {
         return [
-            [Coin::USDT, 3],
+            [Coin::USDT, 4],
             [Coin::BTC, 8],
         ];
     }

@@ -7,6 +7,8 @@ namespace App\Application\Messenger\Market;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Position;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
@@ -26,20 +28,30 @@ final readonly class TransferFundingFeesHandler
     public function __invoke(TransferFundingFees $message): void
     {
         $symbol = $message->symbol;
-        $positionSide = $message->side;
+        $positions = []; /** @var Position[] $positions */
+        if ($short = $this->positionService->getPosition($symbol, Side::Sell)) {
+            $positions[] = $short;
+            if ($short->oppositePosition !== null) {
+                $positions[] = $short->oppositePosition;
+            }
+        } elseif ($long = $this->positionService->getPosition($symbol, Side::Buy)) {
+            $positions[] = $long;
+        }
 
-        $position = $this->positionService->getPosition($symbol, $positionSide);
+        if (!$positions) {
+            return;
+        }
+
+        $totalValue = 0;
+        foreach ($positions as $position) {
+            $totalValue += $position->isShort() ? $position->value : -$position->value;
+        }
 
         $prevPeriodRate = PriceHelper::round($this->marketService->getPreviousPeriodFundingRate($symbol), 7);
         var_dump(sprintf('prev period funding rate: %.7f', $prevPeriodRate));
 
-        if (!$position) {
-            return;
-        }
-
-        $sign = $position->isShort() ? 1 : -1;
-        $fee = $sign * PriceHelper::round($position->value * $prevPeriodRate, 4);
         $coin = $symbol->associatedCoin();
+        $fee = PriceHelper::round($totalValue * $prevPeriodRate, $coin->coinCostPrecision());
 
         $tries = 0;
         $result = false;

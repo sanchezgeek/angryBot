@@ -11,7 +11,7 @@ enum Coin: string
     case BTC = 'BTC';
 
     private const COIN_COST_PRECISION = [
-        self::USDT->value => 3, // @todo | exchange | or 2?
+        self::USDT->value => 4,
         self::BTC->value => 8,
     ];
 
