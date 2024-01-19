@@ -84,14 +84,14 @@ final class SchedulerFactory
 
             # position
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
 
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Buy))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT30S', Async::message(new MoveStops(Side::Buy))),
+            PeriodicalJob::create('2023-09-24T23:49:11Z', 'PT3S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT, Side::Buy))),
 
             # market
-            PeriodicalJob::create('2023-12-01T00:00:03Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Sell))),
-            PeriodicalJob::create('2023-12-01T00:00:04Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Buy))),
+            PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-12-01T00:00:01.77Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT, Side::Buy))),
 
             # orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT5S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
