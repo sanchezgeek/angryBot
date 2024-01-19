@@ -18,6 +18,11 @@ interface PositionServiceInterface
     public function getPosition(Symbol $symbol, Side $side): ?Position;
 
     /**
+     * @return Position[]
+     */
+    public function getPositions(Symbol $symbol): array;
+
+    /**
      * @return Position|null Null - if there is no opposite position opened
      */
     public function getOppositePosition(Position $position): ?Position;

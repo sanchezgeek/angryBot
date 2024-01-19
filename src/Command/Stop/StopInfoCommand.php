@@ -3,7 +3,6 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
@@ -75,13 +74,8 @@ class StopInfoCommand extends Command
         $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
         $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-
-        if ($isHedge) {
-            $isSupportPosition = Hedge::create($position, $oppositePosition)->isSupportPosition($position);
-            if ($isSupportPosition) {
-//                $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
-            }
+        if ($position->isSupportPosition()) {
+            $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
         }
 
         $stops = $this->stopRepository->findActive(

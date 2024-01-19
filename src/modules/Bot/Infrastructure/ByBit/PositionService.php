@@ -8,7 +8,6 @@ use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
@@ -23,6 +22,7 @@ use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
 final class PositionService implements PositionServiceInterface
 {
@@ -74,6 +74,11 @@ final class PositionService implements PositionServiceInterface
 
             return $position;
         });
+    }
+
+    public function getPositions(Symbol $symbol): array
+    {
+        throw new NotImplementedException(sprintf('%s: not implemented', __METHOD__));
     }
 
     public function getOppositePosition(Position $position): ?Position

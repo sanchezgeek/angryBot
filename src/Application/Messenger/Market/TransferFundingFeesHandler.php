@@ -7,8 +7,6 @@ namespace App\Application\Messenger\Market;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Position;
-use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
@@ -28,16 +26,8 @@ final readonly class TransferFundingFeesHandler
     public function __invoke(TransferFundingFees $message): void
     {
         $symbol = $message->symbol;
-        $positions = []; /** @var Position[] $positions */
-        if ($short = $this->positionService->getPosition($symbol, Side::Sell)) {
-            $positions[] = $short;
-            if ($short->oppositePosition !== null) {
-                $positions[] = $short->oppositePosition;
-            }
-        } elseif ($long = $this->positionService->getPosition($symbol, Side::Buy)) {
-            $positions[] = $long;
-        }
 
+        $positions = $this->positionService->getPositions($symbol);
         if (!$positions) {
             return;
         }

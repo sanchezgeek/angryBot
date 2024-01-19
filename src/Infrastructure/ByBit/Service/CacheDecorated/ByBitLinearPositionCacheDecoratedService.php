@@ -62,6 +62,17 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         });
     }
 
+    public function getPositions(Symbol $symbol): array
+    {
+        $key = sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
+
+        return $this->cache->get($key, function (ItemInterface $item) use ($symbol) {
+            $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
+
+            return $this->positionService->getPositions($symbol);
+        });
+    }
+
     /**
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
      */

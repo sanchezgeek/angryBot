@@ -25,6 +25,9 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReach
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 
+use LogicException;
+
+use function end;
 use function is_array;
 use function preg_match;
 use function sprintf;
@@ -53,6 +56,24 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
+        $positions = $this->getPositions($symbol);
+
+        foreach ($positions as $position) {
+            if ($position->side === $side) {
+                return $position;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     */
+    public function getPositions(Symbol $symbol): array
+    {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
         $data = $this->sendRequest($request)->data();
@@ -60,24 +81,28 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
 
-        $position = null;
-        $oppositePosition = null;
+        /** @var Position[] $positions */
+        $positions = [];
         foreach ($list as $item) {
+            $opposite = null;
             if ((float)$item['avgPrice'] !== 0.0) {
-                $itemSide = strtolower($item['side']);
-                if ($itemSide === $side->value) {
-                    $position = $this->parsePositionFromData($item);
-                } elseif ($itemSide === $side->getOpposite()->value) {
-                    $oppositePosition = $this->parsePositionFromData($item);
+                if ($positions) {
+                    $opposite = end($positions);
                 }
+                $position = $this->parsePositionFromData($item);
+                if (isset($opposite)) {
+                    $position->setOppositePosition($opposite);
+                    $opposite->setOppositePosition($position);
+                }
+                $positions[] = $position;
             }
         }
 
-        if ($position && $oppositePosition) {
-            $position->setOppositePosition($oppositePosition);
+        if (count($positions) > 2) {
+            throw new LogicException('More than two positions found on one symbol');
         }
 
-        return $position;
+        return $positions;
     }
 
     private function parsePositionFromData(array $apiData): Position

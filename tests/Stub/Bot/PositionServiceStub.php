@@ -43,6 +43,11 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
+    public function getPositions(Symbol $symbol): array
+    {
+        return $this->positions;
+    }
+
     public function getOppositePosition(Position $position): ?Position
     {
         foreach ($this->positions as $item) {
