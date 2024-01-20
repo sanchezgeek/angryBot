@@ -37,7 +37,7 @@ final class OrderCostHelperTest extends TestCase
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), 0.34739), $marginAmount);
 
         self::assertEquals($symbol->associatedCoin(), $marginAmount->coin());
-        self::assertEquals(0.347, $marginAmount->value());
+        self::assertEquals(0.3474, $marginAmount->value());
     }
 
     public function testLinearOrderBuyCost(): void
@@ -55,6 +55,6 @@ final class OrderCostHelperTest extends TestCase
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), 0.38560289999999997), $buyCost);
 
         self::assertEquals($symbol->associatedCoin(), $buyCost->coin());
-        self::assertEquals(0.386, $buyCost->value());
+        self::assertEquals(0.3856, $buyCost->value());
     }
 }

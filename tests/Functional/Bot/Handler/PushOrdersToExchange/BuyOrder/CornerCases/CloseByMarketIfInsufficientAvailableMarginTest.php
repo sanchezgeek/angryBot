@@ -12,7 +12,9 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -104,7 +106,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
             ->method('interTransferFromContractToSpot')
             ->with(
                 $symbol->associatedCoin(),
-                PriceHelper::round($transferToSpotAmount, 3)
+                PriceHelper::round($transferToSpotAmount, 3),
             );
 
         // Act
@@ -116,24 +118,31 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
 
     public function closeByMarketCasesProvider(): iterable
     {
-        $minProfitPercent = self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
+        $needBuyOrderVolume = 0.003;
         $position = PositionFactory::short(self::SYMBOL, 30000);
+        $minProfitPercent = self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
 
         $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $minProfitPercent)->value();
         yield [
-            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.001, // ['expectedCloseOrderVolume' => 0.003] # for now 0.001 in all cases
+            'position' => $position,
+            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, 1, $position->side),
+            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
         ];
 
+        $needBuyOrderVolume = 0.004;
         $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $minProfitPercent + 100)->value();
         yield [
-            'position' => $position = PositionFactory::short(self::SYMBOL, 30000),
+            'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, 0.003, 1, $position->side),
-            'expectedCloseOrderVolume' => 0.001, // ['expectedCloseOrderVolume' => 0.003] # for now 0.001 in all cases
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, 1, $position->side),
+            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
         ];
+    }
+
+    private static function getExpectedVolumeToClose(float $needBuyVolume, float $lastPriceCurrentPnlPercent): float
+    {
+        return VolumeHelper::forceRoundUp($needBuyVolume / ($lastPriceCurrentPnlPercent * 0.75 / 100));
     }
 
     public function haveNoAvailableBalance(Position $position, BuyOrder $buyOrder, Symbol $symbol, Side $side): void
@@ -142,7 +151,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
             ->method('marketBuy')
             ->with($position, $buyOrder->getVolume())
             ->willThrowException(
-                CannotAffordOrderCost::forBuy($symbol, $side, $buyOrder->getVolume())
+                CannotAffordOrderCost::forBuy($symbol, $side, $buyOrder->getVolume()),
             )
         ;
     }

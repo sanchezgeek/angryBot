@@ -28,10 +28,10 @@ final class CoinAmountTest extends TestCase
     private function createCases(): array
     {
         return [
-            [Coin::USDT, 1.015, 1.015],
-            [Coin::USDT, 0.015, 0.015],
-            [Coin::USDT, 1.0015, 1.002],
-            [Coin::USDT, 0.0015, 0.002],
+            [Coin::USDT, 1.0015, 1.0015],
+            [Coin::USDT, 0.0015, 0.0015],
+            [Coin::USDT, 1.00015, 1.0002],
+            [Coin::USDT, 0.00015, 0.0002],
             [Coin::BTC, 1.00000015, 1.00000015],
             [Coin::BTC, 0.00000015, 0.00000015],
             [Coin::BTC, 1.000000015, 1.00000002],
