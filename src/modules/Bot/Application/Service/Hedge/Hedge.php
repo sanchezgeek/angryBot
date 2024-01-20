@@ -6,6 +6,7 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
+use App\Domain\Value\Percent\Percent;
 
 final readonly class Hedge
 {
@@ -21,6 +22,7 @@ final readonly class Hedge
             throw new \LogicException('Positions on the same side.');
         }
 
+        // @todo | what if positions sizes are equals?
         return $a->size > $b->size ? new Hedge($a, $b) : new Hedge($b, $a);
     }
 
@@ -34,23 +36,31 @@ final readonly class Hedge
         return $this->mainPosition->side === $position->side;
     }
 
+    /**
+     * @todo | hedge | move to service
+     */
     public function needIncreaseSupport(): bool
     {
-        $rate = $this->getSupportRate();
+        $rate = $this->getSupportRate()->part();
 
-        return $rate <= 0.38;
+        return $rate <= 0.28;
     }
 
     /**
      * PushBuyOrdersHandler will create small stops with `under_position`
+     *
+     * @todo | hedge | move to service
      */
     public function needKeepSupportSize(): bool
     {
-        $rate = $this->getSupportRate();
+        $rate = $this->getSupportRate()->part();
 
-        return $rate < 0.45;
+        return $rate < 0.35;
     }
 
+    /**
+     * @todo | hedge | move to service
+     */
     public function getHedgeStrategy(): HedgeStrategy
     {
         $mainPositionStrategy = StopCreate::AFTER_FIRST_STOP_UNDER_POSITION;
@@ -68,8 +78,10 @@ final readonly class Hedge
         return new HedgeStrategy($supportStrategy, $mainPositionStrategy, $description);
     }
 
-    private function getSupportRate(): float
+    public function getSupportRate(): Percent
     {
-        return $this->supportPosition->size / $this->mainPosition->size;
+        return new Percent(
+            ($this->supportPosition->size / $this->mainPosition->size) * 100
+        );
     }
 }
