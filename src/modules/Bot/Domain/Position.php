@@ -44,6 +44,10 @@ final class Position
             throw new LogicException('Opposite position already set.');
         }
 
+        if ($this->side === $oppositePosition->side) {
+            throw new LogicException('Provided position is on the same side.');
+        }
+
         $this->oppositePosition = $oppositePosition;
     }
 
@@ -55,6 +59,11 @@ final class Position
     public function isSupportPosition(): bool
     {
         return ($hedge = $this->getHedge()) && $hedge->isSupportPosition($this);
+    }
+
+    public function isMainPosition(): bool
+    {
+        return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
     }
 
     public function getCaption(): string

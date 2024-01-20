@@ -26,6 +26,15 @@ final readonly class Hedge
         return $a->size > $b->size ? new Hedge($a, $b) : new Hedge($b, $a);
     }
 
+    public static function fromPosition(Position $position): ?self
+    {
+        if ($position->oppositePosition) {
+            return self::create($position, $position->oppositePosition);
+        }
+
+        return null;
+    }
+
     public function isSupportPosition(Position $position): bool
     {
         return $this->supportPosition->side === $position->side;

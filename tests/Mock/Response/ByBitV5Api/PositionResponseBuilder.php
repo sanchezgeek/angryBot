@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBitV5Api;
 
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
+use App\Bot\Domain\Position;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
@@ -70,36 +69,20 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
         $this->category = $category;
     }
 
-    public function addPosition(
-        Symbol $symbol,
-        Side $positionSide,
-        float $entryPrice,
-        float $positionSize,
-        float $positionValue,
-        float $margin,
-        int $leverage,
-        float $liqPrice,
-        float $unrealizedPnl
-    ): self {
-        // @todo | move ucfirst to enum
-        $this->positionsListItems[] = array_replace(self::POSITIONS_LIST_ITEM, [
-            'symbol' => $symbol->value,
-            'side' => ucfirst($positionSide->value),
-            'avgPrice' => (string)$entryPrice,
-            'positionValue' => (string)$positionValue,
-            'positionIM' => (string)$margin,
-            'size' => (string)$positionSize,
-            'liqPrice' => (string)$liqPrice,
-            'leverage' => (string)$leverage,
-            'unrealisedPnl' => (string)$unrealizedPnl,
-        ]);
-
-        return $this;
-    }
-
-    public function withCode(int $code): self
+    public function withPosition(Position $position): self
     {
-        $this->statusCode = $code;
+        // @todo | move ucfirst to enum ?
+        $this->positionsListItems[] = array_replace(self::POSITIONS_LIST_ITEM, [
+            'symbol' => $position->symbol->value,
+            'side' => ucfirst($position->side->value),
+            'avgPrice' => (string)$position->entryPrice,
+            'positionValue' => (string)$position->value,
+            'positionIM' => (string)$position->initialMargin->value(),
+            'size' => (string)$position->size,
+            'liqPrice' => (string)$position->liquidationPrice,
+            'leverage' => (string)$position->leverage->value(),
+            'unrealisedPnl' => (string)$position->unrealizedPnl,
+        ]);
 
         return $this;
     }

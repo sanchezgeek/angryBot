@@ -44,6 +44,41 @@ final class PositionTest extends TestCase
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertNull($position->oppositePosition);
+        self::assertNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
+    }
+
+    public function testShortPositionWithOpposite(): void
+    {
+        $side = Side::Sell;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050.1;
+        $value = 100005000;
+        $liquidation = 200500;
+        $initialMargin = 1000;
+        $leverage = 100;
+
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+        $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 2050.1, 2000050000, 300500, 100, 100);
+        $position->setOppositePosition($oppositePosition);
+
+        self::assertEquals($side, $position->side);
+        self::assertTrue($position->isShort());
+        self::assertFalse($position->isLong());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertSame($oppositePosition, $position->oppositePosition);
+        self::assertNotNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertTrue($position->isSupportPosition());
     }
 
     public function testLongPosition(): void
@@ -68,17 +103,52 @@ final class PositionTest extends TestCase
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertNull($position->oppositePosition);
+        self::assertNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
+    }
+
+    public function testLongPositionWithOpposite(): void
+    {
+        $side = Side::Buy;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050;
+        $value = 100005000;
+        $liquidation = 90500;
+        $initialMargin = 1000;
+        $leverage = 100;
+
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+        $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 1000, 100000, 300500, 100, 100);
+        $position->setOppositePosition($oppositePosition);
+
+        self::assertEquals($side, $position->side);
+        self::assertTrue($position->isLong());
+        self::assertFalse($position->isShort());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertSame($oppositePosition, $position->oppositePosition);
+        self::assertNotNull($position->getHedge());
+        self::assertTrue($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
     }
 
     /**
-     * @dataProvider successCasesProvider
+     * @dataProvider getVolumePartSuccessCases
      */
     public function testCanGetVolumePart(Position $position, float $volumePart, float $expectedVolume): void
     {
         self::assertEquals($expectedVolume, $position->getVolumePart($volumePart));
     }
 
-    private function successCasesProvider(): array
+    private function getVolumePartSuccessCases(): array
     {
         return [
             [
@@ -105,7 +175,7 @@ final class PositionTest extends TestCase
     }
 
     /**
-     * @dataProvider wrongGetVolumeCasesProvider
+     * @dataProvider getVolumePartFailCases
      */
     public function testFailGetVolumePart(float $percent): void
     {
@@ -117,7 +187,7 @@ final class PositionTest extends TestCase
         $position->getVolumePart($percent);
     }
 
-    private function wrongGetVolumeCasesProvider(): array
+    private function getVolumePartFailCases(): array
     {
         return [[-150], [-100], [0], [101], [150]];
     }
