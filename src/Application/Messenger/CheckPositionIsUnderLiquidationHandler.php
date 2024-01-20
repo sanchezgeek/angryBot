@@ -40,7 +40,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const CRITICAL_DELTA = 40;
     public const STOP_CRITICAL_DELTA_BEFORE_LIQUIDATION = 35;
 
-    // @todo | need calc $amount based on Position size (for bigger position DEFAULT_COIN_TRANSFER_AMOUNT will change liquidationPrice very little)
+    /* @todo | need calc $amount based on Position size (for bigger position DEFAULT_COIN_TRANSFER_AMOUNT will change liquidationPrice very little) */
     public const DEFAULT_TRANSFER_AMOUNT = 12;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
 
@@ -81,7 +81,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         if ($priceDeltaToLiquidation <= self::WARNING_DELTA) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
-                if ($spotBalance->availableBalance > 3) {
+                if ($spotBalance->availableBalance > 2) {
                     $amount = $this->amountToTransferFromSpot($spotBalance, $position);
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
 //                    if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position) && $hedge->getSupportRate()->part() > 0.2) return;
@@ -95,6 +95,9 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             // @todo | maybe need also check that hedge has positive distance
             if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position)) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
+                if ($hedge->getSupportRate()->value() > 20) {
+                    $acceptablePositionStopsPartBeforeCriticalRange = 20;
+                }
             }
 
             $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker, $criticalDeltaBeforeLiquidation);

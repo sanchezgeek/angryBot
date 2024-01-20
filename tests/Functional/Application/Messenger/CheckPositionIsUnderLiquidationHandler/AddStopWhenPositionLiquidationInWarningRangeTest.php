@@ -19,6 +19,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -35,6 +36,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
+    use ByBitV5ApiRequestsMocker;
 
     private const WARNING_LIQUIDATION_DELTA = CheckPositionIsUnderLiquidationHandler::WARNING_DELTA;
     private const ACCEPTABLE_STOPS_POSITION_SIZE_PART_BEFORE_CRITICAL_RANGE = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_POSITION_STOPS_PART_BEFORE_CRITICAL_RANGE;
@@ -67,6 +69,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     {
         $this->haveTicker($ticker);
         $this->havePosition($position);
+        $this->haveSpotBalance($position->symbol, 0.1);
 
         $this->haveStopsInDb(...$delayedStops);
         $this->haveActiveConditionalStops($position->symbol, ...$activeConditionalStops);
