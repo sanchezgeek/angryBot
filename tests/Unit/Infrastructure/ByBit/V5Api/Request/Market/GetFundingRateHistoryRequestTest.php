@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @covers \App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest
+ * @covers \App\Infrastructure\ByBit\API\V5\Request\Market\GetFundingRateHistoryRequest
  */
 final class GetFundingRateHistoryRequestTest extends TestCase
 {

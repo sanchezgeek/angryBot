@@ -13,6 +13,9 @@ use App\Domain\Price\Price;
 use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \App\Domain\Order\Service\OrderCostHelper
+ */
 final class OrderCostHelperTest extends TestCase
 {
     private OrderCostHelper $helper;

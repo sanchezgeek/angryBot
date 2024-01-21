@@ -14,6 +14,9 @@ use PHPUnit\Framework\TestCase;
 use function array_replace;
 use function uuid_create;
 
+/**
+ * @covers \App\Tests\Stub\Bot\PositionServiceStub
+ */
 final class PositionServiceStubTest extends TestCase
 {
     public function testAddStopMethodCalls(): void

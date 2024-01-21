@@ -7,6 +7,9 @@ namespace App\Tests\Unit\Helper;
 use App\Helper\VolumeHelper;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \App\Helper\VolumeHelper
+ */
 class VolumeHelperTest extends TestCase
 {
     /**

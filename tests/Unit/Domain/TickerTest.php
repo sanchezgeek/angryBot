@@ -11,6 +11,9 @@ use App\Domain\Price\Price;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \App\Bot\Domain\Ticker
+ */
 class TickerTest extends TestCase
 {
     public function testCreateTicker(): void
