@@ -73,14 +73,13 @@ final class SchedulerFactory
 
     private static function utils(): array
     {
-        $shortCleanupPeriod = '15S';
-        $longCleanupPeriod = '25S';
+        $cleanupPeriod = '45S';
 
         return [
-            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $shortCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $shortCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 1, 3, false))),
-            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $longCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $longCleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 1, 2, true))),
+            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
+            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
+            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
+            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # position
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', Async::message(new MoveStops(Side::Sell))),
