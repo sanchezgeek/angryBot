@@ -5,6 +5,7 @@ framework:
 
         transports:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
+            async_critical: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_critical'
             async_high: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_high'
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
             cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
@@ -29,7 +30,7 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\CheckPositionIsUnderLiquidation: async_high
+            App\Application\Messenger\CheckPositionIsUnderLiquidation: async_critical
             App\Application\Messenger\Market\TransferFundingFees: async_high
 
 # when@test:
