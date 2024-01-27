@@ -17,6 +17,7 @@ use function explode;
 use function http_build_query;
 use function is_array;
 use function is_string;
+use function json_encode;
 use function parse_str;
 use function preg_match;
 use function str_contains;
@@ -72,21 +73,33 @@ class SymfonyHttpClientStub extends MockHttpClient
         $url = $params ? $url . '?' . http_build_query($params) : $url;
         $urlRegexp = addcslashes($url, '?+.*');
 
+        // @todo | headers
         return $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response);
     }
 
-    public function matchPost(string $url, ResponseInterface $response): self
+    public function matchPost(string $url, ResponseInterface $response, array $requestBody): self
     {
-        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response);
+        // @todo | headers
+        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response, ['body' => json_encode($requestBody)]);
     }
 
-    public function matchMethodAndUrl(string $methodRegExp, string $urlRegexp, ResponseInterface $response): self
+    public function matchMethodAndUrl(string $methodRegExp, string $urlRegexp, ResponseInterface $response, array $requestOptions = []): self
     {
         $methodRegExp = $this->ensureRegexp($methodRegExp);
         $urlRegexp = $this->ensureRegexp($urlRegexp);
 
         return $this->match(
-            static fn ($method, $url) => preg_match($methodRegExp, $method) && preg_match($urlRegexp, $url),
+            static function ($method, $url, $options) use ($methodRegExp, $urlRegexp, $requestOptions) {
+                if (!(preg_match($methodRegExp, $method) && preg_match($urlRegexp, $url))) {
+                    return false;
+                }
+
+                if ($expectedBody = $requestOptions['body'] ?? null) {
+                    return $options['body'] === $expectedBody;
+                }
+
+                return true;
+            },
             $response,
         );
     }

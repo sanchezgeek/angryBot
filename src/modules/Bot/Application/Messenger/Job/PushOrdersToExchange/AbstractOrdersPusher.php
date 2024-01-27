@@ -26,12 +26,10 @@ abstract class AbstractOrdersPusher
     protected int $lastSleep = 0;
 
     /**
-     * @param ByBitOrderService $orderService
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
      * @param ByBitLinearPositionCacheDecoratedService $positionService
      */
     public function __construct(
-        protected readonly OrderServiceInterface $orderService,
         protected readonly ExchangeServiceInterface $exchangeService,
         protected readonly PositionServiceInterface $positionService,
         ClockInterface $clock,

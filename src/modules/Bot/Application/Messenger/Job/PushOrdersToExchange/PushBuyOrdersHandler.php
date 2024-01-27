@@ -204,7 +204,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->positionService->marketBuy($position, $order->getVolume());
+            $exchangeOrderId = $this->orderService->marketBuy($position->symbol, $position->side, $order->getVolume());
             $order->setExchangeOrderId($exchangeOrderId);
 //            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
@@ -365,16 +365,17 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
-        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly OrderCostHelper $orderCostHelper,
 
-        OrderServiceInterface $orderService,
-        ExchangeServiceInterface $exchangeService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MarketServiceInterface $marketService,
+        private readonly OrderServiceInterface $orderService,
+
+        ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
-        LoggerInterface $logger,
         ClockInterface $clock,
+        LoggerInterface $logger,
     ) {
-        parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 }

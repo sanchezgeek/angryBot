@@ -29,7 +29,7 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
     {
         // Arrange
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK());
+        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
 
         $expectedResult = $this->okRequestResult(TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);

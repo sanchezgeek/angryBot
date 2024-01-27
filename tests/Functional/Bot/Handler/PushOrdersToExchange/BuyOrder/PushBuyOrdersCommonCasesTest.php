@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -23,6 +24,7 @@ use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 
 use function array_map;
@@ -54,14 +56,17 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
             self::getBuyOrderRepository(),
             $this->stopRepository,
             $this->stopService,
-            self::getContainer()->get(ExchangeAccountServiceInterface::class),
             self::getContainer()->get(OrderCostHelper::class),
-            $this->orderServiceMock,
-            $this->exchangeServiceMock,
+
+            self::getContainer()->get(ExchangeAccountServiceInterface::class),
             self::getContainer()->get(ByBitMarketService::class),
+            self::getContainer()->get(OrderServiceInterface::class),
+
+            $this->exchangeServiceMock,
             $this->positionServiceStub,
-            $this->loggerMock,
+
             $this->clockMock,
+            $this->loggerMock,
         );
     }
 
@@ -69,57 +74,54 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
      * @dataProvider pushBuyOrdersTestDataProvider
      *
      * @param BuyOrder[] $buyOrdersExpectedAfterHandle
+     * @param ByBitApiCallExpectation[] $expectedMarketBuyApiCalls
      */
     public function testPushRelevantBuyOrders(
         Position $position,
         Ticker $ticker,
         array $buyOrdersFixtures,
-        array $expectedAddBuyOrderCallsStack,
+        array $expectedMarketBuyApiCalls,
         array $buyOrdersExpectedAfterHandle,
-        array $mockedExchangeOrderIds,
     ): void {
+        $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
         $this->haveSpotBalance($position->symbol, 0);
 
         $this->haveTicker($ticker);
         $this->positionServiceStub->havePosition($position);
-        $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
         ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
 
-        self::assertSame($expectedAddBuyOrderCallsStack, $this->positionServiceStub->getAddBuyOrderCallsStack());
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
     }
 
     public function pushBuyOrdersTestDataProvider(): iterable
     {
-        $mockedExchangeOrderIds = [uuid_create()];
+        $position = PositionFactory::short($symbol = self::SYMBOL, 29000);
+        $buyOrders = [
+            BuyOrderBuilder::short(10, 29060, 0.01)->build(),  // must be pushed
+            BuyOrderBuilder::short(15, 29060, 0.005)->build(),  // must be pushed and removed
+            BuyOrderBuilder::short(20, 29155, 0.002)->build(),
+            BuyOrderBuilder::short(30, 29055, 0.03)->build(), // must be pushed
+            BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), // must not be pushed (not active)
+        ];
+        $buyOrdersExpectedToPush = [$buyOrders[1], $buyOrders[0], $buyOrders[3]];
+        $exchangeOrderIds = [];
 
         yield [
-            '$position' => $position = PositionFactory::short(self::SYMBOL, 29000),
-            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
-            '$buyOrdersFixtures' => [
-                new BuyOrderFixture(BuyOrderBuilder::short(5, 29060, 0.005)->build()), // must be pushed and removed
-                new BuyOrderFixture(BuyOrderBuilder::short(10, 29060, 0.01)->build()), // must be pushed
-                new BuyOrderFixture(BuyOrderBuilder::short(20, 29155, 0.002)->build()),
-                new BuyOrderFixture(BuyOrderBuilder::short(30, 29055, 0.03)->build()), // must be pushed
-                new BuyOrderFixture(BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
-            ],
-            'expectedAddBuyOrderCalls' => [
-                [$position, 0.005],
-                [$position, 0.01],
-                [$position, 0.03],
-            ],
+            '$position' => $position,
+            '$ticker' => TickerFactory::create($symbol, 29050),
+            '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
+            'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                BuyOrderBuilder::short(30, 29055, 0.03)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setExchangeOrderId($exchangeOrderIds[1]),
+                BuyOrderBuilder::short(30, 29055, 0.03)->build()->setExchangeOrderId($exchangeOrderIds[2]),
 
                 ### unchanged ###
                 BuyOrderBuilder::short(20, 29155, 0.002)->build(),
                 BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId),
             ],
-            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds,
         ];
     }
 
@@ -132,8 +134,10 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         Position $position,
         Ticker $ticker,
         array $buyOrdersFixtures,
+        array $expectedMarketBuyCalls,
         array $stopsExpectedAfterHandle,
     ): void {
+        $this->expectsToMakeApiCalls(...$expectedMarketBuyCalls);
         $this->haveSpotBalance($position->symbol, 0);
 
         $this->haveTicker($ticker);
@@ -153,13 +157,17 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
             BuyOrderBuilder::short(20, 29155, 0.002)->build(), // not handled
             BuyOrderBuilder::short(30, 29055, 0.003)->build(),
             BuyOrderBuilder::short(40, 29060, 0.005)->build(),
-            BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder(),
+            BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder(), // not handled
         ];
+        $buyOrdersExpectedToPush = [$buyOrders[0], $buyOrders[2], $buyOrders[3], $buyOrders[4]];
 
+        $symbol = self::SYMBOL;
+        $position = PositionFactory::short($symbol, 29000);
         yield [
-            '$position' => PositionFactory::short(self::SYMBOL, 29000),
-            '$ticker' => TickerFactory::create(self::SYMBOL, 29050),
+            '$position' => $position,
+            '$ticker' => TickerFactory::create($symbol, 29050),
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
+            'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'stopsExpectedAfterHandle' => [
                 StopBuilder::short(1, $buyOrders[0]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.001), 0.001)->withTD(self::DEFAULT_STOP_TD)->build(),
                 StopBuilder::short(2, $buyOrders[2]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.003), 0.003)->withTD(self::DEFAULT_STOP_TD)->build(),

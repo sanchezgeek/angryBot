@@ -81,7 +81,7 @@ trait ByBitV5ApiTester
     protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse): void
     {
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse);
+        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data());
 
         $this->expectedApiRequestsAfterTest[] = $expectedRequest;
     }

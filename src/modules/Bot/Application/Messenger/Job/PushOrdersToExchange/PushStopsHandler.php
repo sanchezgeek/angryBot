@@ -284,14 +284,16 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly StopRepository $repository,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
+
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MessageBusInterface $messageBus,
-        OrderServiceInterface $orderService,
+        private readonly OrderServiceInterface $orderService,
+
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
     ) {
-        parent::__construct($orderService, $exchangeService, $positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $logger);
     }
 }
