@@ -29,16 +29,16 @@ trait ByBitApiCallHandler
      */
     private function sendRequest(
         AbstractByBitApiRequest $request,
-        Closure $knownApiErrorResolver = null,
-        string $calledServiceMethod = null,
+        ?Closure $knownApiErrorsResolver = null,
+        ?string $calledServiceMethod = null,
     ): ByBitApiCallResult {
         $result = $this->apiClient->send($request);
 
         if (!$result->isSuccess()) {
             $error = $result->error();
 
-            if ($knownApiErrorResolver) {
-                $knownApiErrorResolver($error);
+            if ($knownApiErrorsResolver) {
+                $knownApiErrorsResolver($error);
             }
 
             throw new UnexpectedApiErrorException(

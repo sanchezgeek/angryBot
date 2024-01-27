@@ -68,9 +68,7 @@ final class Position
 
     public function getCaption(): string
     {
-        $type = $this->side === Side::Sell ? 'SHORT' : 'LONG';
-
-        return $this->symbol->value . ' ' . $type;
+        return $this->symbol->value . ' ' . $this->side->title();
     }
 
     /**

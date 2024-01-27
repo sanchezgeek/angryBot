@@ -126,10 +126,10 @@ trait ByBitV5ApiTester
         ByBitV5ApiError $error,
         string $serviceMethod,
     ): UnexpectedApiErrorException {
-        return new UnexpectedApiErrorException($error->code(), $error->msg(), sprintf('%s | make `%s`', $serviceMethod, $requestUrl));
+        return self::unexpectedApiErrorError($requestUrl, $error->code(), $error->msg(), $serviceMethod);
     }
 
-    protected static function unexpectedException(
+    protected static function unexpectedApiErrorError(
         string $requestUrl,
         int $code,
         string $message,
