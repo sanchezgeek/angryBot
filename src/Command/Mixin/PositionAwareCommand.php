@@ -4,7 +4,6 @@ namespace App\Command\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use InvalidArgumentException;
 use RuntimeException;
@@ -14,6 +13,7 @@ use function sprintf;
 
 trait PositionAwareCommand
 {
+    use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
 
     private const POSITION_SIDE_ARGUMENT_NAME = 'position_side';
@@ -22,11 +22,12 @@ trait PositionAwareCommand
 
     private function getPosition(bool $throwException = true): ?Position
     {
-        // @todo | Retrieve position with `symbol` arg
-        $positionSide = $this->getPositionSide();
-        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
+        $symbol = $this->getSymbol();
+        $side = $this->getPositionSide();
+
+        if (!$position = $this->positionService->getPosition($symbol, $side)) {
             if ($throwException) {
-                throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
+                throw new RuntimeException(sprintf('"%s" "%s" position not found', $symbol->value, $side->title()));
             }
 
             return null;
@@ -50,10 +51,11 @@ trait PositionAwareCommand
 
     private function configurePositionArgs(): static
     {
-        // @todo | Add `symbol` arg
-        $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, InputArgument::REQUIRED, 'Position side (sell|buy)');
+        if (!$this->isSymbolArgsConfigured()) {
+            $this->configureSymbolArgs();
+        }
 
-        return $this;
+        return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, InputArgument::REQUIRED, 'Position side (sell|buy)');
     }
 
     private function withPositionService(PositionServiceInterface $positionService): static

@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -13,6 +14,7 @@ use App\Domain\Order\Order;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -30,41 +32,66 @@ class PlaceOrderCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
+    private const SYMBOL = Symbol::BTCUSDT;
+
     private const TYPE_OPTION = 'type';
-    private const MARKET_CLOSE = 'market';
+
+    private const MARKET_BUY = 'buy';
+    private const MARKET_CLOSE = 'close';
     private const LIMIT_TP = 'limitTP';
     private const DELAYED_TP = 'delayedTP';
 
-    private const TYPES = [self::MARKET_CLOSE, self::LIMIT_TP, self::DELAYED_TP];
+    private const TYPES = [self::MARKET_BUY, self::MARKET_CLOSE, self::LIMIT_TP, self::DELAYED_TP];
 
     private const TP_PRICE_OPTION = 'tpPrice';
     private const LIMIT_TP_PRICE_STEP_OPTION = 'step';
 
-    public const FOR_VOLUME_OPTION = 'forVolume';
+    public const VOLUME_ARGUMENT = 'volume';
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
+            ->addArgument(self::VOLUME_ARGUMENT, InputArgument::REQUIRED, sprintf('Volume value || %% of position size (in `%s` mode)', self::MARKET_CLOSE))
+            ->addOption(self::TYPE_OPTION, '-k', InputOption::VALUE_REQUIRED, 'Type (' . implode(', ', self::TYPES) . ')')
+            ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%. Use [`from` + `to` + `step`], if you need place orders in price range (actual for `limitTP` and `delayedTP` modes)')
+            ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `from` + `to`)')
             ->configurePriceRangeArgs()
-            ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
-            ->addOption(self::TYPE_OPTION, '-k', InputOption::VALUE_REQUIRED, 'Type (' . implode(', ', self::TYPES) . ')', self::LIMIT_TP)
-            ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%')
-            ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `priceRange`)')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        [$forVolume, $positionSizePart] = $this->getForVolumeParam();
-        $position = $this->getPosition();
-
         $type = $this->getType();
 
+        if ($type === self::MARKET_BUY) {
+            $symbol = $this->getSymbol();
+            $side = $this->getPositionSide();
+            $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
+
+            $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbol->value, $side->title());
+
+            if (!$this->io->confirm($msg)) {
+                return Command::FAILURE;
+            }
+
+            $this->tradeService->marketBuy($symbol, $side, $volume);
+        }
+
         if ($type === self::MARKET_CLOSE) {
+            // @todo | maybe need move to some trait (code duplicates)
+            $positionSizePart = null;
+            try {
+                $positionSizePart = $this->paramFetcher->getPercentArgument(self::VOLUME_ARGUMENT);
+                $volume = $this->getPosition()->getVolumePart($positionSizePart);
+            } catch (InvalidArgumentException|RuntimeException) {
+                $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
+            }
+            $position = $this->getPosition();
+
             $msg = sprintf(
-                'You\'re about to close %s of %s. Continue?',
-                $positionSizePart !== null ? sprintf('%.1f%%', $positionSizePart) : $forVolume,
+                'You\'re about to close %s of "%s" position. Continue?',
+                $positionSizePart !== null ? sprintf('%.1f%%', $positionSizePart) : $volume,
                 $position->getCaption()
             );
 
@@ -72,10 +99,13 @@ class PlaceOrderCommand extends AbstractCommand
                 return Command::FAILURE;
             }
 
-            $this->tradeService->closeByMarket($position, $forVolume);
+            $this->tradeService->closeByMarket($position, $volume);
         }
 
         if (in_array($type, [self::LIMIT_TP, self::DELAYED_TP])) {
+            $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
+
+            $position = $this->getPosition();
             $context = ['uniqid' => $uniqueId = uniqid('place-tp-orders-grid', true)];
 
             try {
@@ -90,19 +120,19 @@ class PlaceOrderCommand extends AbstractCommand
 
                 foreach ($priceRange->byStepIterator($step) as $price) {
                     $rand = round(random_int(-7, 8) * 0.4, 2);
-                    $orders[] = new Order($price->sub($rand), $forVolume);
+                    $orders[] = new Order($price->sub($rand), $volume);
                 }
 
-                $msg = sprintf('You\'re about to add %d %.3f %ss on %s. Continue?', count($orders), $forVolume, $type, $position->getCaption());
+                $msg = sprintf('You\'re about to add %d %.3f %ss on "%s" position. Continue?', count($orders), $volume, $type, $position->getCaption());
                 if (!$this->io->confirm($msg)) {
                     return Command::FAILURE;
                 }
             } elseif (isset($price)) {
-                $msg = sprintf('You\'re about to add %s on %s. Continue?', $type, $position->getCaption());
+                $msg = sprintf('You\'re about to add %s on "%s" position. Continue?', $type, $position->getCaption());
                 if (!$this->io->confirm($msg)) {
                     return Command::FAILURE;
                 }
-                $orders[] = new Order($price, $forVolume);
+                $orders[] = new Order($price, $volume);
             } else {
                 throw new InvalidArgumentException('`priceRange` or `price` must be specified');
             }
@@ -122,19 +152,6 @@ class PlaceOrderCommand extends AbstractCommand
         }
 
         return Command::SUCCESS;
-    }
-
-    private function getForVolumeParam(): array
-    {
-        $positionSizePart = null;
-        try {
-            $positionSizePart = $this->paramFetcher->getPercentArgument(self::FOR_VOLUME_OPTION);
-            $forVolume = $this->getPosition()->getVolumePart($positionSizePart);
-        } catch (InvalidArgumentException) {
-            $forVolume = $this->paramFetcher->getFloatArgument(self::FOR_VOLUME_OPTION);
-        }
-
-        return [$forVolume, $positionSizePart];
     }
 
     private function getType(): string
