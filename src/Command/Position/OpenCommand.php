@@ -58,7 +58,6 @@ class OpenCommand extends AbstractCommand
     public const DEFAULT_STOP_GRID_QNT = 2;
     public const DEFAULT_TRIGGER_DELTA = '37';
 
-
     private Symbol $symbol;
 
     protected function configure(): void
@@ -78,7 +77,7 @@ class OpenCommand extends AbstractCommand
     {
         parent::initialize($input, $output);
 
-        $this->symbol = Symbol::BTCUSDT;
+        $this->symbol = $this->getSymbol();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -113,7 +112,7 @@ class OpenCommand extends AbstractCommand
 
         // market
         $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
-        $this->positionService->marketBuy($expectedPosition, $marketBuyVolume);
+        $this->tradeService->marketBuy($this->symbol, $positionSide, $marketBuyVolume);
 
         return Command::SUCCESS;
     }
