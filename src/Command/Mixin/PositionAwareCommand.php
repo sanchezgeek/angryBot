@@ -49,13 +49,13 @@ trait PositionAwareCommand
         return $positionSide;
     }
 
-    private function configurePositionArgs(): static
+    private function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
     {
         if (!$this->isSymbolArgsConfigured()) {
             $this->configureSymbolArgs();
         }
 
-        return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, InputArgument::REQUIRED, 'Position side (sell|buy)');
+        return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, $mode, 'Position side (sell|buy)');
     }
 
     private function withPositionService(PositionServiceInterface $positionService): static
