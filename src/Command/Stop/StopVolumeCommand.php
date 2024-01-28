@@ -5,7 +5,8 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Position\ValueObject\Side;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -13,24 +14,27 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'sl:volume', description: 'Creates incremental SL\'ses grid.')]
-class StopVolumeCommand extends Command
+class StopVolumeCommand extends AbstractCommand
 {
+    use PositionAwareCommand;
+
     public function __construct(
         private readonly StopService $stopService,
         private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $positionService,
+        PositionServiceInterface $positionService,
         string $name = null,
     ) {
+        $this->withPositionService($positionService);
+
         parent::__construct($name);
     }
 
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addArgument('volume', InputArgument::REQUIRED, 'Create stops for volume')
             ->addOption('fromPrice', 'f', InputOption::VALUE_OPTIONAL, 'Price to starts from (default - ticker.indexPrice)')
             ->addOption('toPrice', 't', InputOption::VALUE_OPTIONAL, 'Price to finish with (default - position.entryPrice)')
@@ -40,15 +44,7 @@ class StopVolumeCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
         try {
-            if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $input->getArgument('position_side')),
-                );
-            }
-
             if (!(float)($volume = $input->getArgument('volume'))) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $volume provided (%s)', $volume),
@@ -82,12 +78,12 @@ class StopVolumeCommand extends Command
 
             $context = ['uniqid' => \uniqid('fix-position', true)];
 
-            $symbol = Symbol::BTCUSDT;
-            $ticker = $this->exchangeService->ticker($symbol);
-            $position = $this->positionService->getPosition($symbol, $positionSide);
+            $position = $this->getPosition();
+            $positionSide = $position->side;
+            $ticker = $this->exchangeService->ticker($position->symbol);
 
             if ($fromPrice && $ticker->isIndexAlreadyOverStop($positionSide, $fromPrice)) {
-                if (!$io->confirm(\sprintf('ticker.indexPrice already over specified $fromPrice. Do you want to use current ticker.indexPrice as $fromPrice?'))) {
+                if (!$this->io->confirm(\sprintf('ticker.indexPrice already over specified $fromPrice. Do you want to use current ticker.indexPrice as $fromPrice?'))) {
                     return Command::FAILURE;
                 }
                 $fromPrice = $ticker->indexPrice->value();
@@ -102,11 +98,11 @@ class StopVolumeCommand extends Command
             }
 
             if ($toPrice && $ticker->isIndexAlreadyOverStop($positionSide, $toPrice)) {
-                if (!$io->confirm(\sprintf('ticker.indexPrice already over specified $toPrice. Do you want to change $toPrice?'))) {
+                if (!$this->io->confirm(\sprintf('ticker.indexPrice already over specified $toPrice. Do you want to change $toPrice?'))) {
                     return Command::FAILURE;
                 }
 
-                if (!\floatval($delta = $io->ask(\sprintf('Please enter delta:')))) {
+                if (!\floatval($delta = $this->io->ask(\sprintf('Please enter delta:')))) {
                     throw new \InvalidArgumentException(
                         \sprintf('Invalid $delta provided (%s)', $delta),
                     );
@@ -127,14 +123,14 @@ class StopVolumeCommand extends Command
                 $context
             );
 
-            $io->info([
+            $this->io->info([
                 \sprintf('IncrementalStopGrid for %s created.', $position->getCaption()),
                 \json_encode($info),
             ]);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }

@@ -5,22 +5,23 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function count;
 
 #[AsCommand(name: 'sl:move', description: 'Move position stops')]
-class MoveStopsCommand extends Command
+class MoveStopsCommand extends AbstractCommand
 {
+    use PositionAwareCommand;
+
     private const OVER_FIRST_STOP = 'first_stop';
     private const OVER_ENTRY_PRICE = 'entry';
     private const OVER_SPECIFIED_PRICE = 'price';
@@ -34,7 +35,7 @@ class MoveStopsCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addOption('priceToBeginFrom', '-f', InputOption::VALUE_OPTIONAL, 'Price from which SL\'ses must be moved')
             ->addOption('mode', '-m', InputOption::VALUE_REQUIRED, 'Mode', self::OVER_SPECIFIED_PRICE)
             ->addOption('moveOverPrice', 'p', InputOption::VALUE_OPTIONAL, 'Price above|under which SL\'ses must be placed')
@@ -43,22 +44,10 @@ class MoveStopsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
         try {
+            $position = $this->getPosition();
+            $positionSide = $position->side;
             $priceToBeginFrom = $input->getOption('priceToBeginFrom');
-
-            if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $input->getArgument('position_side')),
-                );
-            }
-
-            $position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide);
-            if (!$position) {
-                $io->info(\sprintf('OK (%d).', 0));
-                return Command::SUCCESS;
-            }
 
             $mode = $input->getOption('mode');
             if (!\in_array($mode, self::MODES)) {
@@ -143,11 +132,11 @@ class MoveStopsCommand extends Command
                 throw new \LogicException('$price is undefined');
             }
 
-            $io->info(\sprintf('OK (%d).', count($stops)));
+            $this->io->info(\sprintf('OK (%d).', count($stops)));
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }
@@ -156,9 +145,10 @@ class MoveStopsCommand extends Command
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $positionService,
+        PositionServiceInterface $positionService,
         string $name = null,
     ) {
+        $this->withPositionService($positionService);
         parent::__construct($name);
     }
 }

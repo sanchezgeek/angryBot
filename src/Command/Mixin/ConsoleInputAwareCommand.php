@@ -11,7 +11,7 @@ trait ConsoleInputAwareCommand
 {
     protected ConsoleParamFetcher $paramFetcher;
 
-    private function withInput(InputInterface $input): static
+    protected function withInput(InputInterface $input): static
     {
         $this->paramFetcher = new ConsoleParamFetcher($input);
 

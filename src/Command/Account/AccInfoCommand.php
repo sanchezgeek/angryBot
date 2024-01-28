@@ -4,7 +4,8 @@ namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
-use App\Command\Mixin\PositionAwareCommand;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Order\Service\OrderCostHelper;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -16,9 +17,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function in_array;
 
 #[AsCommand(name: 'acc:info')]
-class AccInfoCommand extends Command
+class AccInfoCommand extends AbstractCommand
 {
-    use PositionAwareCommand;
+    use SymbolAwareCommand;
 
     private const TRANSFER_TO_OPTION = 'transferTo';
     private const TRANSFER_AMOUNT_OPTION = 'transferAmount';
@@ -34,10 +35,7 @@ class AccInfoCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->withInput($input);
-
-        $symbol = $this->getSymbol();
-        $coin = $symbol->associatedCoin();
+        $coin = $this->getSymbol()->associatedCoin();
 
         $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
         $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);

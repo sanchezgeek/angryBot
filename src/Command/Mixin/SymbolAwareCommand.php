@@ -17,7 +17,7 @@ trait SymbolAwareCommand
 
     private ?string $symbolOptionName = null;
 
-    private function getSymbol(): Symbol
+    protected function getSymbol(): Symbol
     {
         if ($this->symbolOptionName) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
@@ -33,14 +33,14 @@ trait SymbolAwareCommand
         return $symbol;
     }
 
-    private function configureSymbolArgs(string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME): static
+    protected function configureSymbolArgs(string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME): static
     {
         $this->symbolOptionName = $symbolOptionName;
 
         return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', self::DEFAULT_SYMBOL->value);
     }
 
-    private function isSymbolArgsConfigured(): bool
+    protected function isSymbolArgsConfigured(): bool
     {
         return $this->symbolOptionName !== null;
     }

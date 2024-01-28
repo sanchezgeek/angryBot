@@ -17,7 +17,7 @@ trait PriceRangeAwareCommand
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
 
-    private function configurePriceRangeArgs(
+    protected function configurePriceRangeArgs(
         string $fromName = 'from', string $fromAlias = 'f',
         string $toName = 'to', string $toAlias = 't',
     ): static {
@@ -32,7 +32,7 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
-    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
+    protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
     {
         try {
             $pnlValue = $this->paramFetcher->getPercentOption($name);
@@ -50,7 +50,7 @@ trait PriceRangeAwareCommand
         }
     }
 
-    private function getPriceRange(): PriceRange
+    protected function getPriceRange(): PriceRange
     {
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);

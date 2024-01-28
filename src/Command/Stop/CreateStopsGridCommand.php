@@ -7,7 +7,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -22,7 +22,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_merge;
 use function implode;
@@ -32,9 +31,8 @@ use function sprintf;
 
 /** @see CreateStopsGridCommandTest */
 #[AsCommand(name: 'sl:grid')]
-class CreateStopsGridCommand extends Command
+class CreateStopsGridCommand extends AbstractCommand
 {
-    use ConsoleInputAwareCommand;
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
@@ -73,8 +71,6 @@ class CreateStopsGridCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         // @todo | tD ?
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
@@ -86,7 +82,7 @@ class CreateStopsGridCommand extends Command
             throw new LogicException('$forVolume is greater than whole position size');
         }
 
-        if (($forVolume > $position->size / 3) && !$io->confirm(sprintf('Are you sure?'))) {
+        if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
             return Command::FAILURE;
         }
 
@@ -106,7 +102,7 @@ class CreateStopsGridCommand extends Command
 
             /** @var Order[] $orders */
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
-//            if (!$io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
+//            if (!$this->io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
 //                return Command::FAILURE;
 //            }
         } else {
@@ -121,7 +117,7 @@ class CreateStopsGridCommand extends Command
         }
 
         if ($position->size <= $alreadyStopped) {
-            if (!$io->confirm('All position volume already under SL\'ses. Want to continue? ')) {
+            if (!$this->io->confirm('All position volume already under SL\'ses. Want to continue? ')) {
                 return Command::FAILURE;
             }
         }
@@ -130,7 +126,7 @@ class CreateStopsGridCommand extends Command
             $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);
         }
 
-        $io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
+        $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
 
         return Command::SUCCESS;
     }

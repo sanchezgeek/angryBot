@@ -13,14 +13,14 @@ use function sprintf;
 
 trait PositionAwareCommand
 {
-    use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
+    use SymbolAwareCommand;
 
     private const POSITION_SIDE_ARGUMENT_NAME = 'position_side';
 
     private readonly PositionServiceInterface $positionService;
 
-    private function getPosition(bool $throwException = true): ?Position
+    protected function getPosition(bool $throwException = true): ?Position
     {
         $symbol = $this->getSymbol();
         $side = $this->getPositionSide();
@@ -36,7 +36,7 @@ trait PositionAwareCommand
         return $position;
     }
 
-    private function getPositionSide(): Side
+    protected function getPositionSide(): Side
     {
         $argName = self::POSITION_SIDE_ARGUMENT_NAME;
         $providedPositionSideValue = $this->paramFetcher->getStringArgument($argName);
@@ -49,7 +49,7 @@ trait PositionAwareCommand
         return $positionSide;
     }
 
-    private function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
+    protected function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
     {
         if (!$this->isSymbolArgsConfigured()) {
             $this->configureSymbolArgs();
@@ -58,7 +58,7 @@ trait PositionAwareCommand
         return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, $mode, 'Position side (sell|buy)');
     }
 
-    private function withPositionService(PositionServiceInterface $positionService): static
+    protected function withPositionService(PositionServiceInterface $positionService): static
     {
         $this->positionService = $positionService;
 

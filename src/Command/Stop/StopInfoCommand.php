@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Price\Helper\PriceHelper;
@@ -32,9 +33,8 @@ use function is_bool;
 use function sprintf;
 
 #[AsCommand(name: 'sl:info')]
-class StopInfoCommand extends Command
+class StopInfoCommand extends AbstractCommand
 {
-    use ConsoleInputAwareCommand;
     use PositionAwareCommand;
 
     private const DEFAULT_PNL_STEP = 20;
@@ -42,7 +42,6 @@ class StopInfoCommand extends Command
     private const SHOW_POSITION_PNL = 'showPositionPnl';
     private const SHOW_TP = 'showTP';
 
-    private SymfonyStyle $io;
     private string $aggregateWith;
     private array $aggOrder = [];
 
@@ -58,10 +57,9 @@ class StopInfoCommand extends Command
         ;
     }
 
-    protected function initialize(InputInterface $input, OutputInterface $output)
+    protected function initialize(InputInterface $input, OutputInterface $output): void
     {
-        $this->withInput($input);
-        $this->io = new SymfonyStyle($input, $output);
+        parent::initialize($input, $output);
 
         $this->aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
     }
@@ -91,8 +89,6 @@ class StopInfoCommand extends Command
         if (!$showTPs) {
             $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         }
-//            ->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder())
-        ;
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
@@ -111,7 +107,7 @@ class StopInfoCommand extends Command
 
             if ($showPnl) {
                 $format .= ' (%s)';
-                $args[] = new Pnl($usdPnL, 'USDT');
+                $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
             $this->io->note(\sprintf($format, ...$args));

@@ -32,8 +32,6 @@ class PlaceOrderCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
-    private const SYMBOL = Symbol::BTCUSDT;
-
     private const TYPE_OPTION = 'type';
 
     private const MARKET_BUY = 'buy';

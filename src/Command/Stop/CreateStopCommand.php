@@ -3,7 +3,8 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Orders\StopService;
-use App\Domain\Position\ValueObject\Side;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -12,8 +13,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'sl:single', description: 'Creates single stop with specified price.')]
-class CreateStopCommand extends Command
+class CreateStopCommand extends AbstractCommand
 {
+    use PositionAwareCommand;
+
     public function __construct(
         private readonly StopService $stopService,
         string $name = null,
@@ -24,7 +27,7 @@ class CreateStopCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addArgument('trigger_delta', InputArgument::REQUIRED, 'Trigger delta')
             ->addArgument('volume', InputArgument::REQUIRED, 'Stop volume')
             ->addArgument('price', InputArgument::REQUIRED, 'Trigger price')
@@ -33,18 +36,14 @@ class CreateStopCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $this->io = new SymfonyStyle($input, $output);
 
         try {
             $price = $input->getArgument('price');
             $volume = $input->getArgument('volume');
             $triggerDelta = $input->getArgument('trigger_delta') ?? null;
+            $positionSide = $this->getPositionSide();
 
-            if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
-                throw new \InvalidArgumentException(
-                    \sprintf('Invalid $step provided (%s)', $input->getArgument('position_side')),
-                );
-            }
             if (!(float)$price) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $price provided (%s)', $price),
@@ -56,16 +55,11 @@ class CreateStopCommand extends Command
                 );
             }
 
-            $this->stopService->create(
-                $positionSide,
-                $price,
-                $volume,
-                $triggerDelta
-            );
+            $this->stopService->create($positionSide, $price, $volume, $triggerDelta);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }

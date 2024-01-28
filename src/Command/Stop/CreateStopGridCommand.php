@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -15,12 +16,11 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_merge;
 
 #[AsCommand(name: 'sl:old-grid', description: 'Creates incremental SL\'ses grid.')]
-class CreateStopGridCommand extends Command
+class CreateStopGridCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -42,8 +42,6 @@ class CreateStopGridCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         try {
             $position = $this->getPosition();
             $triggerDelta = $input->getArgument('trigger_delta');
@@ -92,7 +90,7 @@ class CreateStopGridCommand extends Command
 
             if ($position->size < $alreadyStopped) {
                 if (
-                    !$io->confirm(
+                    !$this->io->confirm(
                         \sprintf('All position volume already under SL\'ses. Last position SL\'ses will be removed. Want to continue? ')
                     )
                 ) {
@@ -105,13 +103,7 @@ class CreateStopGridCommand extends Command
             }
 
             for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                $this->stopService->create(
-                    $position->side,
-                    $price,
-                    $volume,
-                    $triggerDelta,
-                    $context
-                );
+                $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
                 $volume = round($volume+$increment, 3);
             }
 
@@ -130,7 +122,6 @@ class CreateStopGridCommand extends Command
             }
 
             $delta = $sum - $position->size;
-
 
             /** @var Stop[] $removed */
             $removed = [];
@@ -154,11 +145,11 @@ class CreateStopGridCommand extends Command
                 $result[] = \sprintf('Removed volume: %.2f', $volume);
             }
 
-            $io->success($result);
+            $this->io->success($result);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }
