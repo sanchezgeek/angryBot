@@ -129,7 +129,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         $priceRangeToFindExistedStops = PriceRange::create(
             $position->isShort() ? $liquidation->sub($criticalDeltaBeforeLiquidation) : $liquidation->add($criticalDeltaBeforeLiquidation),
-            $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice, $markPrice->value()),
+            $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice->value(), $markPrice->value()),
         );
 
         $delayedStops = $this->stopRepository->findActive(side: $positionSide, qbModifier: function (QueryBuilder $qb) use ($priceRangeToFindExistedStops) {
