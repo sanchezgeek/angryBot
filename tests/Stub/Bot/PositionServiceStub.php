@@ -6,7 +6,6 @@ namespace App\Tests\Stub\Bot;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -28,9 +27,7 @@ final class PositionServiceStub implements PositionServiceInterface
 
     private array $mockedExchangeOrdersIds = [];
     private array $addStopMethodCalls = [];
-    private array $addBuyOrderMethodCalls = [];
     private array $pushedStopsExchangeOrderIds = [];
-    private array $pushedBuyOrdersExchangeOrderIds = [];
 
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
@@ -69,16 +66,6 @@ final class PositionServiceStub implements PositionServiceInterface
         return $exchangeOrderId;
     }
 
-    public function marketBuy(Position $position, float $qty): string
-    {
-        $this->addBuyOrderMethodCalls[] = [$position, $qty];
-
-        $exchangeOrderId = $this->getNextExchangeOrderId();
-        $this->pushedBuyOrdersExchangeOrderIds[] = $exchangeOrderId;
-
-        return $exchangeOrderId;
-    }
-
     private function getNextExchangeOrderId(): string
     {
         if (!($exchangeOrderId = array_shift($this->mockedExchangeOrdersIds))) {
@@ -96,11 +83,6 @@ final class PositionServiceStub implements PositionServiceInterface
     public function getAddStopCallsStack(): array
     {
         return $this->addStopMethodCalls;
-    }
-
-    public function getAddBuyOrderCallsStack(): array
-    {
-        return $this->addBuyOrderMethodCalls;
     }
 
     public function setMockedExchangeOrdersIds(array $mockedExchangeOrdersIds): self

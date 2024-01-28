@@ -126,6 +126,8 @@ final class PositionService implements PositionServiceInterface
     }
 
     /**
+     * Просто оставлю это здесь =)
+     *
      * @inheritDoc
      *
      * @throws CannotAffordOrderCost

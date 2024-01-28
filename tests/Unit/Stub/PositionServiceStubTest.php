@@ -57,8 +57,8 @@ final class PositionServiceStubTest extends TestCase
         );
     }
 
-    public function testDummyBuy(): void
+    public function testDummy(): void
     {
-        self::markTestIncomplete('testAddBuyOrderMethodCalls, testCanReplaceSamePosition, testFailSetPositionWhenPositionAlreadyExists');
+        self::markTestIncomplete('testCanReplaceSamePosition, testFailSetPositionWhenPositionAlreadyExists');
     }
 }

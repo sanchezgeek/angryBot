@@ -97,20 +97,4 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     {
         return $this->positionService->addConditionalStop($position, $price, $qty, $triggerBy);
     }
-
-    /**
-     * @inheritDoc
-     *
-     * @throws CannotAffordOrderCost
-     *
-     * @throws ApiRateLimitReached
-     * @throws UnexpectedApiErrorException
-     * @throws UnknownByBitApiErrorException
-     *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
-     */
-    public function marketBuy(Position $position, float $qty): string
-    {
-        return $this->positionService->marketBuy($position, $qty);
-    }
 }

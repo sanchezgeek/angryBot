@@ -31,9 +31,4 @@ interface PositionServiceInterface
      * @return string Created stop `orderId`
      */
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string;
-
-    /**
-     * @return string Created buy order `orderId`
-     */
-    public function marketBuy(Position $position, float $qty): string;
 }

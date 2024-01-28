@@ -166,7 +166,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                 && preg_match(
                     sprintf(
                         '/expect %s, but trigger_price\[\d+\] %s current\[\d+\]/',
-                        $position->isShort() ? 'Rising' : 'Falling',
+                        $position->isShort() ? 'Rising' : 'Falling', // @todo ckeck
                         $position->isShort() ? '<=' : '>=',
                     ),
                     $msg,
@@ -182,39 +182,5 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         }
 
         return $stopOrderId;
-    }
-
-    /**
-     * @inheritDoc
-     *
-     * @throws CannotAffordOrderCost
-     *
-     * @throws ApiRateLimitReached
-     * @throws UnknownByBitApiErrorException
-     * @throws UnexpectedApiErrorException
-     *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddBuyOrderTest
-     */
-    public function marketBuy(Position $position, float $qty): string
-    {
-        $request = PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty);
-
-        $result = $this->sendRequest($request, static function (ApiErrorInterface $error) use ($position, $qty) {
-            match ($error->code()) {
-                ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCost::forBuy(
-                    $position->symbol,
-                    $position->side,
-                    $qty,
-                ),
-                default => null
-            };
-        });
-
-        $buyOrderId = $result->data()['orderId'] ?? null;
-        if (!$buyOrderId) {
-            throw BadApiResponseException::cannotFindKey($request, 'result.`orderId`', __METHOD__);
-        }
-
-        return $buyOrderId;
     }
 }
