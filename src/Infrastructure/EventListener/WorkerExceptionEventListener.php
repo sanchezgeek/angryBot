@@ -32,6 +32,7 @@ final class WorkerExceptionEventListener
 
     protected function printError(Throwable $exception): void
     {
+        var_dump($exception->getFile());
         print_r($exception->getMessage() . PHP_EOL);
     }
 }
