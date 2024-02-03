@@ -19,7 +19,7 @@ final class PositionUpdated extends LoggableEvent
             return null;
         }
 
-        return $this->position->positionValue > 26500 ? 'true' : 'false';
+        return $this->position->value > 26500 ? 'true' : 'false';
 //        return \sprintf('--#%s#-- | volume: %.2f USDT', $this->position->getCaption(), $this->position->positionValue);
     }
 }

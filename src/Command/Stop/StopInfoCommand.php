@@ -2,6 +2,7 @@
 
 namespace App\Command\Stop;
 
+use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
@@ -174,6 +175,7 @@ class StopInfoCommand extends AbstractCommand
     public function __construct(
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
+        CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
         string $name = null,
     ) {
         $this->withPositionService($positionService);
