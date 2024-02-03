@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Fixture;
 
-use App\Bot\Application\Service\Orders\BuyOrderService;
 use App\Bot\Domain\Entity\BuyOrder;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -28,7 +27,7 @@ final class BuyOrderFixture extends AbstractDoctrineFixture
         $entityManager = $container->get(EntityManagerInterface::class);
 
         /**
-         * @see BuyOrderService
+         * @see \App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler::handle
          */
         $entityManager->getConnection()->executeQuery('SELECT setval(\'buy_order_id_seq\', (SELECT MAX(id) + 1 from buy_order), false);');
     }

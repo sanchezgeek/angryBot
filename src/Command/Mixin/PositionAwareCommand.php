@@ -4,7 +4,6 @@ namespace App\Command\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use InvalidArgumentException;
 use RuntimeException;
@@ -15,23 +14,29 @@ use function sprintf;
 trait PositionAwareCommand
 {
     use ConsoleInputAwareCommand;
+    use SymbolAwareCommand;
 
     private const POSITION_SIDE_ARGUMENT_NAME = 'position_side';
 
     private readonly PositionServiceInterface $positionService;
 
-    private function getPosition(): Position
+    protected function getPosition(bool $throwException = true): ?Position
     {
-        // @todo | Retrieve position with `symbol` arg
-        $positionSide = $this->getPositionSide();
-        if (!$position = $this->positionService->getPosition(Symbol::BTCUSDT, $positionSide)) {
-            throw new RuntimeException(sprintf('Position on "%s" side not found', $positionSide->title()));
+        $symbol = $this->getSymbol();
+        $side = $this->getPositionSide();
+
+        if (!$position = $this->positionService->getPosition($symbol, $side)) {
+            if ($throwException) {
+                throw new RuntimeException(sprintf('"%s" "%s" position not found', $symbol->value, $side->title()));
+            }
+
+            return null;
         }
 
         return $position;
     }
 
-    private function getPositionSide(): Side
+    protected function getPositionSide(): Side
     {
         $argName = self::POSITION_SIDE_ARGUMENT_NAME;
         $providedPositionSideValue = $this->paramFetcher->getStringArgument($argName);
@@ -44,15 +49,16 @@ trait PositionAwareCommand
         return $positionSide;
     }
 
-    private function configurePositionArgs(): static
+    protected function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
     {
-        // @todo | Add `symbol` arg
-        $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, InputArgument::REQUIRED, 'Position side (sell|buy)');
+        if (!$this->isSymbolArgsConfigured()) {
+            $this->configureSymbolArgs();
+        }
 
-        return $this;
+        return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, $mode, 'Position side (sell|buy)');
     }
 
-    private function withPositionService(PositionServiceInterface $positionService): static
+    protected function withPositionService(PositionServiceInterface $positionService): static
     {
         $this->positionService = $positionService;
 

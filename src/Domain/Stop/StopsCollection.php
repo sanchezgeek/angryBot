@@ -114,7 +114,7 @@ final class StopsCollection implements IteratorAggregate
 
     public function volumePart(float $volume): float
     {
-        return VolumeHelper::round(($this->totalVolume() / $volume) * 100);
+        return round(($this->totalVolume() / $volume) * 100, 3);
     }
 
     public function grabFromRange(PriceRange $range): self

@@ -9,11 +9,22 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use DateInterval;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+
+use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface
 {
@@ -22,6 +33,9 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     /** @todo | inject into service? */
     private const POSITION_TTL = '6 seconds';
 
+    /**
+     * @param ByBitLinearPositionService $positionService
+     */
     public function __construct(
         private PositionServiceInterface $positionService,
         private EventDispatcherInterface $events,
@@ -31,14 +45,14 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetPositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        $key = \sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
+        $key = sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
 
         return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
-            $item->expiresAfter(\DateInterval::createFromDateString(self::POSITION_TTL));
+            $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
 
             if ($position = $this->positionService->getPosition($symbol, $side)) {
                 $this->events->dispatch(new PositionUpdated($position));
@@ -48,8 +62,19 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         });
     }
 
+    public function getPositions(Symbol $symbol): array
+    {
+        $key = sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
+
+        return $this->cache->get($key, function (ItemInterface $item) use ($symbol) {
+            $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
+
+            return $this->positionService->getPositions($symbol);
+        });
+    }
+
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
      */
     public function getOppositePosition(Position $position): ?Position
     {
@@ -57,18 +82,19 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddStopTest
+     * @inheritDoc
+     *
+     * @throws MaxActiveCondOrdersQntReached
+     * @throws TickerOverConditionalOrderTriggerPrice
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddStopTest
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
-        return $this->positionService->addStop($position, $ticker, $price, $qty);
-    }
-
-    /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService\AddBuyOrderTest
-     */
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
-    {
-        return $this->positionService->addBuyOrder($position, $ticker, $price, $qty);
+        return $this->positionService->addConditionalStop($position, $price, $qty, $triggerBy);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Command\Stop\Dump;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Clock\ClockInterface;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Helper\Json;
@@ -16,7 +17,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function file_put_contents;
 use function implode;
@@ -27,7 +27,7 @@ use function sprintf;
  * @see StopsDumpCommandTest
  */
 #[AsCommand(name: 'sl:dump')]
-class StopsDumpCommand extends Command
+class StopsDumpCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -55,8 +55,6 @@ class StopsDumpCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         $positionSide = $this->getPositionSide();
         $mode = $this->getMode();
         $deleteDumpedStops = $this->paramFetcher->getBoolOption(self::DELETE_DUMPED_STOPS_OPTION);
@@ -80,7 +78,7 @@ class StopsDumpCommand extends Command
         }
 
         if (!$stops) {
-            $io->info('Stops not found!'); return Command::SUCCESS;
+            $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
         $dump = [];
@@ -96,10 +94,10 @@ class StopsDumpCommand extends Command
                 }
             });
 
-            $io->note(sprintf('Stops removed! Qnt: %d', count($stops)));
+            $this->io->note(sprintf('Stops removed! Qnt: %d', count($stops)));
         }
 
-        $io->info(sprintf('Dump saved to %s', $filepath));
+        $this->io->info(sprintf('Dump saved to %s', $filepath));
 
         return Command::SUCCESS;
     }

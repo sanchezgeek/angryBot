@@ -6,14 +6,17 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
+use function array_map;
 use function usort;
 
 trait StopsTester
 {
     use TestWithDoctrineRepository;
     use PositionSideAwareTest;
+    use TestWithDbFixtures;
 
     /**
      * @return Stop[]
@@ -26,6 +29,11 @@ trait StopsTester
         }
 
         return $stops;
+    }
+
+    private function haveStopsInDb(Stop ...$stops): void
+    {
+        $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $stops));
     }
 
     protected static function seeStopsInDb(Stop ...$expectedStops): void

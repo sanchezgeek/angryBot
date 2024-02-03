@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5;
 
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\Result\ByBitApiCallResult;
+use App\Infrastructure\ByBit\API\Common\ByBitApiCallResult;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
@@ -32,7 +32,7 @@ abstract class ByBitV5ApiRequestTestAbstract extends TestCase
     private const API_KEY = 'bybit-api-key';
     private const API_SECRET = 'bybit-api-secret';
 
-    private const EXPECTED_RECV_WINDOW = '5000';
+    private const EXPECTED_RECV_WINDOW = '8000';
     private const EXPECTED_BAPI_SIGN_TYPE = '2';
 
     protected SymfonyHttpClientStub $httpClientStub;

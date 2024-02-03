@@ -11,6 +11,9 @@ use PHPUnit\Framework\TestCase;
 
 use function iterator_to_array;
 
+/**
+ * @covers \App\Domain\BuyOrder\BuyOrdersCollection
+ */
 final class BuyOrdersCollectionTest extends TestCase
 {
     public function testHas(): void

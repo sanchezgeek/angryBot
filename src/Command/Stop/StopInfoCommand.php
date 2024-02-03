@@ -3,9 +3,10 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Price\Helper\PriceHelper;
@@ -32,15 +33,15 @@ use function is_bool;
 use function sprintf;
 
 #[AsCommand(name: 'sl:info')]
-class StopInfoCommand extends Command
+class StopInfoCommand extends AbstractCommand
 {
-    use ConsoleInputAwareCommand;
     use PositionAwareCommand;
 
     private const DEFAULT_PNL_STEP = 20;
     private const SHOW_PNL_OPTION = 'showPnl';
+    private const SHOW_POSITION_PNL = 'showPositionPnl';
+    private const SHOW_TP = 'showTP';
 
-    private SymfonyStyle $io;
     private string $aggregateWith;
     private array $aggOrder = [];
 
@@ -49,15 +50,16 @@ class StopInfoCommand extends Command
         $this
             ->configurePositionArgs()
             ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
-            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback')
+            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
+            ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
+            ->addOption(self::SHOW_TP, '-t', InputOption::VALUE_NEGATABLE, 'Show TP orders', false)
         ;
     }
 
-    protected function initialize(InputInterface $input, OutputInterface $output)
+    protected function initialize(InputInterface $input, OutputInterface $output): void
     {
-        $this->withInput($input);
-        $this->io = new SymfonyStyle($input, $output);
+        parent::initialize($input, $output);
 
         $this->aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
     }
@@ -67,14 +69,11 @@ class StopInfoCommand extends Command
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
         $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
+        $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
+        $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-
-        if ($isHedge) {
-            $isSupportPosition = Hedge::create($position, $oppositePosition)->isSupportPosition($position);
-            if ($isSupportPosition) {
-                $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
-            }
+        if ($position->isSupportPosition()) {
+            $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
         }
 
         $stops = $this->stopRepository->findActive(
@@ -86,7 +85,10 @@ class StopInfoCommand extends Command
             $this->io->info('Stops not found!'); return Command::SUCCESS;
         }
 
-        $stops = new StopsCollection(...$stops);
+        $stops = (new StopsCollection(...$stops));
+        if (!$showTPs) {
+            $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
+        }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
@@ -105,7 +107,7 @@ class StopInfoCommand extends Command
 
             if ($showPnl) {
                 $format .= ' (%s)';
-                $args[] = new Pnl($usdPnL, 'USDT');
+                $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
             $this->io->note(\sprintf($format, ...$args));
@@ -117,6 +119,12 @@ class StopInfoCommand extends Command
 
         if ($showPnl) {
             $this->io->note(sprintf('total PNL: %s', new Pnl($totalUsdPnL)));
+        }
+
+        if ($showCurrentPositionPnl) {
+            $this->io->note(
+                sprintf('unrealized position PNL: %.1f', $position->unrealizedPnl)
+            );
         }
 
         $this->io->note(sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100));

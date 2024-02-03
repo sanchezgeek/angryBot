@@ -117,8 +117,53 @@ final class BuyOrderTest extends TestCase
         self::assertSame($exchangeOrderId, $buyOrder->getContext()[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT]);
     }
 
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testEmptyIsWithShortStopContext(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+
+        self::assertFalse($buyOrder->isWithShortStop());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testIsWithShortStopContext(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
+        self::assertFalse($buyOrder->isWithShortStop());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
+        self::assertFalse($buyOrder->isWithShortStop());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
+        self::assertTrue($buyOrder->isWithShortStop());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testEmptyStopDistanceContext(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+
+        self::assertNull($buyOrder->getStopDistance());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testGetStopDistanceContext(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
+
+        self::assertSame(100500.0, $buyOrder->getStopDistance());
+    }
+
     public function testDummy(): void
     {
-        self::markTestIncomplete('isWithShortStop, ...');
+        self::markTestIncomplete();
     }
 }

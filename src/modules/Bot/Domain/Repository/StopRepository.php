@@ -20,7 +20,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Stop[]    findAll()
  * @method Stop[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class StopRepository extends ServiceEntityRepository implements PositionOrderRepository
+class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 
@@ -87,8 +87,8 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($nearTicker) {
-            $cond = $side === Side::Sell    ? '(:price > s.price - s.triggerDelta)' : '(:price < s.price + s.triggerDelta)';
-            $price = $side === Side::Sell   ? $nearTicker->indexPrice + 50  : $nearTicker->indexPrice - 50;
+            $cond = $side->isShort()    ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
+            $price = $side->isShort()   ? $nearTicker->indexPrice->value() + 50  : $nearTicker->indexPrice->value() - 50;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
         }

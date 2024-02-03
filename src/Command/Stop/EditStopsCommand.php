@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -31,7 +32,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'sl:range-edit')]
-class EditStopsCommand extends Command
+class EditStopsCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -75,8 +76,6 @@ class EditStopsCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         $priceRange = $this->getPriceRange();
         $action = $this->getAction();
         $position = $this->getPosition();
@@ -95,17 +94,17 @@ class EditStopsCommand extends Command
 
         $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
         if (!$filteredStops->totalCount()) {
-//            $io->info('Stops by specified criteria not found!');
+//            $this->io->info('Stops by specified criteria not found!');
             return Command::SUCCESS;
         }
 
         if ($stopsInSpecifiedRange->totalCount() !== $filteredStops->totalCount()) {
-            $io->info(sprintf('Stops in specified range qnt: %d', $stopsInSpecifiedRange->totalCount()));
+            $this->io->info(sprintf('Stops in specified range qnt: %d', $stopsInSpecifiedRange->totalCount()));
         }
 
-        $io->info(sprintf('Filtered stops qnt: %d', $filteredStops->totalCount()));
+        $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStops->totalCount()));
 
-        if (!$io->confirm(
+        if (!$this->io->confirm(
             sprintf(
                 'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
                 $action,
@@ -176,7 +175,7 @@ class EditStopsCommand extends Command
                 );
             });
 
-            $io->note(\sprintf('removed stops qnt: %d', $removed->totalCount()));
+            $this->io->note(\sprintf('removed stops qnt: %d', $removed->totalCount()));
         }
 
         if ($action === self::ACTION_REMOVE) {
@@ -186,7 +185,7 @@ class EditStopsCommand extends Command
                 }
             });
 
-//            $io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
+//            $this->io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
         }
 
         if ($action === self::ACTION_EDIT) {
@@ -198,7 +197,7 @@ class EditStopsCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('modified stops qnt: %d', $filteredStops->totalCount()));
+            $this->io->note(\sprintf('modified stops qnt: %d', $filteredStops->totalCount()));
         }
 
         return Command::SUCCESS;

@@ -10,7 +10,13 @@ use App\Bot\Application\Service\Exchange\TickersCache;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Domain\Price\PriceRange;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
@@ -20,6 +26,9 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private const DEFAULT_TICKER_TTL = '1000 milliseconds';
 
+    /**
+     * @param ByBitLinearExchangeService $exchangeService
+     */
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
@@ -28,7 +37,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
+     * @throws TickerNotFoundException
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
      */
     public function ticker(Symbol $symbol): Ticker
     {
@@ -43,6 +58,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         return $this->updateTicker($symbol, \DateInterval::createFromDateString(self::DEFAULT_TICKER_TTL));
     }
 
+    /**
+     * @throws TickerNotFoundException
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
     public function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
     {
         $key = $this->tickerCacheKey($symbol);
@@ -61,15 +83,23 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
     /**
      * @return ActiveStopOrder[]
      *
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(Symbol $symbol): array
+    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
     {
-        return $this->exchangeService->activeConditionalOrders($symbol);
+        return $this->exchangeService->activeConditionalOrders($symbol, $priceRange);
     }
 
     /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService\CloseActiveConditionalOrderTest
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     *
+     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\CloseActiveConditionalOrderTest
      */
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {

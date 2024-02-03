@@ -6,20 +6,12 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Strategy\StopCreate;
 
-final class HedgeStrategy
+final readonly class HedgeStrategy
 {
-    public StopCreate $supportPositionOppositeStopCreation;
-    public StopCreate $mainPositionOppositeStopCreation;
-    public ?string $description;
-
     public function __construct(
-        string $hedgeSupportPositionCreateOppositeStopAfter,
-        string $hedgeMainPositionCreateOppositeStopAfter,
-        ?string $description = null
+        public StopCreate $supportPositionStopCreation,
+        public StopCreate $mainPositionStopCreation,
+        public ?string $description = null
     ) {
-        $this->supportPositionOppositeStopCreation = StopCreate::tryFrom($hedgeSupportPositionCreateOppositeStopAfter);
-        $this->mainPositionOppositeStopCreation = StopCreate::tryFrom($hedgeMainPositionCreateOppositeStopAfter);
-
-        $this->description = $description;
     }
 }

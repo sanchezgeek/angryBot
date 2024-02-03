@@ -17,7 +17,7 @@ trait PriceRangeAwareCommand
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
 
-    private function configurePriceRangeArgs(
+    protected function configurePriceRangeArgs(
         string $fromName = 'from', string $fromAlias = 'f',
         string $toName = 'to', string $toAlias = 't',
     ): static {
@@ -32,14 +32,14 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
-    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
+    protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
     {
         try {
             $pnlValue = $this->paramFetcher->getPercentOption($name);
             return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
             try {
-                return Price::float($this->paramFetcher->getFloatOption($name));
+                return Price::float($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
                 if ($required) {
                     throw $e;
@@ -50,14 +50,11 @@ trait PriceRangeAwareCommand
         }
     }
 
-    private function getPriceRange(): PriceRange
+    protected function getPriceRange(): PriceRange
     {
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
 
-        return new PriceRange($fromPrice, $toPrice);
+        return PriceRange::create($fromPrice, $toPrice);
     }
 }

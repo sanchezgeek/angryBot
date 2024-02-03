@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -33,6 +34,7 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
     protected StopService $stopService;
     protected StopRepository $stopRepository;
 
+    protected OrderServiceInterface $orderServiceMock;
     protected PositionServiceInterface $positionServiceStub;
     protected ExchangeServiceInterface $exchangeServiceMock;
     protected LoggerInterface $loggerMock;
@@ -46,6 +48,7 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
 
+        $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceStub = new PositionServiceStub();
         $this->loggerMock = $this->createMock(LoggerInterface::class);

@@ -14,7 +14,7 @@ use App\Helper\VolumeHelper;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-final class StopService
+final class StopService implements StopServiceInterface
 {
     use DispatchCommandTrait;
 

@@ -6,8 +6,8 @@ namespace App\Tests\Stub\Bot;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use LogicException;
 
@@ -27,9 +27,7 @@ final class PositionServiceStub implements PositionServiceInterface
 
     private array $mockedExchangeOrdersIds = [];
     private array $addStopMethodCalls = [];
-    private array $addBuyOrderMethodCalls = [];
     private array $pushedStopsExchangeOrderIds = [];
-    private array $pushedBuyOrdersExchangeOrderIds = [];
 
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
@@ -40,6 +38,11 @@ final class PositionServiceStub implements PositionServiceInterface
         }
 
         return null;
+    }
+
+    public function getPositions(Symbol $symbol): array
+    {
+        return $this->positions;
     }
 
     public function getOppositePosition(Position $position): ?Position
@@ -53,22 +56,12 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
-        $this->addStopMethodCalls[] = [$position, $ticker, $price, $qty];
+        $this->addStopMethodCalls[] = [$position, $price, $qty, $triggerBy];
 
         $exchangeOrderId = $this->getNextExchangeOrderId();
         $this->pushedStopsExchangeOrderIds[] = $exchangeOrderId;
-
-        return $exchangeOrderId;
-    }
-
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string
-    {
-        $this->addBuyOrderMethodCalls[] = [$position, $ticker, $price, $qty];
-
-        $exchangeOrderId = $this->getNextExchangeOrderId();
-        $this->pushedBuyOrdersExchangeOrderIds[] = $exchangeOrderId;
 
         return $exchangeOrderId;
     }
@@ -90,11 +83,6 @@ final class PositionServiceStub implements PositionServiceInterface
     public function getAddStopCallsStack(): array
     {
         return $this->addStopMethodCalls;
-    }
-
-    public function getAddBuyOrderCallsStack(): array
-    {
-        return $this->addBuyOrderMethodCalls;
     }
 
     public function setMockedExchangeOrdersIds(array $mockedExchangeOrdersIds): self

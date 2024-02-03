@@ -7,9 +7,9 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
-use App\Tests\Mock\Response\ByBit\PositionResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function sprintf;
@@ -44,37 +44,64 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
     {
         $symbol = Symbol::BTCUSDT;
         $category = AssetCategory::linear;
+
+        ### SHORT ###
         $positionSide = Side::Sell;
 
-        yield sprintf('have %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        # single
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100, -20);
+        yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => (new PositionResponseBuilder($category))->addPosition(
-                $symbol,
-                $positionSide,
-                $entryPrice = 30000,
-                $size = 1.1,
-                $value = 33000,
-                $margin = 330,
-                $leverage = 100,
-                $liqPrice = 31000,
-            )->build(),
-            '$expectedPosition' => new Position(
-                $positionSide,
-                $symbol,
-                $entryPrice,
-                $size,
-                $value,
-                $liqPrice,
-                $margin,
-                $leverage,
-            ),
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
+            '$expectedPosition' => $position,
         ];
 
-        // @todo | apiV5 | 'have position on other side'
-
-        yield sprintf('have no position (%s %s, %s)', $symbol->value, $positionSide->title(), $category->value) => [
+        # with opposite
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100, -20);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
+        $position->setOppositePosition($oppositePosition);
+        $oppositePosition->setOppositePosition($position);
+        yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
-            '$apiResponse' => (new PositionResponseBuilder($category))->build(),
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->withPosition($oppositePosition)->build(),
+            '$expectedPosition' => $position,
+        ];
+
+        # have no position on SHORT side
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
+        yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),
+            '$expectedPosition' => null,
+        ];
+
+        ### BUY ###
+        $positionSide = Side::Buy;
+
+        # single
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 100, 20);
+        yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
+            '$expectedPosition' => $position,
+        ];
+
+        # with opposite
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 100, 20);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
+        $position->setOppositePosition($oppositePosition);
+        $oppositePosition->setOppositePosition($position);
+        yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->withPosition($oppositePosition)->build(),
+            '$expectedPosition' => $position,
+        ];
+
+        # have no position on SHORT side
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
+        yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),
             '$expectedPosition' => null,
         ];
     }

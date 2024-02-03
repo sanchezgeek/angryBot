@@ -5,6 +5,7 @@ namespace App\Command\Buy;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -15,14 +16,13 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_merge;
 use function random_int;
 use function round;
 
 #[AsCommand(name: 'buy:grid')]
-class CreateBuyGridCommand extends Command
+class CreateBuyGridCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -42,8 +42,6 @@ class CreateBuyGridCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         try {
             $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
@@ -63,14 +61,14 @@ class CreateBuyGridCommand extends Command
                 );
             }
 
-            $io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
-            $io->info(
+            $this->io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
+            $this->io->info(
                 sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit %s -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $side->value, $uniqueId)
             );
 
             return Command::SUCCESS;
         } catch (Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }

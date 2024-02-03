@@ -7,18 +7,17 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Result\CommonApiError;
-use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Error;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
-use App\Tests\Mock\Response\ByBit\Trade\CancelOrderResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
-
 use function sprintf;
 use function uuid_create;
 
@@ -31,7 +30,7 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
     use ByBitV5ApiTester;
 
     private const REQUEST_URL = CancelOrderRequest::URL;
-    private const METHOD = ByBitLinearExchangeService::class . '::closeActiveConditionalOrder';
+    private const CALLED_METHOD = 'ByBitLinearExchangeService::closeActiveConditionalOrder';
 
     /**
      * @dataProvider closeOrderTestSuccessCases
@@ -103,18 +102,25 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
         # Ticker not found
         foreach ($this->positionSideProvider() as [$side]) {
             # Api errors
-            $error = ApiV5Error::ApiRateLimitReached;
-            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->desc()) => [
+            $error = ByBitV5ApiError::knownError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit reached');
+            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), ApiV5Errors::ApiRateLimitReached->desc()) => [
                 $category, $symbol, $side,
                 '$apiResponse' => CancelOrderResponseBuilder::error($error)->build(),
-                '$expectedException' => new ApiRateLimitReached(),
+                '$expectedException' => new ApiRateLimitReached($msg),
             ];
 
-            $error = new CommonApiError(100500, 'Some other cancel order error');
-            yield sprintf('[%s] API returned %d code (%s)', $side->value, $error->code(), $error->desc()) => [
+            $error = ByBitV5ApiError::unknown(100500, 'Some other cancel order error');
+            yield sprintf('[%s] API returned unknown %d code (%s) => UnknownByBitApiErrorException', $side->value, $error->code(), $error->msg()) => [
                 $category, $symbol, $side,
                 '$apiResponse' => CancelOrderResponseBuilder::error($error)->build(),
-                '$expectedException' => self::expectedUnknownApiErrorException(self::REQUEST_URL, $error, self::METHOD),
+                '$expectedException' => self::unknownV5ApiErrorException(self::REQUEST_URL, $error),
+            ];
+
+            $error = ByBitV5ApiError::knownError(ApiV5Errors::MaxActiveCondOrdersQntReached, ApiV5Errors::MaxActiveCondOrdersQntReached->desc());
+            yield sprintf('[%s] API returned known %d code (%s) => UnexpectedApiErrorException', $side->value, $error->code(), $error->msg()) => [
+                $category, $symbol, $side,
+                '$apiResponse' => CancelOrderResponseBuilder::error($error)->build(),
+                '$expectedException' => self::unexpectedV5ApiErrorException(self::REQUEST_URL, $error, self::CALLED_METHOD),
             ];
         }
     }

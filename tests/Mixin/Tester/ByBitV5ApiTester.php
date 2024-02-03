@@ -5,13 +5,22 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Tester;
 
 use App\Clock\ClockInterface;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient;
+use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
+use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Tests\Functional\Infrastructure\BybBit\Service\ApiErrorTestCaseData;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
+use App\Tests\Mixin\DataProvider\TestCaseAwareTest;
 use App\Tests\Stub\Request\SymfonyHttpClientStub;
 use DateTimeImmutable;
 use RuntimeException;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function assert;
 use function count;
@@ -19,26 +28,23 @@ use function sprintf;
 
 trait ByBitV5ApiTester
 {
-    private const DEFAULT_HOST = 'https://api-testnet.bybit.com';
+    use PositionSideAwareTest;
+    use TestCaseAwareTest;
+
+    public const DEFAULT_HOST = 'https://api-testnet.bybit.com';
     private const DEFAULT_API_KEY = 'bybit-api-key';
     private const DEFAULT_API_SECRET = 'bybit-api-secret';
 
-    private string $apiHost;
+    private ?SymfonyHttpClientStub $httpClientStub = null;
 
-    private SymfonyHttpClientStub $httpClientStub;
-
-    /**
-     * @var AbstractByBitApiRequest[]
-     */
+    /** @var AbstractByBitApiRequest[] */
     private array $expectedApiRequestsAfterTest = [];
 
     public function initializeApiClient(
         string $host = self::DEFAULT_HOST,
         string $apiKey = self::DEFAULT_API_KEY,
-        string $apiSecret = self::DEFAULT_API_SECRET
+        string $apiSecret = self::DEFAULT_API_SECRET,
     ): ByBitV5ApiClient {
-        $this->apiHost = $host;
-
         $clockMock = $this->createMock(ClockInterface::class);
         $clockMock->method('now')->willReturn(new DateTimeImmutable());
 
@@ -53,25 +59,31 @@ trait ByBitV5ApiTester
         );
     }
 
+    private function getHttClientStub(): SymfonyHttpClientStub
+    {
+        return $this->httpClientStub ?? ($this->httpClientStub = self::getContainer()->get(HttpClientInterface::class));
+    }
+
     protected function getFullRequestUrl(AbstractByBitApiRequest $request): string
     {
-        return $this->apiHost . $request->url();
+        $apiHost = $this->getHttClientStub()->getBaseUri();
+        return $apiHost . $request->url();
     }
 
-    protected function matchGet(AbstractByBitApiRequest $request, MockResponse $resultResponse): void
+    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse): void
     {
-        $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), $resultResponse);
+        $requestUrl = $this->getFullRequestUrl($expectedRequest);
+        $this->getHttClientStub()->matchGet($requestUrl, $expectedRequest->data(), $resultResponse);
 
-        $this->expectedApiRequestsAfterTest[] = $request;
+        $this->expectedApiRequestsAfterTest[] = $expectedRequest;
     }
 
-    protected function matchPost(AbstractByBitApiRequest $request, MockResponse $resultResponse): void
+    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse): void
     {
-        $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchPost($requestUrl, $resultResponse);
+        $requestUrl = $this->getFullRequestUrl($expectedRequest);
+        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data());
 
-        $this->expectedApiRequestsAfterTest[] = $request;
+        $this->expectedApiRequestsAfterTest[] = $expectedRequest;
     }
 
     /**
@@ -79,7 +91,7 @@ trait ByBitV5ApiTester
      */
     protected function assertResultHttpClientCalls(): void
     {
-        $actualRequestCalls = $this->httpClientStub->getRequestCalls();
+        $actualRequestCalls = $this->getHttClientStub()->getRequestCalls();
         self::assertCount(count($this->expectedApiRequestsAfterTest), $actualRequestCalls);
 
         foreach ($this->expectedApiRequestsAfterTest as $key => $expectedRequest) {
@@ -91,7 +103,7 @@ trait ByBitV5ApiTester
                 self::assertSame($expectedRequest->data(), $actualRequestCall->body);
             } else {
                 assert($expectedRequest->method() === Request::METHOD_GET, new RuntimeException(
-                    sprintf('Unknown request type (`%s` verb)', $expectedRequest->method())
+                    sprintf('Unknown request type (`%s` verb)', $expectedRequest->method()),
                 ));
 
                 self::assertSame($expectedRequest->method(), $actualRequestCall->method);
@@ -100,5 +112,40 @@ trait ByBitV5ApiTester
                 self::assertSame($expectedRequest->data(), $actualRequestCall->params);
             }
         }
+    }
+
+    protected static function unknownV5ApiErrorException(
+        string $requestUrl,
+        ByBitV5ApiError $error,
+    ): UnknownByBitApiErrorException {
+        return new UnknownByBitApiErrorException($error->code(), $error->msg(), sprintf('Make `%s` request', $requestUrl));
+    }
+
+    protected static function unexpectedV5ApiErrorException(
+        string $requestUrl,
+        ByBitV5ApiError $error,
+        string $serviceMethod,
+    ): UnexpectedApiErrorException {
+        return self::unexpectedApiErrorError($requestUrl, $error->code(), $error->msg(), $serviceMethod);
+    }
+
+    protected static function unexpectedApiErrorError(
+        string $requestUrl,
+        int $code,
+        string $message,
+        string $serviceMethod,
+    ): UnexpectedApiErrorException {
+        return new UnexpectedApiErrorException($code, $message, sprintf('%s | make `%s`', $serviceMethod, $requestUrl));
+    }
+
+    /**
+     * @return ApiErrorTestCaseData[]
+     */
+    protected function commonFailedApiCallCases(string $requestUrl): array
+    {
+        return [
+            ApiErrorTestCaseData::knownApiError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit', new ApiRateLimitReached($msg)),
+            ApiErrorTestCaseData::unknownApiError($requestUrl),
+        ];
     }
 }

@@ -6,8 +6,12 @@ namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\CoinAmount;
+use App\Domain\Order\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
+use App\Tests\Factory\TickerFactory;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 use function sprintf;
@@ -17,31 +21,134 @@ use function sprintf;
  */
 final class PositionTest extends TestCase
 {
-    public function testIsShort(): void
+    public function testShortPosition(): void
     {
-        $position = new Position(Side::Sell, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+        $side = Side::Sell;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050.1;
+        $value = 100005000;
+        $liquidation = 200500;
+        $initialMargin = 1000;
+        $leverage = 100;
 
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+
+        self::assertEquals($side, $position->side);
         self::assertTrue($position->isShort());
         self::assertFalse($position->isLong());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertNull($position->oppositePosition);
+        self::assertNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
     }
 
-    public function testIsLong(): void
+    public function testShortPositionWithOpposite(): void
     {
-        $position = new Position(Side::Buy, Symbol::BTCUSDT, 100500, 1050, 100005000, 0, 1000, 100);
+        $side = Side::Sell;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050.1;
+        $value = 100005000;
+        $liquidation = 200500;
+        $initialMargin = 1000;
+        $leverage = 100;
 
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+        $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 2050.1, 2000050000, 300500, 100, 100);
+        $position->setOppositePosition($oppositePosition);
+
+        self::assertEquals($side, $position->side);
+        self::assertTrue($position->isShort());
+        self::assertFalse($position->isLong());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertSame($oppositePosition, $position->oppositePosition);
+        self::assertNotNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertTrue($position->isSupportPosition());
+    }
+
+    public function testLongPosition(): void
+    {
+        $side = Side::Buy;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050;
+        $value = 100005000;
+        $liquidation = 90500;
+        $initialMargin = 1000;
+        $leverage = 100;
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+
+        self::assertEquals($side, $position->side);
         self::assertTrue($position->isLong());
         self::assertFalse($position->isShort());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertNull($position->oppositePosition);
+        self::assertNull($position->getHedge());
+        self::assertFalse($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
+    }
+
+    public function testLongPositionWithOpposite(): void
+    {
+        $side = Side::Buy;
+        $symbol = Symbol::BTCUSDT;
+        $entry = 100500;
+        $size = 1050;
+        $value = 100005000;
+        $liquidation = 90500;
+        $initialMargin = 1000;
+        $leverage = 100;
+
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
+        $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 1000, 100000, 300500, 100, 100);
+        $position->setOppositePosition($oppositePosition);
+
+        self::assertEquals($side, $position->side);
+        self::assertTrue($position->isLong());
+        self::assertFalse($position->isShort());
+        self::assertEquals($symbol, $position->symbol);
+        self::assertEquals($entry, $position->entryPrice);
+        self::assertEquals($size, $position->size);
+        self::assertEquals($value, $position->value);
+        self::assertEquals($liquidation, $position->liquidationPrice);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals(new Leverage($leverage), $position->leverage);
+        self::assertSame($oppositePosition, $position->oppositePosition);
+        self::assertNotNull($position->getHedge());
+        self::assertTrue($position->isMainPosition());
+        self::assertFalse($position->isSupportPosition());
     }
 
     /**
-     * @dataProvider successCasesProvider
+     * @dataProvider getVolumePartSuccessCases
      */
     public function testCanGetVolumePart(Position $position, float $volumePart, float $expectedVolume): void
     {
         self::assertEquals($expectedVolume, $position->getVolumePart($volumePart));
     }
 
-    private function successCasesProvider(): array
+    private function getVolumePartSuccessCases(): array
     {
         return [
             [
@@ -68,7 +175,7 @@ final class PositionTest extends TestCase
     }
 
     /**
-     * @dataProvider wrongGetVolumeCasesProvider
+     * @dataProvider getVolumePartFailCases
      */
     public function testFailGetVolumePart(float $percent): void
     {
@@ -80,8 +187,30 @@ final class PositionTest extends TestCase
         $position->getVolumePart($percent);
     }
 
-    private function wrongGetVolumeCasesProvider(): array
+    private function getVolumePartFailCases(): array
     {
         return [[-150], [-100], [0], [101], [150]];
+    }
+
+    public function testCanGetDeltaToLiquidation(): void
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
+        self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
+
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,31450);
+        self::assertEquals(450, $position->priceDeltaToLiquidation($ticker));
+    }
+
+    public function testFailGetDeltaToLiquidation(): void
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $ticker = TickerFactory::create(Symbol::BTCUSD, 30600,30450);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
+
+        $position->priceDeltaToLiquidation($ticker);
     }
 }

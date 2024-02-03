@@ -7,6 +7,9 @@ namespace App\Tests\Unit\Domain\Position\ValueObject;
 use App\Domain\Position\ValueObject\Side;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers \App\Domain\Position\ValueObject\Side
+ */
 final class SideTest extends TestCase
 {
     public function testLongExpectations(): void

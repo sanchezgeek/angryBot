@@ -3,6 +3,7 @@
 namespace App\Command\Buy;
 
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Command\AbstractCommand;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -10,10 +11,9 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'buy:move', description: 'Move position buy-orders')]
-class MoveBuyOrdersCommand extends Command
+class MoveBuyOrdersCommand extends AbstractCommand
 {
     public function __construct(
         private readonly BuyOrderRepository $buyOrderRepository,
@@ -25,15 +25,12 @@ class MoveBuyOrdersCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
             ->addArgument('priceToBeginBefore', InputArgument::REQUIRED, 'Price from which BuyOrders must be moved')
             ->addArgument('moveOverPrice', InputArgument::REQUIRED, 'Price above|under which BuyOrders must be placed');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-
         try {
             if (!$positionSide = Side::tryFrom($input->getArgument('position_side'))) {
                 throw new \InvalidArgumentException(
@@ -74,13 +71,9 @@ class MoveBuyOrdersCommand extends Command
                 $this->buyOrderRepository->save($order);
             }
 
-//            $io->success(
-//                \sprintf('Result transfer cost: %d', $cost),
-//            );
-
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error($e->getMessage());
+            $this->io->error($e->getMessage());
 
             return Command::FAILURE;
         }

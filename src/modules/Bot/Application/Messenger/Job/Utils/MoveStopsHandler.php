@@ -20,8 +20,8 @@ final class MoveStopsHandler
      */
     private array $lastRunAt = [];
 
-    private const PRICE_STEP = 3;
-    private const MOVE_STEP = 2.8;
+    public const PRICE_STEP = 3;
+    public const MOVE_STEP = 3.1;
 
     public function __construct(
         private readonly StopRepository $stopRepository,
@@ -55,8 +55,8 @@ final class MoveStopsHandler
 
         if (
             $side->isShort()
-                ? ($entryPrice->less($lastRun->sub(self::PRICE_STEP)))
-                : ($entryPrice->greater($lastRun->add(self::PRICE_STEP)))
+                ? ($entryPrice->lessThan($lastRun->sub(self::PRICE_STEP)))
+                : ($entryPrice->greaterThan($lastRun->add(self::PRICE_STEP)))
         ) {
             $delta = abs($entryPrice->value() - $lastRun->value());
             $times = $delta / self::PRICE_STEP;
@@ -69,9 +69,9 @@ final class MoveStopsHandler
 
                 // @todo '0.025' must be calculated as part of position size
                 if ($stop->getVolume() >= 0.025) {
-                    $needMove = $side->isShort() ? $stopPrice->greater($entryPrice) : $stopPrice->less($entryPrice);
+                    $needMove = $side->isShort() ? $stopPrice->greaterThan($entryPrice) : $stopPrice->lessThan($entryPrice);
                 } else {
-                    $needMove = $side->isShort() ? $stopPrice->greater($entryPrice->sub(100)) : $stopPrice->less($entryPrice->add(100));
+                    $needMove = $side->isShort() ? $stopPrice->greaterThan($entryPrice->sub(100)) : $stopPrice->lessThan($entryPrice->add(100));
                 }
 
                 if (!$needMove) {

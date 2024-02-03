@@ -7,8 +7,10 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -16,81 +18,144 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
+use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Throwable;
 
-/** @see PushStopsTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
+    public const LIQUIDATION_WARNING_DELTA = 50;
+    public const LIQUIDATION_CRITICAL_DELTA = 35;
+
+    public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
+    public const TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 7;
+
     private const SL_DEFAULT_TRIGGER_DELTA = 25;
     private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
-    public const BUY_ORDER_TRIGGER_DELTA = 1;
-    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 108;
-    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 121;
+
+    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 78;
+    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
 
     public function __invoke(PushStops $message): void
     {
-        if (!($position = $this->positionService->getPosition($message->symbol, $message->side))) {
+        $positionService = $this->positionService; $orderService = $this->orderService;
+        $side = $message->side; $symbol = $message->symbol;
+        $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
+
+        if (!($position = $this->positionService->getPosition($symbol, $side))) {
             return;
         }
 
-        $stops = $this->repository->findActive(
-            side: $position->side,
-            nearTicker: $this->exchangeService->ticker($message->symbol),
-            qbModifier: static fn (QB $qb) => QueryHelper::addOrder($qb, 'price', $position->isShort() ? 'ASC' : 'DESC')
-        );
-        $ticker = $this->exchangeService->ticker($message->symbol); // For case if ticker changed while DB query
+        $stops = $this->findStops($side, $symbol);
+        $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
+        $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+
+        if ($deltaToLiquidation <= self::LIQUIDATION_WARNING_DELTA) {
+            $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
+        } else {
+            $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
+        }
 
         foreach ($stops as $stop) {
-            $td = $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
-            $price = $stop->getPrice();
+            ### TP
+            if ($stop->isTakeProfitOrder()) {
+                if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
+                    $this->pushStopToExchange($ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                }
+                continue;
+            }
 
-            if (
-                ($indexAlreadyOverStop = $ticker->isIndexAlreadyOverStop($position->side, $price))
-                || (abs($price - $ticker->indexPrice) <= ($this->slForcedTriggerDelta ?: $td))
-            ) {
-                if ($indexAlreadyOverStop) {
-                    // @todo Надо всё таки ещё ращ проработать эту ситуацию (
-                    //  1) отловить ту ошибку
-                    //  2) понять обработано ли оно в действительности
-                    //  3) если что-то не так - добиться желаемого поведения
-                    //  4) на ошибку завести отдельный exception и работать именно с exception (потому что возможно в дальнейшем просто относительно результата ->addStop это всё не будет работать)
-                    //)
-                    $newPrice = $stop->getPositionSide() === Side::Sell ? $ticker->indexPrice + 15 : $ticker->indexPrice - 15;
-                    $stop->setPrice($newPrice)->setTriggerDelta($td + 7);
+            ### Regular
+            $td = $this->getStopTriggerDelta($stop);
+            $stopPrice = $stop->getPrice();
+
+            if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
+                $callback = null;
+                if ($stop->isCloseByMarketContextSet()) {
+                    $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
+                        $orderId = $orderService->closeByMarket($position, $stop->getVolume());
+                        $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), Price::float($stop->getPrice()));
+
+                        return $orderId;
+                    };
+                } elseif ($currentPriceOverStop) {
+                    if ($deltaToLiquidation <= self::LIQUIDATION_CRITICAL_DELTA) {
+                        $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
+                    } else {
+                        $newPrice = $side->isShort() ? $currentPrice->value() + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $currentPrice->value() - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;
+                        $stop->setPrice($newPrice)->setTriggerDelta($td + self::TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP);
+                    }
                 }
 
-                $this->addStop($position, $ticker, $stop);
+                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+                    try {
+                        return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
+                    } catch (TickerOverConditionalOrderTriggerPrice $e) {
+                        return $orderService->closeByMarket($position, $stop->getVolume());
+                    }
+                });
+
+                if ($stop->getExchangeOrderId()) {
+                    if ($stop->isWithOppositeOrder()) {
+                        $this->createOpposite($position, $stop, $ticker);
+                    }
+//                    $this->events->dispatch(new StopPushedToExchange($stop));
+                }
+            }
+        }
+
+        if ($stopsClosedByMarket) {
+            $loss = 0;
+            foreach ($stopsClosedByMarket as $order) {
+                if (($expectedLoss = PnlHelper::getPnlInUsdt($position, $order->getPrice(), $order->getVolume())) < 0) {
+                    $loss += -$expectedLoss;
+                }
+            }
+
+            if ($loss > 0) {
+                try {
+                    $this->exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), FloatHelper::round($loss, 3));
+                } catch (Throwable) {}
             }
         }
     }
 
-    private function addStop(Position $position, Ticker $ticker, Stop $stop): void
+    private function pushStopToExchange(Ticker $ticker, Stop $stop, callable $pushStopCallback): void
     {
         try {
-            if ($exchangeOrderId = $this->positionService->addStop($position, $ticker, $stop->getPrice(), $stop->getVolume())) {
-                $stop->setExchangeOrderId($exchangeOrderId);
-//                $this->events->dispatch(new StopPushedToExchange($stop));
-                if ($stop->isWithOppositeOrder()) {
-                    $this->createOpposite($position, $stop, $ticker);
-                }
-            }
+            $stopOrderId = $pushStopCallback();
+            $stop->setExchangeOrderId($stopOrderId);
         } catch (ApiRateLimitReached $e) {
-            $this->logExchangeClientException($e);
+            $this->logWarning($e);
             $this->sleep($e->getMessage());
         } catch (MaxActiveCondOrdersQntReached $e) {
-            $this->logExchangeClientException($e);
+            // @todo | currentPriceWithLiquidationPriceDifference->delta() + isCurrentPriceOverStopPrice
             $this->messageBus->dispatch(TryReleaseActiveOrders::forStop($ticker->symbol, $stop));
+        } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
+            $this->logCritical($e);
         } finally {
             $this->repository->save($stop);
         }
@@ -186,18 +251,48 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
     }
 
+    private function getStopTriggerDelta(Stop $stop): float
+    {
+        if ($stop->isCloseByMarketContextSet()) {
+            return 0.3;
+        }
+
+        return $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
+    }
+
+    /**
+     * @param Side $side
+     * @param Symbol $symbol
+     * @return Stop[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     * @throws TickerNotFoundException
+     */
+    private function findStops(Side $side, Symbol $symbol): array
+    {
+        return $this->repository->findActive(
+            side: $side,
+            nearTicker: $this->exchangeService->ticker($symbol),
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC')
+        );
+    }
+
     public function __construct(
         private readonly HedgeService $hedgeService,
         private readonly StopRepository $repository,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
+
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MessageBusInterface $messageBus,
+        private readonly OrderServiceInterface $orderService,
+
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $logger,
         ClockInterface $clock,
-
-        private readonly float $slForcedTriggerDelta
     ) {
         parent::__construct($exchangeService, $positionService, $clock, $logger);
     }

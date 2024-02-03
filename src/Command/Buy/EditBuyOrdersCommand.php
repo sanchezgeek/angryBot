@@ -5,6 +5,7 @@ namespace App\Command\Buy;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -28,7 +29,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'buy:edit')]
-class EditBuyOrdersCommand extends Command
+class EditBuyOrdersCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -58,8 +59,6 @@ class EditBuyOrdersCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
-
         $action = $this->getAction();
 
         $orders = $this->buyOrderRepository->findActive(
@@ -72,22 +71,15 @@ class EditBuyOrdersCommand extends Command
         );
 
         if (!$orders) {
-            $io->info('BuyOrders not found!'); return Command::SUCCESS;
+            $this->io->info('BuyOrders not found!'); return Command::SUCCESS;
         }
-
-        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
-        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
 
         $buyOrdersCollection = new BuyOrdersCollection(...$orders);
 
+        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
+        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
         if ($toPrice && $fromPrice) {
-            if ($fromPrice->greater($toPrice)) {
-                [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-            }
-
-            $priceRange = new PriceRange($fromPrice, $toPrice);
-
-            $buyOrdersCollection = $buyOrdersCollection->grabFromRange($priceRange);
+            $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice));
         }
 
         $buyOrders = $this->applyFilters($buyOrdersCollection);
@@ -95,15 +87,15 @@ class EditBuyOrdersCommand extends Command
         $totalVolume = $buyOrders->totalVolume();
 
         if (!$totalCount) {
-            $io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
+            $this->io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
         if ($totalCount === count($orders)) {
-            $io->error('All orders matched provided conditions.');
+            $this->io->error('All orders matched provided conditions.');
             return Command::FAILURE;
         }
 
-        if (!$io->confirm(sprintf('You\'re about to %s %d BuyOrders (%.3f). Continue?', $action, $totalCount, $totalVolume))) {
+        if (!$this->io->confirm(sprintf('You\'re about to %s %d BuyOrders (%.3f). Continue?', $action, $totalCount, $totalVolume))) {
             return Command::FAILURE;
         }
 
@@ -114,7 +106,7 @@ class EditBuyOrdersCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('removed BuyOrders qnt: %d (%.3f)', $totalCount, $totalVolume));
+            $this->io->note(\sprintf('removed BuyOrders qnt: %d (%.3f)', $totalCount, $totalVolume));
         }
 
         if ($action === self::ACTION_EDIT) {
@@ -126,7 +118,7 @@ class EditBuyOrdersCommand extends Command
                 }
             });
 
-            $io->note(\sprintf('modified BuyOrders qnt: %d', $buyOrders->totalCount()));
+            $this->io->note(\sprintf('modified BuyOrders qnt: %d', $buyOrders->totalCount()));
         }
 
         return Command::SUCCESS;

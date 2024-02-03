@@ -50,10 +50,8 @@ final class PositionStopRangesCollection implements \IteratorAggregate
             );
         }
 
-        if ($position->isShort()) {
-            $ranges = array_reverse($ranges);
-            $rangesStops = array_reverse($rangesStops);
-        }
+        $ranges = array_reverse($ranges);
+        $rangesStops = array_reverse($rangesStops);
 
         foreach ($ranges as $key => $range) {
             $this->stopsOnRanges->offsetSet($range, $rangesStops[$key]);

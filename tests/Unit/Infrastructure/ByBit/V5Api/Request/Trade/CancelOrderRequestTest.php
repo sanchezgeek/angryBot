@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;

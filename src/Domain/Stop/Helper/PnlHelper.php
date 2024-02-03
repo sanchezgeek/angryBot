@@ -14,10 +14,19 @@ final class PnlHelper
 {
     public static function getPnlInPercents(Position $position, float $price): float
     {
-        $sign = $position->side->isShort() ? -1 : +1;
+        $sign = $position->isShort() ? -1 : +1;
         $delta = $price - $position->entryPrice;
 
         return $sign * ($delta / $position->entryPrice) * self::getPositionLeverage($position) * 100;
+    }
+
+    public static function getPnlInUsdt(Position $position, Price $price, float $volume): float
+    {
+        $sign = $position->side->isShort() ? -1 : +1;
+        $delta = $price->value() - $position->entryPrice;
+
+        // @todo | or it's right only for BTCUSDT contracts?
+        return $sign * $delta * $volume;
     }
 
     public static function getTargetPriceByPnlPercent(Position $position, float $percent): Price

@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Common;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\AbstractByBitApiRequest;
-use App\Infrastructure\ByBit\API\V5\Enum\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
-use App\Tests\Mock\Response\ByBit\PositionResponses;
-use App\Tests\Mock\Response\ByBit\TradeResponses;
+use App\Tests\Mock\Response\ByBitV5Api\PositionResponses;
+use App\Tests\Mock\Response\ByBitV5Api\TradeResponses;
 use Symfony\Component\HttpFoundation\Request;
 
 use function uuid_create;
@@ -69,7 +70,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     {
         // Arrange
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK());
+        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
 
         $expectedResult = $this->okRequestResult(TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result']);
         $expectedHeaders = $this->expectedPrivateHeaders($request);
@@ -94,12 +95,13 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     {
         return [
             [
-                PlaceOrderRequest::stopConditionalOrderTriggeredByIndexPrice(
+                PlaceOrderRequest::stopConditionalOrder(
                     AssetCategory::linear,
                     Symbol::BTCUSDT,
                     Side::Sell,
                     0.01,
-                    30000.1
+                    30000.1,
+                    TriggerBy::IndexPrice
                 )
             ],
             [

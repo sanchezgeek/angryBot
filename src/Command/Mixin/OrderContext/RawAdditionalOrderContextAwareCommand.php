@@ -13,14 +13,14 @@ trait RawAdditionalOrderContextAwareCommand
 
     private const ADDITIONAL_CONTEXT_ARGUMENT_NAME = 'rawc';
 
-    private function configureAdditionalContextOption(): static
+    protected function configureAdditionalContextOption(): static
     {
         $this->addOption(self::ADDITIONAL_CONTEXT_ARGUMENT_NAME, null, InputOption::VALUE_OPTIONAL, 'Raw additional context');
 
         return $this;
     }
 
-    private function getRawAdditionalContext(): ?array
+    protected function getRawAdditionalContext(): ?array
     {
         return $this->paramFetcher->getJsonArrayOption(self::ADDITIONAL_CONTEXT_ARGUMENT_NAME);
     }

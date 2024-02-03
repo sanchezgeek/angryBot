@@ -9,6 +9,8 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 
 final readonly class CreateBuyOrderHandler
 {
+    private const TRIGGER_DELTA = 1;
+
     public function __construct(private BuyOrderRepository $repository)
     {
     }
@@ -17,7 +19,7 @@ final readonly class CreateBuyOrderHandler
     {
         $id = $this->repository->getNextId();
 
-        $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, $dto->triggerDelta, $dto->side, $dto->context);
+        $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, self::TRIGGER_DELTA, $dto->side, $dto->context);
         $this->repository->save($buyOrder);
 
         return new CreateBuyOrderResultDto($buyOrder);

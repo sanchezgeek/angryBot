@@ -76,7 +76,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        $triggerPrice = $mainPosition->side === Side::Sell ? $ticker->indexPrice - 10 : $ticker->indexPrice + 10;
+        $triggerPrice = $mainPosition->side === Side::Sell ? $ticker->indexPrice->value() - 10 : $ticker->indexPrice->value() + 10;
 
         if (!$this->canAddStopOnPrice($mainPosition->side, $triggerPrice)) {
             return;

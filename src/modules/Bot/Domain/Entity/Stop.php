@@ -30,6 +30,10 @@ class Stop implements HasEvents
 {
     public const MIN_VOLUME = 0.001;
 
+    public const IS_TP_CONTEXT = 'isTakeProfit';
+    public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
+    public const TP_TRIGGER_DELTA = 50;
+
     use HasVolume;
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
@@ -127,6 +131,51 @@ class Stop implements HasEvents
         $this->triggerDelta = $triggerDelta;
 
         return $this;
+    }
+
+    public function getContext(string $name = null): mixed
+    {
+        return $name ? ($this->context[$name] ?? null) : $this->context;
+    }
+
+    public function isTakeProfitOrder(): bool
+    {
+        return ($this->context[self::IS_TP_CONTEXT] ?? null) === true;
+    }
+
+    public function setIsTakeProfitOrder(): self
+    {
+        $this->context[self::IS_TP_CONTEXT] = true;
+
+        /**
+         * @todo | пока что такой костыль, т.к. для того, чтобы PushStopsHandler нашёл этот ордер, нужна trigger_delta
+         * @see \App\Bot\Domain\Repository\StopRepository::findActive() + $nearTicker
+         */
+        $this->setTriggerDelta(self::TP_TRIGGER_DELTA);
+
+        return $this;
+    }
+
+    public function isCloseByMarketContextSet(): bool
+    {
+        return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
+    }
+
+    public function setIsCloseByMarketContext(): self
+    {
+        $this->context[self::CLOSE_BY_MARKET_CONTEXT] = true;
+
+        return $this;
+    }
+
+    public static function getTakeProfitContext(): array
+    {
+        return [self::IS_TP_CONTEXT => true];
+    }
+
+    public static function getTakeProfitTriggerDelta(): float
+    {
+        return self::TP_TRIGGER_DELTA;
     }
 
     public function getPnlInPercents(Position $position): float

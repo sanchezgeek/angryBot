@@ -11,6 +11,9 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -24,6 +27,9 @@ final class TryReleaseActiveOrdersHandler
     private const DEFAULT_TRIGGER_DELTA = 20;
     private const DEFAULT_RELEASE_OVER_DISTANCE = 70;
 
+    /**
+     * @param ByBitLinearExchangeService $exchangeService
+     */
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopService $stopService,
@@ -33,6 +39,10 @@ final class TryReleaseActiveOrdersHandler
     ) {
     }
 
+    /**
+     * @throws UnknownByBitApiErrorException
+     * @throws ApiRateLimitReached
+     */
     public function __invoke(TryReleaseActiveOrders $command): void
     {
         $claimedOrderVolume = $command->forVolume;
@@ -57,7 +67,7 @@ final class TryReleaseActiveOrdersHandler
             }
 
             if (
-                abs($order->triggerPrice - $ticker->indexPrice) > $distance
+                $ticker->indexPrice->deltaWith($order->triggerPrice) > $distance
 //                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
 //                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {
@@ -81,6 +91,8 @@ final class TryReleaseActiveOrdersHandler
             $existedStop->clearExchangeOrderId();
             $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + 3); // Increase triggerDelta little bit
             $this->stopRepository->save($existedStop);
+
+            // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?
 
             $this->events->dispatch(new ActiveCondStopMovedBack($existedStop));
         } else {

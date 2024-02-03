@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
+
+use function abs;
+use function round;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceTest
@@ -21,27 +25,35 @@ readonly final class Price
             throw new \DomainException('Price cannot be less or equals zero.');
         }
 
+        if ($value < 0.01) {
+            throw new \DomainException('Price cannot be less min available value.');
+        }
+
         $this->value = $value;
     }
 
     public static function float(float $value): self
     {
-        return new self(PriceHelper::round($value));
+        return new self($value);
     }
 
     public function value(): float
     {
-        return $this->value;
+        return round($this->value, 2);
     }
 
-    public function add(float $value): self
+    public function add(Price|float $addValue): self
     {
-        return self::float($this->value + $value);
+        $addValue = $addValue instanceof self ? $addValue->value : $addValue;
+
+        return self::float($this->value + $addValue);
     }
 
-    public function sub(float $value): self
+    public function sub(Price|float $subValue): self
     {
-        return self::float($this->value - $value);
+        $subValue = $subValue instanceof self ? $subValue->value : $subValue;
+
+        return self::float($this->value - $subValue);
     }
 
     public function eq(Price $price): bool
@@ -49,28 +61,65 @@ readonly final class Price
         return $this->value === $price->value;
     }
 
-    public function greater(Price $price): bool
+    public function greaterThan(Price|float $price): bool
     {
-        return $this->value > $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value > $price;
     }
 
-    public function less(Price $price): bool
+    public function greaterOrEquals(Price|float $price): bool
     {
-        return $this->value < $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value >= $price;
     }
 
-    public function greaterOrEquals(Price $price): bool
+    public function lessThan(Price|float $price): bool
     {
-        return $this->value >= $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value < $price;
     }
 
-    public function lessOrEquals(Price $price): bool
+    public function lessOrEquals(Price|float $price): bool
     {
-        return $this->value <= $price->value;
+        $price = $price instanceof self ? $price->value : $price;
+
+        return $this->value <= $price;
     }
 
-    public function pnlFor(Position $position): float
+    public function isPriceInRange(PriceRange $priceRange): bool
+    {
+        return $this->greaterOrEquals($priceRange->from()) && $this->lessOrEquals($priceRange->to());
+    }
+
+    public function getPnlPercentFor(Position $position): float
     {
         return PnlHelper::getPnlInPercents($position, $this->value());
+    }
+
+    public function isPriceOverTakeProfit(Side $positionSide, float $takeProfitPrice): bool
+    {
+        return $positionSide->isShort() ? $this->value <= $takeProfitPrice : $this->value >= $takeProfitPrice;
+    }
+
+    public function isPriceOverStop(Side $positionSide, float $stopPrice): bool
+    {
+        return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
+    }
+
+    public function differenceWith(Price|float $price): PriceMovement
+    {
+        $price = $price instanceof self ? $price : self::float($price);
+
+        return PriceMovement::fromToTarget($price, $this);
+    }
+
+    public function deltaWith(Price|float $price): float
+    {
+        $price = $price instanceof self ? $price->value : $price;
+
+        return abs($this->value - $price);
     }
 }

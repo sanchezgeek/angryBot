@@ -62,7 +62,8 @@ cc: sf
 
 ## —— App 🛠 ————————————————————————————————————————————————————————————————
 test: ## Run tests
-	@$(PHP_CONT) bin/phpunit --testdox
+	@$(eval gr ?= )
+	@$(PHP_CONT) bin/phpunit --testdox $(gr)
 
 run: ## Run bot
 	@$(PHP_CONT) /usr/bin/supervisord
@@ -93,10 +94,11 @@ out: ## Get consumers output
 
 sl-info: ## Get position SLs info ("s=" - to specify `position_side`, "p=" - to specify `pnlStep`, "sp=" - to specify `showPnl`, example: sl-info s=sell p=30)
 	@$(eval s ?=)
-	@$(eval p ?= 40)
+	@$(eval p ?= 30)
 	@$(eval a ?= )
 	@$(eval sp ?= )
-	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp)
+	@$(eval stp ?= )
+	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp) $(stp)
 
 ## —— SHORT 🐻 ——
 s-info: ## Get SHORT-position SLs info ("p=" - to specify `pnlStep`, example: s-info p=30)
@@ -118,16 +120,16 @@ p-b-info: s=buy
 p-b-info: sp=--showPnl
 p-b-info: sl-info
 
-p-info: ## Get position info on price move ("s=" - to specify `position_side` "t=" - to specify `to` price, example: p-info s=sell t=30000)
+pos-m-info: ## Get position info on price movement ("s=" - to specify `position_side` "t=" - to specify `to` price, example: m-info s=sell t=30000)
 	@$(eval s ?=)
 	@$(eval t ?=)
-	@$(PHP_CONT) ./bin/console pos:p-info $(s) -t $(t)
+	@$(PHP_CONT) ./bin/console p:move-info $(s) -t $(t)
 
 ## —— SHORT 🐻 ——
-sh-info: ## Get SHORT-position info ("t=" - to specify `to` price, example: sh-info t=30000)
-sh-info: s=sell
-sh-info: p-info
+s-m-info: ## Get SHORT-position info on price movement ("t=" - to specify `to` price, example: s-m-info t=30000)
+s-m-info: s=sell
+s-m-info: pos-m-info
 ## —— LONG 🐂 ——
-l-info: ## Get LONG-position info ("t=" - to specify `to` price, example: l-info t=30000)
-l-info: s=buy
-l-info: p-info
+l-m-info: ## Get LONG-position info on price movement ("t=" - to specify `to` price, example: l-m-info t=30000)
+l-m-info: s=buy
+l-m-info: pos-m-info

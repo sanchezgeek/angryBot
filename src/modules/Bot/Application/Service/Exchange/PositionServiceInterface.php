@@ -7,10 +7,8 @@ namespace App\Bot\Application\Service\Exchange;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Exception\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\Service\Exception\CannotAffordOrderCost;
 
 interface PositionServiceInterface
 {
@@ -20,21 +18,17 @@ interface PositionServiceInterface
     public function getPosition(Symbol $symbol, Side $side): ?Position;
 
     /**
+     * @return Position[]
+     */
+    public function getPositions(Symbol $symbol): array;
+
+    /**
      * @return Position|null Null - if there is no opposite position opened
      */
     public function getOppositePosition(Position $position): ?Position;
 
     /**
-     * @return ?string Created stop order id or NULL if creation failed
-     *
-     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached|CannotAffordOrderCost
+     * @return string Created stop `orderId`
      */
-    public function addStop(Position $position, Ticker $ticker, float $price, float $qty): ?string;
-
-    /**
-     * @return ?string Created buy order id or NULL if creation failed
-     *
-     * @throws MaxActiveCondOrdersQntReached|ApiRateLimitReached|CannotAffordOrderCost
-     */
-    public function addBuyOrder(Position $position, Ticker $ticker, float $price, float $qty): ?string;
+    public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string;
 }

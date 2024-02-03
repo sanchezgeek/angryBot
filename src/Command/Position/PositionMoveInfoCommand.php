@@ -5,13 +5,12 @@ namespace App\Command\Position;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Bot\Infrastructure\ByBit\ExchangeService;
+use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
-use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\QueryBuilder;
@@ -20,12 +19,11 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function sprintf;
 
-#[AsCommand(name: 'pos:p-info')]
-class PositionMoveInfoCommand extends Command
+#[AsCommand(name: 'p:move-info')]
+class PositionMoveInfoCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -41,16 +39,10 @@ class PositionMoveInfoCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output); $this->withInput($input);
         $position = $this->getPosition();
 
-        $fromPrice = Price::float($this->exchangeService->ticker(Symbol::BTCUSDT)->indexPrice);
+        $fromPrice = $this->exchangeService->ticker($position->symbol)->indexPrice;
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
-        if ($fromPrice->greater($toPrice)) {
-            [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
-        }
-        $priceRange = new PriceRange($fromPrice, $toPrice);
-
         $buyOrders = $this->buyOrderRepository->findActive(
             side: $position->side,
             qbModifier: function (QueryBuilder $qb) use ($position) {
@@ -59,8 +51,7 @@ class PositionMoveInfoCommand extends Command
             }
         );
 
-        $buyOrders = new BuyOrdersCollection(...$buyOrders);
-        $buyOrders = $buyOrders->grabFromRange($priceRange);
+        $buyOrders = (new BuyOrdersCollection(...$buyOrders))->grabFromRange(PriceRange::create($fromPrice, $toPrice));
 
         $valueSum = $position->size * $position->entryPrice;
         $qtySum = $position->size;
@@ -70,13 +61,13 @@ class PositionMoveInfoCommand extends Command
         }
         $newEntry = $valueSum / $qtySum;
 
-        $io->note(sprintf('Price diff: %.2f', $newEntry - $position->entryPrice));
+        $this->io->note(sprintf('Price diff: %.2f', $newEntry - $position->entryPrice));
 
         $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
         if ($isHedge && Hedge::create($position, $oppositePosition)->isSupportPosition($position)) {
-            $io->note(sprintf('Result hedge support size: %.3f', $position->size + $buyOrders->totalVolume()));
+            $this->io->note(sprintf('Result hedge support size: %.3f', $position->size + $buyOrders->totalVolume()));
         } else {
-            $io->note(sprintf('Volume diff: %.3f', $buyOrders->totalVolume()));
+            $this->io->note(sprintf('Volume diff: %.3f', $buyOrders->totalVolume()));
         }
 
         return Command::SUCCESS;

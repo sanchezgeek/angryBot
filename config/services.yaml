@@ -10,10 +10,6 @@ services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
-        bind:
-            $slForcedTriggerDelta: '%env(float:SL_FORCED_TRIGGER_DELTA)%'
-            $hedgeSupportPositionCreateOppositeStopAfter: '%env(HEDGE_SUPPORT_POSITION_CREATE_OPPOSITE_STOP_AFTER)%'
-            $hedgeMainPositionCreateOppositeStopAfter: '%env(HEDGE_MAIN_POSITION_CREATE_OPPOSITE_STOP_AFTER)%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -35,23 +31,23 @@ services:
         factory: [ 'App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
 
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
-        alias: App\Bot\Infrastructure\ByBit\PositionService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
 
     App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
-        alias: App\Bot\Infrastructure\ByBit\ExchangeService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
     App\Bot\Application\Service\Exchange\TickersCache:
-        alias: App\Bot\Infrastructure\ByBit\ExchangeService
+        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
-#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
-#        arguments:
-#            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
-#
-#    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
-#        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
-#        arguments:
-#            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        arguments:
+            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
     App\Bot\Infrastructure\ByBit\PositionService:
         arguments:
@@ -86,3 +82,13 @@ services:
             $host: 'https://%env(BYBIT_API_HOST)%'
             $apiKey: '%env(BYBIT_API_KEY)%'
             $secretKey: '%env(BYBIT_API_SECRET)%'
+
+    App\Application\Messenger\CheckPositionIsUnderLiquidationHandler:
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+#### commands ####
+    App\Command\Position\OpenCommand:
+        class: App\Command\Position\OpenCommand
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

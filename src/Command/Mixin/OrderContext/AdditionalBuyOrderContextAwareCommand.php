@@ -23,7 +23,7 @@ trait AdditionalBuyOrderContextAwareCommand
         ],
     ];
 
-    private function configureBuyOrderAdditionalContexts(): static
+    protected function configureBuyOrderAdditionalContexts(): static
     {
         foreach (self::NEGATABLE_OPTIONS as $option => ['caption' => $caption]) {
             $this->addOption($option, null, InputOption::VALUE_NEGATABLE, $caption);
@@ -32,7 +32,7 @@ trait AdditionalBuyOrderContextAwareCommand
         return $this;
     }
 
-    private function getAdditionalBuyOrderContext(): ?array
+    protected function getAdditionalBuyOrderContext(): ?array
     {
         $additionalContext = [];
 

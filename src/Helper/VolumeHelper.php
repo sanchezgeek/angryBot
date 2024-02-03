@@ -19,4 +19,16 @@ final class VolumeHelper
 
         return $rounded;
     }
+
+    public static function forceRoundUp(float $volume, int $precision = self::DEFAULT_PRECISION): float
+    {
+        $fig = 10 ** $precision;
+        $rounded = (ceil($volume * $fig) / $fig);
+
+        if ($rounded < self::MIN_VOLUME) {
+            return self::MIN_VOLUME;
+        }
+
+        return $rounded;
+    }
 }
