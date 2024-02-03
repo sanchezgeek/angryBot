@@ -37,7 +37,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         $this->haveTicker($ticker);
         $this->havePosition($position);
 
-        $buyOrder = new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, 1, $side);
+        $buyOrder = new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, $side);
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveSpotBalance($symbol, $coinSpotBalanceValue);
@@ -121,7 +121,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, 1, $position->side),
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, $position->side),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
         ];
 
@@ -130,7 +130,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, 1, $position->side),
+            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, $position->side),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
         ];
     }

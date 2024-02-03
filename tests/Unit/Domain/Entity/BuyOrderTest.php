@@ -29,7 +29,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testEmptyExchangeOrderIdContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         self::assertFalse($buyOrder->hasExchangeOrderId());
         self::assertNull($buyOrder->getExchangeOrderId());
@@ -42,7 +42,7 @@ final class BuyOrderTest extends TestCase
     {
         $exchangeOrderId = uuid_create();
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
 
         self::assertTrue($buyOrder->hasExchangeOrderId());
         self::assertSame($exchangeOrderId, $buyOrder->getExchangeOrderId());
@@ -55,7 +55,7 @@ final class BuyOrderTest extends TestCase
     {
         $exchangeOrderId = uuid_create();
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         $buyOrder->setExchangeOrderId($exchangeOrderId);
 
@@ -70,7 +70,7 @@ final class BuyOrderTest extends TestCase
     {
         $exchangeOrderId = uuid_create();
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
 
         $buyOrder->clearExchangeOrderId();
 
@@ -83,7 +83,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testEmptyOnlyAfterExchangeOrderExecutedContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         self::assertNull($buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertArrayNotHasKey(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT, $buyOrder->getContext());
@@ -96,7 +96,7 @@ final class BuyOrderTest extends TestCase
     {
         $exchangeOrderId = uuid_create();
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
 
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertSame($exchangeOrderId, $buyOrder->getContext()[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT]);
@@ -109,7 +109,7 @@ final class BuyOrderTest extends TestCase
     {
         $exchangeOrderId = uuid_create();
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         $buyOrder->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
 
@@ -122,7 +122,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testEmptyIsWithShortStopContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         self::assertFalse($buyOrder->isWithShortStop());
     }
@@ -132,13 +132,13 @@ final class BuyOrderTest extends TestCase
      */
     public function testIsWithShortStopContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isWithShortStop());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
         self::assertFalse($buyOrder->isWithShortStop());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
         self::assertTrue($buyOrder->isWithShortStop());
     }
 
@@ -147,7 +147,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testEmptyStopDistanceContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
         self::assertNull($buyOrder->getStopDistance());
     }
@@ -157,7 +157,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testGetStopDistanceContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, 10, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
 
         self::assertSame(100500.0, $buyOrder->getStopDistance());
     }

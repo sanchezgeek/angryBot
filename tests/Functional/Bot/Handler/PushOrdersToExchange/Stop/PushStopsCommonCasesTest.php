@@ -326,8 +326,6 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
      */
     private function expectedOppositeOrders(Stop $stop, string $pushedStopExchangeOrderId, int $fromId = 1): array
     {
-        $tD = 1;
-
         $side = $stop->getPositionSide();
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
@@ -340,12 +338,12 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
 
         if ($stopVolume >= 0.006) {
             $orders = [
-                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance), VolumeHelper::round($stopVolume / 3), $tD, $side),
-                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 3.8), VolumeHelper::round($stopVolume / 4.5),$tD, $side),
-                new BuyOrder($fromId, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 2), VolumeHelper::round($stopVolume / 3.5),$tD, $side),
+                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance), VolumeHelper::round($stopVolume / 3), $side),
+                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 3.8), VolumeHelper::round($stopVolume / 4.5), $side),
+                new BuyOrder($fromId, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 2), VolumeHelper::round($stopVolume / 3.5), $side),
             ];
         } else {
-            $orders = [new BuyOrder($fromId, $stopPrice + $baseDistance, $stopVolume, $tD, $side)];
+            $orders = [new BuyOrder($fromId, $stopPrice + $baseDistance, $stopVolume, $side)];
         }
 
         foreach ($orders as $order) {
@@ -363,15 +361,7 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         $startId = 1;
         $orders = [];
         foreach ($buyOrders as $buyOrder) {
-            $orders[] =
-                new BuyOrder(
-                    $startId++,
-                    $buyOrder->getPrice(),
-                    $buyOrder->getVolume(),
-                    $buyOrder->getTriggerDelta(),
-                    $buyOrder->getPositionSide(),
-                    $buyOrder->getContext()
-                );
+            $orders[] = new BuyOrder($startId++, $buyOrder->getPrice(), $buyOrder->getVolume(), $buyOrder->getPositionSide(), $buyOrder->getContext());
         }
 
         return $orders;

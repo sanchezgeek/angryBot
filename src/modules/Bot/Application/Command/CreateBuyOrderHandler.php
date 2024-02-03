@@ -18,7 +18,7 @@ final class CreateBuyOrderHandler
 
     public function __invoke(CreateBuyOrder $command): void
     {
-        $buyOrder = new BuyOrder($command->id, $command->price, $command->volume, $command->triggerDelta, $command->positionSide, $command->context);
+        $buyOrder = new BuyOrder($command->id, $command->price, $command->volume, $command->positionSide, $command->context);
 
         $this->repository->save($buyOrder);
     }

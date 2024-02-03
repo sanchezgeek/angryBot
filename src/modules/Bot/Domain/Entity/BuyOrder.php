@@ -46,9 +46,6 @@ class BuyOrder implements HasEvents
     #[ORM\Column]
     private float $volume;
 
-    #[ORM\Column(nullable: true)]
-    private ?float $triggerDelta = null;
-
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
 
@@ -58,12 +55,11 @@ class BuyOrder implements HasEvents
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, Price|float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
+    public function __construct(int $id, Price|float $price, float $volume, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $price instanceof Price ? $price->value() : $price;
         $this->volume = $volume;
-        $this->triggerDelta = $triggerDelta;
         $this->positionSide = $positionSide;
         $this->context = $context;
     }
@@ -91,11 +87,6 @@ class BuyOrder implements HasEvents
     public function getVolume(): float
     {
         return $this->volume;
-    }
-
-    public function getTriggerDelta(): ?float
-    {
-        return $this->triggerDelta;
     }
 
     public function getContext(string $name = null): mixed

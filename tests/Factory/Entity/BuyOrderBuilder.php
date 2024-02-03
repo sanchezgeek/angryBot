@@ -36,6 +36,6 @@ final class BuyOrderBuilder
 
     public function build(): BuyOrder
     {
-        return new BuyOrder($this->id, $this->price, $this->volume, $this->triggerDelta, $this->side, $this->context);
+        return new BuyOrder($this->id, $this->price, $this->volume, $this->side, $this->context);
     }
 }
