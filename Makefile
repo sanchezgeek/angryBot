@@ -126,9 +126,9 @@ pos-m-info: ## Get position info on price movement ("s=" - to specify `position_
 	@$(PHP_CONT) ./bin/console p:move-info $(s) -t $(t)
 
 ## —— SHORT 🐻 ——
-sh-m-info: ## Get SHORT-position info on price movement ("t=" - to specify `to` price, example: sh-m-info t=30000)
-sh-m-info: s=sell
-sh-m-info: pos-m-info
+s-m-info: ## Get SHORT-position info on price movement ("t=" - to specify `to` price, example: s-m-info t=30000)
+s-m-info: s=sell
+s-m-info: pos-m-info
 ## —— LONG 🐂 ——
 l-m-info: ## Get LONG-position info on price movement ("t=" - to specify `to` price, example: l-m-info t=30000)
 l-m-info: s=buy
