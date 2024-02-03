@@ -46,7 +46,7 @@ final readonly class Hedge
     }
 
     /**
-     * @todo | hedge | move to service
+     * @todo | hedge | move to service (which must operate with some config)
      */
     public function needIncreaseSupport(): bool
     {

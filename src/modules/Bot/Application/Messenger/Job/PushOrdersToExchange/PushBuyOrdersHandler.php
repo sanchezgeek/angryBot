@@ -46,8 +46,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1.1;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 180;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 230;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 250;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
@@ -182,19 +182,36 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
+            /**
+             * (1) option
+             *      just hard "off" / "on"
+             * Then options divide into three branches:
+             * (1) For support position
+             *      1) just "off"
+             *         => from which position profit must be taken?
+             *      3) from self
+             *      4) from opposite
+             *
+             *    For 3 and 4 options there must be some setting to choose minimum applicable PNL%
+             *
+             *
+             *
+             * Maybe decision about ability to use profit from current position also must be made based on selected option?
+             */
+
+//            if (($hedge = $position->getHedge())) {
+//                if (
+//                    $hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()
+//                    && ($ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 200 // mainPosition PNL%
+//                ) {
+//                    $this->orderService->closeByMarket($position->oppositePosition, 0.001); // $this->messageBus->dispatch(new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty));
+//                } // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
+//                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
+//                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
+//            }
+
             $this->lastCannotAffordAtPrice = $ticker->indexPrice->value();
             $this->lastCannotAffordAt = $this->clock->now();
-
-            if (($hedge = $position->getHedge())) {
-                if (
-                    $hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()
-                    && ($ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 130 // mainPosition PNL%
-                ) {
-                    $this->orderService->closeByMarket($position->oppositePosition, 0.001); // $this->messageBus->dispatch(new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty));
-                } // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
-                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
-                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
-            }
         }
     }
 
