@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 
-use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\EventListener\Stop\CreateOppositeBuyOrdersListener;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -22,6 +22,7 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\StopsTester;
 
 use function array_map;
@@ -41,30 +42,26 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
 
     use StopsTester;
     use BuyOrdersTester;
+    use MessageConsumerTrait;
 
     private const SYMBOL = Symbol::BTCUSDT;
-
-    private PushStopsHandler $handler;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
-        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
-
-        $this->handler = new PushStopsHandler(
-            $this->hedgeService,
-            $this->stopRepository,
-            $createBuyOrderHandler,
-            $this->stopService,
-            self::getContainer()->get(ExchangeAccountServiceInterface::class),
-            $this->messageBus,
-            $this->orderServiceMock,
-            $this->exchangeServiceMock,
-            $this->positionServiceStub,
-            $this->loggerMock,
-            $this->clockMock
+        self::getContainer()->set(
+            PushStopsHandler::class,
+            new PushStopsHandler(
+                $this->stopRepository,
+                self::getContainer()->get(ExchangeAccountServiceInterface::class),
+                $this->orderServiceMock,
+                $this->messageBus,
+                $this->exchangeServiceMock,
+                $this->positionServiceStub,
+                $this->loggerMock,
+                $this->clockMock,
+            )
         );
 
         self::truncateStops();
@@ -89,7 +86,7 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
         $this->applyDbFixtures(...$stopsFixtures);
 
-        ($this->handler)(new PushStops($position->symbol, $position->side));
+        $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
         self::assertSame($expectedStopAddMethodCalls, $this->positionServiceStub->getAddStopCallsStack());
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
@@ -231,7 +228,7 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         $this->positionServiceStub->setMockedExchangeOrdersIds($mockedStopExchangeOrderIds);
         $this->applyDbFixtures(...$stops);
 
-        ($this->handler)(new PushStops($position->symbol, $position->side));
+        $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
         self::seeBuyOrdersInDb(...self::cloneBuyOrders(...$buyOrdersExpectedAfterHandle));
     }
@@ -330,10 +327,7 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $baseDistance = $side->isLong()
-            ? PushStopsHandler::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
-            : PushStopsHandler::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE
-        ;
+        $baseDistance = $side->isLong() ? CreateOppositeBuyOrdersListener::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : CreateOppositeBuyOrdersListener::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
         $baseDistance = $side->isLong() ? $baseDistance : -$baseDistance;
 
         if ($stopVolume >= 0.006) {

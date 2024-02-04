@@ -69,11 +69,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
-        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
         $this->messageBus = self::getContainer()->get(MessageBusInterface::class);
         $this->eventDispatcher = self::getContainer()->get(EventDispatcherInterface::class);
-        $this->hedgeService = self::getContainer()->get(HedgeService::class);
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
 
@@ -85,13 +82,10 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         $this->clockMock = $this->createMock(ClockInterface::class);
 
         $this->handler = new PushStopsHandler(
-            $this->hedgeService,
             $this->stopRepository,
-            $createBuyOrderHandler,
-            $this->stopService,
             $this->exchangeAccountServiceMock,
-            $this->messageBus,
             $this->orderServiceMock,
+            $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

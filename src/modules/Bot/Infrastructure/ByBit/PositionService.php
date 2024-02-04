@@ -24,6 +24,9 @@ use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
+/**
+ * @deprecated
+ */
 final class PositionService implements PositionServiceInterface
 {
 //    private const URL = 'https://api-testnet.bybit.com';

@@ -6,7 +6,6 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
-use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\QueryBuilder;
@@ -24,10 +23,8 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 {
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 
-    public function __construct(
-        private readonly EventBus $eventBus,
-        ManagerRegistry $registry,
-    ) {
+    public function __construct(ManagerRegistry $registry)
+    {
         parent::__construct($registry, Stop::class);
     }
 
@@ -35,7 +32,6 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     {
         $save = function () use ($stop) {
             $this->getEntityManager()->persist($stop);
-            $this->eventBus->handleEvents($stop);
         };
 
         $this->getEntityManager()->getConnection()->isTransactionActive()

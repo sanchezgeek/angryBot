@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -30,7 +29,6 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
-    protected HedgeService $hedgeService;
     protected StopService $stopService;
     protected StopRepository $stopRepository;
 
@@ -44,7 +42,6 @@ abstract class PushOrderHandlerTestAbstract extends KernelTestCase
     {
         $this->messageBus = self::getContainer()->get(MessageBusInterface::class);
         $this->eventDispatcher = self::getContainer()->get(EventDispatcherInterface::class);
-        $this->hedgeService = self::getContainer()->get(HedgeService::class);
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
 

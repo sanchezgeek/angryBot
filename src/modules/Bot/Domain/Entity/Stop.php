@@ -12,6 +12,7 @@ use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
@@ -154,6 +155,13 @@ class Stop implements HasEvents
         $this->setTriggerDelta(self::TP_TRIGGER_DELTA);
 
         return $this;
+    }
+
+    public function wasPushedToExchange(string $exchangeOrderId): self
+    {
+        $this->recordThat(new StopPushedToExchange($this));
+
+        return $this->setExchangeOrderId($exchangeOrderId);
     }
 
     public function isCloseByMarketContextSet(): bool

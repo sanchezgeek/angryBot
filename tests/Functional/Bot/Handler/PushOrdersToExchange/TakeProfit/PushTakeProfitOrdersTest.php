@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit;
 
-use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -61,11 +60,8 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        /** @var CreateBuyOrderHandler $createBuyOrderHandler */
-        $createBuyOrderHandler = self::getContainer()->get(CreateBuyOrderHandler::class);
         $this->messageBus = self::getContainer()->get(MessageBusInterface::class);
         $this->eventDispatcher = self::getContainer()->get(EventDispatcherInterface::class);
-        $this->hedgeService = self::getContainer()->get(HedgeService::class);
         $this->stopService = self::getContainer()->get(StopService::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
 
@@ -77,13 +73,10 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         $this->clockMock = $this->createMock(ClockInterface::class);
 
         $this->handler = new PushStopsHandler(
-            $this->hedgeService,
             $this->stopRepository,
-            $createBuyOrderHandler,
-            $this->stopService,
             $this->exchangeAccountServiceMock,
-            $this->messageBus,
             $this->orderServiceMock,
+            $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

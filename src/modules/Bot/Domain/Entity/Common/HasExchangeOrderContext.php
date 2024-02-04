@@ -8,7 +8,10 @@ trait HasExchangeOrderContext
 {
     public const EXCHANGE_ORDER_ID_CONTEXT = 'exchange.orderId';
 
-    public function setExchangeOrderId(string $exchangeOrderId): self
+    /**
+     * @internal For use by Stop and BuyOrder | For tests
+     */
+    public function setExchangeOrderId(string $exchangeOrderId): static
     {
         $this->context[self::EXCHANGE_ORDER_ID_CONTEXT] = $exchangeOrderId;
 
@@ -25,7 +28,7 @@ trait HasExchangeOrderContext
         return isset($this->context[self::EXCHANGE_ORDER_ID_CONTEXT]);
     }
 
-    public function clearExchangeOrderId(): self
+    public function clearExchangeOrderId(): static
     {
         if (isset($this->context[self::EXCHANGE_ORDER_ID_CONTEXT])) {
             unset($this->context[self::EXCHANGE_ORDER_ID_CONTEXT]);

@@ -21,6 +21,9 @@ use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * @deprecated
+ */
 final class ExchangeService implements ExchangeServiceInterface, TickersCache
 {
     private const URL = 'https://api.bybit.com';

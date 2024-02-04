@@ -3,11 +3,8 @@
 namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
-use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
-use App\EventBus\EventBus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -27,10 +24,8 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
     private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
 
-    public function __construct(
-        private readonly EventBus $eventBus,
-        ManagerRegistry $registry,
-    ) {
+    public function __construct(ManagerRegistry $registry)
+    {
         parent::__construct($registry, BuyOrder::class);
     }
 
@@ -38,7 +33,6 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     {
         $save = function () use ($buyOrder) {
             $this->getEntityManager()->persist($buyOrder);
-            $this->eventBus->handleEvents($buyOrder);
         };
 
         $this->getEntityManager()->getConnection()->isTransactionActive()

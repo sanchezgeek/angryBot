@@ -2,10 +2,10 @@
 
 namespace App\Command\Position;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Infrastructure\ByBit\ExchangeService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -74,7 +74,7 @@ class PositionMoveInfoCommand extends AbstractCommand
     }
 
     public function __construct(
-        private readonly ExchangeService $exchangeService,
+        private readonly ExchangeServiceInterface $exchangeService,
         private readonly BuyOrderRepository $buyOrderRepository,
         PositionServiceInterface $positionService,
         string $name = null,

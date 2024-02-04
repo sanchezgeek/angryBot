@@ -31,3 +31,9 @@ services:
 
     App\Clock\ClockInterface:
         class: App\Clock\Clock
+
+    # to replace handlers and run handle within `messenger:consume` command
+    # @see PushStopsCommonCasesTest
+    App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler:
+        public: true
+        tags: [messenger.message_handler]
