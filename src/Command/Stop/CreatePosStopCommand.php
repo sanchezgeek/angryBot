@@ -3,6 +3,7 @@
 namespace App\Command\Stop;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
@@ -77,15 +78,16 @@ class CreatePosStopCommand extends AbstractCommand
                 sprintf('Position on %s side has no liquidationPrice', $position->side->title())
             );
         }
+//        $fromPrice = Price::float($position->liquidationPrice);
 
-        $fromPrice = Price::float($position->liquidationPrice);
-        $toPrice = $position->isShort() ? $fromPrice->sub(self::DELTA) : $fromPrice->add(self::DELTA);
-        $stopsGrid = new OrdersGrid(PriceRange::create($fromPrice, $toPrice));
+        $ticker = $this->exchangeService->ticker($this->getSymbol());
+        $price = ($position->liquidationPrice + $ticker->indexPrice->value()) / 2;
 
-        $qnt = $this->paramFetcher->getIntOption(self::ORDERS_QNT_OPTION, sprintf('Param "%s" is required.', self::ORDERS_QNT_OPTION));
-
-        /** @var Order[] $orders */
-        $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
+//        $toPrice = $position->isShort() ? $fromPrice->sub(self::DELTA) : $fromPrice->add(self::DELTA);
+//        $stopsGrid = new OrdersGrid(PriceRange::create($fromPrice, $toPrice));
+//        $qnt = $this->paramFetcher->getIntOption(self::ORDERS_QNT_OPTION, sprintf('Param "%s" is required.', self::ORDERS_QNT_OPTION));
+//        /** @var Order[] $orders */
+//        $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
 
         $alreadyStopped = 0;
         $stops = $this->stopRepository->findActive($position->side);
@@ -99,9 +101,11 @@ class CreatePosStopCommand extends AbstractCommand
             }
         }
 
-        foreach ($orders as $order) {
-            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);
-        }
+        $this->stopService->create($position->side, $price, $forVolume, $triggerDelta, $context);
+
+//        foreach ($orders as $order) {
+//            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);
+//        }
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
 
@@ -124,6 +128,7 @@ class CreatePosStopCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
+        private readonly ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
