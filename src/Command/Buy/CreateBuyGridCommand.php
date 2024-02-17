@@ -54,7 +54,7 @@ class CreateBuyGridCommand extends AbstractCommand
             }
 
             foreach ($priceRange->byStepIterator($step) as $price) {
-                $rand = round(random_int(-7, 8) * 0.4, 2);
+                $rand = round(random_int(-8, 9) * 0.8, 2);
 
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($side, $volume, $price->sub($rand)->value(), $context)
