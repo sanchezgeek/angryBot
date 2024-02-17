@@ -46,6 +46,14 @@ final class StopTest extends TestCase
     {
         $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
 
+        $stop = StopBuilder::long(1, 31000, 0.5)->build();
+        self::assertEquals(333.33, $stop->getPnlInPercents($position));
+        self::assertEquals(500, $stop->getPnlUsd($position));
+
+        $stop = StopBuilder::long(1, 30300, 0.05)->build();
+        self::assertEquals(100, $stop->getPnlInPercents($position));
+        self::assertEquals(15, $stop->getPnlUsd($position));
+
         $stop = StopBuilder::long(1, 29700, 0.5)->build();
         self::assertEquals(-100, $stop->getPnlInPercents($position));
         self::assertEquals(-150, $stop->getPnlUsd($position));

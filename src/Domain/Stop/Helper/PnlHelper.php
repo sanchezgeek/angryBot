@@ -20,10 +20,12 @@ final class PnlHelper
         return $sign * ($delta / $position->entryPrice) * self::getPositionLeverage($position) * 100;
     }
 
-    public static function getPnlInUsdt(Position $position, Price $price, float $volume): float
+    public static function getPnlInUsdt(Position $position, Price|float $price, float $volume): float
     {
+        $price = $price instanceof Price ? $price->value() : $price;
+
         $sign = $position->side->isShort() ? -1 : +1;
-        $delta = $price->value() - $position->entryPrice;
+        $delta = $price - $position->entryPrice;
 
         // @todo | or it's right only for BTCUSDT contracts?
         return $sign * $delta * $volume;
