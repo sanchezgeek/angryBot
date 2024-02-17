@@ -45,9 +45,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1.1;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 230;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 250;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 29;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 175;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
@@ -55,7 +55,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN) {
+        if (
+            $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
+            || $position->size < 0.1
+        ) {
             return true;
         }
 
@@ -131,9 +134,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $orders = $this->findOrdersNearTicker($side, $position, $ticker);
 
+        /** @var BuyOrder $lastBuy To use, for example, after catch `CannotAffordOrderCost` exception */
+        $lastBuy = null;
         try {
             $boughtOrders = [];
             foreach ($orders as $order) {
+                $lastBuy = $order;
                 if ($order->mustBeExecuted($ticker)) {
                     $this->buy($position, $ticker, $order);
 
@@ -160,10 +166,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         } catch (CannotAffordOrderCost $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
-            if ($this->canUseSpot($ticker, $position, $spotBalance)) {
+            if ($lastBuy->getSuccessSpotTransfersCount() < 1 && $this->canUseSpot($ticker, $position, $spotBalance)) {
                 $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
                 $amount = $orderCost * 1.1; // $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
                 if ($this->transferToContract($spotBalance, $amount)) {
+                    $lastBuy->incSuccessSpotTransfersCounter();
+
+                    $this->buyOrderRepository->save($lastBuy);
                     return;
                 }
             }
@@ -179,6 +188,23 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
                 }
 
+                $this->buyOrderRepository->save($lastBuy);
+                return;
+            }
+
+            if (
+                $lastBuy->getHedgeSupportFixationsCount() < 1
+                && ($hedge = $position->getHedge())
+                && $hedge->isMainPosition($position) && $hedge->getSupportRate()->value() > 20
+                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition))
+                && $supportPnlPercent > 2800
+            ) {
+                $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
+
+                $this->orderService->closeByMarket($hedge->supportPosition, $volume);
+                $lastBuy->incHedgeSupportFixationsCounter();
+
+                $this->buyOrderRepository->save($lastBuy);
                 return;
             }
 

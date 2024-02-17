@@ -23,6 +23,8 @@ class BuyOrder implements HasEvents
 {
     use HasWithoutOppositeContext;
 
+    public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
+    public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
     public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
 
     /**
@@ -114,5 +116,29 @@ class BuyOrder implements HasEvents
     public function getStopDistance(): ?float
     {
         return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;
+    }
+
+    public function incSuccessSpotTransfersCounter(): self
+    {
+        $this->context[self::SPOT_TRANSFERS_COUNT_CONTEXT] = $this->getSuccessSpotTransfersCount() + 1;
+
+        return $this;
+    }
+
+    public function getSuccessSpotTransfersCount(): int
+    {
+        return $this->context[self::SPOT_TRANSFERS_COUNT_CONTEXT] ?? 0;
+    }
+
+    public function incHedgeSupportFixationsCounter(): self
+    {
+        $this->context[self::SUPPORT_FIXATIONS_COUNT_CONTEXT] = $this->getHedgeSupportFixationsCount() + 1;
+
+        return $this;
+    }
+
+    public function getHedgeSupportFixationsCount(): int
+    {
+        return $this->context[self::SUPPORT_FIXATIONS_COUNT_CONTEXT] ?? 0;
     }
 }
