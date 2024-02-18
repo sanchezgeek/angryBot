@@ -13,7 +13,7 @@ SYMFONY  = $(PHP_CONT) bin/console
 .PHONY        : help build up start down logs sh composer vendor sf cc
 
 prepare_files:
-	@if [ ! -f .env.local ]; then cp .env.local.dist .env.local; fi
+	@./bin/prepare_env
 
 ## —— 🎵 🐳 The Symfony Docker Makefile 🐳 🎵 ——————————————————————————————
 help: ## Outputs this help screen
@@ -26,7 +26,7 @@ build: ## Builds the Docker images
 rebuild: ## Rebuilds the Docker images
 	@$(DOCKER_COMP) build --pull --no-cache
 
-up: ## Start the docker hub in detached mode (no logs)
+up: ## Up the docker hub in detached mode (no logs)
 	@$(DOCKER_COMP) up --detach
 
 start: prepare_files build up ## Build and start the containers

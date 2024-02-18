@@ -3,7 +3,8 @@ Trading bot.
 
 ### Start
 ```shell
-make start
+sudo apt install make
+sudo make start
 make composer "c=install" # to install deps
 make sf c="doctrine:database:create" && make sf c="d:m:m" # to create db-schema
 ```
