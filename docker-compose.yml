@@ -20,8 +20,8 @@ services:
       start_period: 30s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DATABASE}?serverVersion=${POSTGRES_VERSION:-15}
-    networks:
-      - bot-network
+#    networks:
+#      - bot-network
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-15}-alpine
@@ -35,8 +35,8 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
     ports:
       - "${POSTGRES_EXTERNAL_PORT}:5432"
-    networks:
-      - bot-network
+#    networks:
+#      - bot-network
 
 volumes:
   php_socket:
@@ -44,6 +44,6 @@ volumes:
   db-data:
 #  caddy_config:
 
-networks:
-  bot-network:
-    driver: "bridge"
+#networks:
+#  bot-network:
+#    driver: "bridge"
