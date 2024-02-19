@@ -9,7 +9,6 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
@@ -77,11 +76,12 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
      * @param ByBitApiCallExpectation[] $expectedMarketBuyApiCalls
      */
     public function testPushRelevantBuyOrders(
-        Position $position,
         Ticker $ticker,
+        Position $position,
         array $buyOrdersFixtures,
         array $expectedMarketBuyApiCalls,
         array $buyOrdersExpectedAfterHandle,
+        array $stopsExpectedAfterHandle,
     ): void {
         $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
         $this->haveSpotBalance($position->symbol, 0);
@@ -93,87 +93,70 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
 
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
+        self::seeStopsInDb(...$stopsExpectedAfterHandle);
     }
 
     public function pushBuyOrdersTestDataProvider(): iterable
     {
-        $position = PositionFactory::short($symbol = self::SYMBOL, 29000);
+        $ticker = TickerFactory::create($symbol = self::SYMBOL, 29050);
         $buyOrders = [
-            BuyOrderBuilder::short(10, 29060, 0.01)->build(),  // must be pushed
-            BuyOrderBuilder::short(15, 29060, 0.005)->build(),  // must be pushed and removed
-            BuyOrderBuilder::short(20, 29155, 0.002)->build(),
-            BuyOrderBuilder::short(30, 29055, 0.03)->build(), // must be pushed
-            BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), // must not be pushed (not active)
+            # [2] must be pushed | with stop
+            10 => BuyOrderBuilder::short(10, 29060, 0.01)->build(),
+
+            # -- must not be pushed (too far) --
+            20 => BuyOrderBuilder::short(20, 29155, 0.002)->build(),
+
+            # [1] must be pushed and removed | with stop
+            30 => BuyOrderBuilder::short(30, 29060, 0.005)->build(),
+
+            # -- must not be pushed (too far) --
+            40 => BuyOrderBuilder::short(40, 29105, 0.003)->build(),
+
+            # [0] must be pushed and removed | with stop
+            50 => BuyOrderBuilder::short(50, 29060, 0.001)->build(),
+
+            # [4] must be pushed | withOUT stop
+            60 => BuyOrderBuilder::short(60, 29060, 0.035)->build()->setIsWithoutOppositeOrder(),
+
+            # must not be pushed (not active)
+            70 => BuyOrderBuilder::short(70, 29055, 0.031)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()),
+
+            # [3] must be pushed | with stop
+            80 => BuyOrderBuilder::short(80, 29055, 0.03)->build(),
         ];
-        $buyOrdersExpectedToPush = [$buyOrders[1], $buyOrders[0], $buyOrders[3]];
+        $buyOrdersExpectedToPush = [$buyOrders[50], $buyOrders[30], $buyOrders[10], $buyOrders[80], $buyOrders[60]];
         $exchangeOrderIds = [];
 
+        /** @var BuyOrder $buyOrder */
         yield [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 29050),
+            '$ticker' => $ticker, '$position' => PositionFactory::short($symbol, 29000),
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
             'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setExchangeOrderId($exchangeOrderIds[1]),
-                BuyOrderBuilder::short(30, 29055, 0.03)->build()->setExchangeOrderId($exchangeOrderIds[2]),
+                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setExchangeOrderId($exchangeOrderIds[2]),
+                BuyOrderBuilder::short(80, 29055, 0.03)->build()->setExchangeOrderId($exchangeOrderIds[3]),
+                BuyOrderBuilder::short(60, 29060, 0.035)->build()->setExchangeOrderId($exchangeOrderIds[4])->setIsWithoutOppositeOrder(),
 
                 ### unchanged ###
                 BuyOrderBuilder::short(20, 29155, 0.002)->build(),
-                BuyOrderBuilder::short(40, 29055, 0.04)->build()->setExchangeOrderId($existedExchangeOrderId),
+                BuyOrderBuilder::short(40, 29105, 0.003)->build(),
+                BuyOrderBuilder::short(70, 29055, 0.031)->build()->setExchangeOrderId($existedExchangeOrderId),
             ],
-        ];
-    }
-
-    /**
-     * @dataProvider createOppositeStopsTestCases
-     *
-     * @param Stop[] $stopsExpectedAfterHandle
-     */
-    public function testCreateOppositeStops(
-        Position $position,
-        Ticker $ticker,
-        array $buyOrdersFixtures,
-        array $expectedMarketBuyCalls,
-        array $stopsExpectedAfterHandle,
-    ): void {
-        $this->expectsToMakeApiCalls(...$expectedMarketBuyCalls);
-        $this->haveSpotBalance($position->symbol, 0);
-
-        $this->haveTicker($ticker);
-        $this->positionServiceStub->havePosition($position);
-        $this->applyDbFixtures(...$buyOrdersFixtures);
-
-        ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
-
-        self::seeStopsInDb(...$stopsExpectedAfterHandle);
-    }
-
-    public function createOppositeStopsTestCases(): iterable
-    {
-        /** @var BuyOrder[] $buyOrders */
-        $buyOrders = [
-            BuyOrderBuilder::short(10, 29060, 0.001)->build(),
-            BuyOrderBuilder::short(20, 29155, 0.002)->build(), // not handled
-            BuyOrderBuilder::short(30, 29055, 0.003)->build(),
-            BuyOrderBuilder::short(40, 29060, 0.005)->build(),
-            BuyOrderBuilder::short(50, 29060, 0.005)->build()->setIsWithoutOppositeOrder(), // not handled
-        ];
-        $buyOrdersExpectedToPush = [$buyOrders[0], $buyOrders[2], $buyOrders[3], $buyOrders[4]];
-
-        $symbol = self::SYMBOL;
-        $position = PositionFactory::short($symbol, 29000);
-        yield [
-            '$position' => $position,
-            '$ticker' => TickerFactory::create($symbol, 29050),
-            '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
-            'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'stopsExpectedAfterHandle' => [
-                StopBuilder::short(1, $buyOrders[0]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.001), 0.001)->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(2, $buyOrders[2]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.003), 0.003)->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(3, $buyOrders[3]->getPrice() + StopCreate::getDefaultStrategyStopOrderDistance(0.005), 0.005)->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(1, self::expectedStopPrice($buyOrders[50]), $buyOrders[50]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(2, self::expectedStopPrice($buyOrders[30]), $buyOrders[30]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(3, self::expectedStopPrice($buyOrders[10]), $buyOrders[10]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(4, self::expectedStopPrice($buyOrders[80]), $buyOrders[80]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
             ],
         ];
+    }
+
+    private static function expectedStopPrice(BuyOrder $buyOrder): float
+    {
+        $stopDistance = StopCreate::getDefaultStrategyStopOrderDistance($buyOrder->getVolume());
+
+        return $buyOrder->getPrice() + $stopDistance;
     }
 
     public function testDummy(): void
