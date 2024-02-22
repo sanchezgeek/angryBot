@@ -6,25 +6,22 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Order\Service\OrderCostHelper;
-use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
-use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\OrderCasesTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function array_map;
 use function uuid_create;
@@ -33,8 +30,9 @@ use function uuid_create;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
  */
-final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
+final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 {
+    use OrderCasesTester;
     use StopsTester;
     use BuyOrdersTester;
     use ByBitV5ApiRequestsMocker;
@@ -51,22 +49,7 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         self::truncateStops();
         self::truncateBuyOrders();
 
-        $this->handler = new PushBuyOrdersHandler(
-            self::getBuyOrderRepository(),
-            $this->stopRepository,
-            $this->stopService,
-            self::getContainer()->get(OrderCostHelper::class),
-
-            self::getContainer()->get(ExchangeAccountServiceInterface::class),
-            self::getContainer()->get(ByBitMarketService::class),
-            self::getContainer()->get(OrderServiceInterface::class),
-
-            $this->exchangeServiceMock,
-            $this->positionServiceStub,
-
-            $this->clockMock,
-            $this->loggerMock,
-        );
+        $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
     }
 
     /**
@@ -87,7 +70,7 @@ final class PushBuyOrdersCommonCasesTest extends PushOrderHandlerTestAbstract
         $this->haveSpotBalance($position->symbol, 0);
 
         $this->haveTicker($ticker);
-        $this->positionServiceStub->havePosition($position);
+        $this->havePosition($position->symbol, $position);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
         ($this->handler)(new PushBuyOrders($position->symbol, $position->side));

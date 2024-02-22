@@ -35,6 +35,7 @@
 
     <extensions>
         <extension class="App\Tests\PHPUnit\Extensions\PrepareTestDbHook"/>
+        <extension class="App\Tests\PHPUnit\Extensions\ClearCacheTestHook"/>
     </extensions>
 
     <!-- Run `composer require symfony/panther` before enabling this extension -->

@@ -54,13 +54,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->positionServiceStub = self::getContainer()->get(PositionServiceInterface::class);
-        $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
-        self::getContainer()->set(ExchangeServiceInterface::class, $this->exchangeServiceMock);
+        self::truncateStops();
 
         $this->handler = self::getContainer()->get(CheckPositionIsUnderLiquidationHandler::class);
-
-        self::truncateStops();
     }
 
     /**
@@ -69,7 +65,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     public function testAddStop(Position $position, Ticker $ticker, array $delayedStops, array $activeConditionalStops, array $expectedAdditionalStops): void
     {
         $this->haveTicker($ticker);
-        $this->havePosition($position);
+        $this->havePosition($ticker->symbol, $position);
 //        $this->haveSpotBalance($position->symbol, 0.1, false);
 
         $this->haveStopsInDb(...$delayedStops);
@@ -139,21 +135,6 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         // Acceptable stops position size part - total stops position size part
         return new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart);
-    }
-
-    protected function haveTicker(Ticker $ticker): void
-    {
-        $this->exchangeServiceMock->method('ticker')->with($ticker->symbol)->willReturn($ticker);
-    }
-
-    private function havePosition(Position $position): void
-    {
-        $this->positionServiceStub->havePosition($position);
-    }
-
-    private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
-    {
-        $this->exchangeServiceMock->expects(self::once())->method('activeConditionalOrders')->with($symbol)->willReturn($activeStopOrders);
     }
 
     public function testDummy(): void

@@ -120,6 +120,30 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
         return $this;
     }
 
+    public function withActiveConditionalStop(
+        Symbol $symbol,
+        Side $positionSide,
+        string $orderId,
+        float $triggerPrice,
+        float $qty,
+        TriggerBy $triggerBy = TriggerBy::IndexPrice,
+        ExecutionOrderType $orderType = ExecutionOrderType::Market,
+    ): self {
+        $this->ordersListItems[] = array_replace(self::ORDERS_LIST_ITEM, [
+            'symbol' => $symbol->value,
+            'side' => $positionSide->getOpposite()->value,
+            'orderId' => $orderId,
+            'triggerPrice' => (string)$triggerPrice,
+            'qty' => (string)$qty,
+            'triggerBy' => $triggerBy->value,
+            'orderType' => $orderType->value,
+            'reduceOnly' => true,
+            'closeOnTrigger' => false,
+        ]);
+
+        return $this;
+    }
+
     public function build(): MockResponse
     {
         $body = self::ROOT_BODY_ARRAY;

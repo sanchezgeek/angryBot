@@ -11,15 +11,35 @@ use App\Command\Stop\EditStopsCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Fixture\StopFixture;
+use App\Tests\Mixin\CommandsTester;
+use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+
+use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_map;
 
 /**
  * @covers \App\Command\Stop\EditStopsCommand::ACTION_REMOVE
  */
-final class RemoveStopsInRangeTest extends EditStopsInRangeTestAbstract
+final class RemoveStopsInRangeTest extends KernelTestCase
 {
+    use StopsTester;
+    use CommandsTester;
+    use ByBitV5ApiRequestsMocker;
+
+    private const COMMAND_NAME = 'sl:range-edit';
     private const ACTION = EditStopsCommand::ACTION_REMOVE;
+
+    private CommandTester $tester;
+
+    protected function setUp(): void
+    {
+        self::truncateStops();
+
+        $this->tester = $this->createCommandTester(self::COMMAND_NAME);
+    }
 
     /**
      * @dataProvider removeStopsFromRangeDataProvider
@@ -36,7 +56,7 @@ final class RemoveStopsInRangeTest extends EditStopsInRangeTestAbstract
         array $expectedStopsInDb
     ): void {
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $initialStops));
-        $this->positionServiceStub->havePosition($position);
+        $this->havePosition($symbol, $position);
 
         $this->tester->execute(['position_side' => $side->value, '-f' => $from, '-t' => $to, '-a' => self::ACTION]);
 

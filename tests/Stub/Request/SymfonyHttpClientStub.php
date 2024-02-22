@@ -54,62 +54,77 @@ class SymfonyHttpClientStub extends MockHttpClient
     {
         return function (string $method, string $url, array $options) {
             foreach ($this->matchers as $matcher) {
-                if ($response = $matcher($method, $url, $options)) {
+                if (($result = $matcher($method, $url, $options)) !== null) {
                     break;
                 }
             }
 
-            $this->registerCall($method, $url, $options);
+            $result = $result ?? null;
 
-            return $response ?? $this->defaultResponse;
+            /** @see self::match() return value of closure */
+            if (is_array($result)) {
+                [$response, $registerRequestCall] = $result;
+
+                if ($registerRequestCall) {
+                    $this->registerCall($method, $url, $options);
+                }
+
+                return $response;
+            }
+
+            return $this->defaultResponse;
         };
     }
 
     /**
      * @param array<string, string> $params
      */
-    public function matchGet(string $url, array $params, ResponseInterface $response): self
+    public function matchGet(string $url, array $params, ResponseInterface $response, bool $registerRequestCall = true): self
     {
         $url = $params ? $url . '?' . http_build_query($params) : $url;
         $urlRegexp = addcslashes($url, '?+.*');
 
         // @todo | headers
-        return $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response);
+        return $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response, [], $registerRequestCall);
     }
 
-    public function matchPost(string $url, ResponseInterface $response, array $requestBody): self
+    public function matchPost(string $url, ResponseInterface $response, array $requestBody, bool $registerRequestCall = true): self
     {
         // @todo | headers
-        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response, ['body' => json_encode($requestBody)]);
+        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response, ['body' => json_encode($requestBody)], $registerRequestCall);
     }
 
-    public function matchMethodAndUrl(string $methodRegExp, string $urlRegexp, ResponseInterface $response, array $requestOptions = []): self
-    {
+    public function matchMethodAndUrl(
+        string $methodRegExp,
+        string $urlRegexp,
+        ResponseInterface $response,
+        array $requestOptions,
+        bool $needRegisterRequestCall
+    ): self {
         $methodRegExp = $this->ensureRegexp($methodRegExp);
         $urlRegexp = $this->ensureRegexp($urlRegexp);
 
-        return $this->match(
-            static function ($method, $url, $options) use ($methodRegExp, $urlRegexp, $requestOptions) {
-                if (!(preg_match($methodRegExp, $method) && preg_match($urlRegexp, $url))) {
-                    return false;
-                }
+        $matcher = static function ($method, $url, $options) use ($methodRegExp, $urlRegexp, $requestOptions) {
+            if (!(preg_match($methodRegExp, $method) && preg_match($urlRegexp, $url))) {
+                return false;
+            }
 
-                if ($expectedBody = $requestOptions['body'] ?? null) {
-                    return $options['body'] === $expectedBody;
-                }
+            if ($expectedBody = $requestOptions['body'] ?? null) {
+                return $options['body'] === $expectedBody;
+            }
 
-                return true;
-            },
-            $response,
-        );
+            return true;
+        };
+
+        return $this->match($matcher, $response, $needRegisterRequestCall);
     }
 
     /**
      * @param callable $matcher fn(string $method, string $url, array $options): bool
      */
-    public function match(callable $matcher, ResponseInterface $result): self
+    public function match(callable $matcher, ResponseInterface $response, bool $registerRequestCall): self
     {
-        $this->matchers[] = static fn ($method, $url, $options) => $matcher($method, $url, $options) ? $result : null;
+        $this->matchers[] = static fn ($method, $url, $options) => $matcher($method, $url, $options) ? [$response, $registerRequestCall] : null;
 
         return $this;
     }

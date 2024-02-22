@@ -12,6 +12,12 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Fixture\StopFixture;
+use App\Tests\Mixin\CommandsTester;
+use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+
+use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_map;
 use function sprintf;
@@ -19,9 +25,23 @@ use function sprintf;
 /**
  * @covers \App\Command\Stop\EditStopsCommand::ACTION_MOVE
  */
-final class MoveStopsInRangeTest extends EditStopsInRangeTestAbstract
+final class MoveStopsInRangeTest extends KernelTestCase
 {
+    use StopsTester;
+    use CommandsTester;
+    use ByBitV5ApiRequestsMocker;
+
+    private const COMMAND_NAME = 'sl:range-edit';
     private const ACTION = EditStopsCommand::ACTION_MOVE;
+
+    private CommandTester $tester;
+
+    protected function setUp(): void
+    {
+        self::truncateStops();
+
+        $this->tester = $this->createCommandTester(self::COMMAND_NAME);
+    }
 
     /**
      * @dataProvider editStopsInRangeDataProvider
@@ -39,7 +59,7 @@ final class MoveStopsInRangeTest extends EditStopsInRangeTestAbstract
         array $expectedStopsInDb
     ): void {
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $initialStops));
-        $this->positionServiceStub->havePosition($position);
+        $this->havePosition($symbol, $position);
 
         $currentStops = new StopsCollection(...self::getStopRepository()->findAll());
         $initialTotalVolume = $currentStops->totalVolume();
