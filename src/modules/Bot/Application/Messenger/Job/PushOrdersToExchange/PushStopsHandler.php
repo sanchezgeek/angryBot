@@ -128,7 +128,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
     {
         try {
             $stopOrderId = $pushStopCallback();
-            $stop->wasPushedToExchange($stopOrderId);
+            $stop->wasPushedToExchange($ticker->symbol, $stopOrderId);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());

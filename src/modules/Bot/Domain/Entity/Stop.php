@@ -11,6 +11,7 @@ use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -157,9 +158,9 @@ class Stop implements HasEvents
         return $this;
     }
 
-    public function wasPushedToExchange(string $exchangeOrderId): self
+    public function wasPushedToExchange(Symbol $symbol, string $exchangeOrderId): self
     {
-        $this->recordThat(new StopPushedToExchange($this));
+        $this->recordThat(new StopPushedToExchange($this, $symbol));
 
         return $this->setExchangeOrderId($exchangeOrderId);
     }

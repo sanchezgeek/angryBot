@@ -12,6 +12,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
@@ -45,7 +46,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     private const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 29;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 175;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
@@ -276,9 +277,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $side = $position->side;
         $volume = $buyOrder->getVolume();
 
+        $context = [];
+        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
+            $context[Stop::CLOSE_BY_MARKET_CONTEXT] = true;
+        }
+
         if ($specifiedStopDistance = $buyOrder->getStopDistance()) {
             $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
-            $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
+            $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
+            return;
         }
 
         $triggerPrice = null;
@@ -333,7 +340,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
         }
 
-        $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA);
+        $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
     }
 
     /**
