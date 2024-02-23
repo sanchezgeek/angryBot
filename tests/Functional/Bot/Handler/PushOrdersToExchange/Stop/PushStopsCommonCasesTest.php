@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 use App\Application\EventListener\Stop\CreateOppositeBuyOrdersListener;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -16,14 +15,19 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\VolumeHelper;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
-use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\PushOrderHandlerTestAbstract;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
+use App\Tests\Mixin\OrderCasesTester;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function array_map;
 
@@ -31,38 +35,25 @@ use function array_map;
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
  */
-final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
+final class PushStopsCommonCasesTest extends KernelTestCase
 {
-    private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
-    private const OPPOSITE_BUY_DISTANCE = 38;
-    private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
-    private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
-
-    private const LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
-
+    use OrderCasesTester;
     use StopsTester;
     use BuyOrdersTester;
     use MessageConsumerTrait;
+    use ByBitV5ApiRequestsMocker;
+
+    private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
+    private const OPPOSITE_BUY_DISTANCE = 38;
+    private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
 
     private const SYMBOL = Symbol::BTCUSDT;
+    private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
+    private const LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        self::getContainer()->set(
-            PushStopsHandler::class,
-            new PushStopsHandler(
-                $this->stopRepository,
-                self::getContainer()->get(ExchangeAccountServiceInterface::class),
-                $this->orderServiceMock,
-                $this->messageBus,
-                $this->exchangeServiceMock,
-                $this->positionServiceStub,
-                $this->loggerMock,
-                $this->clockMock,
-            )
-        );
 
         self::truncateStops();
         self::truncateBuyOrders();
@@ -76,20 +67,21 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
     public function testPushRelevantStopOrders(
         Position $position,
         Ticker $ticker,
-        array $stopsFixtures,
-        array $expectedStopAddMethodCalls,
+        array $stops,
+        array $expectedMarketBuyApiCalls,
         array $stopsExpectedAfterHandle,
-        array $mockedExchangeOrderIds
+        array $buyOrdersExpectedAfterHandle,
     ): void {
         $this->haveTicker($ticker);
-        $this->positionServiceStub->havePosition($position);
-        $this->positionServiceStub->setMockedExchangeOrdersIds($mockedExchangeOrderIds);
-        $this->applyDbFixtures(...$stopsFixtures);
+        $this->havePosition($position->symbol, $position);
+        $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
+
+        $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $stops));
 
         $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
-        self::assertSame($expectedStopAddMethodCalls, $this->positionServiceStub->getAddStopCallsStack());
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
+        self::seeBuyOrdersInDb(...self::cloneBuyOrders(...$buyOrdersExpectedAfterHandle));
     }
 
     public function pushStopsTestCases(): iterable
@@ -97,35 +89,39 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         $addPriceDelta = self::ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP;
         $addTriggerDelta = self::ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP;
 
-        $mockedExchangeOrderIds = [];
+        $exchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29030, 29030);
         $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA + 1);
         $triggerBy = TriggerBy::IndexPrice;
+        /** @var Stop[] $stops */
+        $stops = [
+            1 => StopBuilder::short(1, 29055, 0.4)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
+            5 => StopBuilder::short(5, 29030, 0.011)->withTD(10)->build()->setIsWithoutOppositeOrder(), # before ticker => push | without oppositeBuy
+            10 => StopBuilder::short(10, 29060, 0.1)->withTD(10)->build(), # by tD | with oppositeBuy
+            15 => StopBuilder::short(15, 29061, 0.1)->withTD(10)->build(),
+            20 => StopBuilder::short(20, 29155, 0.2)->withTD(100)->build(),
+            30 => StopBuilder::short(30, 29055, 0.3)->withTD(5)->build(), # by tD | with oppositeBuy
+            40 => StopBuilder::short(40, 29029, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
+        ];
+        $stopsExpectedToPush = [(clone $stops[5])->setPrice($ticker->indexPrice->value() + $addPriceDelta), $stops[30], $stops[10]];
+
         yield 'BTCUSDT SHORT (liquidation not in critical range => by indexPrice)' => [
             '$position' => $position,
             '$ticker' => $ticker,
-            '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(1, 29055, 0.4)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
-                new StopFixture(StopBuilder::short(5, 29030, 0.011)->withTD(10)->build()), // before ticker
-                new StopFixture(StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()), // by tD
-                new StopFixture(StopBuilder::short(15, 29061, 0.1)->withTD(10)->build()),
-                new StopFixture(StopBuilder::short(20, 29155, 0.2)->withTD(100)->build()),
-                new StopFixture(StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()),  // by tD
-                new StopFixture(StopBuilder::short(40, 29029, 0.33)->withTD(5)->build()->setIsTakeProfitOrder()),
-            ],
-            'expectedStopAddMethodCalls' => [
-                [$position, $ticker->indexPrice->value() + $addPriceDelta, 0.011, $triggerBy],
-                [$position, 29055.0, 0.3, $triggerBy],
-                [$position, 29060.0, 0.1, $triggerBy],
-            ],
+            'stops' => $stops,
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, $stopsExpectedToPush, $triggerBy, $exchangeOrderIds),
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                StopBuilder::short(5, $ticker->indexPrice->value() + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build() // initial price is before ticker => set new price + push
+
+                # initial price is before ticker => set new price + push
+                StopBuilder::short(5, $ticker->indexPrice->value() + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
                     ->setOriginalPrice(29030)
-                    ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                // simple push
-                StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                    ->setIsWithoutOppositeOrder()
+                    ->setExchangeOrderId($exchangeOrderIds[0]),
+
+                # just push
+                StopBuilder::short(30, 29055, 0.3)->withTD(5)->build()->setExchangeOrderId($exchangeOrderIds[1]),
+                StopBuilder::short(10, 29060, 0.1)->withTD(10)->build()->setExchangeOrderId($exchangeOrderIds[2]),
 
                 ### unchanged ###
                 StopBuilder::short(1, 29055, 0.4)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
@@ -133,37 +129,38 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
                 StopBuilder::short(20, 29155, 0.2)->withTD(100)->build(),
                 StopBuilder::short(40, 29029, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
             ],
-            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+            'buyOrdersExpectedAfterHandle' => [
+                ...$this->expectedOppositeOrders($stops[30], $exchangeOrderIds[1]),
+                ...$this->expectedOppositeOrders($stops[10], $exchangeOrderIds[2])
+            ],
         ];
 
-        $mockedExchangeOrderIds = [];
+        $exchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29010, 29030, 29010);
-        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA);
+        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 99, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA);
         $triggerBy = TriggerBy::MarkPrice;
+        $stops = [
+            1 => StopBuilder::short(1, 29035, 0.4)->withTD(5)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
+            5 => StopBuilder::short(5, 29020, 0.011)->withTD(10)->build(), # before ticker | with oppositeBuy
+            10 => StopBuilder::short(10, 29040, 0.1)->withTD(10)->build(), # by tD | with oppositeBuy
+            15 => StopBuilder::short(15, 29041, 0.1)->withTD(10)->build(),
+            20 => StopBuilder::short(20, 29131, 0.2)->withTD(100)->build(),
+            30 => StopBuilder::short(30, 29035, 0.3)->withTD(5)->build()->setIsWithoutOppositeOrder(), # by tD | without oppositeBuy
+            40 => StopBuilder::short(40, 29009, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
+        ];
+        $stopsExpectedToPush = [(clone $stops[5])->setPrice($ticker->markPrice->value() + $addPriceDelta), $stops[30], $stops[10]];
         yield 'BTCUSDT SHORT (liquidation in critical range => by marketPrice)' => [
             '$position' => $position,
             '$ticker' => $ticker,
-            '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(1, 29035, 0.4)->withTD(5)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
-                new StopFixture(StopBuilder::short(5, 29020, 0.011)->withTD(10)->build()), // before ticker
-                new StopFixture(StopBuilder::short(10, 29040, 0.1)->withTD(10)->build()), // by tD
-                new StopFixture(StopBuilder::short(15, 29041, 0.1)->withTD(10)->build()),
-                new StopFixture(StopBuilder::short(20, 29131, 0.2)->withTD(100)->build()),
-                new StopFixture(StopBuilder::short(30, 29035, 0.3)->withTD(5)->build()),  // by tD
-                new StopFixture(StopBuilder::short(40, 29009, 0.33)->withTD(5)->build()->setIsTakeProfitOrder()),
-            ],
-            'expectedStopAddMethodCalls' => [
-                [$position, $ticker->markPrice->value() + $addPriceDelta, 0.011, $triggerBy],
-                [$position, 29035.0, 0.3, $triggerBy],
-                [$position, 29040.0, 0.1, $triggerBy],
-            ],
+            'stops' => $stops,
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, $stopsExpectedToPush, $triggerBy, $exchangeOrderIds),
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
                 StopBuilder::short(5, $ticker->markPrice->value() + $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build() // initial price is before ticker => set new price + push
                 ->setOriginalPrice(29020)
-                    ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                StopBuilder::short(30, 29035, 0.3)->withTD(5)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                StopBuilder::short(10, 29040, 0.1)->withTD(10)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                    ->setExchangeOrderId($exchangeOrderIds[0]),
+                StopBuilder::short(30, 29035, 0.3)->withTD(5)->build()->setIsWithoutOppositeOrder()->setExchangeOrderId($exchangeOrderIds[1]),
+                StopBuilder::short(10, 29040, 0.1)->withTD(10)->build()->setExchangeOrderId($exchangeOrderIds[2]),
 
                 ### unchanged ###
                 StopBuilder::short(1, 29035, 0.4)->withTD(5)->build()->setExchangeOrderId($existedExchangeOrderId),
@@ -171,43 +168,47 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
                 StopBuilder::short(20, 29131, 0.2)->withTD(100)->build(),
                 StopBuilder::short(40, 29009, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
             ],
-            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+            'buyOrdersExpectedAfterHandle' => [
+                ...$this->expectedOppositeOrders($stopsExpectedToPush[0], $exchangeOrderIds[0]),
+                ...$this->expectedOppositeOrders($stops[10], $exchangeOrderIds[2])
+            ],
         ];
 
-        $mockedExchangeOrderIds = [];
+        $exchangeOrderIds = [];
+        $ticker = TickerFactory::create(self::SYMBOL, 29050);
+        $position = PositionFactory::long(self::SYMBOL, 29000);
         $triggerBy = TriggerBy::IndexPrice;
+        $stops = [
+            1 => StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
+            5 => StopBuilder::long(5, 29070, 0.011)->withTD(10)->build(), # must be pushed (before ticker)
+            10 => StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()->setIsWithoutOppositeOrder(), # must be pushed (by tD)
+            15 => StopBuilder::long(15, 29039, 0.1)->withTD(10)->build(),
+            20 => StopBuilder::long(20, 28949, 0.2)->withTD(100)->build(),
+            30 => StopBuilder::long(30, 29045, 0.3)->withTD(5)->build(),  # must be pushed (by tD)
+        ];
+        $stopsExpectedToPush = [(clone $stops[5])->setPrice($ticker->indexPrice->value() - $addPriceDelta), $stops[30], $stops[10]];
         yield 'BTCUSDT LONG' => [
-            '$position' => $position = PositionFactory::long(self::SYMBOL, 29000),
-            '$ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050),
-            '$stopFixtures' => [
-                new StopFixture(StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create())), // must not be pushed (not active)
-                new StopFixture(StopBuilder::long(5, 29070, 0.011)->withTD(10)->build()), // must be pushed (before ticker)
-                new StopFixture(StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()), // must be pushed (by tD)
-                new StopFixture(StopBuilder::long(15, 29039, 0.1)->withTD(10)->build()),
-                new StopFixture(StopBuilder::long(20, 28949, 0.2)->withTD(100)->build()),
-                new StopFixture(StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()),  // must be pushed (by tD)
-            ],
-            'expectedStopAddMethodCalls' => [
-                [$position, $ticker->indexPrice->value() - $addPriceDelta, 0.011, $triggerBy],
-                [$position, 29045.0, 0.3, $triggerBy],
-                [$position, 29040.0, 0.1, $triggerBy],
-            ],
+            '$position' => $position,
+            '$ticker' => $ticker,
+            'stops' => $stops,
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, $stopsExpectedToPush, $triggerBy, $exchangeOrderIds),
             'stopsExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                // initial price is before ticker => set new price + push
                 StopBuilder::long(5, $ticker->indexPrice->value() - $addPriceDelta, 0.011)->withTD(10 + $addTriggerDelta)->build()
-                    ->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create())
+                    ->setExchangeOrderId($exchangeOrderIds[0])
                     ->setOriginalPrice(29070),
-                // simple push
-                StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
-                StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()->setExchangeOrderId($mockedExchangeOrderIds[] = uuid_create()),
+                StopBuilder::long(30, 29045, 0.3)->withTD(5)->build()->setExchangeOrderId($exchangeOrderIds[1]),
+                StopBuilder::long(10, 29040, 0.1)->withTD(10)->build()->setIsWithoutOppositeOrder()->setExchangeOrderId($exchangeOrderIds[2]),
 
                 ### unchanged ###
                 StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId),
                 StopBuilder::long(15, 29039, 0.1)->withTD(10)->build(),
                 StopBuilder::long(20, 28949, 0.2)->withTD(100)->build(),
             ],
-            '$mockedExchangeOrderIds' => $mockedExchangeOrderIds
+            'buyOrdersExpectedAfterHandle' => [
+                ...$this->expectedOppositeOrders($stopsExpectedToPush[0], $exchangeOrderIds[0]),
+                ...$this->expectedOppositeOrders($stops[30], $exchangeOrderIds[1])
+            ],
         ];
     }
 
@@ -220,13 +221,13 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         Position $position,
         Ticker $ticker,
         array $stops,
-        array $mockedStopExchangeOrderIds,
+        array $expectedMarketBuyApiCalls,
         array $buyOrdersExpectedAfterHandle,
     ): void {
         $this->haveTicker($ticker);
-        $this->positionServiceStub->havePosition($position);
-        $this->positionServiceStub->setMockedExchangeOrdersIds($mockedStopExchangeOrderIds);
-        $this->applyDbFixtures(...$stops);
+        $this->havePosition($ticker->symbol, $position);
+        $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
+        $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $stops));
 
         $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
@@ -238,82 +239,84 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         # BTCUSDT SHORT
         $position = PositionFactory::short(self::SYMBOL, 29000); $ticker = TickerFactory::create(self::SYMBOL, 29050);
 
+        $exchangeOrderIds = [];
         yield '[BTCUSDT SHORT] No opposite' => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => [
-                new StopFixture(StopBuilder::short(10, 29060, 0.001)->withTD(10)->build()->setIsWithoutOppositeOrder()),
-                new StopFixture(StopBuilder::short(20, 29055, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder()),
-                new StopFixture(StopBuilder::short(30, 29060, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder()),
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
+                StopBuilder::short(10, 29060, 0.001)->withTD(10)->build()->setIsWithoutOppositeOrder(),
+                StopBuilder::short(20, 29055, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder(),
             ],
-            '$mockedExchangeOrderIds' => [],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [],
         ];
 
+        $exchangeOrderIds = [];
         yield '[BTCUSDT SHORT] Small order => One opposite' => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => array_map(static fn(Stop $stop) => new StopFixture($stop), $stops = [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
                 StopBuilder::short(10, 29060, 0.001)->withTD(10)->build(),
                 StopBuilder::short(20, 29055, 0.005)->withTD(10)->build(),
-            ]),
-            '$mockedStopExchangeOrderIds' => $mockedStopExchangeOrderIds = [uuid_create(), uuid_create()],
+            ],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
-                ...$this->expectedOppositeOrders($stops[1], $mockedStopExchangeOrderIds[0]),
-                ...$this->expectedOppositeOrders($stops[0], $mockedStopExchangeOrderIds[1])
+                ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[0]),
+                ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[1])
             ],
         ];
 
-        $mockedStopExchangeOrderIds = [uuid_create()];
         $stops = [StopBuilder::short(20, 29055, 0.006)->withTD(10)->build()];
-        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $mockedStopExchangeOrderIds[0]);
-        yield \sprintf(
-            '[BTCUSDT SHORT] Big order => Partial opposites: %s => %s',
-            $this->ordersDesc(...$stops),
-            $this->ordersDesc(...$oppositeOrders)
-        ) => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => array_map(static fn(Stop $stop) => new StopFixture($stop), $stops),
-            '$mockedStopExchangeOrderIds' => $mockedStopExchangeOrderIds,
+        $exchangeOrderIds = [];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]);
+        yield \sprintf('[BTCUSDT SHORT] Big order => Partial opposites: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
             'buyOrdersExpectedAfterHandle' => $oppositeOrders,
         ];
 
         # BTCUSDT LONG
         $position = PositionFactory::long(self::SYMBOL, 29000); $ticker = TickerFactory::create(self::SYMBOL, 29050);
 
+        $exchangeOrderIds = [];
         yield '[BTCUSDT LONG] No opposite' => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => [
-                new StopFixture(StopBuilder::long(10, 29060, 0.001)->withTD(10)->build()->setIsWithoutOppositeOrder()),
-                new StopFixture(StopBuilder::long(20, 29055, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder()),
-                new StopFixture(StopBuilder::long(30, 29060, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder()),
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
+                StopBuilder::long(10, 29040, 0.001)->withTD(10)->build()->setIsWithoutOppositeOrder(),
+                StopBuilder::long(20, 29045, 0.005)->withTD(10)->build()->setIsWithoutOppositeOrder(),
             ],
-            '$mockedExchangeOrderIds' => [],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [],
         ];
 
+        $exchangeOrderIds = [];
         yield '[BTCUSDT LONG] Small order => One opposite' => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => array_map(static fn(Stop $stop) => new StopFixture($stop), $stops = [
-                StopBuilder::long(10, 29040, 0.001)->withTD(10)->build(),
-                StopBuilder::long(20, 29045, 0.005)->withTD(10)->build(),
-            ]),
-            '$mockedStopExchangeOrderIds' => $mockedStopExchangeOrderIds = [uuid_create(), uuid_create()],
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
+                StopBuilder::long(10, 29045, 0.001)->withTD(10)->build(),
+                StopBuilder::long(20, 29040, 0.005)->withTD(10)->build(),
+            ],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
-                ...$this->expectedOppositeOrders($stops[1], $mockedStopExchangeOrderIds[0]),
-                ...$this->expectedOppositeOrders($stops[0], $mockedStopExchangeOrderIds[1])
+                ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]),
+                ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[1])
             ],
         ];
 
-        $mockedStopExchangeOrderIds = [uuid_create()];
+        $exchangeOrderIds = [];
         $stops = [StopBuilder::long(20, 29045, 0.02)->withTD(10)->build()];
-        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $mockedStopExchangeOrderIds[0]);
-        yield \sprintf(
-            '[BTCUSDT LONG] Big order => Partial opposites: %s => %s',
-            $this->ordersDesc(...$stops),
-            $this->ordersDesc(...$oppositeOrders)
-        ) => [
-            '$position' => $position, '$ticker' => $ticker,
-            '$stopFixtures' => array_map(static fn(Stop $stop) => new StopFixture($stop), $stops),
-            '$mockedStopExchangeOrderIds' => $mockedStopExchangeOrderIds,
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]);
+        yield \sprintf('[BTCUSDT LONG] Big order => Partial opposites: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
             'buyOrdersExpectedAfterHandle' => $oppositeOrders,
         ];
     }
@@ -345,6 +348,36 @@ final class PushStopsCommonCasesTest extends PushOrderHandlerTestAbstract
         }
 
         return $orders;
+    }
+
+    /**
+     * @param BuyOrder[] $stops
+     *
+     * @return ByBitApiCallExpectation[]
+     */
+    protected static function successConditionalStopApiCallExpectations(Symbol $symbol, array $stops, TriggerBy $triggerBy, array &$exchangeOrderIdsCollector = null): array
+    {
+        $result = [];
+        foreach ($stops as $stop) {
+            $exchangeOrderId = uuid_create();
+
+            if ($exchangeOrderIdsCollector !== null) {
+                $exchangeOrderIdsCollector[] = $exchangeOrderId;
+            }
+
+            $request = PlaceOrderRequest::stopConditionalOrder(
+                $symbol->associatedCategory(),
+                $symbol,
+                $stop->getPositionSide(),
+                $stop->getVolume(),
+                $stop->getPrice(),
+                $triggerBy,
+            );
+
+            $result[] = new ByBitApiCallExpectation($request, PlaceOrderResponseBuilder::ok($exchangeOrderId)->build());
+        }
+
+        return $result;
     }
 
     /**

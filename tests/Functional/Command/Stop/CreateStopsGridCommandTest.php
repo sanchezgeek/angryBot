@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Command\Stop;
 
 use App\Application\UniqueIdGeneratorInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -14,8 +13,8 @@ use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mock\UniqueIdGeneratorStub;
-use App\Tests\Stub\Bot\PositionServiceStub;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,16 +29,14 @@ use function sprintf;
 final class CreateStopsGridCommandTest extends KernelTestCase
 {
     use StopsTester;
+    use ByBitV5ApiRequestsMocker;
 
     private const COMMAND_NAME = 'sl:grid';
     private const DEFAULT_TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;
     private const UNIQID_CONTEXT = 'awesome-unique-stops-grid';
 
-    private PositionServiceStub $positionServiceStub;
-
     protected function setUp(): void
     {
-        $this->positionServiceStub = self::getContainer()->get(PositionServiceInterface::class);
         self::getContainer()->set(UniqueIdGeneratorInterface::class, new UniqueIdGeneratorStub(self::UNIQID_CONTEXT));
 
         self::truncateStops();
@@ -61,7 +58,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         array $expectedStopsInDb
     ): void {
         // Arrange
-        $this->positionServiceStub->havePosition($position);
+        $this->havePosition($symbol, $position);
         $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
         $params = [
             'position_side' => $side->value,
@@ -289,7 +286,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         $qnt,
         \Throwable $expectedException
     ): void {
-        $this->positionServiceStub->havePosition($position);
+        $this->havePosition($symbol, $position);
         $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
 
         $this->expectException(get_class($expectedException));

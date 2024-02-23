@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequestTest
+ *
+ * @link https://bybit-exchange.github.io/docs/v5/market/tickers
  */
 final readonly class GetTickersRequest extends AbstractByBitApiRequest
 {

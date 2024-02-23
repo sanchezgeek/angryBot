@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Tester;
 
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Exchange\ActiveStopOrder;
+use App\Bot\Domain\Position;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
@@ -12,10 +15,17 @@ use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\Account\AccountBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\TickersResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Trade\CurrentOrdersResponseBuilder;
+use LogicException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -29,10 +39,10 @@ trait ByBitV5ApiRequestsMocker
     {
         $coinAmount = new CoinAmount($coin = $symbol->associatedCoin(), $amount);
 
-        $this->matchGet(
-            new GetWalletBalanceRequest(AccountType::SPOT, $coin),
-            AccountBalanceResponseBuilder::ok($symbol->associatedCategory())->withCoinBalance(AccountType::SPOT, $coinAmount)->build(),
-        );
+        $expectedRequest = new GetWalletBalanceRequest(AccountType::SPOT, $coin);
+        $resultResponse = AccountBalanceResponseBuilder::ok($symbol->associatedCategory())->withCoinBalance(AccountType::SPOT, $coinAmount)->build();
+
+        $this->matchGet($expectedRequest, $resultResponse);
     }
 
     protected  function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void
@@ -41,12 +51,12 @@ trait ByBitV5ApiRequestsMocker
             $method = $expectation->expectedRequest->method();
 
             if ($method === Request::METHOD_POST) {
-                $this->matchPost($expectation->expectedRequest, $expectation->resultResponse);
+                $this->matchPost($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck());
             } else {
                 $method !== Request::METHOD_GET && throw new RuntimeException(
                     sprintf('Unknown request type (`%s` verb)', $method)
                 );
-                $this->matchGet($expectation->expectedRequest, $expectation->resultResponse);
+                $this->matchGet($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck());
             }
         }
     }
@@ -94,9 +104,72 @@ trait ByBitV5ApiRequestsMocker
     {
         $exchangeOrderId = uuid_create();
 
-        return new ByBitApiCallExpectation(
-            PlaceOrderRequest::marketClose($symbol->associatedCategory(), $symbol, $positionSide, $qty),
-            PlaceOrderResponseBuilder::ok($exchangeOrderId)->build(),
+        $expectedRequest = PlaceOrderRequest::marketClose($symbol->associatedCategory(), $symbol, $positionSide, $qty);
+        $resultResponse = PlaceOrderResponseBuilder::ok($exchangeOrderId)->build();
+
+        return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
+    }
+
+    protected static function tickerApiCallExpectation(Ticker $ticker): ByBitApiCallExpectation
+    {
+        $symbol = $ticker->symbol;
+
+        $expectedRequest = new GetTickersRequest($symbol->associatedCategory(), $symbol);
+        $resultResponse = TickersResponseBuilder::ok($ticker)->build();
+
+        return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
+    }
+
+    protected static function positionsApiCallExpectation(Symbol $symbol, Position ...$positions): ByBitApiCallExpectation
+    {
+        $expectedRequest = new GetPositionsRequest($symbol->associatedCategory(), $symbol);
+
+        $resultResponse = new PositionResponseBuilder($symbol->associatedCategory());
+        foreach ($positions as $position) {
+            if ($position->symbol !== $symbol) {
+                throw new LogicException(sprintf('Position with invalid ::symbol provided (%s provided, but %s expected)', $position->symbol->value, $symbol->value));
+            }
+            $resultResponse->withPosition($position);
+        }
+
+        return new ByBitApiCallExpectation($expectedRequest, $resultResponse->build());
+    }
+
+    protected function haveTicker(Ticker $ticker): void
+    {
+        $byBitApiCallExpectation = self::tickerApiCallExpectation($ticker);
+        $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
+
+        $this->expectsToMakeApiCalls(
+            $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck()
+        );
+    }
+
+    protected function havePosition(Symbol $symbol, Position ... $positions): void
+    {
+        $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
+        $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
+
+        $this->expectsToMakeApiCalls($byBitApiCallExpectation);
+    }
+
+    private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
+    {
+        $category = $symbol->associatedCategory();
+
+        $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
+        foreach ($activeStopOrders as $activeStopOrder) {
+            $apiResponseBuilder->withActiveConditionalStop(
+                $symbol,
+                $activeStopOrder->positionSide,
+                uuid_create(),
+                $activeStopOrder->triggerPrice,
+                $activeStopOrder->volume,
+            );
+        }
+
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
         );
     }
 }
