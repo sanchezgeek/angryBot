@@ -35,12 +35,12 @@ trait ByBitV5ApiRequestsMocker
 {
     use ByBitV5ApiTester;
 
-    protected function haveSpotBalance(Symbol $symbol, float $amount): void
+    protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $coinAmount = new CoinAmount($coin = $symbol->associatedCoin(), $amount);
 
         $expectedRequest = new GetWalletBalanceRequest(AccountType::SPOT, $coin);
-        $resultResponse = AccountBalanceResponseBuilder::ok($symbol->associatedCategory())->withCoinBalance(AccountType::SPOT, $coinAmount)->build();
+        $resultResponse = AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance(AccountType::SPOT, $coinAmount)->build();
 
         $this->matchGet($expectedRequest, $resultResponse);
     }

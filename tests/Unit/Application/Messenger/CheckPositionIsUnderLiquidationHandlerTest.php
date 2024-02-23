@@ -110,7 +110,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->stopService->expects(self::never())->method(self::anything());
 
         $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
-            new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance),
+            new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance),
         );
 
         if ($expectedTransferAmount !== null) {

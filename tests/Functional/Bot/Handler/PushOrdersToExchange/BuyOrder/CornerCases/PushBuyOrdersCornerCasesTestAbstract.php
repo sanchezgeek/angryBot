@@ -98,14 +98,14 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->positionServiceMock->method('getPosition')->with($position->symbol, $position->side)->willReturn($position);
     }
 
-    protected function haveSpotBalance(Symbol $symbol, float $amount): void
+    protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $this->exchangeAccountServiceMock
             ->expects(self::once())
             ->method('getSpotWalletBalance')
             ->with($coin = $symbol->associatedCoin())
             ->willReturn(
-                new WalletBalance(AccountType::SPOT, $coin, $amount),
+                new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
             )
         ;
     }

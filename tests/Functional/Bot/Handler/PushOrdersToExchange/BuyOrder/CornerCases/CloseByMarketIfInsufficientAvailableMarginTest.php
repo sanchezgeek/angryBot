@@ -29,7 +29,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
     /**
      * @dataProvider doNotCloseByMarketCasesProvider
      */
-    public function testDoNotCloseByMarket(Position $position, Ticker $ticker, float $coinSpotBalanceValue): void
+    public function testDoNotCloseByMarket(Position $position, Ticker $ticker, float $availableSpotBalance): void
     {
         $symbol = $position->symbol;
         $side = $position->side;
@@ -40,7 +40,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         $buyOrder = new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, $side);
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
-        $this->haveSpotBalance($symbol, $coinSpotBalanceValue);
+        $this->haveAvailableSpotBalance($symbol, $availableSpotBalance);
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
 
         // Assert
@@ -61,19 +61,19 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         yield 'lastPrice pnl less than min required' => [
             'position' => $position,
             'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
-            'coinSpotBalanceValue' => 0,
+            'availableSpotBalance' => 0,
         ];
 
         yield 'lastPrice pnl greater than min required, but spot balance available' => [
             'position' => $position,
             'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
-            'coinSpotBalanceValue' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
+            'availableSpotBalance' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
         ];
 
         yield 'lastPrice pnl over min required, but spot balance available' => [
             'position' => $position,
             'ticker' => TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice - 1),
-            'coinSpotBalanceValue' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
+            'availableSpotBalance' => self::USE_SPOT_IF_BALANCE_GREATER_THAN + 1,
         ];
     }
 
@@ -89,7 +89,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         $this->havePosition($position);
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
-        $this->haveSpotBalance($symbol, 0);
+        $this->haveAvailableSpotBalance($symbol, 0);
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
         $this->expectsToMakeApiCalls(self::successCloseByMarketApiCallExpectation($symbol, $position->side, $expectedCloseOrderVolume));
 

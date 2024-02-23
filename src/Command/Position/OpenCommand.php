@@ -142,11 +142,11 @@ class OpenCommand extends AbstractCommand
         $this->tradeService->closeByMarket($position, $position->size);
 
         $currentLoss = PriceHelper::round(-$unrealizedPnl, 2);
-        $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
-        if ($contractBalance->availableBalance > 2) {
+        $spotBalance = $this->accountService->getSpotWalletBalance($this->symbol->associatedCoin());
+        if ($spotBalance->availableBalance > 2) {
             $this->accountService->interTransferFromSpotToContract(
                 $this->symbol->associatedCoin(),
-                min(PriceHelper::round($contractBalance->availableBalance - 1, 2), $currentLoss)
+                min(PriceHelper::round($spotBalance->availableBalance - 1), $currentLoss)
             );
         }
 
