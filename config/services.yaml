@@ -49,7 +49,7 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
 ### cache
-    App\Bot\Application\Service\Exchange\TickersCache:
+    App\Infrastructure\Cache\TickersCache:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
 #    Symfony\Contracts\Cache\CacheInterface:

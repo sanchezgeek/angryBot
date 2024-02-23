@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 use function addcslashes;
+use function array_unshift;
 use function explode;
 use function http_build_query;
 use function is_array;
@@ -124,7 +125,9 @@ class SymfonyHttpClientStub extends MockHttpClient
      */
     public function match(callable $matcher, ResponseInterface $response, bool $registerRequestCall): self
     {
-        $this->matchers[] = static fn ($method, $url, $options) => $matcher($method, $url, $options) ? [$response, $registerRequestCall] : null;
+        $matcher = static fn($method, $url, $options) => $matcher($method, $url, $options) ? [$response, $registerRequestCall] : null;
+
+        array_unshift($this->matchers, $matcher);
 
         return $this;
     }

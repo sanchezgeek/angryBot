@@ -6,7 +6,6 @@ namespace App\Bot\Infrastructure\ByBit;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\TickersCache;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -14,8 +13,8 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Helper\Json;
+use App\Infrastructure\Cache\TickersCache;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
-use App\Worker\AppContext;
 use Lin\Bybit\BybitLinear;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Stub\Bot;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\TickersCache;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\PriceRange;
+use App\Infrastructure\Cache\TickersCache;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
 use function sprintf;

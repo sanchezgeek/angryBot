@@ -20,6 +20,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Infrastructure\Cache\PositionsCache;
 use Closure;
 
 use function debug_backtrace;
@@ -30,8 +31,10 @@ final class ByBitOrderService implements OrderServiceInterface
 
     private const ASSET_CATEGORY = AssetCategory::linear;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly PositionsCache $positionsCache
+    ) {
         $this->apiClient = $apiClient;
     }
 
@@ -48,7 +51,7 @@ final class ByBitOrderService implements OrderServiceInterface
      */
     public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string
     {
-        return $this->sendPlaceOrderRequest(
+        $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
             static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
                 match ($error->code()) {
@@ -61,6 +64,10 @@ final class ByBitOrderService implements OrderServiceInterface
                 };
             }
         );
+
+        $this->positionsCache->clearPositionCache($symbol, $positionSide);
+
+        return $exchangeOrderId;
     }
 
     /**
@@ -74,9 +81,13 @@ final class ByBitOrderService implements OrderServiceInterface
      */
     public function closeByMarket(Position $position, float $qty): string
     {
-        return $this->sendPlaceOrderRequest(
+        $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty)
         );
+
+        $this->positionsCache->clearPositionCache($position->symbol, $position->side);
+
+        return $exchangeOrderId;
     }
 
     /**

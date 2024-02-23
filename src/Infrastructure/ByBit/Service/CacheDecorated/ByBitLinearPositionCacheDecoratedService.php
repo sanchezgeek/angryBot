@@ -7,7 +7,6 @@ namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -15,10 +14,10 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
-use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Infrastructure\Cache\PositionsCache;
 use DateInterval;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -26,7 +25,7 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 use function sprintf;
 
-final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface
+final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface, PositionsCache
 {
     private const ASSET_CATEGORY = AssetCategory::linear;
 
@@ -41,7 +40,6 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         private EventDispatcherInterface $events,
         private CacheInterface $cache,
     ) {
-
     }
 
     /**
@@ -49,7 +47,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        $key = sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
+        $key = self::positionCacheKey($symbol, $side);
 
         return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
             $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
@@ -96,5 +94,17 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
         return $this->positionService->addConditionalStop($position, $price, $qty, $triggerBy);
+    }
+
+    public function clearPositionCache(Symbol $symbol, Side $positionSide): void
+    {
+        $this->cache->delete(
+            self::positionCacheKey($symbol, $positionSide)
+        );
+    }
+
+    private static function positionCacheKey(Symbol $symbol, Side $side): string
+    {
+        return sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
     }
 }
