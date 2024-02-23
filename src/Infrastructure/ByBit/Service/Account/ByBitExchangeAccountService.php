@@ -106,7 +106,11 @@ final class ByBitExchangeAccountService implements ExchangeAccountServiceInterfa
             if ($item['accountType'] === $accountType->value) {
                 foreach ($item['coin'] as $coinData) {
                     if ($coinData['coin'] === $coin->value) {
-                        $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance']);
+                        if ($accountType === AccountType::SPOT) {
+                            $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
+                        } elseif ($accountType === AccountType::CONTRACT) {
+                            $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['availableToWithdraw']);
+                        }
                     }
                 }
             }

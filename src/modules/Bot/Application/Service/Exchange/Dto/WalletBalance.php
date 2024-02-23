@@ -14,7 +14,8 @@ final readonly class WalletBalance
     public function __construct(
         public AccountType $accountType,
         public Coin        $assetCoin,
-        public float       $availableBalance
+        public float       $totalBalance,
+        public float       $availableBalance,
     ) {
     }
 }

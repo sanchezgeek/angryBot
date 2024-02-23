@@ -15,6 +15,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use function in_array;
+use function sprintf;
 
 #[AsCommand(name: 'acc:info')]
 class AccInfoCommand extends AbstractCommand
@@ -39,7 +40,9 @@ class AccInfoCommand extends AbstractCommand
 
         $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
         $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-        var_dump($spotWalletBalance->availableBalance, $contractWalletBalance->availableBalance);
+
+        $this->io->note(sprintf('spot: %.3f/%.3f', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
+        $this->io->note(sprintf('contract: %.3f/%.3f', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
 
         if ($transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION)) {
             $to = $this->paramFetcher->getStringOption(self::TRANSFER_TO_OPTION);
