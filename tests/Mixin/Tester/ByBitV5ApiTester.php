@@ -70,20 +70,24 @@ trait ByBitV5ApiTester
         return $apiHost . $request->url();
     }
 
-    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse): void
+    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true): void
     {
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-        $this->getHttClientStub()->matchGet($requestUrl, $expectedRequest->data(), $resultResponse);
+        $this->getHttClientStub()->matchGet($requestUrl, $expectedRequest->data(), $resultResponse, $needTrackRequestCallToFurtherCheck);
 
-        $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+        if ($needTrackRequestCallToFurtherCheck) {
+            $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+        }
     }
 
-    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse): void
+    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true): void
     {
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data());
+        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data(), $needTrackRequestCallToFurtherCheck);
 
-        $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+        if ($needTrackRequestCallToFurtherCheck) {
+            $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+        }
     }
 
     /**

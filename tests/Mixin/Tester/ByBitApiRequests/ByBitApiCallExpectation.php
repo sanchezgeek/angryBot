@@ -7,11 +7,25 @@ namespace App\Tests\Mixin\Tester\ByBitApiRequests;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final readonly class ByBitApiCallExpectation
+final class ByBitApiCallExpectation
 {
     public function __construct(
-        public AbstractByBitApiRequest $expectedRequest,
-        public MockResponse $resultResponse,
+        public readonly AbstractByBitApiRequest $expectedRequest,
+        public readonly MockResponse $resultResponse,
+        /** @internal  */
+        private bool $trackPositionCallToFurtherCheck = true
     ) {
+    }
+
+    public function isNeedTrackRequestCallToFurtherCheck(): bool
+    {
+        return $this->trackPositionCallToFurtherCheck;
+    }
+
+    public function setNoNeedToTrackRequestCallToFurtherCheck(): self
+    {
+        $this->trackPositionCallToFurtherCheck = false;
+
+        return $this;
     }
 }

@@ -7,15 +7,6 @@ services:
         arguments:
             $baseUri: 'https://%env(BYBIT_API_HOST)%'
 
-    App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
-        class: App\Tests\Stub\Bot\ExchangeServiceStub
-
-    App\Bot\Application\Service\Exchange\PositionServiceInterface:
-        class: App\Tests\Stub\Bot\PositionServiceStub
-
-    App\Bot\Application\Service\Exchange\TickersCache:
-        class: App\Tests\Stub\Bot\ExchangeServiceStub
-
     App\Application\UniqueIdGeneratorInterface:
         class: App\Tests\Mock\UniqueIdGeneratorStub
 
@@ -30,4 +21,9 @@ services:
             $stopRepository: '@App\Bot\Domain\Repository\StopRepositoryInterface'
 
     App\Clock\ClockInterface:
+        public: true
         class: App\Clock\Clock
+
+    Psr\Log\LoggerInterface:
+        public: true
+        class: App\Tests\PHPUnit\TestLogger
