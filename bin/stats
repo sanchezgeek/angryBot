@@ -1,0 +1,10 @@
+#!/bin/sh
+
+echo "---- ACCOUNT info ----"
+./bin/console acc:info
+
+echo "----  SHORT info -----"
+./bin/console sl:info sell -p100 --showPnl
+
+echo "----  LONG info  -----"
+./bin/console sl:info buy -p100 --showPnl

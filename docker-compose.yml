@@ -20,6 +20,7 @@ services:
       start_period: 30s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DATABASE}?serverVersion=${POSTGRES_VERSION:-15}
+      MAKE_FROM_CONTAINER: "1"
 #    networks:
 #      - bot-network
 

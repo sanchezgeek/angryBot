@@ -41,8 +41,8 @@ class AccInfoCommand extends AbstractCommand
         $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
         $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
 
-        $this->io->note(sprintf('spot: %.3f/%.3f', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
-        $this->io->note(sprintf('contract: %.3f/%.3f', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
+        $this->io->note(sprintf('spot: %.3f available / %.3f total', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
+        $this->io->note(sprintf('contract: %.3f available / %.3f total', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
 
         if ($transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION)) {
             $to = $this->paramFetcher->getStringOption(self::TRANSFER_TO_OPTION);

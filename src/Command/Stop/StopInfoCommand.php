@@ -74,7 +74,9 @@ class StopInfoCommand extends AbstractCommand
         $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
         if ($position->isSupportPosition()) {
-            $this->io->info(sprintf('[hedge support] size: %.3f', $position->size));
+            $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
+        } else {
+            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
 
         $stops = $this->stopRepository->findActive(
@@ -83,7 +85,7 @@ class StopInfoCommand extends AbstractCommand
         );
 
         if (!$stops) {
-            $this->io->info('Stops not found!'); return Command::SUCCESS;
+            $this->io->block('Stops not found!'); return Command::SUCCESS;
         }
 
         $stops = (new StopsCollection(...$stops));
@@ -111,7 +113,7 @@ class StopInfoCommand extends AbstractCommand
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
-            $this->io->note(\sprintf($format, ...$args));
+            $this->io->text(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);
 
             $totalUsdPnL += $usdPnL;
@@ -119,16 +121,16 @@ class StopInfoCommand extends AbstractCommand
         }
 
         if ($showPnl) {
-            $this->io->note(sprintf('total PNL: %s', new Pnl($totalUsdPnL)));
+            $this->io->block(sprintf('total PNL: %s', new Pnl($totalUsdPnL)));
         }
 
         if ($showCurrentPositionPnl) {
-            $this->io->note(
+            $this->io->text(
                 sprintf('unrealized position PNL: %.1f', $position->unrealizedPnl)
             );
         }
 
-        $this->io->note(sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100));
+        $this->io->info(sprintf('volume stopped: %.2f%%', ($totalVolume / $position->size) * 100));
 
         return Command::SUCCESS;
     }

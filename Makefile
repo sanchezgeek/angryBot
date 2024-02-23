@@ -1,7 +1,11 @@
 DOCKER_COMP = docker compose --env-file=.env.local
 
 # Docker containers
-PHP_CONT = $(DOCKER_COMP) exec php
+ifdef MAKE_FROM_CONTAINER
+PHP_CONT :=
+else
+PHP_CONT := ${DOCKER_COMP} exec php
+endif
 
 # Executables
 PHP      = $(PHP_CONT) php
@@ -133,3 +137,6 @@ s-m-info: pos-m-info
 l-m-info: ## Get LONG-position info on price movement ("t=" - to specify `to` price, example: l-m-info t=30000)
 l-m-info: s=buy
 l-m-info: pos-m-info
+
+stats:
+	@$(PHP_CONT) ./bin/stats
