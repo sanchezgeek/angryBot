@@ -1,10 +1,12 @@
 #!/bin/sh
 
+PNL_STEP=${1:-30}
+
 echo "---- ACCOUNT info ----"
 ./bin/console acc:info
 
 echo "----  SHORT info -----"
-./bin/console sl:info sell --showPnl
+./bin/console sl:info sell --showPnl -p"${PNL_STEP}"
 
 echo "----  LONG info  -----"
-./bin/console sl:info buy --showPnl
+./bin/console sl:info buy --showPnl -p"${PNL_STEP}"
