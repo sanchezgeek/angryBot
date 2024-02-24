@@ -29,7 +29,7 @@ final class HedgeService
         $this->logger = $logger;
     }
 
-    public function isSupportSizeEnoughFor(Hedge $hedge): bool
+    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge): bool
     {
         $mainPosition = $hedge->mainPosition;
         $supportPosition = $hedge->supportPosition;

@@ -44,7 +44,7 @@ use function sprintf;
 #[AsMessageHandler]
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
-    private const STOP_ORDER_TRIGGER_DELTA = 37;
+    public const STOP_ORDER_TRIGGER_DELTA = 37;
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;

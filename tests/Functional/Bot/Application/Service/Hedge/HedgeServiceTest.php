@@ -32,7 +32,7 @@ final class HedgeServiceTest extends KernelTestCase
     {
         $hedge = Hedge::create(...$positions);
 
-        $result = $this->hedgeService->isSupportSizeEnoughFor($hedge);
+        $result = $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge);
 
         self::assertEquals($expectedResult, $result);
     }

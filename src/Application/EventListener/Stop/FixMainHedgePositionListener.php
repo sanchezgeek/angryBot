@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\EventListener\Stop;
 
+use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
@@ -54,14 +55,14 @@ final class FixMainHedgePositionListener
         if (
             ($hedge = $position->getHedge())
             && $hedge->isSupportPosition($position)
-            && !$this->hedgeService->isSupportSizeEnoughFor($hedge)
+            && !$this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
             && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition))
             && $mainPositionPnlPercent > self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN
         ) {
             $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true];
             $supplyStopPrice = $position->isLong() ? $stop->getPrice() + 50 : $stop->getPrice() - 50;
 
-            $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPORT_STOP_VOLUME, 10, $context);
+            $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPORT_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
         }
     }
 }
