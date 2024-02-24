@@ -7,7 +7,7 @@ namespace App\Bot\Domain;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Order\Leverage;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use LogicException;

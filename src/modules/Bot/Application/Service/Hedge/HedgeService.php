@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\Json;
 use App\Helper\VolumeHelper;
 use App\Trait\LoggerTrait;
@@ -17,6 +18,8 @@ final class HedgeService
 {
     use LoggerTrait;
 
+    const SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN = 70;
+
     public function __construct(
         private readonly StopService $stopService,
         LoggerInterface $logger,
@@ -24,6 +27,26 @@ final class HedgeService
     ) {
         $this->clock = $clock;
         $this->logger = $logger;
+    }
+
+    public function isSupportSizeEnoughFor(Hedge $hedge): bool
+    {
+        $mainPosition = $hedge->mainPosition;
+        $supportPosition = $hedge->supportPosition;
+
+        $applicablePercentOfMainPositionMargin = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN);
+        $applicableSupportProfit = $mainPosition->initialMargin->getPercentPart($applicablePercentOfMainPositionMargin);
+
+        $applicableSupportSize = $applicableSupportProfit->value() / $hedge->getPositionsDistance();
+
+        return $supportPosition->size >= $applicableSupportSize;
+
+//        $applicableSupportRate = $applicableSupportSize / $mainPosition->size;
+//        var_dump($applicableSupportSize, $applicableSupportRate);die;
+//        var_dump($supportPosition->size < $applicableSupportSize);
+//        $profitOfCurrentSupportOnMainPositionEntry = PnlHelper::getPnlInUsdt($supportPosition, $mainPosition->entryPrice, $supportPosition->size);
+//        $profitOfApplicableSupportOnMainPositionEntry = PnlHelper::getPnlInUsdt($supportPosition, $mainPosition->entryPrice, $applicableSupportSize);
+//        var_dump($profitOfCurrentSupportOnMainPositionEntry, $profitOfApplicableSupportOnMainPositionEntry);die;
     }
 
     public function createStopIncrementalGridBySupport(Hedge $hedge, Stop $stop): void

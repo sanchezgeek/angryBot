@@ -8,6 +8,8 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Domain\Value\Percent\Percent;
 
+use function abs;
+
 final readonly class Hedge
 {
     private function __construct(
@@ -92,5 +94,10 @@ final readonly class Hedge
         return new Percent(
             ($this->supportPosition->size / $this->mainPosition->size) * 100
         );
+    }
+
+    public function getPositionsDistance(): float
+    {
+        return abs($this->supportPosition->entryPrice - $this->mainPosition->entryPrice);
     }
 }

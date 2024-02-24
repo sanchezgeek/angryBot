@@ -8,6 +8,9 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 
+/**
+ * @see \App\Tests\Unit\Tests\Factory\PositionFactoryTest
+ */
 final class PositionFactory
 {
     private const DEFAULT_PRICE = 29000;

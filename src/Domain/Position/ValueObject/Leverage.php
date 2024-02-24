@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Order;
+namespace App\Domain\Position\ValueObject;
 
 use DomainException;
 

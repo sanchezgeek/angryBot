@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Domain\Position;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Order\Leverage;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;

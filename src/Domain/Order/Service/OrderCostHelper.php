@@ -7,7 +7,7 @@ namespace App\Domain\Order\Service;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Exchange\Service\ExchangeCommissionProvider;
 use App\Domain\Order\ExchangeOrder;
-use App\Domain\Order\Leverage;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 
 final class OrderCostHelper
