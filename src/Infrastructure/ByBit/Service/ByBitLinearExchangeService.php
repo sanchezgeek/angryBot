@@ -109,10 +109,12 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
                 continue;
             }
 
-            $activeOrders[] = new ActiveStopOrder(
+            $orderId = $item['orderId'];
+
+            $activeOrders[$orderId] = new ActiveStopOrder(
                 $symbol,
                 Side::from(strtolower($item['side']))->getOpposite(),
-                $item['orderId'],
+                $orderId,
                 (float)$item['qty'],
                 (float)$item['triggerPrice'],
                 TriggerBy::from($item['triggerBy'])->value,
@@ -120,9 +122,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         }
 
         if ($priceRange) {
-            $activeOrders = array_values(array_filter($activeOrders, static function(ActiveStopOrder $order) use ($priceRange) {
+            $activeOrders = array_filter($activeOrders, static function(ActiveStopOrder $order) use ($priceRange) {
                 return $priceRange->isPriceInRange($order->triggerPrice);
-            }));
+            });
         }
 
         return $activeOrders;

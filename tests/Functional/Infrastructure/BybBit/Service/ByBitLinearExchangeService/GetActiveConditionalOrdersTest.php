@@ -130,7 +130,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
             '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
                 # active LONG conditional stops
-                new ActiveStopOrder(
+                $firstLongStopId => new ActiveStopOrder(
                     $symbol,
                     Side::Buy,
                     $firstLongStopId,
@@ -138,7 +138,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $firstLongStopTriggerPrice,
                     $firstLongStopTriggerBy->value
                 ),
-                new ActiveStopOrder(
+                $secondLongStopId => new ActiveStopOrder(
                     $symbol,
                     Side::Buy,
                     $secondLongStopId,
@@ -147,7 +147,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $secondLongStopTriggerBy->value
                 ),
                 # active SHORT conditional stops
-                new ActiveStopOrder(
+                $shortStopId => new ActiveStopOrder(
                     $symbol,
                     Side::Sell,
                     $shortStopId,
@@ -163,7 +163,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
             '$priceRange' => PriceRange::create(31500, 32001),
             '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
-                new ActiveStopOrder(
+                $secondLongStopId => new ActiveStopOrder(
                     $symbol,
                     Side::Buy,
                     $secondLongStopId,

@@ -36,8 +36,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
         $this->getEntityManager()->getConnection()->isTransactionActive()
             ? $save()
-            : $this->getEntityManager()->wrapInTransaction($save)
-        ;
+            : $this->getEntityManager()->wrapInTransaction($save);
     }
 
     public function remove(Stop $stop): void
@@ -53,8 +52,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')
-            ->setParameter(':posSide', $side)
-        ;
+            ->setParameter(':posSide', $side);
 
         if ($qbModifier) {
             $qbModifier($qb);
@@ -75,8 +73,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->setParameter(':posSide', $side)
-        ;
+            ->setParameter(':posSide', $side);
 
         if ($exceptOppositeOrders) {
             $qb->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false");
@@ -147,10 +144,22 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$exchangeOrderId') = true")
-        ;
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$exchangeOrderId') = true");
 
         return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * @return Stop[]
+     */
+    public function findPushedToExchange(Side $side): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.positionSide = :posSide')
+            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = true")
+            ->setParameter(':posSide', $side);
+
+        return $qb->getQuery()->getResult();
     }
 
     public function getNextId(): int
