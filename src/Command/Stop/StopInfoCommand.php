@@ -94,6 +94,7 @@ class StopInfoCommand extends AbstractCommand
         }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
         $totalUsdPnL = $totalVolume = 0;
+        $sizeLeft = $position->size;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
             if (!$rangeStops->totalCount()) {
                 continue;
@@ -101,17 +102,22 @@ class StopInfoCommand extends AbstractCommand
 
             $usdPnL = $rangeStops->totalUsdPnL($position);
 
-            $format = '[%s] | %d | %.1f%%';
+            $format = '[%s] | % 3.d | % 4.1f%% | % 4.1f%%';
             $args = [
                 $rangeDesc,
                 $rangeStops->totalCount(),
                 $rangeStops->volumePart($position->size),
+                $rangeStops->volumePart($sizeLeft),
             ];
 
             if ($showPnl) {
                 $format .= ' (%s)';
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
+
+            $sizeLeft -= $rangeStops->totalVolume();
+            $args[] = $sizeLeft;
+            $format .= ' => %.3f';
 
             $this->io->text(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);
