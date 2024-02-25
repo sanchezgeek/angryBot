@@ -2,11 +2,17 @@
 
 PNL_STEP=${1:-30}
 
+if [ $2 = "true" ]; then
+    AGG_WITH='isWithOppositeOrder()'
+  else
+    AGG_WITH=""
+fi
+
 echo "---- ACCOUNT info ----"
 ./bin/console acc:info
 
 echo "----  SHORT info -----"
-./bin/console sl:info sell --showPnl -p"${PNL_STEP}"
+./bin/console sl:info sell --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
 
 echo "----  LONG info  -----"
-./bin/console sl:info buy --showPnl -p"${PNL_STEP}"
+./bin/console sl:info buy --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
