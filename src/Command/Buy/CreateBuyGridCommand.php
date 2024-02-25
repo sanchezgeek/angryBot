@@ -62,7 +62,7 @@ class CreateBuyGridCommand extends AbstractCommand
             }
 
             $this->io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
-            $this->io->info(
+            $this->io->writeln(
                 sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit %s -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $side->value, $uniqueId)
             );
 

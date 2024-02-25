@@ -88,7 +88,7 @@ final class ConsoleParamFetcher
         return $this->fetchPercentValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function getPercentOption(string $name, string $nullOptionErrorMessage = null): float
+    public function requiredPercentOption(string $name, string $nullOptionErrorMessage = null): float
     {
         $value = $this->input->getOption($name);
         if ($value === null) {
@@ -98,6 +98,13 @@ final class ConsoleParamFetcher
         }
 
         return $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
+    }
+
+    public function percentOption(string $name): ?float
+    {
+        $value = $this->input->getOption($name);
+
+        return $value === null ? null : $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
     }
 
     public function getBoolOption(string $name): bool
@@ -129,7 +136,7 @@ final class ConsoleParamFetcher
         return (int)$value;
     }
 
-    private function fetchFloatValue(string $value, string $name, string $paramTypeCaption): float
+    public function fetchFloatValue(string $value, string $name, string $paramTypeCaption): float
     {
         if (!is_numeric($value) || (string)($floatValue = (float)$value) === '') {
             throw new InvalidArgumentException(
@@ -140,7 +147,7 @@ final class ConsoleParamFetcher
         return $floatValue;
     }
 
-    private function fetchPercentValue(string $value, string $name, string $paramTypeCaption): float
+    public function fetchPercentValue(string $value, string $name, string $paramTypeCaption): float
     {
         if (
             !str_ends_with($value, '%')

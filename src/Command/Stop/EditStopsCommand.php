@@ -11,6 +11,7 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
@@ -23,9 +24,9 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_map;
+use function count;
 use function explode;
 use function implode;
 use function in_array;
@@ -76,7 +77,13 @@ class EditStopsCommand extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $priceRange = $this->getPriceRange();
+        $priceRange = $this->getRange();
+        $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
+
+        if (!$priceRange && !$filterCallbacksOption) {
+            throw new InvalidArgumentException(sprintf('One of `priceRange` or `%s` options must be specified.', self::FILTER_CALLBACKS_OPTION));
+        }
+
         $action = $this->getAction();
         $position = $this->getPosition();
 
@@ -88,27 +95,33 @@ class EditStopsCommand extends AbstractCommand
                 QueryHelper::addOrder($qb, 'triggerDelta', 'ASC');
             }
         );
-
         $stopsCollection = new StopsCollection(...$stops);
-        $stopsInSpecifiedRange = ($stopsCollection)->grabFromRange($priceRange);
 
-        $filteredStops = $this->applyFilters($stopsInSpecifiedRange);
-        if (!$filteredStops->totalCount()) {
-//            $this->io->info('Stops by specified criteria not found!');
+        $stopsInSpecifiedRange = $priceRange ? $stopsCollection->grabFromRange($priceRange) : $stopsCollection;
+        $filteredStops = $filterCallbacksOption ? $this->applyFilters($filterCallbacksOption, $stopsInSpecifiedRange) : $stopsInSpecifiedRange;
+        $filteredStopsCount = $filteredStops->totalCount();
+
+        if (!$filteredStopsCount) {
+            $this->io->info('Stops by specified criteria not found!');
             return Command::SUCCESS;
         }
 
-        if ($stopsInSpecifiedRange->totalCount() !== $filteredStops->totalCount()) {
+        if ($filteredStopsCount === count($stops)) {
+            $this->io->error('All active stops matched provided conditions.');
+            return Command::FAILURE;
+        }
+
+        if ($stopsInSpecifiedRange->totalCount() !== $filteredStopsCount) {
             $this->io->info(sprintf('Stops in specified range qnt: %d', $stopsInSpecifiedRange->totalCount()));
         }
 
-        $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStops->totalCount()));
+        $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStopsCount));
 
         if (!$this->io->confirm(
             sprintf(
                 'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
                 $action,
-                $filteredStops->totalCount(),
+                $filteredStopsCount,
                 $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
                 $filteredStops->volumePart($stopsCollection->totalVolume()),
                 $filteredStops->volumePart($position->size)
@@ -119,7 +132,7 @@ class EditStopsCommand extends AbstractCommand
 
         if ($action === self::ACTION_MOVE) {
             $price = $this->getPriceFromPnlPercentOptionWithFloatFallback(self::MOVE_TO_PRICE_OPTION);
-            $movePart = $this->paramFetcher->getPercentOption(self::MOVE_PART_OPTION);
+            $movePart = $this->paramFetcher->requiredPercentOption(self::MOVE_PART_OPTION);
             if ($movePart <= 0 || $movePart > 100) {
                 throw new InvalidArgumentException(
                     sprintf(
@@ -185,7 +198,7 @@ class EditStopsCommand extends AbstractCommand
                 }
             });
 
-//            $this->io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
+            $this->io->note(\sprintf('removed stops qnt: %d', $filteredStops->totalCount()));
         }
 
         if ($action === self::ACTION_EDIT) {
@@ -197,10 +210,19 @@ class EditStopsCommand extends AbstractCommand
                 }
             });
 
-            $this->io->note(\sprintf('modified stops qnt: %d', $filteredStops->totalCount()));
+            $this->io->note(\sprintf('modified stops qnt: %d', $filteredStopsCount));
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function getRange(): ?PriceRange
+    {
+        try {
+            return $this->getPriceRange();
+        } catch (InvalidArgumentException $e) {
+            return null;
+        }
     }
 
     private function getAction(): string
@@ -215,9 +237,8 @@ class EditStopsCommand extends AbstractCommand
         return $action;
     }
 
-    private function applyFilters(StopsCollection $stops): StopsCollection
+    private function applyFilters(?string $filterCallbacksOption, StopsCollection $stops): StopsCollection
     {
-        $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
         if ($filterCallbacksOption && $filterCallbacks = array_map('trim', explode(',', $filterCallbacksOption))) {
             return $stops->filterWithCallback(static function (Stop $stop) use ($filterCallbacks) {
                 foreach ($filterCallbacks as $stopFilterCallback) {

@@ -18,7 +18,7 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    const SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN = 70;
+    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 63;
 
     public function __construct(
         private readonly StopService $stopService,
@@ -29,17 +29,21 @@ final class HedgeService
         $this->logger = $logger;
     }
 
-    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge): bool
+    public function getApplicableSupportSize(
+        Hedge $hedge,
+        ?float $mainPositionIMPercentForSupport = null
+    ): float {
+        $mainPositionInitialMarginPercentForSupport = $mainPositionIMPercentForSupport ?? self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT;
+        $applicablePercentOfMainPositionMargin = new Percent($mainPositionInitialMarginPercentForSupport);
+
+        $applicableSupportProfit = $hedge->mainPosition->initialMargin->getPercentPart($applicablePercentOfMainPositionMargin);
+
+        return VolumeHelper::round($applicableSupportProfit->value() / $hedge->getPositionsDistance());
+    }
+
+    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, float $mainPositionIMPercentForSupport = null): bool
     {
-        $mainPosition = $hedge->mainPosition;
-        $supportPosition = $hedge->supportPosition;
-
-        $applicablePercentOfMainPositionMargin = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN);
-        $applicableSupportProfit = $mainPosition->initialMargin->getPercentPart($applicablePercentOfMainPositionMargin);
-
-        $applicableSupportSize = $applicableSupportProfit->value() / $hedge->getPositionsDistance();
-
-        return $supportPosition->size >= $applicableSupportSize;
+        return $hedge->supportPosition->size >= $this->getApplicableSupportSize($hedge, $mainPositionIMPercentForSupport);
 
 //        $applicableSupportRate = $applicableSupportSize / $mainPosition->size;
 //        var_dump($applicableSupportSize, $applicableSupportRate);die;

@@ -167,7 +167,7 @@ class PlaceOrderCommand extends AbstractCommand
     private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
     {
         try {
-            $pnlValue = $this->paramFetcher->getPercentOption($name);
+            $pnlValue = $this->paramFetcher->requiredPercentOption($name);
             return PnlHelper::getTargetPriceByPnlPercent($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
             try {
