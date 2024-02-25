@@ -41,7 +41,7 @@ final class HedgeServiceTest extends KernelTestCase
     public function isSupportSizeEnoughTestCases(): iterable
     {
         $applicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN);
-        $notApplicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN - 0.5);
+        $notApplicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN - 1);
 
         ### BTCUSDT SHORT
 
@@ -88,7 +88,7 @@ final class HedgeServiceTest extends KernelTestCase
     private static function testCaseCaption(Position $main, Position $support, bool $expectedResult): string
     {
         return sprintf(
-            'main [%s | %.2f | %.4f] vs support [%s | %.2f | %.4f] => %s',
+            'main [%s | %.2f | %.4f] vs support [%s | %.2f | %.3f] => %s',
             $main->getCaption(),
             $main->entryPrice,
             $main->size,

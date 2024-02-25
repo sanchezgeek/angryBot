@@ -9,6 +9,8 @@ use App\Domain\Value\Common\IntegerValue;
 use DomainException;
 use InvalidArgumentException;
 
+use Stringable;
+
 use function is_numeric;
 use function round;
 use function sprintf;
@@ -18,7 +20,7 @@ use function substr;
 /**
  * @see \App\Tests\Unit\Domain\Value\Percent\PercentTest
  */
-final class Percent
+final class Percent implements Stringable
 {
     private const PART_ROUND_PRECISION = 3;
 
@@ -66,5 +68,10 @@ final class Percent
         }
 
         return $value * $this->part();
+    }
+
+    public function __toString(): string
+    {
+        return sprintf('%.2f%%', $this->value);
     }
 }

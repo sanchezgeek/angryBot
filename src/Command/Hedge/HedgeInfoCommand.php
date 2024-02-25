@@ -7,6 +7,7 @@ use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Domain\Value\Percent\Percent;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -40,12 +41,13 @@ class HedgeInfoCommand extends AbstractCommand
             return Command::INVALID;
         }
         $supportPosition = $hedge->supportPosition;
+        $specifiedMainPositionIMPercentToSupport = $this->paramFetcher->percentOption(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_OPTION);
 
-        $mainPositionIMPercentForSupport = $this->paramFetcher->percentOption(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_OPTION);
-        $applicableSupportSize = $this->hedgeService->getApplicableSupportSize($hedge, $mainPositionIMPercentForSupport);
+        $mainPositionIMPercentToSupport = $specifiedMainPositionIMPercentToSupport ? new Percent($specifiedMainPositionIMPercentToSupport) : $this->hedgeService->getDefaultMainPositionIMPercentToSupport();
+        $applicableSupportSize = $this->hedgeService->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
         $sizeDiff = $supportPosition->size - $applicableSupportSize;
 
-        $this->io->block(sprintf('Support size applicable for support %.2f%% of mainPosition.IM: %.3f', $mainPositionIMPercentForSupport, $applicableSupportSize));
+        $this->io->block(sprintf('Support size applicable for support %s of mainPosition.InitialMargin: %.3f', $mainPositionIMPercentToSupport, $applicableSupportSize));
         $this->io->block(sprintf('Current support size: %.3f', $supportPosition->size));
         $this->io->block(sprintf('Diff: %.3f', $sizeDiff));
 

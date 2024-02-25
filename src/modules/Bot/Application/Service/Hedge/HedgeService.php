@@ -29,21 +29,23 @@ final class HedgeService
         $this->logger = $logger;
     }
 
-    public function getApplicableSupportSize(
-        Hedge $hedge,
-        ?float $mainPositionIMPercentForSupport = null
-    ): float {
-        $mainPositionInitialMarginPercentForSupport = $mainPositionIMPercentForSupport ?? self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT;
-        $applicablePercentOfMainPositionMargin = new Percent($mainPositionInitialMarginPercentForSupport);
+    public function getDefaultMainPositionIMPercentToSupport(): Percent
+    {
+        return new Percent(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT);
+    }
 
-        $applicableSupportProfit = $hedge->mainPosition->initialMargin->getPercentPart($applicablePercentOfMainPositionMargin);
+    public function getApplicableSupportSize(Hedge $hedge, ?Percent $mainPositionIMPercentToSupport = null): float
+    {
+        $mainPositionInitialMarginPercentForSupport = $mainPositionIMPercentToSupport ?? $this->getDefaultMainPositionIMPercentToSupport();
+
+        $applicableSupportProfit = $hedge->mainPosition->initialMargin->getPercentPart($mainPositionInitialMarginPercentForSupport);
 
         return VolumeHelper::round($applicableSupportProfit->value() / $hedge->getPositionsDistance());
     }
 
-    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, float $mainPositionIMPercentForSupport = null): bool
+    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, Percent $mainPositionIMPercentToSupport = null): bool
     {
-        return $hedge->supportPosition->size >= $this->getApplicableSupportSize($hedge, $mainPositionIMPercentForSupport);
+        return $hedge->supportPosition->size >= $this->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
 
 //        $applicableSupportRate = $applicableSupportSize / $mainPosition->size;
 //        var_dump($applicableSupportSize, $applicableSupportRate);die;
