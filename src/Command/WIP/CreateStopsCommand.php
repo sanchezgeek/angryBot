@@ -2,13 +2,13 @@
 
 namespace App\Command\WIP;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Domain\Position\ValueObject\Side;
 use App\Helper\VolumeHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -61,7 +61,7 @@ class CreateStopsCommand extends AbstractCommand
             $volume = self::DEFAULT_INITIAL_VOLUME;
             $increment = (float)($input->getOption('increment') ?? null);
 
-            $context = ['uniqid' => \uniqid('fix-position', true)];
+            $context = ['uniqid' => $this->uniqueIdGenerator->generateUniqueId('fix-position')];
 
             $position = $this->getPosition();
             $ticker = $this->exchangeService->ticker($position->symbol);
@@ -102,6 +102,7 @@ class CreateStopsCommand extends AbstractCommand
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

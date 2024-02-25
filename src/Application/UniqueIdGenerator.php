@@ -8,6 +8,6 @@ final class UniqueIdGenerator implements UniqueIdGeneratorInterface
 {
     public function generateUniqueId(string $prefix): string
     {
-        return uniqid($prefix, true);
+        return uniqid($prefix . '.');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Command\Buy;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -48,7 +49,7 @@ class CreateBuyGridCommand extends AbstractCommand
             $step = $this->paramFetcher->getIntArgument('step');
             $priceRange = $this->getPriceRange();
 
-            $context = ['uniqid' => $uniqueId = uniqid('inc-create', true)];
+            $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('buy-grid')];
             if ($additionalContext = $this->getAdditionalBuyOrderContext()) {
                 $context = array_merge($context, $additionalContext);
             }
@@ -76,6 +77,7 @@ class CreateBuyGridCommand extends AbstractCommand
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

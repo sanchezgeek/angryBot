@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function array_merge;
 
 #[AsCommand(name: 'sl:old-grid', description: 'Creates incremental SL\'ses grid.')]
-class CreateStopGridCommand extends AbstractCommand
+class OldStopsGridCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

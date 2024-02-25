@@ -2,6 +2,7 @@
 
 namespace App\Command\Stop;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
@@ -23,6 +24,7 @@ class StopVolumeCommand extends AbstractCommand
     public function __construct(
         private readonly StopService $stopService,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
@@ -76,7 +78,7 @@ class StopVolumeCommand extends AbstractCommand
                 throw new \LogicException('Only one of $delta and $toPrice can be used');
             }
 
-            $context = ['uniqid' => \uniqid('fix-position', true)];
+            $context = ['uniqid' => $this->uniqueIdGenerator->generateUniqueId('fix-position')];
 
             $position = $this->getPosition();
             $positionSide = $position->side;

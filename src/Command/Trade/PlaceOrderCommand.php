@@ -2,6 +2,7 @@
 
 namespace App\Command\Trade;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
@@ -104,7 +105,6 @@ class PlaceOrderCommand extends AbstractCommand
             $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
 
             $position = $this->getPosition();
-            $context = ['uniqid' => $uniqueId = uniqid('place-tp-orders-grid', true)];
 
             try {
                 $priceRange = $this->getPriceRange();
@@ -135,6 +135,7 @@ class PlaceOrderCommand extends AbstractCommand
                 throw new InvalidArgumentException('`priceRange` or `price` must be specified');
             }
 
+            $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('delayed-tp-grid')];
             foreach ($orders as $order) {
                 if ($type === self::DELAYED_TP) {
                     $context = array_merge($context, Stop::getTakeProfitContext());
@@ -185,6 +186,7 @@ class PlaceOrderCommand extends AbstractCommand
     public function __construct(
         private readonly OrderServiceInterface $tradeService,
         private readonly StopServiceInterface $stopService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

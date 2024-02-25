@@ -259,7 +259,6 @@ class EditStopsCommand extends AbstractCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
-//        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

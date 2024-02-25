@@ -67,8 +67,7 @@ class CreatePosStopCommand extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $uniqueId = $this->uniqueIdGenerator->generateUniqueId('inc-sl-grid.');
-        $context = ['uniqid' => $uniqueId];
+        $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid')];
         if ($additionalContext = $this->getAdditionalStopContext()) {
             $context = array_merge($context, $additionalContext);
         }
