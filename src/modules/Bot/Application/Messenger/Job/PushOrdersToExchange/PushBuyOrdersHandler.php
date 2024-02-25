@@ -46,7 +46,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     public const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 1;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 0.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 175;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
