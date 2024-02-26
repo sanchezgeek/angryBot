@@ -8,7 +8,6 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
-use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\PositionStopRangesCollection;
@@ -20,7 +19,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_combine;
 use function array_fill;
@@ -29,6 +27,7 @@ use function array_keys;
 use function array_merge;
 use function array_replace;
 use function count;
+use function end;
 use function implode;
 use function is_bool;
 use function sprintf;
@@ -93,8 +92,24 @@ class StopInfoCommand extends AbstractCommand
             $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
-        $totalUsdPnL = $totalVolume = 0;
-        $sizeLeft = $position->size;
+
+        $stopped = [];
+        if ($position->isShort()) {
+            foreach ($rangesCollection as $rangeStops) {
+                if (!$rangeStops->totalCount()) continue;
+                foreach ($stopped as $key => $item) {
+                    $stopped[$key] += $rangeStops->totalVolume();
+                }
+                $stopped[] = $rangeStops->totalVolume();
+            }
+        } else {
+            foreach ($rangesCollection as $rangeStops) {
+                if (!$rangeStops->totalCount()) continue;
+                $stopped[] = $rangeStops->totalVolume() + (count($stopped) > 0 ? end($stopped) : 0);
+            }
+        }
+
+        $key = $totalUsdPnL = $totalVolume = 0;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
             if (!$rangeStops->totalCount()) {
                 continue;
@@ -102,28 +117,24 @@ class StopInfoCommand extends AbstractCommand
 
             $usdPnL = $rangeStops->totalUsdPnL($position);
 
-            $format = '[%s] | % 3.d | % 4.1f%% | % 4.1f%%';
-            $args = [
-                $rangeDesc,
-                $rangeStops->totalCount(),
-                $rangeStops->volumePart($position->size),
-                $rangeStops->volumePart($sizeLeft),
-            ];
+            $format = '[%s] | % 3.d | % 4.1f%%';
+            $args = [$rangeDesc, $rangeStops->totalCount(), $rangeStops->volumePart($position->size)];
 
             if ($showPnl) {
                 $format .= ' (%s)';
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
-            $sizeLeft -= $rangeStops->totalVolume();
-            $args[] = $sizeLeft;
-            $format .= ' => %.3f';
+            $sizeLeft = $position->size - $stopped[$key];
+            $format .= ' => %.3f'; $args[] = $sizeLeft;
 
             $this->io->text(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);
 
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
+
+            $key++;
         }
 
         if ($showPnl) {
