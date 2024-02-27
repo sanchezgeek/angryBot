@@ -13,10 +13,12 @@ use App\Bot\Domain\Entity\Stop;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
+use function var_dump;
+
 #[AsEventListener]
 final class FixMainHedgePositionListener
 {
-    public const ENABLED = false;
+    public const ENABLED = true;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
     const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.002;
@@ -52,6 +54,7 @@ final class FixMainHedgePositionListener
         $position = $this->positionService->getPosition($symbol, $stop->getPositionSide());
         $ticker = $this->exchangeService->ticker($symbol);
 
+        var_dump($stop->getPrice());
         if (
             ($hedge = $position->getHedge())
             && $hedge->isSupportPosition($position)
@@ -61,6 +64,7 @@ final class FixMainHedgePositionListener
         ) {
             $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true];
             $supplyStopPrice = $position->isLong() ? $stop->getPrice() + 50 : $stop->getPrice() - 50;
+            var_dump('create on => ' . $supplyStopPrice);
 
             $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPORT_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
         }

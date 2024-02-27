@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -198,9 +199,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if (
                 $lastBuy->getHedgeSupportFixationsCount() < 1
                 && ($hedge = $position->getHedge())
-                && $hedge->isMainPosition($position) && $hedge->getSupportRate()->value() > 20
-                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition))
-                && $supportPnlPercent > 2800
+                && $hedge->isMainPosition($position)
+                && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
+                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 150
             ) {
                 $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
 
@@ -414,6 +415,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     public function __construct(
+        private readonly HedgeService $hedgeService,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,

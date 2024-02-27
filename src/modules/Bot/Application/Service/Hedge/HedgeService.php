@@ -18,7 +18,7 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 63;
+    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 23;
 
     public function __construct(
         private readonly StopService $stopService,

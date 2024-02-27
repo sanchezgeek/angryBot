@@ -16,7 +16,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 #[AsEventListener]
 final class CreateOppositeBuyOrdersListener
 {
-    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 78;
+    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
     public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
 
     public function __construct(
