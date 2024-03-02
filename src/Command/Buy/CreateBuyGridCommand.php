@@ -5,13 +5,16 @@ namespace App\Command\Buy;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Position;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use Exception;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,12 +24,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function array_merge;
 use function random_int;
 use function round;
+use function str_contains;
 
 #[AsCommand(name: 'buy:grid')]
 class CreateBuyGridCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
-    use PositionAwareCommand;
+    use PositionAwareCommand {
+        getPosition as trait_getPosition;
+    }
     use AdditionalBuyOrderContextAwareCommand;
     use PriceRangeAwareCommand;
 
@@ -75,9 +81,29 @@ class CreateBuyGridCommand extends AbstractCommand
         }
     }
 
+    /**
+     * To create BuyOrders grid if relative percent passed with `from` and `to` options, but position not opened yet (ticker.indexPrice will be used)
+     */
+    protected function getPosition(bool $throwException = true): ?Position
+    {
+        try {
+            return $this->trait_getPosition($throwException);
+        } catch (RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'not found')) {
+                $symbol = $this->getSymbol();
+                $ticker = $this->exchangeService->ticker($symbol);
+                $indexPrice = $ticker->indexPrice;
+                return new Position($this->getPositionSide(), $symbol, $indexPrice->value(), $size = 0.001, $size * $indexPrice->value(), 0, 10, 100);
+            }
+
+            throw $e;
+        }
+    }
+
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
+        private readonly ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
