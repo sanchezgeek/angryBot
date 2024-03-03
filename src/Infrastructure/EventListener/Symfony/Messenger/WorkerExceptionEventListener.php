@@ -4,36 +4,58 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\EventListener\Symfony\Messenger;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Throwable;
 
 use function print_r;
+use function sprintf;
 
 #[AsEventListener]
-final class WorkerExceptionEventListener
+final readonly class WorkerExceptionEventListener
 {
-    public function __construct()
+    public function __construct(private LoggerInterface $appErrorLogger)
     {
-
     }
 
     public function __invoke(WorkerMessageFailedEvent $event): void
     {
-        $exception = $event->getThrowable();
-
-        while ($exception instanceof HandlerFailedException) {
-            $exception = $exception->getPrevious();
+        $error = $event->getThrowable();
+        while ($error instanceof HandlerFailedException) {
+            $error = $error->getPrevious();
         }
 
-        $this->printError($exception);
+        $this->logAppError($error);
+        $this->printError($error);
     }
 
-    protected function printError(Throwable $exception): void
+    private function printError(Throwable $error): void
     {
-        var_dump($exception->getFile());
-        var_dump($exception->getLine());
-        print_r($exception->getMessage() . PHP_EOL);
+        print_r(sprintf('%s::%s', $error->getFile() , $error->getLine()) . PHP_EOL);
+        print_r($error->getMessage() . PHP_EOL);
+    }
+
+    private function logAppError(\Throwable $error): void
+    {
+        $exception = $error;
+        while ($exception->getPrevious()) {
+            $exception = $exception->getPrevious();
+            if ($exception instanceof TransportExceptionInterface) {
+                return;
+            }
+        }
+
+        $this->appErrorLogger->critical(
+            $error->getMessage(),
+            [
+                'file' => $error->getFile(),
+                'line' => $error->getLine(),
+                'trace' => $error->getTraceAsString(),
+                'previous' => $error->getPrevious(),
+            ],
+        );
     }
 }

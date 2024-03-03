@@ -23,6 +23,8 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_merge;
+use function end;
+use function explode;
 use function get_class;
 use function gettype;
 use function hash_hmac;
@@ -62,6 +64,9 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
             $result = $this->doSend($request);
         } catch (UnknownByBitApiErrorException $e) {
             throw $e;
+        } catch (TransportExceptionInterface $e) {
+            $class = explode('\\', get_class($e));
+            throw new RuntimeException(sprintf('ByBitV5ApiClient::send | Got %s exception (%s).', end($class), $e->getMessage()), 0, $e);
         } catch (\Throwable $e) {
             $msg = sprintf(
                 'ByBitV5ApiClient::send | Got %s exception (%s) when do `%s` request call.',

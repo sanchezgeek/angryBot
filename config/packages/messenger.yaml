@@ -23,7 +23,6 @@ framework:
 
             # from cron
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
-            App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
             # orders
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
@@ -32,6 +31,9 @@ framework:
             # position
             App\Application\Messenger\CheckPositionIsUnderLiquidation: async_critical
             App\Application\Messenger\Market\TransferFundingFees: async_high
+
+            # stale
+            # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
 when@test:
     framework:

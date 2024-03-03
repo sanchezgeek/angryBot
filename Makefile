@@ -87,8 +87,14 @@ crit: ## Get dev CRITICAL
 warn: ## Get dev WARNING
 	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep WARN
 
+err: ## Get app errors (@see WorkerExceptionEventListener::logAppError for excepted errors)
+	@$(PHP_CONT) tail -f /srv/app/var/log/app_errors.log
+
 out-warn: ## Get consumers "warning" output
-	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '!!'
+	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '@ '
+
+out-crit: ## Get consumers "critical" output
+	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '! '
 
 out: ## Get consumers output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log
