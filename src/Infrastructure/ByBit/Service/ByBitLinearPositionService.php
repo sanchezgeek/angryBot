@@ -28,6 +28,7 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use LogicException;
 
 use function end;
+use function in_array;
 use function is_array;
 use function preg_match;
 use function sprintf;
@@ -162,7 +163,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             }
 
             if (
-                $code === ApiV5Errors::BadRequestParams->value
+                in_array($code, [ApiV5Errors::BadRequestParams->value, ApiV5Errors::BadRequestParams2->value], true)
                 && preg_match(
                     sprintf(
                         '/expect %s, but trigger_price\[\d+\] %s current\[\d+\]/',

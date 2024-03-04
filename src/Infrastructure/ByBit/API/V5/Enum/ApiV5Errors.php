@@ -8,6 +8,7 @@ enum ApiV5Errors: int
     case CannotAffordOrderCost = 110007;
     case MaxActiveCondOrdersQntReached = 110009;
     case BadRequestParams = 10001;
+    case BadRequestParams2 = 110092;
 
     public function code(): int
     {

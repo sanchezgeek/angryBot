@@ -50,27 +50,27 @@ final class PositionStopRangesCollectionTest extends TestCase
                 StopBuilder::short(110, 29912, 0.01)->build(),
             ],
             [
-                '0% .. 30%' => new StopsCollection(
+                '   0% ..   30%' => new StopsCollection(
                     StopBuilder::short(110, 29912, 0.01)->build(),
                 ),
-                '30% .. 60%' => new StopsCollection(
+                '  30% ..   60%' => new StopsCollection(
                     StopBuilder::short(80, 29850, 0.007)->build(),
                     StopBuilder::short(90, 29890, 0.008)->build(),
                     StopBuilder::short(100, 29890, 0.009)->build(),
                 ),
-                '60% .. 90%' => new StopsCollection(
+                '  60% ..   90%' => new StopsCollection(
                     StopBuilder::short(70, 29790, 0.006)->build(),
                 ),
-                '90% .. 120%' => new StopsCollection(
+                '  90% ..  120%' => new StopsCollection(
                     StopBuilder::short(40, 29650, 0.003)->build(),
                     StopBuilder::short(50, 29680, 0.004)->build(),
                     StopBuilder::short(60, 29710, 0.005)->build(),
                 ),
-                '120% .. 150%' => new StopsCollection(
+                ' 120% ..  150%' => new StopsCollection(
                     StopBuilder::short(20, 29551, 0.002)->build(),
                     StopBuilder::short(30, 29570, 0.002)->build(),
                 ),
-                '150% .. 180%' => new StopsCollection(
+                ' 150% ..  180%' => new StopsCollection(
                     StopBuilder::short(10, 29549, 0.001)->build(),
                 ),
             ]

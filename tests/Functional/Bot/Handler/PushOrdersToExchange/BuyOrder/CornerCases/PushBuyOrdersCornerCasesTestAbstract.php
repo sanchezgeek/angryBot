@@ -11,6 +11,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
@@ -38,6 +39,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected const SYMBOL = Symbol::BTCUSDT;
 
+    protected HedgeService $hedgeService;
     protected BuyOrderRepository $buyOrderRepository;
     protected StopRepository $stopRepository;
     protected StopService $stopService;
@@ -55,6 +57,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
+        $this->hedgeService = self::getContainer()->get(HedgeService::class);
         $this->buyOrderRepository = self::getContainer()->get(BuyOrderRepository::class);
         $this->stopRepository = self::getContainer()->get(StopRepository::class);
         $this->stopService = self::getContainer()->get(StopService::class);
@@ -70,6 +73,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->loggerMock = $this->createMock(LoggerInterface::class);
 
         $this->handler = new PushBuyOrdersHandler(
+            $this->hedgeService,
             $this->buyOrderRepository,
             $this->stopRepository,
             $this->stopService,
