@@ -18,7 +18,8 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 23;
+    // @todo | hedge | Mb based on current hedge distance? Because on 100pp distance it won't (and must not) work correct. Or based on distance with main position liquidation.
+    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 50;
 
     public function __construct(
         private readonly StopService $stopService,
