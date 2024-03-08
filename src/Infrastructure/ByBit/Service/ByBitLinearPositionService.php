@@ -14,6 +14,7 @@ use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -31,6 +32,8 @@ use function end;
 use function in_array;
 use function is_array;
 use function preg_match;
+use function print_r;
+use function sleep;
 use function sprintf;
 use function strtolower;
 
@@ -42,6 +45,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     use ByBitApiCallHandler;
 
     private const ASSET_CATEGORY = AssetCategory::linear;
+
+    private const SLEEP_INC = 5;
+    protected int $lastSleep = 0;
 
     public function __construct(ByBitApiClientInterface $apiClient)
     {
@@ -77,7 +83,13 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
-        $data = $this->sendRequest($request)->data();
+        try {
+            $data = $this->sendRequest($request)->data();
+        } catch (PermissionDeniedException $e) {
+            $this->sleep($e->getMessage());
+            return [];
+        }
+
         if (!is_array($list = $data['list'] ?? null)) {
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
@@ -183,5 +195,17 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         }
 
         return $stopOrderId;
+    }
+
+    protected function sleep(string $cause): void
+    {
+        $this->lastSleep += self::SLEEP_INC;
+
+        print_r(sprintf('Sleep for %d seconds, because %s', $this->lastSleep, $cause) . PHP_EOL);
+        sleep($this->lastSleep);
+
+        if ($this->lastSleep > 15) {
+            $this->lastSleep = 0;
+        }
     }
 }

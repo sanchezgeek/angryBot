@@ -7,6 +7,7 @@ namespace App\Infrastructure\ByBit\Service\Common;
 use App\Infrastructure\ByBit\API\Common\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
@@ -26,6 +27,7 @@ trait ByBitApiCallHandler
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
      * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
      */
     private function sendRequest(
         AbstractByBitApiRequest $request,

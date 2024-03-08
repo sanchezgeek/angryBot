@@ -10,6 +10,7 @@ use App\Infrastructure\ByBit\API\Common\ByBitApiCallResult;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -56,6 +57,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 
     /**
      * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
      * @throws UnknownByBitApiErrorException
      */
     public function send(AbstractByBitApiRequest $request): ByBitApiCallResult
@@ -82,6 +84,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
             $error = $result->error();
             match ($error->code()) {
                 ApiV5Errors::ApiRateLimitReached->value => throw new ApiRateLimitReached($error->msg()),
+                ApiV5Errors::PermissionDenied->value => throw new PermissionDeniedException($request),
                 default => null
             };
         }
