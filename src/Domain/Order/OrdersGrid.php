@@ -80,7 +80,7 @@ final class OrdersGrid
 
         $volume = VolumeHelper::round($forVolume / $qnt);
         if ($volume === VolumeHelper::MIN_VOLUME && $volume * $qnt > $forVolume) {
-            $qnt = (int)($forVolume / $volume);
+            $qnt = (int)(max(VolumeHelper::MIN_VOLUME, $forVolume) / $volume);
             $volume = VolumeHelper::round($forVolume / $qnt);
         }
 
