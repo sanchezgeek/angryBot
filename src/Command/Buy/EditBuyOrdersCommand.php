@@ -46,6 +46,8 @@ class EditBuyOrdersCommand extends AbstractCommand
     public const ACTION_EDIT = 'edit';
     private const ACTIONS = [self::ACTION_REMOVE, self::ACTION_EDIT];
 
+    public const WITHOUT_CONFIRMATION_OPTION = 'y';
+
     protected function configure(): void
     {
         $this
@@ -54,11 +56,13 @@ class EditBuyOrdersCommand extends AbstractCommand
             ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
             ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
             ->addOption(self::EDIT_CALLBACK_OPTION, null, InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
+            ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $withoutConfirm = $this->paramFetcher->getBoolOption(self::WITHOUT_CONFIRMATION_OPTION);
         $action = $this->getAction();
 
         $orders = $this->buyOrderRepository->findActive(
@@ -90,12 +94,12 @@ class EditBuyOrdersCommand extends AbstractCommand
             $this->io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
-        if ($totalCount === count($orders)) {
+        if ($totalCount === count($orders) && !$withoutConfirm) {
             $this->io->error('All orders matched provided conditions.');
             return Command::FAILURE;
         }
 
-        if (!$this->io->confirm(sprintf('You\'re about to %s %d BuyOrders (%.3f). Continue?', $action, $totalCount, $totalVolume))) {
+        if (!$withoutConfirm && !$this->io->confirm(sprintf('You\'re about to %s %d BuyOrders (%.3f). Continue?', $action, $totalCount, $totalVolume))) {
             return Command::FAILURE;
         }
 

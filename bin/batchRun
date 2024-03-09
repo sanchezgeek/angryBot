@@ -1,0 +1,13 @@
+#!/bin/bash
+
+UNDO_PATH=${1}
+
+if [ -f "$UNDO_PATH" ] ; then
+    cat "$UNDO_PATH" |
+      while read in; do
+          eval "$in"
+      done
+  else
+    echo 'File not specified';
+fi
+

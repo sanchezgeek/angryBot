@@ -22,8 +22,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use function array_merge;
+use function array_unshift;
 use function random_int;
 use function round;
+use function sprintf;
 use function str_contains;
 
 #[AsCommand(name: 'buy:grid')]
@@ -49,6 +51,7 @@ class CreateBuyGridCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+
         try {
             $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
@@ -68,10 +71,21 @@ class CreateBuyGridCommand extends AbstractCommand
                 );
             }
 
-            $this->io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
-            $this->io->writeln(
-                sprintf('For delete them just run:' . PHP_EOL . './bin/console buy:edit %s -aremove \ --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $side->value, $uniqueId)
-            );
+            $output = [
+                sprintf(
+                    './bin/console buy:edit%s %s -aremove --filterCallbacks="getContext(\'uniqid\')===\'%s\'"',
+                    $this->io->isQuiet() ? ' --' . EditBuyOrdersCommand::WITHOUT_CONFIRMATION_OPTION : '', // to also quiet remove orders
+                    $side->value,
+                    $uniqueId
+                )
+            ];
+
+            if (!$this->io->isQuiet()) {
+                $this->io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
+                array_unshift($output, 'For delete them just run:');
+            }
+
+            $this->io->writeln($output, OutputInterface::VERBOSITY_QUIET);
 
             return Command::SUCCESS;
         } catch (Exception $e) {

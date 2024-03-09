@@ -1,0 +1,31 @@
+#!/bin/bash
+
+UNDO_LOG="$(pwd)/data/open-undo.$(cat /proc/sys/kernel/random/uuid).undo"
+
+SIDE=${1:-sell}
+INITIAL_VOLUME=${2:-"6%"}
+
+open_cmd="./bin/console p:open ${SIDE} ${INITIAL_VOLUME}"
+echo "----- OPEN -----"
+echo "${open_cmd}"
+eval "${open_cmd}"
+
+grids=(
+  "-f-200% -t200% 0.001 ${3:-15} --wOO"
+  "-f-200% -t200% 0.002 ${4:-121} --wOO"
+  "-f-200% -t200% 0.003 ${5:-221} --wOO"
+  "-f-200% -t200% 0.004 ${6:-321}"
+  "-f-200% -t200% 0.005 ${7:-421}"
+)
+
+for grid_def in "${grids[@]}"
+  do
+    grid_cmd="./bin/console buy:grid -q ${SIDE} ${grid_def}"
+    echo -e "${grid_cmd}\n  =>"
+    undo_out=$(eval "${grid_cmd}")
+    echo -e "    ${undo_out}\n"
+    echo "${undo_out}" >> "${UNDO_LOG}"
+  done
+
+echo -e "\nTo delete created BuyOrders just run:"
+echo -e "\n  ./bin/batchRun ${UNDO_LOG}"
