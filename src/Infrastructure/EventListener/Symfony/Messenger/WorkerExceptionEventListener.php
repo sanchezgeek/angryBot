@@ -13,6 +13,7 @@ use Throwable;
 
 use function print_r;
 use function sprintf;
+use function str_contains;
 
 #[AsEventListener]
 final readonly class WorkerExceptionEventListener
@@ -40,6 +41,10 @@ final readonly class WorkerExceptionEventListener
 
     private function logAppError(\Throwable $error): void
     {
+        if (str_contains($error->getMessage(), 'timestamp or recv_window param')) {
+            return;
+        }
+
         $exception = $error;
         while ($exception->getPrevious()) {
             $exception = $exception->getPrevious();
