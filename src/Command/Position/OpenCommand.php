@@ -98,6 +98,8 @@ class OpenCommand extends AbstractCommand
             return Command::FAILURE;
         }
 
+        $this->entityManager->beginTransaction();
+
         $this->removeCurrentPositionStops();
 
         $size = $this->getSizeArgument();
@@ -113,6 +115,9 @@ class OpenCommand extends AbstractCommand
         // market
         $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
         $this->tradeService->marketBuy($this->symbol, $positionSide, $marketBuyVolume);
+
+        $this->entityManager->flush();
+        $this->entityManager->commit();
 
         return Command::SUCCESS;
     }
