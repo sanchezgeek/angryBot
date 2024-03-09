@@ -98,9 +98,16 @@ class OpenCommand extends AbstractCommand
             return Command::FAILURE;
         }
 
+        $removeStops = true;
+        if ($this->getPosition(false) && !$this->io->confirm('Remove existed stops?', false)) {
+            $removeStops = false;
+        }
+
         $this->entityManager->beginTransaction();
 
-        $this->removeCurrentPositionStops();
+        if ($removeStops) {
+            $this->removeCurrentPositionStops();
+        }
 
         $size = $this->getSizeArgument();
 
