@@ -9,6 +9,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use LogicException;
@@ -212,5 +213,29 @@ final class PositionTest extends TestCase
         $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
 
         $position->priceDeltaToLiquidation($ticker);
+    }
+
+    /**
+     * @dataProvider isPositionInProfitTestDataProvider
+     */
+    public function testIsPositionInProfit(Position $position, float $currentPrice, bool $expectedResult): void
+    {
+        self::assertEquals($expectedResult, $position->isPositionInProfit($currentPrice));
+        self::assertEquals($expectedResult, $position->isPositionInProfit(Price::float($currentPrice)));
+    }
+
+    public function isPositionInProfitTestDataProvider(): iterable
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+
+        yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => true];
+        yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => false];
+
+        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+
+        yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => true];
     }
 }

@@ -250,4 +250,26 @@ final class PriceRangeTest extends TestCase
 
         self::assertEquals(Price::float(38000), $range->getMiddlePrice());
     }
+
+    /**
+     * @dataProvider isPriceInRangeTestCases
+     */
+    public function testIsPriceInRange(PriceRange $priceRange, float $price, $expectedResult): void
+    {
+        self::assertEquals($expectedResult, $priceRange->isPriceInRange(Price::float($price)));
+        self::assertEquals($expectedResult, $priceRange->isPriceInRange($price));
+    }
+
+    public function isPriceInRangeTestCases(): array
+    {
+        return [
+            [PriceRange::create(100500, 200500), 100500, true],
+            [PriceRange::create(100500, 200500), 200000, true],
+            [PriceRange::create(100500, 200500), 100499, false],
+            [PriceRange::create(100500, 200500), 200501, false],
+
+            # todo | exception | by now using in collections (inclusivity bug)
+            [PriceRange::create(100500, 200500), 200500, false],
+        ];
+    }
 }

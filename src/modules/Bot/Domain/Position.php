@@ -9,6 +9,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Helper\VolumeHelper;
 use LogicException;
 
@@ -79,6 +80,16 @@ final class Position
         return $this->side === Side::Sell
             ? $this->entryPrice - $ticker->indexPrice->value()
             : $ticker->indexPrice->value() - $this->entryPrice
+        ;
+    }
+
+    public function isPositionInProfit(Price|float $currentPrice): bool
+    {
+        $currentPrice = $currentPrice instanceof Price ? $currentPrice->value() : $currentPrice;
+
+        return $this->isShort()
+            ? $this->entryPrice > $currentPrice
+            : $this->entryPrice < $currentPrice
         ;
     }
 

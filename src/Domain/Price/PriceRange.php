@@ -44,8 +44,10 @@ final readonly class PriceRange
         return self::create($fromPrice, $toPrice);
     }
 
-    public function isPriceInRange(float $price): bool
+    public function isPriceInRange(Price|float $price): bool
     {
+        $price = $price instanceof Price ? $price->value() : $price;
+
         return $price >= $this->from->value() && $price < $this->to->value();
     }
 
