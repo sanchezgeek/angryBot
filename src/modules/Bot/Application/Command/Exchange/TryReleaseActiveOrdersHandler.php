@@ -25,7 +25,7 @@ final class TryReleaseActiveOrdersHandler
 {
     private const MIN_LEFT_ORDERS_QNT = 3;
     private const DEFAULT_TRIGGER_DELTA = 20;
-    private const DEFAULT_RELEASE_OVER_DISTANCE = 70;
+    private const DEFAULT_RELEASE_OVER_DISTANCE = 90;
 
     /**
      * @param ByBitLinearExchangeService $exchangeService

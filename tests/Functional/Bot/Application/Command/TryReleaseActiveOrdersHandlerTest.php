@@ -34,6 +34,8 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
     use StopsTester;
     use BuyOrdersTester;
 
+    private const DEFAULT_RELEASE_OVER_DISTANCE = TryReleaseActiveOrdersHandler::DEFAULT_RELEASE_OVER_DISTANCE;
+
     protected EventDispatcherInterface $eventDispatcher;
     protected StopService $stopService;
     private ExchangeServiceInterface $exchangeServiceMock;
@@ -116,8 +118,9 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
             ]
         ];
 
+        $releaseOnDistance = self::DEFAULT_RELEASE_OVER_DISTANCE + 1;
         yield 'need to release' => [
-            '$ticker' => TickerFactory::create($symbol, 28571),
+            '$ticker' => $ticker = TickerFactory::create($symbol, 28571),
             '$stopsFixtures' => [
                 new StopFixture(StopBuilder::long(1, 28500, 0.001)->withTD(10)->build()->setExchangeOrderId($exchangeOrderId))
             ],
@@ -126,10 +129,10 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
                 new BuyOrderFixture(BuyOrderBuilder::long(2, 28700, 0.002)->build()->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId))
             ],
             '$activeConditionalOrders' => [
-                new ActiveStopOrder($symbol, Side::Buy, $exchangeOrderId, 0.001, 28500, 'хз')
+                new ActiveStopOrder($symbol, Side::Buy, $exchangeOrderId, 0.001, $ticker->indexPrice->value() - $releaseOnDistance, 'хз')
             ],
             '$expectedClosedActiveConditionalOrders' => [
-                new ActiveStopOrder($symbol, Side::Buy, $exchangeOrderId, 0.001, 28500, 'хз')
+                new ActiveStopOrder($symbol, Side::Buy, $exchangeOrderId, 0.001, $ticker->indexPrice->value() - $releaseOnDistance, 'хз')
             ],
             'stopsExpectedAfterHandle' => [
                 StopBuilder::long(1, 28500, 0.001)->withTD(13)->build()
