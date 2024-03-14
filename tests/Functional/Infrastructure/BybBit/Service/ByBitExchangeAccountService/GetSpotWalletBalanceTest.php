@@ -49,7 +49,7 @@ final class GetSpotWalletBalanceTest extends ByBitExchangeAccountServiceTestAbst
         $coinAmount = new CoinAmount($coin, $amount);
         yield sprintf('have %.3f on %s spot', $amount, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance(AccountType::SPOT, $coinAmount)->build(),
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
         ];
 
@@ -58,7 +58,7 @@ final class GetSpotWalletBalanceTest extends ByBitExchangeAccountServiceTestAbst
         $coinAmount = new CoinAmount($coin, $amount);
         yield sprintf('have %.8f on %s spot', $amount, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance(AccountType::SPOT, $coinAmount)->build(),
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
         ];
     }

@@ -32,7 +32,7 @@ abstract class ByBitV5ApiRequestTestAbstract extends TestCase
     private const API_KEY = 'bybit-api-key';
     private const API_SECRET = 'bybit-api-secret';
 
-    private const EXPECTED_RECV_WINDOW = '8000';
+    private const EXPECTED_RECV_WINDOW = '15000';
     private const EXPECTED_BAPI_SIGN_TYPE = '2';
 
     protected SymfonyHttpClientStub $httpClientStub;

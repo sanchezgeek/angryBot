@@ -77,11 +77,11 @@ final class AccountBalanceResponseBuilder implements ResponseBuilderInterface
         return new self($error);
     }
 
-    public function withAvailableSpotBalance(AccountType $accountType, CoinAmount $availableAmount): self
+    public function withAvailableSpotBalance(CoinAmount $availableAmount): self
     {
         $item = self::COIN_BALANCE_ITEM;
 
-        $item['accountType'] = $accountType->value;
+        $item['accountType'] = AccountType::SPOT->value;
         $item['coin'][0]['coin'] = $availableAmount->coin()->value;
         $item['coin'][0]['walletBalance'] = (string)$availableAmount->value();
         $item['coin'][0]['free'] = (string)$availableAmount->value();
@@ -91,11 +91,11 @@ final class AccountBalanceResponseBuilder implements ResponseBuilderInterface
         return $this;
     }
 
-    public function withContractBalance(AccountType $accountType, Coin $coin, float $totalAmount, float $availableAmount): self
+    public function withContractBalance(Coin $coin, float $totalAmount, float $availableAmount): self
     {
         $item = self::COIN_BALANCE_ITEM;
 
-        $item['accountType'] = $accountType->value;
+        $item['accountType'] = AccountType::CONTRACT->value;
         $item['coin'][0]['coin'] = $coin->value;
         $item['coin'][0]['walletBalance'] = (string)$totalAmount;
         $item['coin'][0]['availableToWithdraw'] = (string)$availableAmount;

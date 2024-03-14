@@ -41,6 +41,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveAvailableSpotBalance($symbol, $availableSpotBalance);
+        $this->haveContractWalletBalance($symbol, $position->initialMargin->value(), 0);
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
 
         // Assert
@@ -90,6 +91,7 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveAvailableSpotBalance($symbol, 0);
+        $this->haveContractWalletBalance($symbol, $position->initialMargin->value(), 0);
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
         $this->expectsToMakeApiCalls(self::successCloseByMarketApiCallExpectation($symbol, $position->side, $expectedCloseOrderVolume));
 

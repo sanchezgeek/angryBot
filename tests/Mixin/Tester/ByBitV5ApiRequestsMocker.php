@@ -37,12 +37,20 @@ trait ByBitV5ApiRequestsMocker
 
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
-        $coinAmount = new CoinAmount($coin = $symbol->associatedCoin(), $amount);
+        $coinAmount = new CoinAmount($symbol->associatedCoin(), $amount);
 
-        $expectedRequest = new GetWalletBalanceRequest(AccountType::SPOT, $coin);
-        $resultResponse = AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance(AccountType::SPOT, $coinAmount)->build();
+        $expectedRequest = new GetWalletBalanceRequest(AccountType::SPOT, $symbol->associatedCoin());
+        $resultResponse = AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build();
 
-        $this->matchGet($expectedRequest, $resultResponse);
+        $this->matchGet($expectedRequest, $resultResponse, false);
+    }
+
+    protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
+    {
+        $expectedRequest = new GetWalletBalanceRequest(AccountType::CONTRACT, $symbol->associatedCoin());
+        $resultResponse = AccountBalanceResponseBuilder::ok()->withContractBalance($symbol->associatedCoin(), $total, $available)->build();
+
+        $this->matchGet($expectedRequest, $resultResponse, false);
     }
 
     protected  function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void

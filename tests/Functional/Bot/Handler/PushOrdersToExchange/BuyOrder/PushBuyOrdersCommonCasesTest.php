@@ -66,11 +66,15 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         array $buyOrdersExpectedAfterHandle,
         array $stopsExpectedAfterHandle,
     ): void {
+        $symbol = $position->symbol;
+
         $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
-        $this->haveAvailableSpotBalance($position->symbol, 0);
+        $this->haveAvailableSpotBalance($symbol, 0);
 
         $this->haveTicker($ticker);
-        $this->havePosition($position->symbol, $position);
+        $this->havePosition($symbol, $position);
+        $this->haveAvailableSpotBalance($symbol, 2);
+        $this->haveContractWalletBalance($symbol, $position->initialMargin->value(), 0);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
         ($this->handler)(new PushBuyOrders($position->symbol, $position->side));

@@ -48,7 +48,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         $available = 105.1;
         yield sprintf('have %.3f on %s contract balance', $available, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance(AccountType::CONTRACT, $coin, $total, $available)->build(),
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),
         ];
 
@@ -57,7 +57,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         $available = 0.11234543;
         yield sprintf('have %.3f on %s contract balance', $available, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance(AccountType::CONTRACT, $coin, $total, $available)->build(),
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),
         ];
     }
