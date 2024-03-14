@@ -67,6 +67,10 @@ final class Percent implements Stringable
             return $value->getPercentPart($this);
         }
 
+        if ($value instanceof IntegerValue) {
+            $value = $value->value();
+        }
+
         return $value * $this->part();
     }
 
