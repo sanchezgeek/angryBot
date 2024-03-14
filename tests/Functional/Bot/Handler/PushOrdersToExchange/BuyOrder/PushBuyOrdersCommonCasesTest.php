@@ -111,8 +111,8 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $exchangeOrderIds = [];
 
         /** @var BuyOrder $buyOrder */
-        yield [
-            '$ticker' => $ticker, '$position' => PositionFactory::short($symbol, 29000),
+        yield 'position value less than MVA + position in loss => can buy' => [
+            '$ticker' => $ticker, '$position' => PositionFactory::short($symbol, 29000, 0.01),
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
             'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [

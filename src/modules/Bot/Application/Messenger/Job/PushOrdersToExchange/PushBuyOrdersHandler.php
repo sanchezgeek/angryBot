@@ -19,6 +19,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
@@ -32,6 +33,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Value\CachedValue;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -47,20 +49,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     public const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 0.5;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 150;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 175;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 5.5;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 100;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 183;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
+    /** @var CachedValue[] */
+    private array $balanceHotCache = [];
+
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        if (
-            $spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN
-            || $position->size < 0.1
-        ) {
+        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position) < 60) {
             return true;
         }
 
@@ -112,6 +114,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         );
     }
 
+    public const LEVERAGE_SLEEP_RANGES = [
+        92 => [-40, 130, 1300],
+        83 => [-30, 100, 1000],
+        73 => [-25, 70, 900],
+        63 => [-15, 50, 650],
+//        51 => [-15, 30, 550],
+    ];
+
     public function __invoke(PushBuyOrders $message): void
     {
         if ($this->marketService->isNowFundingFeesPaymentTime()) {
@@ -123,6 +133,29 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $ticker = $this->exchangeService->ticker($symbol);
         $position = $this->positionService->getPosition($symbol, $side);
+
+        if ($position) {
+            $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+            $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
+
+            foreach (self::LEVERAGE_SLEEP_RANGES as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
+                // @todo | by now only for linear
+                if ($this->totalPositionLeverage($position) >= $leverage) {
+                    if (!$position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
+                        break;
+                    }
+                    if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
+                        return;
+                    }
+                    if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {
+                        return;
+                    }
+
+                    break;
+                }
+            }
+        }
+
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
@@ -167,8 +200,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
         } catch (CannotAffordOrderCost $e) {
-            $this->logWarning($e);
-
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($lastBuy->getSuccessSpotTransfersCount() < 1 && $this->canUseSpot($ticker, $position, $spotBalance)) {
                 $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
@@ -403,7 +434,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             || (
                 $this->lastCannotAffordAtPrice !== null
                 && !$ticker->indexPrice->isPriceInRange(
-                    PriceRange::create($this->lastCannotAffordAtPrice - 15, $this->lastCannotAffordAtPrice + 15)
+                    PriceRange::create($this->lastCannotAffordAtPrice - 15, $this->lastCannotAffordAtPrice + 15),
                 )
             );
 
@@ -412,6 +443,33 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         return $canBuy;
+    }
+
+    private function getCachedTotalBalance(Symbol $symbol): float
+    {
+        $exchangeAccountService = $this->exchangeAccountService;
+
+        $coin = $symbol->associatedCoin();
+        $balance = $this->balanceHotCache[$coin->value] ?? (
+            $this->balanceHotCache[$coin->value] = new CachedValue(
+                static function () use ($exchangeAccountService, $coin) {
+                    $spotBalance = $exchangeAccountService->getSpotWalletBalance($coin);
+                    $contractBalance = $exchangeAccountService->getContractWalletBalance($coin);
+
+                    return $spotBalance->totalBalance + $contractBalance->totalBalance;
+                },
+                10000
+            )
+        );
+
+        return $balance->get();
+    }
+
+    public function totalPositionLeverage(Position $position): float
+    {
+        $totalBalance = $this->getCachedTotalBalance($position->symbol);
+
+        return ($position->initialMargin->value() / (0.94 * $totalBalance)) * 100;
     }
 
     public function __construct(
