@@ -43,7 +43,7 @@ use function sprintf;
  */
 final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 {
-    private const BAPI_RECOMMENDED_RECV_WINDOW = '8000';
+    private const BAPI_RECOMMENDED_RECV_WINDOW = '15000';
     private const BAPI_SIGN_TYPE = '2';
 
     public function __construct(
