@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo make err | while read line ; do aplay $(pwd)/data/alarm.wav 2>&1 1>/dev/null ; echo $line ; done
