@@ -37,7 +37,7 @@ class StopInfoCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
-    private const DEFAULT_PNL_STEP = 20;
+    private const DEFAULT_PNL_STEP = 10;
     private const SHOW_PNL_OPTION = 'showPnl';
     private const SHOW_POSITION_PNL = 'showPositionPnl';
     private const SHOW_TP = 'showTP';
