@@ -75,7 +75,7 @@ class StopInfoCommand extends AbstractCommand
         if ($position->isSupportPosition()) {
             $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
         } else {
-            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
+//            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
 
         $stops = $this->stopRepository->findActive(
@@ -125,8 +125,8 @@ class StopInfoCommand extends AbstractCommand
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
-            $sizeLeft = $position->size - $stopped[$key];
-            $format .= ' => %.3f'; $args[] = $sizeLeft;
+//            $sizeLeft = $position->size - $stopped[$key];
+//            $format .= ' => %.3f'; $args[] = $sizeLeft;
 
             $this->io->text(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);

@@ -51,7 +51,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 5.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 100;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 183;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 383;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
@@ -114,11 +114,19 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         );
     }
 
+//    public const LEVERAGE_SLEEP_RANGES = [
+//        92 => [-40, 105, 1300],
+//        83 => [-30, 95, 1000],
+//        73 => [-20, 75, 700],
+//        63 => [-10, 50, 650],
+//    ];
+// + min / max
+
     public const LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 130, 1300],
-        83 => [-30, 100, 1000],
-        73 => [-25, 70, 900],
-        63 => [-15, 50, 650],
+        92 => [-40, 105, 1500],
+        83 => [-30, 90, 1200],
+        73 => [-25, 80, 900],
+        63 => [-15, 60, 850],
 //        51 => [-15, 30, 550],
     ];
 

@@ -41,7 +41,7 @@ use function min;
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
     # Transfer from spot
-    public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE / 2.5;
+    public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE / 2;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
     public const MIN_TRANSFER_AMOUNT = 12;
 
@@ -51,8 +51,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 60;
 
     public const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = 25;
-    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 3.5;
-    public const ADDITIONAL_STOP_TRIGGER_DELTA = 25;
+    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 4;
+    public const ADDITIONAL_STOP_TRIGGER_DELTA = 45;
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -73,6 +73,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $symbol = $message->symbol; $positionSide = $message->side;
         $position = $this->positionService->getPosition($symbol, $positionSide);
         $ticker = $this->exchangeService->ticker($symbol);
+        $coin = $symbol->associatedCoin();
 
         if (!$position) {
             return;
@@ -87,7 +88,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         if ($priceDeltaToLiquidation <= self::TRANSFER_FROM_SPOT_ON_DISTANCE) {
             try {
-                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin = $symbol->associatedCoin());
+                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
                 if ($spotBalance->availableBalance > 2) {
                     $amount = $this->amountToTransferFromSpot($spotBalance, $position);
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
@@ -97,18 +98,17 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         if ($priceDeltaToLiquidation <= self::CHECK_STOPS_ON_DISTANCE) {
-            $criticalDeltaBeforeLiquidation = $this->getStopCriticalDeltaBeforeLiquidation($ticker, $positionSide);
             $volumeMustBeStopped = $position->size;
 
             // @todo | maybe need also check that hedge has positive distance
             if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position)) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
                 if ($hedge->getSupportRate()->value() > 20) {
-                    $acceptableStoppedPartBeforeLiquidation = 8;
+                    $acceptableStoppedPartBeforeLiquidation = 15;
                 }
             }
 
-            $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker, $criticalDeltaBeforeLiquidation);
+            $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker);
             $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $volumeMustBeStopped) * 100; // @todo | maybe need update position before calc
 
             $volumePartDelta = $acceptableStoppedPartBeforeLiquidation - $stoppedPositionPart;
@@ -126,13 +126,19 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                     );
                 }
             }
+        } elseif ($priceDeltaToLiquidation > 1000) {
+            $contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
+            if ($contractBalance->availableBalance > 15) {
+                $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
+            }
         }
     }
 
-    private function getStopsVolumeBeforeLiquidation(Position $position, Ticker $ticker, float $criticalDeltaBeforeLiquidation): float
+    private function getStopsVolumeBeforeLiquidation(Position $position, Ticker $ticker): float
     {
         $positionSide = $position->side;
         $liquidation = Price::float($position->liquidationPrice);
+        $criticalDeltaBeforeLiquidation = $this->getStopCriticalDeltaBeforeLiquidation($ticker, $positionSide);
 
         $indexPrice = $ticker->indexPrice; $markPrice = $ticker->markPrice;
 
