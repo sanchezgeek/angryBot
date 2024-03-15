@@ -82,13 +82,13 @@ stop: ## Stop bot
 	@$(PHP_CONT) /usr/bin/supervisorctl stop all
 
 crit: ## Get dev CRITICAL
-	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep CRIT
+	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log -n1 | grep CRIT
 
 warn: ## Get dev WARNING
-	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log | grep WARN
+	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log -n1 | grep WARN
 
 err: ## Get app errors (@see WorkerExceptionEventListener::logAppError for excepted errors)
-	@$(PHP_CONT) tail -f /srv/app/var/log/app_errors.log
+	@$(PHP_CONT) tail -f -n1 /srv/app/var/log/app_errors.log
 
 out-warn: ## Get consumers "warning" output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '@ '
