@@ -10,6 +10,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\VolumeHelper;
 use LogicException;
 
@@ -37,6 +38,14 @@ final class Position
     ) {
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
         $this->leverage = new Leverage($leverage);
+    }
+
+    /**
+     * @todo Get from response
+     */
+    public function getPositionBalance(): CoinAmount
+    {
+        return $this->initialMargin->addPercent(Percent::string('5%'));
     }
 
     public function setOppositePosition(Position $oppositePosition): void

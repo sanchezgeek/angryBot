@@ -14,7 +14,7 @@ use App\Domain\Position\ValueObject\Side;
 final class PositionFactory
 {
     private const DEFAULT_PRICE = 29000;
-    private const DEFAULT_SIZE = 1;
+    private const DEFAULT_SIZE = 0.05;
     private const DEFAULT_LEVERAGE = 100;
 
     public static function short(

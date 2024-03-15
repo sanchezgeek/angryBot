@@ -73,8 +73,8 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 
         $this->haveTicker($ticker);
         $this->havePosition($symbol, $position);
-        $this->haveAvailableSpotBalance($symbol, 2);
-        $this->haveContractWalletBalance($symbol, $position->initialMargin->value(), 0);
+        $this->haveAvailableSpotBalance($symbol, 0);
+        $this->haveContractWalletBalanceAllUsedToOpenPosition($position);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
         ($this->handler)(new PushBuyOrders($position->symbol, $position->side));

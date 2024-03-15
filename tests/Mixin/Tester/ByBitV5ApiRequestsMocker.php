@@ -53,6 +53,18 @@ trait ByBitV5ApiRequestsMocker
         $this->matchGet($expectedRequest, $resultResponse, false);
     }
 
+    /**
+     * To mock situation, when there is some available balance (to pass "leverage" check)
+     * @see \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler::LEVERAGE_SLEEP_RANGES
+     */
+    protected function haveContractWalletBalanceAllUsedToOpenPosition(Position $position): void
+    {
+        $positionCost = $position->getPositionBalance()->value();
+        $amountAvailable = $positionCost / 2;
+
+        $this->haveContractWalletBalance($position->symbol, $positionCost + $amountAvailable, $amountAvailable);
+    }
+
     protected  function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void
     {
         foreach ($expectations as $expectation) {
