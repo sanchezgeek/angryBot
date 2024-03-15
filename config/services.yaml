@@ -81,7 +81,7 @@ services:
             $apiKey: '%env(BYBIT_API_KEY)%'
             $secretKey: '%env(BYBIT_API_SECRET)%'
 
-    App\Application\Messenger\CheckPositionIsUnderLiquidationHandler:
+    App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 

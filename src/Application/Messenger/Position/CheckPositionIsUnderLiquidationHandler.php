@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger;
+namespace App\Application\Messenger\Position;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
@@ -34,7 +34,7 @@ use function min;
 /**
  * @group liquidation
  *
- * @see \App\Tests\Functional\Application\Messenger\CheckPositionIsUnderLiquidationHandler
+ * @see \App\Tests\Functional\Application\Messenger\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest
  * @see \App\Tests\Unit\Application\Messenger\CheckPositionIsUnderLiquidationHandlerTest
  */
 #[AsMessageHandler]

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
-use App\Application\Messenger\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;

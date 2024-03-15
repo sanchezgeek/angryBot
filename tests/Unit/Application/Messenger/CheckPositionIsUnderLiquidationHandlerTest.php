@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\Messenger;
 
-use App\Application\Messenger\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\CheckPositionIsUnderLiquidationHandler;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;

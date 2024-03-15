@@ -29,7 +29,7 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\CheckPositionIsUnderLiquidation: async_critical
+            App\Application\Messenger\Position\CheckPositionIsUnderLiquidation: async_critical
             App\Application\Messenger\Market\TransferFundingFees: async_high
 
             # stale
