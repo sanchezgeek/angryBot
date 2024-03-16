@@ -145,6 +145,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         if ($position) {
             $hedge = $position->getHedge();
+            if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
+                return;
+            }
 
             $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
