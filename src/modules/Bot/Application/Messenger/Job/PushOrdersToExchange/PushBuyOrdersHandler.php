@@ -38,11 +38,12 @@ use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Throwable;
 
 use function random_int;
 use function sprintf;
 
-/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\PushBuyOrdersCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases */
 #[AsMessageHandler]
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
@@ -51,7 +52,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 5.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 100;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 383;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
@@ -91,7 +92,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $amount = $availableBalance - 0.1;
         }
 
-        $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
+        try {
+            $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
+        } catch (Throwable $e) {echo sprintf('%s::%s: %s', __FILE__, __LINE__, $e->getMessage()) . PHP_EOL;}
 
         return true;
     }
@@ -236,11 +239,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
 
             if (
-                $lastBuy->getHedgeSupportFixationsCount() < 1
+                $lastBuy->getOnlyAfterExchangeOrderExecutedContext() # only for opposite orders after SL
+                && $lastBuy->getHedgeSupportFixationsCount() < 1
                 && ($hedge = $position->getHedge())
                 && $hedge->isMainPosition($position)
                 && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
-                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 150
+                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < -30 # to prevent use supportPosition profit through the way to mainPosition :)
+                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
             ) {
                 $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
 
