@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\EventListener\Symfony\Messenger;
 
+use App\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
@@ -16,10 +17,17 @@ use function sprintf;
 use function str_contains;
 
 #[AsEventListener]
-final readonly class WorkerExceptionEventListener
+final class WorkerExceptionEventListener
 {
-    public function __construct(private LoggerInterface $appErrorLogger)
-    {
+    private const CONNECTION_ERR_MESSAGES = [
+        'timestamp or recv_window param',
+    ];
+
+    public function __construct(
+        private readonly LoggerInterface $appErrorLogger,
+        private readonly LoggerInterface $connectionErrorLogger,
+        private readonly ClockInterface $clock,
+    ) {
     }
 
     public function __invoke(WorkerMessageFailedEvent $event): void
@@ -29,7 +37,7 @@ final readonly class WorkerExceptionEventListener
             $error = $error->getPrevious();
         }
 
-        $this->logAppError($error);
+        $this->logError($error);
         $this->printError($error);
     }
 
@@ -39,28 +47,67 @@ final readonly class WorkerExceptionEventListener
         print_r($error->getMessage() . PHP_EOL);
     }
 
-    private function logAppError(\Throwable $error): void
+    private function logError(\Throwable $error): void
     {
-        if (str_contains($error->getMessage(), 'timestamp or recv_window param')) {
-            return;
+        # connection errors
+        foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
+            if (str_contains($error->getMessage(), $expectedMessage)) {
+                $this->logConnectionError($error);
+                return;
+            }
         }
 
         $exception = $error;
         while ($exception->getPrevious()) {
             $exception = $exception->getPrevious();
             if ($exception instanceof TransportExceptionInterface) {
+                $this->logConnectionError($error);
                 return;
             }
         }
 
-        $this->appErrorLogger->critical(
-            $error->getMessage(),
-            [
-                'file' => $error->getFile(),
-                'line' => $error->getLine(),
-                'trace' => $error->getTraceAsString(),
-                'previous' => $error->getPrevious(),
-            ],
-        );
+        # app errors
+        $this->appErrorLogger->critical($error->getMessage(), [
+            'file' => $error->getFile(),
+            'line' => $error->getLine(),
+            'trace' => $error->getTraceAsString(),
+            'previous' => $error->getPrevious(),
+        ]);
+    }
+
+    private const CONN_ERR_PENDING_INTERVAL = 5;
+    private const CONN_ERR_RESET_INTERVAL = 25;
+
+    private ?int $connErrorRecievedAt = null;
+    private ?int $resetAt = null;
+
+    private function logConnectionError(Throwable $error): void
+    {
+        $now = $this->clock->now()->getTimestamp();
+
+        if ($this->resetAt && $now >= $this->resetAt) {
+            $this->connErrorRecievedAt = null;
+            $this->resetAt = null;
+            return;
+        }
+
+        if ($this->connErrorRecievedAt === null) {
+            $this->connErrorRecievedAt = $now;
+            $this->resetAt = $now + self::CONN_ERR_RESET_INTERVAL;
+            return;
+        }
+
+        $this->resetAt = $now + self::CONN_ERR_RESET_INTERVAL;
+
+        $pendingTill = $this->connErrorRecievedAt + self::CONN_ERR_PENDING_INTERVAL;
+        if ($now <= $pendingTill) {
+            return;
+        }
+
+        $this->connectionErrorLogger->critical($error->getMessage(), [
+            'file' => $error->getFile(),
+            'line' => $error->getLine(),
+            'previous' => $error->getPrevious(),
+        ]);
     }
 }
