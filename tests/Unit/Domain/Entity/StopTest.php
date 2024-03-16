@@ -70,6 +70,54 @@ final class StopTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
+    public function testCanGetContextIfContextIsEmpty(Side $side): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, []);
+
+        self::assertSame([], $stop->getContext());
+    }
+
+    /**
+     * @dataProvider getContextTestDataProvider
+     */
+    public function testCanGetContext(Side $side, array $context): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+
+        self::assertSame($context, $stop->getContext());
+    }
+
+    /**
+     * @dataProvider getContextTestDataProvider
+     */
+    public function testCanGetContextByName(Side $side, array $context, string $name, mixed $expectedValue): void
+    {
+        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+
+        self::assertSame($expectedValue, $stop->getContext($name));
+        self::assertSame($expectedValue, $stop->getContext()[$name]);
+    }
+
+    private function getContextTestDataProvider(): iterable
+    {
+        $name = 'some-context.value';
+
+        foreach ($this->positionSides() as $side) {
+            yield [$side, [$name => null], $name, null];
+            yield [$side, [$name => true], $name, true];
+            yield [$side, [$name => false], $name, false];
+
+            yield [$side, [$name => 100500], $name, 100500];
+            yield [$side, [$name => '100500'], $name, '100500'];
+
+            yield [$side, [$name => 100.500], $name, 100.500];
+            yield [$side, [$name => ['some-array' => 'context']], $name, ['some-array' => 'context']];
+        }
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
     public function testGetIsWithOppositeOrder(Side $side): void
     {
         $stopWithOpposite1 = new Stop(1, 100500, 123.456, 10, $side);

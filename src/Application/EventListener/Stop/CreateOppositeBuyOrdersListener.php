@@ -6,6 +6,7 @@ namespace App\Application\EventListener\Stop;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
@@ -48,7 +49,7 @@ final class CreateOppositeBuyOrdersListener
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
 
-        $context = ['onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId()];
+        $context = [BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId()];
 
         $orders = [
             ['volume' => $volume, 'price' => $triggerPrice]

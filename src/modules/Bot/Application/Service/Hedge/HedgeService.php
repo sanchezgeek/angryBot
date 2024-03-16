@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -19,7 +20,7 @@ final class HedgeService
     use LoggerTrait;
 
     // @todo | hedge | Mb based on current hedge distance? Because on 100pp distance it won't (and must not) work correct. Or based on distance with main position liquidation.
-    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 50;
+    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 90;
 
     public function __construct(
         private readonly StopService $stopService,
@@ -76,7 +77,7 @@ final class HedgeService
 
         $context = [
             'cause' => 'incrementalStopGridAfterMainPositionStopCreated',
-            'onlyAfterExchangeOrderExecuted' => $stop->getExchangeOrderId(),
+            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
         ];
 
         $info = $this->stopService->createIncrementalToPosition($supportPosition, $stopVolume, $fromPrice, $supportPosition->entryPrice, $context);
