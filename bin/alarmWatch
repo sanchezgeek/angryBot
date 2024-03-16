@@ -1,3 +1,6 @@
 #!/bin/bash
 
-sudo make ${1} | while read line ; do aplay $(pwd)/data/alarm.wav -d3 2>&1 1>/dev/null ; echo $line ; done
+# check the sound :)
+aplay $(pwd)/data/alarm.wav -d2
+
+sudo make ${1} | while read line ; do aplay $(pwd)/data/alarm.wav -d2 2>&1 1>/dev/null ; echo $line ; done
