@@ -75,6 +75,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
             ->setParameter(':posSide', $side);
 
+        // а это тут вообще зачем? Для случая ConditionalBO?
         if ($exceptOppositeOrders) {
             $qb->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false");
         }

@@ -113,6 +113,11 @@ class BuyOrder implements HasEvents
         return $this;
     }
 
+    public function getOnlyAfterExchangeOrderExecutedContext(): ?string
+    {
+        return $this->context[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT] ?? null;
+    }
+
     public function getStopDistance(): ?float
     {
         return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;

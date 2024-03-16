@@ -27,6 +27,54 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
+    public function testCanGetContextIfContextIsEmpty(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, []);
+
+        self::assertSame([], $buyOrder->getContext());
+    }
+
+    /**
+     * @dataProvider getContextTestDataProvider
+     */
+    public function testCanGetContext(Side $side, array $context): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, $context);
+
+        self::assertSame($context, $buyOrder->getContext());
+    }
+
+    /**
+     * @dataProvider getContextTestDataProvider
+     */
+    public function testCanGetContextByName(Side $side, array $context, string $name, mixed $expectedValue): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, $context);
+
+        self::assertSame($expectedValue, $buyOrder->getContext($name));
+        self::assertSame($expectedValue, $buyOrder->getContext()[$name]);
+    }
+
+    private function getContextTestDataProvider(): iterable
+    {
+        $name = 'some-context.value';
+
+        foreach ($this->positionSides() as $side) {
+            yield [$side, [$name => null], $name, null];
+            yield [$side, [$name => true], $name, true];
+            yield [$side, [$name => false], $name, false];
+
+            yield [$side, [$name => 100500], $name, 100500];
+            yield [$side, [$name => '100500'], $name, '100500'];
+
+            yield [$side, [$name => 100.500], $name, 100.500];
+            yield [$side, [$name => ['some-array' => 'context']], $name, ['some-array' => 'context']];
+        }
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
     public function testEmptyExchangeOrderIdContext(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
@@ -81,12 +129,11 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyOnlyAfterExchangeOrderExecutedContext(Side $side): void
+    public function testCanGetEmptyOnlyAfterExchangeOrderExecutedContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, []);
 
-        self::assertNull($buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
-        self::assertArrayNotHasKey(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT, $buyOrder->getContext());
+        self::assertNull($buyOrder->getOnlyAfterExchangeOrderExecutedContext());
     }
 
     /**
@@ -98,8 +145,7 @@ final class BuyOrderTest extends TestCase
 
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
 
-        self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
-        self::assertSame($exchangeOrderId, $buyOrder->getContext()[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT]);
+        self::assertSame($exchangeOrderId, $buyOrder->getOnlyAfterExchangeOrderExecutedContext());
     }
 
     /**
@@ -113,8 +159,9 @@ final class BuyOrderTest extends TestCase
 
         $buyOrder->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
 
+        self::assertSame([self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId], $buyOrder->getContext());
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
-        self::assertSame($exchangeOrderId, $buyOrder->getContext()[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT]);
+        self::assertSame($exchangeOrderId, $buyOrder->getOnlyAfterExchangeOrderExecutedContext());
     }
 
     /**
