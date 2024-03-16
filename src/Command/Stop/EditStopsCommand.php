@@ -106,8 +106,7 @@ class EditStopsCommand extends AbstractCommand
             return Command::SUCCESS;
         }
 
-        if ($filteredStopsCount === count($stops)) {
-            $this->io->error('All active stops matched provided conditions.');
+        if ($filteredStopsCount === count($stops) && !$this->io->confirm('All active stops matched provided conditions. Continue?')) {
             return Command::FAILURE;
         }
 
