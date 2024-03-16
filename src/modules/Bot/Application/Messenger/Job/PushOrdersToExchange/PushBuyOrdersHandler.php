@@ -117,20 +117,18 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         );
     }
 
-//    public const LEVERAGE_SLEEP_RANGES = [
-//        92 => [-40, 105, 1300],
-//        83 => [-30, 95, 1000],
-//        73 => [-20, 75, 700],
-//        63 => [-10, 50, 650],
-//    ];
-// + min / max
-
     public const LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 105, 1500],
-        83 => [-30, 90, 1200],
-        73 => [-25, 80, 900],
-        63 => [-15, 60, 850],
-//        51 => [-15, 30, 550],
+        92 => [-40, 105, 1800],
+        83 => [-30, 70, 1500],
+        73 => [-25, 50, 1000],
+        63 => [-15, 30, 850],
+    ];
+
+    public const HEDGE_LEVERAGE_SLEEP_RANGES = [
+        92 => [-40, 70, 1400],
+        85 => [-25, 55, 1300],
+        75 => [-20, 40, 1200],
+        65 => [-5, 5, 850],
     ];
 
     public function __invoke(PushBuyOrders $message): void
@@ -146,12 +144,16 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $position = $this->positionService->getPosition($symbol, $side);
 
         if ($position) {
+            $hedge = $position->getHedge();
+
             $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
+            $totalPositionLeverage = $this->totalPositionLeverage($position);
 
-            foreach (self::LEVERAGE_SLEEP_RANGES as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
+            $sleepRanges = $hedge?->isMainPosition($position) ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
+            foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
                 // @todo | by now only for linear
-                if ($this->totalPositionLeverage($position) >= $leverage) {
+                if ($totalPositionLeverage >= $leverage) {
                     if (!$position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
                         break;
                     }
@@ -470,8 +472,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     $contractBalance = $exchangeAccountService->getContractWalletBalance($coin);
 
                     return $spotBalance->totalBalance + $contractBalance->totalBalance;
-                },
-                10000
+                }
             )
         );
 
