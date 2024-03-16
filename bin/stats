@@ -2,8 +2,16 @@
 
 PNL_STEP=${1:-30}
 
+AGG_WITH=""
+
 if [ $2 = "true" ]; then
     AGG_WITH='isWithOppositeOrder()'
+  else
+    AGG_WITH=""
+fi
+
+if [ $3 = "true" ]; then
+    AGG_WITH='isCloseByMarketContextSet()'
   else
     AGG_WITH=""
 fi

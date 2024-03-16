@@ -39,6 +39,7 @@ class StopInfoCommand extends AbstractCommand
 
     private const DEFAULT_PNL_STEP = 10;
     private const SHOW_PNL_OPTION = 'showPnl';
+    private const SHOW_SIZE_LEFT_OPTION = 'showSize';
     private const SHOW_POSITION_PNL = 'showPositionPnl';
     private const SHOW_TP = 'showTP';
 
@@ -51,6 +52,7 @@ class StopInfoCommand extends AbstractCommand
             ->configurePositionArgs()
             ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
             ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
+            ->addOption(self::SHOW_SIZE_LEFT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short size left', false)
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
             ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
             ->addOption(self::SHOW_TP, '-t', InputOption::VALUE_NEGATABLE, 'Show TP orders', false)
@@ -69,11 +71,13 @@ class StopInfoCommand extends AbstractCommand
         $position = $this->getPosition();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
         $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
+        $showSizeLeft = $this->paramFetcher->getBoolOption(self::SHOW_SIZE_LEFT_OPTION);
         $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
         $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
         if ($position->isSupportPosition()) {
             $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
+            $showSizeLeft = true;
         } else {
 //            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
@@ -125,8 +129,10 @@ class StopInfoCommand extends AbstractCommand
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
-//            $sizeLeft = $position->size - $stopped[$key];
-//            $format .= ' => %.3f'; $args[] = $sizeLeft;
+            if ($showSizeLeft) {
+                $sizeLeft = $position->size - $stopped[$key];
+                $format .= ' => %.3f'; $args[] = $sizeLeft;
+            }
 
             $this->io->text(\sprintf($format, ...$args));
             $this->printAggregateInfo($rangeStops);
