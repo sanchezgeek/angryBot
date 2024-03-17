@@ -40,43 +40,35 @@ final class HedgeServiceTest extends KernelTestCase
 
     public function isSupportSizeEnoughTestCases(): iterable
     {
-        $applicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN);
-        $notApplicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN - 1);
+        $applicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN, false);
+        $notApplicablePercentOfIM = new Percent(self::SUPPORT_PROFIT_MUST_BE_GREATER_THAN_MAIN_POSITION_MARGIN - 1, false);
 
         ### BTCUSDT SHORT
 
         $main = PositionFactory::short(Symbol::BTCUSDT, 36000, 0.5);
-        $support = PositionFactory::long(Symbol::BTCUSDT, 35000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 1000, $applicablePercentOfIM)); # div to hedgeDistance
+        $support = PositionFactory::long(Symbol::BTCUSDT, 34000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 2000, $applicablePercentOfIM)); # div to hedgeDistance
         yield self::testCaseCaption($main, $support, true) => [[$main, $support], 'expectedResult' => true];
+
+        $main = PositionFactory::short(Symbol::BTCUSDT, 36000, 0.5);
+        $support = PositionFactory::long(Symbol::BTCUSDT, 34000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 2000, $notApplicablePercentOfIM));
+        yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
 
         $main = PositionFactory::short(Symbol::BTCUSDT, 36000, 0.5);
         $support = PositionFactory::long(Symbol::BTCUSDT, 35000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 1000, $notApplicablePercentOfIM));
         yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
 
-        $main = PositionFactory::short(Symbol::BTCUSDT, 36000, 0.5);
-        $support = PositionFactory::long(Symbol::BTCUSDT, 35500, self::supportSizeToGetInitialMarginPercentAsProfit($main, 500, $applicablePercentOfIM));
-        yield self::testCaseCaption($main, $support, true) => [[$main, $support], 'expectedResult' => true];
-
-        $main = PositionFactory::short(Symbol::BTCUSDT, 36000, 0.5);
-        $support = PositionFactory::long(Symbol::BTCUSDT, 35500, self::supportSizeToGetInitialMarginPercentAsProfit($main, 500, $notApplicablePercentOfIM));
-        yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
-
         ### BTCUSDT LONG
 
-        $main = PositionFactory::long(Symbol::BTCUSDT, 35000, 0.5);
-        $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 1000, $applicablePercentOfIM));
+        $main = PositionFactory::long(Symbol::BTCUSDT, 34000, 0.5);
+        $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 2000, $applicablePercentOfIM));
         yield self::testCaseCaption($main, $support, true) => [[$main, $support], 'expectedResult' => true];
+
+        $main = PositionFactory::long(Symbol::BTCUSDT, 34000, 0.5);
+        $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 2000, $notApplicablePercentOfIM));
+        yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
 
         $main = PositionFactory::long(Symbol::BTCUSDT, 35000, 0.5);
         $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 1000, $notApplicablePercentOfIM));
-        yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
-
-        $main = PositionFactory::long(Symbol::BTCUSDT, 35500, 0.5);
-        $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 500, $applicablePercentOfIM));
-        yield self::testCaseCaption($main, $support, true) => [[$main, $support], 'expectedResult' => true];
-
-        $main = PositionFactory::long(Symbol::BTCUSDT, 35500, 0.5);
-        $support = PositionFactory::short(Symbol::BTCUSDT, 36000, self::supportSizeToGetInitialMarginPercentAsProfit($main, 500, $notApplicablePercentOfIM));
         yield self::testCaseCaption($main, $support, false) => [[$main, $support], 'expectedResult' => false];
     }
 
