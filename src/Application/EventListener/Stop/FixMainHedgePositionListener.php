@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
@@ -25,7 +26,7 @@ final class FixMainHedgePositionListener
     public const ENABLED = true;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
-    const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
+    const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.002;
 
     const SUPPLY_STOP_VOLUME = 0.001;
 
@@ -89,10 +90,10 @@ final class FixMainHedgePositionListener
             return;
         }
 
-        $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true];
+        $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
         $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + 50 : $stopPrice - 50;
         $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
 
-        var_dump('create supply stop on => ' . $supplyStopPrice);
+        var_dump('supply stop created');
     }
 }
