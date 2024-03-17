@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases;
 
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
@@ -39,15 +39,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected const SYMBOL = Symbol::BTCUSDT;
 
-    protected HedgeService $hedgeService;
-    protected BuyOrderRepository $buyOrderRepository;
-    protected StopRepository $stopRepository;
-    protected StopService $stopService;
-    protected OrderCostHelper $orderCostHelper;
-    protected MarketServiceInterface $marketService;
-
     protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
-    protected OrderServiceInterface|MockObject $orderService;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected LoggerInterface $loggerMock;
@@ -57,15 +49,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->hedgeService = self::getContainer()->get(HedgeService::class);
-        $this->buyOrderRepository = self::getContainer()->get(BuyOrderRepository::class);
-        $this->stopRepository = self::getContainer()->get(StopRepository::class);
-        $this->stopService = self::getContainer()->get(StopService::class);
-        $this->orderCostHelper = self::getContainer()->get(OrderCostHelper::class);
-
         $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
-        $this->marketService = self::getContainer()->get(ByBitMarketService::class);
-        $this->orderService = self::getContainer()->get(OrderServiceInterface::class);
 
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
@@ -73,15 +57,16 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->loggerMock = $this->createMock(LoggerInterface::class);
 
         $this->handler = new PushBuyOrdersHandler(
-            $this->hedgeService,
-            $this->buyOrderRepository,
-            $this->stopRepository,
-            $this->stopService,
-            $this->orderCostHelper,
+            self::getContainer()->get(CreateBuyOrderHandler::class),
+            self::getContainer()->get(HedgeService::class),
+            self::getContainer()->get(BuyOrderRepository::class),
+            self::getContainer()->get(StopRepository::class),
+            self::getContainer()->get(StopService::class),
+            self::getContainer()->get(OrderCostHelper::class),
 
             $this->exchangeAccountServiceMock,
-            $this->marketService,
-            $this->orderService,
+            self::getContainer()->get(ByBitMarketService::class),
+            self::getContainer()->get(OrderServiceInterface::class),
 
             $this->exchangeServiceMock,
             $this->positionServiceMock,

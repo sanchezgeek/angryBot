@@ -20,7 +20,7 @@ use App\Tests\Fixture\BuyOrderFixture;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
  */
-final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrdersCornerCasesTestAbstract
+final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends PushBuyOrdersCornerCasesTestAbstract
 {
     private const USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
     private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = PushBuyOrdersHandler::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
@@ -110,7 +110,13 @@ final class CloseByMarketIfInsufficientAvailableMarginTest extends PushBuyOrders
         ($this->handler)(new PushBuyOrders($symbol, $side));
 
         // Assert
-        self::seeBuyOrdersInDb(clone $buyOrder);
+        $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(50) : $ticker->indexPrice->add(50);
+
+        self::seeBuyOrdersInDb(
+            clone $buyOrder,
+            # also must create BuyOrder to reopen closed volume on further movement
+            new BuyOrder($buyOrder->getId() + 1, $reopenOnPrice, $expectedCloseOrderVolume, $position->side)
+        );
     }
 
     public function closeByMarketCasesProvider(): iterable

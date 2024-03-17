@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
+use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -99,6 +101,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return true;
     }
 
+    /**
+     * @return BuyOrder[]
+     */
     public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
     {
         $indexPrice = $ticker->indexPrice;
@@ -230,16 +235,23 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             if ($this->canTakeProfit($position, $ticker)) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-                $volume = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
-                $this->orderService->closeByMarket($position, $volume);
+                $volumeClosedForTakeProfit = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
+                $this->orderService->closeByMarket($position, $volumeClosedForTakeProfit);
 
                 if (!$position->isSupportPosition()) {
-                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volume);
+                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosedForTakeProfit);
                     $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
                     $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
                 }
 
                 $this->buyOrderRepository->save($lastBuy);
+
+                // reopen closed volume on further movement
+                $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(50) : $ticker->indexPrice->add(50);
+                $this->createBuyOrderHandler->handle(
+                    new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value())
+                );
+
                 return;
             }
 
@@ -490,6 +502,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     public function __construct(
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly HedgeService $hedgeService,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
