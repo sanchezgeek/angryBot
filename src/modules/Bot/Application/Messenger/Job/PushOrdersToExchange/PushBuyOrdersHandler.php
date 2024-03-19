@@ -60,9 +60,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
-    /** @var CachedValue[] */
-    private array $balanceHotCache = [];
-
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
         if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position) < 60) {
@@ -475,28 +472,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return $canBuy;
     }
 
-    private function getCachedTotalBalance(Symbol $symbol): float
-    {
-        $exchangeAccountService = $this->exchangeAccountService;
-
-        $coin = $symbol->associatedCoin();
-        $balance = $this->balanceHotCache[$coin->value] ?? (
-            $this->balanceHotCache[$coin->value] = new CachedValue(
-                static function () use ($exchangeAccountService, $coin) {
-                    $spotBalance = $exchangeAccountService->getSpotWalletBalance($coin);
-                    $contractBalance = $exchangeAccountService->getContractWalletBalance($coin);
-
-                    return $spotBalance->totalBalance + $contractBalance->totalBalance;
-                }
-            )
-        );
-
-        return $balance->get();
-    }
-
     public function totalPositionLeverage(Position $position): float
     {
-        $totalBalance = $this->getCachedTotalBalance($position->symbol);
+        $totalBalance = $this->exchangeAccountService->getCachedTotalBalance($position->symbol);
 
         return ($position->initialMargin->value() / (0.94 * $totalBalance)) * 100;
     }

@@ -7,6 +7,7 @@ namespace App\Infrastructure\ByBit\Service\Account;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\Exception\AccountCoinDataNotFound;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Helper\FloatHelper;
@@ -19,6 +20,8 @@ use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+
+use App\Value\CachedValue;
 
 use function is_array;
 use function sprintf;
@@ -121,5 +124,25 @@ final class ByBitExchangeAccountService implements ExchangeAccountServiceInterfa
         }
 
         return $walletBalance;
+    }
+
+    /** @var CachedValue[] */
+    private array $balanceHotCache = [];
+
+    public function getCachedTotalBalance(Symbol $symbol): float
+    {
+        $coin = $symbol->associatedCoin();
+        $balance = $this->balanceHotCache[$coin->value] ?? (
+            $this->balanceHotCache[$coin->value] = new CachedValue(
+                function () use ($coin) {
+                    $spotBalance = $this->getSpotWalletBalance($coin);
+                    $contractBalance = $this->getContractWalletBalance($coin);
+
+                    return $spotBalance->totalBalance + $contractBalance->totalBalance;
+                }
+            )
+        );
+
+        return $balance->get();
     }
 }
