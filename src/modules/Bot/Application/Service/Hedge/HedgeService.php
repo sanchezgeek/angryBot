@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -20,11 +21,21 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    // @todo | hedge | Mb based on current hedge distance? Because on 100pp distance it won't (and must not) work correct. Or based on distance with main position liquidation.
-    const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 90;
+    private const MIN = 100;
+    private const RANGES = [
+        [-200, 500, 150],
+        [500, 650, 130],
+        [650, 800, 110],
+        [800, 950, 100],
+        [950, 1050, 90],
+        [1050, 1200, 80],
+        [1200, 1350, 70],
+    ];
+    private const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 60;
 
     public function __construct(
         private readonly StopService $stopService,
+        private readonly ExchangeServiceInterface $exchangeService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         LoggerInterface $logger,
         ClockInterface $clock,
@@ -33,14 +44,29 @@ final class HedgeService
         $this->logger = $logger;
     }
 
-    public function getDefaultMainPositionIMPercentToSupport(): Percent
+    public function getDefaultMainPositionIMPercentToSupport(Hedge $hedge): Percent
     {
-        return new Percent(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT);
+        $ticker = $this->exchangeService->ticker($hedge->mainPosition->symbol);
+        $currentMainPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($hedge->mainPosition);
+
+        $mainImPercentToSupport = self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT;
+        foreach (self::RANGES as $key => [$fromPnl, $toPnl, $expectedMainImPercentToSupport]) {
+            if ($key === 0 && $currentMainPositionPnlPercent < $fromPnl) {
+                $mainImPercentToSupport = self::MIN;
+                break;
+            }
+            if ($currentMainPositionPnlPercent >= $fromPnl && $currentMainPositionPnlPercent <= $toPnl) {
+                $mainImPercentToSupport = $expectedMainImPercentToSupport;
+                break;
+            }
+        }
+
+        return new Percent($mainImPercentToSupport, false);
     }
 
     public function getApplicableSupportSize(Hedge $hedge, ?Percent $mainPositionIMPercentToSupport = null): float
     {
-        $mainPositionInitialMarginPercentForSupport = $mainPositionIMPercentToSupport ?? $this->getDefaultMainPositionIMPercentToSupport();
+        $mainPositionInitialMarginPercentForSupport = $mainPositionIMPercentToSupport ?? $this->getDefaultMainPositionIMPercentToSupport($hedge);
 
         $applicableSupportProfit = $hedge->mainPosition->initialMargin->getPercentPart($mainPositionInitialMarginPercentForSupport);
 
@@ -49,6 +75,8 @@ final class HedgeService
 
     public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, Percent $mainPositionIMPercentToSupport = null): bool
     {
+        // @todo | what to do on short distance between positions? => 1/2 of main
+
         if ($this->exchangeAccountService->getCachedTotalBalance($hedge->mainPosition->symbol) < ($hedge->mainPosition->initialMargin->value() / 2.5)) {
             return false;
         }
