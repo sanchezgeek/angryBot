@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Hedge;
 
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -24,6 +25,7 @@ final class HedgeService
 
     public function __construct(
         private readonly StopService $stopService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         LoggerInterface $logger,
         ClockInterface $clock,
     ) {
@@ -47,6 +49,10 @@ final class HedgeService
 
     public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, Percent $mainPositionIMPercentToSupport = null): bool
     {
+        if ($this->exchangeAccountService->getCachedTotalBalance($hedge->mainPosition->symbol) < ($hedge->mainPosition->initialMargin->value() / 2.5)) {
+            return false;
+        }
+
         return $hedge->supportPosition->size >= $this->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
 
 //        $applicableSupportRate = $applicableSupportSize / $mainPosition->size;
