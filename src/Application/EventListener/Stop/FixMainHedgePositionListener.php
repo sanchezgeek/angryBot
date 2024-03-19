@@ -26,9 +26,10 @@ final class FixMainHedgePositionListener
     public const ENABLED = true;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
-    const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.002;
+    const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
 
     const SUPPLY_STOP_VOLUME = 0.001;
+    const SUPPLY_STOP_DISTANCE = 350;
 
     public function __construct(
         private readonly OrderCostHelper $orderCostHelper,
@@ -91,7 +92,7 @@ final class FixMainHedgePositionListener
         }
 
         $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
-        $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + 50 : $stopPrice - 50;
+        $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + self::SUPPLY_STOP_DISTANCE : $stopPrice - self::SUPPLY_STOP_DISTANCE;
         $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
 
         var_dump('supply stop created');
