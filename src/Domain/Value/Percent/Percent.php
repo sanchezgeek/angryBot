@@ -26,9 +26,9 @@ final class Percent implements Stringable
 
     private float $value;
 
-    public function __construct(float $value)
+    public function __construct(float $value, bool $strict = true)
     {
-        if ($value <= 0 || $value > 100) {
+        if ($strict && ($value <= 0 || $value > 100)) {
             throw new DomainException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $value));
         }
 
