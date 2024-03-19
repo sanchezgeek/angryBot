@@ -21,7 +21,6 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
@@ -35,13 +34,14 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Value\CachedValue;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
+use function max;
+use function min;
 use function random_int;
 use function sprintf;
 
@@ -56,6 +56,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 100;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
+
+    public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = false;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
@@ -252,14 +254,18 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
+            $priceToCalcLiqDiff = $position->isShort() ? max($position->entryPrice, $ticker->markPrice->value()) : min($position->entryPrice, $ticker->markPrice->value());
             if (
-                $lastBuy->getOnlyAfterExchangeOrderExecutedContext() # only for opposite orders after SL
+                (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->getOnlyAfterExchangeOrderExecutedContext())
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
                 && ($hedge = $position->getHedge())
                 && $hedge->isMainPosition($position)
-                && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
-                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < -30 # to prevent use supportPosition profit through the way to mainPosition :)
+                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
                 && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
+                && (
+                    abs($priceToCalcLiqDiff - $position->liquidationPrice) > 1500               # position liquidation too far
+                    || $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)   # or support size enough
+                )
             ) {
                 $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
 
