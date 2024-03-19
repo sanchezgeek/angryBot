@@ -20,7 +20,7 @@ use function random_int;
 final class CreateOppositeBuyOrdersListener
 {
     public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 181;
-    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 141;
+    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 211;
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
