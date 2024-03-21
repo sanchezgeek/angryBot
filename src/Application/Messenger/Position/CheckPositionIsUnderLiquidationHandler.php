@@ -126,11 +126,13 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                     );
                 }
             }
-        } elseif ($priceDeltaToLiquidation > 1000) {
-            $contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-            if ($contractBalance->availableBalance > 15) {
-                $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
-            }
+        } elseif (
+            ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
+            && ($contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin))
+            && ($totalBalance = $this->exchangeAccountService->getCachedTotalBalance($symbol))
+            && ($contractBalance->availableBalance / $totalBalance) > 0.5
+        ) {
+            $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
         }
     }
 
