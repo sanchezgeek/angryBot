@@ -16,5 +16,5 @@ interface ExchangeAccountServiceInterface
 
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void;
 
-    public function getCachedTotalBalance(Symbol $symbol);
+    public function getCachedTotalBalance(Symbol $symbol): float;
 }
