@@ -99,6 +99,11 @@ readonly final class Price
         return PnlHelper::getPnlInPercents($position, $this->value());
     }
 
+    public function getTargetPriceByPnlPercent(float $pnlPercent, Position $position): Price
+    {
+        return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $position);
+    }
+
     public function isPriceOverTakeProfit(Side $positionSide, float $takeProfitPrice): bool
     {
         return $positionSide->isShort() ? $this->value <= $takeProfitPrice : $this->value >= $takeProfitPrice;

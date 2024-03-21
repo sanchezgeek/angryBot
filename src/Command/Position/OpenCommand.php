@@ -207,8 +207,8 @@ class OpenCommand extends AbstractCommand
             $fromPercent = (float)$parts[0];
             $toPercent = $fromPercent + 3;
 
-            $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPercent);
-            $toPrice = PnlHelper::getTargetPriceByPnlPercent($position, $toPercent);
+            $fromPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $fromPercent);
+            $toPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $toPercent);
 
             $priceRange = PriceRange::create($fromPrice, $toPrice);
 

@@ -38,8 +38,8 @@ final readonly class PriceRange
 
     public static function byPositionPnlRange(Position $position, float $fromPnl, float $toPnl): self
     {
-        $fromPrice = PnlHelper::getTargetPriceByPnlPercent($position, $fromPnl);
-        $toPrice = PnlHelper::getTargetPriceByPnlPercent($position, $toPnl);
+        $fromPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $fromPnl);
+        $toPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $toPnl);
 
         return self::create($fromPrice, $toPrice);
     }

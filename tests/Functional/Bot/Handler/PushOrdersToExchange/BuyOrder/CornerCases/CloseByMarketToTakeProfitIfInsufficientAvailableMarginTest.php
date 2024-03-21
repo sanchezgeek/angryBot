@@ -57,7 +57,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
     public function doNotCloseByMarketCasesProvider(): iterable
     {
         $position = PositionFactory::short(self::SYMBOL, 30000);
-        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY)->value();
+        $lastPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY)->value();
 
         yield 'lastPrice pnl less than min required' => [
             'position' => $position,
@@ -125,7 +125,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $position = PositionFactory::short(self::SYMBOL, 30000);
         $minProfitPercent = self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY;
 
-        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $minProfitPercent)->value() - 1;
+        $lastPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $minProfitPercent)->value() - 1;
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
@@ -134,7 +134,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         ];
 
         $needBuyOrderVolume = 0.004;
-        $lastPrice = PnlHelper::getTargetPriceByPnlPercent($position, $minProfitPercent + 100)->value();
+        $lastPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $minProfitPercent + 100)->value();
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),

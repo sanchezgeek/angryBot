@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Stop\Helper;
 
 use App\Bot\Domain\Position;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 
 /**
@@ -31,19 +32,25 @@ final class PnlHelper
         return $sign * $delta * $volume;
     }
 
-    public static function getTargetPriceByPnlPercent(Position $position, float $percent): Price
+    public static function targetPriceByPnlPercentFromPositionEntry(Position $position, float $percent): Price
     {
-        $sign = $position->side->isShort() ? -1 : +1;
+        return self::targetPriceByPnlPercent($position->entryPrice, $percent, $position);
+    }
 
-        $value = $position->entryPrice / self::getPositionLeverage($position);
+    public static function targetPriceByPnlPercent(Price|float $fromPrice, float $percent, Position $position): Price
+    {
+        $fromPrice = $fromPrice instanceof Price ? $fromPrice->value() : $fromPrice;
+        $sign = $position->isShort() ? -1 : +1;
+
+        $value = $fromPrice / self::getPositionLeverage($position);
 
         return Price::float(
-            $position->entryPrice + ($sign * ($percent / 100) * $value)
+            $fromPrice + ($sign * ($percent / 100) * $value)
         );
     }
 
     protected static function getPositionLeverage(Position $position): float
     {
-        return 100; // @todo $position->positionLeverage ??;
+        return 100; // @todo | use $position->positionLeverage ??;
     }
 }
