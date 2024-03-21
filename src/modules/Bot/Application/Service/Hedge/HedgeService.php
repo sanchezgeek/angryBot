@@ -23,15 +23,15 @@ final class HedgeService
 
     private const MIN = 100;
     private const RANGES = [
-        [-200, 500, 150],
-        [500, 650, 130],
-        [650, 800, 110],
-        [800, 950, 100],
-        [950, 1050, 90],
-        [1050, 1200, 80],
-        [1200, 1350, 70],
+        [-200, 500, 140],
+        [500, 650, 120],
+        [650, 800, 100],
+        [800, 950, 90],
+        [950, 1050, 75],
+        [1050, 1200, 65],
+        [1200, 1350, 60],
     ];
-    private const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 60;
+    private const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 50;
 
     public function __construct(
         private readonly StopService $stopService,
@@ -77,7 +77,7 @@ final class HedgeService
     {
         // @todo | what to do on short distance between positions? => 1/2 of main
 
-        if ($this->exchangeAccountService->getCachedTotalBalance($hedge->mainPosition->symbol) < ($hedge->mainPosition->initialMargin->value() / 2.5)) {
+        if ($this->exchangeAccountService->getCachedTotalBalance($hedge->mainPosition->symbol) < ($hedge->mainPosition->initialMargin->value() / 5)) {
             return false;
         }
 
