@@ -94,8 +94,7 @@ class EditBuyOrdersCommand extends AbstractCommand
             $this->io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
-        if ($totalCount === count($orders) && !$withoutConfirm) {
-            $this->io->error('All orders matched provided conditions.');
+        if ($totalCount === count($orders) && !$withoutConfirm && !$this->io->confirm('All orders matched provided conditions. Continue?')) {
             return Command::FAILURE;
         }
 
