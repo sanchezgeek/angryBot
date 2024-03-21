@@ -43,7 +43,7 @@ class HedgeInfoCommand extends AbstractCommand
         $supportPosition = $hedge->supportPosition;
         $specifiedMainPositionIMPercentToSupport = $this->paramFetcher->percentOption(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_OPTION);
 
-        $mainPositionIMPercentToSupport = $specifiedMainPositionIMPercentToSupport ? new Percent($specifiedMainPositionIMPercentToSupport) : $this->hedgeService->getDefaultMainPositionIMPercentToSupport();
+        $mainPositionIMPercentToSupport = $specifiedMainPositionIMPercentToSupport ? new Percent($specifiedMainPositionIMPercentToSupport) : $this->hedgeService->getDefaultMainPositionIMPercentToSupport($hedge);
         $applicableSupportSize = $this->hedgeService->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
         $sizeDiff = $supportPosition->size - $applicableSupportSize;
 
