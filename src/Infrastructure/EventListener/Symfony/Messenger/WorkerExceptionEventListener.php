@@ -21,6 +21,7 @@ final class WorkerExceptionEventListener
 {
     private const CONNECTION_ERR_MESSAGES = [
         'timestamp or recv_window param',
+        'Server Timeout',
     ];
 
     public function __construct(
