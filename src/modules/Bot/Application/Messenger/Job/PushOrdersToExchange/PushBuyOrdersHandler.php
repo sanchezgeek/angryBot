@@ -135,8 +135,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     continue;
                 }
 
-                $lastBuy = $order;
                 if ($order->mustBeExecuted($ticker)) {
+                    $lastBuy = $order;
                     $this->buy($position, $ticker, $order);
 
                      if ($order->getExchangeOrderId()) {
