@@ -44,6 +44,7 @@ class OpenCommand extends AbstractCommand
     use PositionAwareCommand;
 
     public const DEBUG_OPTION = 'deb';
+    public const WITH_STOPS_OPTION = 'withStops';
 
     public const REOPEN_OPTION = 'reopen';
     public const SIZE_ARGUMENT = 'size';
@@ -70,6 +71,7 @@ class OpenCommand extends AbstractCommand
             ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta', self::DEFAULT_TRIGGER_DELTA)
             ->addOption(self::REOPEN_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reopen position?')
             ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
+            ->addOption(self::WITH_STOPS_OPTION, null, InputOption::VALUE_OPTIONAL, 'With stops?', true)
         ;
     }
 
@@ -113,7 +115,9 @@ class OpenCommand extends AbstractCommand
 
         $expectedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 100);
 
-        $this->createStopsGrid($expectedPosition);
+        if ($this->isWithStopsOptionChecked()) {
+            $this->createStopsGrid($expectedPosition);
+        }
 
         ['range' => $buyGridRange, 'part' => $buyGridPart] = $this->getGridRangeOption($expectedPosition);
         $buyGridVolume = $buyGridPart->of($size);
@@ -275,6 +279,11 @@ class OpenCommand extends AbstractCommand
     private function isDebugEnabled(): bool
     {
         return $this->paramFetcher->getBoolOption(self::DEBUG_OPTION);
+    }
+
+    private function isWithStopsOptionChecked(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::WITH_STOPS_OPTION);
     }
 
     public function __construct(
