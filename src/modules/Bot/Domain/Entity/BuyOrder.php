@@ -26,6 +26,7 @@ class BuyOrder implements HasEvents
     public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
     public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
+    public const FORCE_BUY_CONTEXT = 'forceBuy';
 
     /**
      * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
@@ -104,6 +105,11 @@ class BuyOrder implements HasEvents
     public function isWithShortStop(): bool
     {
         return ($this->context[self::WITH_SHORT_STOP_CONTEXT] ?? null) === true;
+    }
+
+    public function isForceBuyOrder(): bool
+    {
+        return ($this->context[self::FORCE_BUY_CONTEXT] ?? null) === true;
     }
 
     public function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId): self
