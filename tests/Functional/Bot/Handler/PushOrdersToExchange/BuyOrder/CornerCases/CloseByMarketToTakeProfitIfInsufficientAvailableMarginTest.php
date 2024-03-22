@@ -45,7 +45,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
 
         // Assert
-        $this->exchangeAccountServiceMock->expects(self::never())->method('interTransferFromContractToSpot');
+        $this->exchangeAccountServiceMock->shouldReceive('interTransferFromContractToSpot')->never();
 
         // Act
         ($this->handler)(new PushBuyOrders($symbol, $side));
@@ -99,8 +99,8 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $expectedCloseOrderVolume);
         $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
         $this->exchangeAccountServiceMock
-            ->expects(self::once())
-            ->method('interTransferFromContractToSpot')
+            ->shouldReceive('interTransferFromContractToSpot')
+            ->once()
             ->with(
                 $symbol->associatedCoin(),
                 PriceHelper::round($transferToSpotAmount, 3),

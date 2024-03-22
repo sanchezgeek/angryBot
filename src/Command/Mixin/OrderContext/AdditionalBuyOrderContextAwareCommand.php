@@ -21,6 +21,10 @@ trait AdditionalBuyOrderContextAwareCommand
             'caption' => 'Without opposite order',
             'mappedContext' => BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT,
         ],
+        'fB' => [
+            'caption' => 'Force buy',
+            'mappedContext' => BuyOrder::FORCE_BUY_CONTEXT,
+        ],
     ];
 
     protected function configureBuyOrderAdditionalContexts(): static

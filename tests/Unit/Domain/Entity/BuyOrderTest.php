@@ -167,7 +167,7 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyIsWithShortStopContext(Side $side): void
+    public function testEmptyIsWithShortStopWhenContextIsNotSet(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
 
@@ -177,7 +177,7 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testIsWithShortStopContext(Side $side): void
+    public function testIsWithShortStop(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isWithShortStop());
@@ -187,6 +187,31 @@ final class BuyOrderTest extends TestCase
 
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
         self::assertTrue($buyOrder->isWithShortStop());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testEmptyIsForceBuyOrderWhenContextIsNotSet(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+
+        self::assertFalse($buyOrder->isForceBuyOrder());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testIsForceBuyOrder(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::FORCE_BUY_CONTEXT => 100500]);
+        self::assertFalse($buyOrder->isForceBuyOrder());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::FORCE_BUY_CONTEXT => false]);
+        self::assertFalse($buyOrder->isForceBuyOrder());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::FORCE_BUY_CONTEXT => true]);
+        self::assertTrue($buyOrder->isForceBuyOrder());
     }
 
     /**

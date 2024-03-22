@@ -8,7 +8,9 @@ use App\Helper\Json;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
 
+use function filter_var;
 use function is_numeric;
+use function is_string;
 use function sprintf;
 use function str_ends_with;
 use function substr;
@@ -109,8 +111,14 @@ final class ConsoleParamFetcher
 
     public function getBoolOption(string $name): bool
     {
-        if ($this->input->getOption($name) !== null) {
-            return $this->input->getOption($name) === true;
+        $providedValue = $this->input->getOption($name);
+
+        if ($providedValue !== null) {
+            if (is_string($providedValue)) {
+                return filter_var($this->input->getOption($name), FILTER_VALIDATE_BOOL);
+            }
+
+            return $providedValue === true;
         }
 
         return false;
