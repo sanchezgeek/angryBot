@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerC
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
+use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -26,6 +27,7 @@ use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
+use Mockery;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -39,7 +41,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected const SYMBOL = Symbol::BTCUSDT;
 
-    protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
+    protected ExchangeAccountServiceInterface|Mockery\MockInterface $exchangeAccountServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected LoggerInterface $loggerMock;
@@ -49,7 +51,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
+        $this->exchangeAccountServiceMock = Mockery::mock(AbstractExchangeAccountService::class)->makePartial();
 
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
@@ -90,22 +92,18 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $this->exchangeAccountServiceMock
-            ->method('getSpotWalletBalance')
+            ->shouldReceive('getSpotWalletBalance')
             ->with($coin = $symbol->associatedCoin())
-            ->willReturn(
-                new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
-            )
+            ->andReturn(new WalletBalance(AccountType::SPOT, $coin, $amount, $amount))
         ;
     }
 
     protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
     {
         $this->exchangeAccountServiceMock
-            ->method('getContractWalletBalance')
+            ->shouldReceive('getContractWalletBalance')
             ->with($coin = $symbol->associatedCoin())
-            ->willReturn(
-                new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),
-            )
+            ->andReturn(new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),)
         ;
     }
 }
