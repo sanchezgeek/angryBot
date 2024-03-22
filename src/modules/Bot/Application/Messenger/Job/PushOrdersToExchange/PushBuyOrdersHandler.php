@@ -82,58 +82,23 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
 
-    private function transferToContract(WalletBalance $spotBalance, float $amount): bool
-    {
-        $availableBalance = $spotBalance->availableBalance - 0.1;
-
-        if ($availableBalance < $amount) {
-            if ($availableBalance < 0.2) {
-                return false;
-            }
-            $amount = $availableBalance - 0.1;
-        }
-
-        try {
-            $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
-        } catch (Throwable $e) {echo sprintf('%s::%s: %s', __FILE__, __LINE__, $e->getMessage()) . PHP_EOL;}
-
-        return true;
-    }
-
     /**
      * @return BuyOrder[]
      */
     public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
     {
-        $indexPrice = $ticker->indexPrice;
-        $volumeOrdering = $this->canTakeProfit($position, $ticker)
-            ? 'DESC'
-            : 'ASC'; // To get the cheapest orders (if can afford buy less qty)
+        $volumeOrdering = $this->canTakeProfit($position, $ticker) ? 'DESC' : 'ASC'; // To get the cheapest orders (if can afford buy less qty)
 
         return $this->buyOrderRepository->findActiveInRange(
             side: $side,
-            from: ($position->isShort() ? $indexPrice->value() - 15 : $indexPrice->value() - 20),
-            to: ($position->isShort() ? $indexPrice->value() + 20 : $indexPrice->value() + 15),
+            from: ($position->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
+            to: ($position->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
             qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
             },
         );
     }
-
-    public const LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 105, 1800],
-        83 => [-30, 70, 1500],
-        73 => [-25, 50, 1000],
-        63 => [-15, 30, 850],
-    ];
-
-    public const HEDGE_LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 70, 1400],
-        85 => [-25, 55, 1300],
-        75 => [-20, 40, 1200],
-        65 => [-5, 5, 850],
-    ];
 
     public function __invoke(PushBuyOrders $message): void
     {
@@ -145,45 +110,17 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $symbol = $message->symbol;
 
         $ticker = $this->exchangeService->ticker($symbol);
-        $position = $this->positionService->getPosition($symbol, $side);
-
-        if ($position) {
-            $hedge = $position->getHedge();
-            if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
-                return;
-            }
-
-            $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
-            $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
-            $totalPositionLeverage = $this->totalPositionLeverage($position);
-
-            $sleepRanges = $hedge?->isMainPosition($position) ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
-            foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
-                // @todo | by now only for linear
-                if ($totalPositionLeverage >= $leverage) {
-                    if (!$position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
-                        break;
-                    }
-                    if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
-                        return;
-                    }
-                    if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {
-                        return;
-                    }
-
-                    break;
-                }
-            }
+        if (!$this->canBuy($ticker)) {
+            return;
         }
+
+        $position = $this->positionService->getPosition($symbol, $side);
+        $ignoreBuy = $this->isNeedIgnoreBuy($position, $ticker);
 
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
             // @todo test
-            return;
-        }
-
-        if (!$this->canBuy($ticker)) {
             return;
         }
 
@@ -194,6 +131,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         try {
             $boughtOrders = [];
             foreach ($orders as $order) {
+                if ($ignoreBuy && !$order->isForceBuyOrder()) {
+                    continue;
+                }
+
                 $lastBuy = $order;
                 if ($order->mustBeExecuted($ticker)) {
                     $this->buy($position, $ticker, $order);
@@ -247,9 +188,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
                 // reopen closed volume on further movement
                 $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(50) : $ticker->indexPrice->add(50);
-                $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value())
-                );
+                $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value()));
 
                 return;
             }
@@ -483,6 +422,72 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $totalBalance = $this->exchangeAccountService->getCachedTotalBalance($position->symbol);
 
         return ($position->initialMargin->value() / (0.94 * $totalBalance)) * 100;
+    }
+
+    private function transferToContract(WalletBalance $spotBalance, float $amount): bool
+    {
+        $availableBalance = $spotBalance->availableBalance - 0.1;
+
+        if ($availableBalance < $amount) {
+            if ($availableBalance < 0.2) {
+                return false;
+            }
+            $amount = $availableBalance - 0.1;
+        }
+
+        try {
+            $this->exchangeAccountService->interTransferFromSpotToContract($spotBalance->assetCoin, $amount);
+        } catch (Throwable $e) {echo sprintf('%s::%s: %s', __FILE__, __LINE__, $e->getMessage()) . PHP_EOL;}
+
+        return true;
+    }
+
+    public const LEVERAGE_SLEEP_RANGES = [
+        92 => [-40, 105, 1800],
+        83 => [-30, 70, 1500],
+        73 => [-25, 50, 1000],
+        63 => [-15, 30, 850],
+    ];
+
+    public const HEDGE_LEVERAGE_SLEEP_RANGES = [
+        92 => [-40, 70, 1400],
+        85 => [-25, 55, 1300],
+        75 => [-20, 40, 1200],
+        65 => [-5, 5, 850],
+    ];
+
+    private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): bool
+    {
+        if ($position) {
+            $hedge = $position->getHedge();
+            if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
+                return true;
+            }
+
+            $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+            $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
+            $totalPositionLeverage = $this->totalPositionLeverage($position);
+
+            $sleepRanges = $hedge?->isMainPosition($position) ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
+            foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
+                // @todo | by now only for linear
+                if ($totalPositionLeverage >= $leverage) {
+                    if (!$position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
+                        break;
+                    }
+                    if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
+                        return true;
+                    }
+                    if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {
+                        return true;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function __construct(
