@@ -20,11 +20,9 @@ use function substr;
 /**
  * @see \App\Tests\Unit\Domain\Value\Percent\PercentTest
  */
-final class Percent implements Stringable
+final class Percent extends AbstractFloat implements Stringable
 {
     private const PART_ROUND_PRECISION = 3;
-
-    private float $value;
 
     public function __construct(float $value, bool $strict = true)
     {
@@ -32,7 +30,7 @@ final class Percent implements Stringable
             throw new DomainException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $value));
         }
 
-        $this->value = $value;
+        parent::__construct($value);
     }
 
     public static function string(string $percent): self
@@ -51,14 +49,9 @@ final class Percent implements Stringable
         return new self($value);
     }
 
-    public function value(): float
-    {
-        return $this->value;
-    }
-
     public function part(): float
     {
-        return round($this->value / 100, self::PART_ROUND_PRECISION);
+        return round($this->value() / 100, self::PART_ROUND_PRECISION);
     }
 
     public function of(int|float|IntegerValue|AbstractFloat $value): float|AbstractFloat
@@ -76,6 +69,6 @@ final class Percent implements Stringable
 
     public function __toString(): string
     {
-        return sprintf('%.2f%%', $this->value);
+        return sprintf('%.2f%%', $this->value());
     }
 }

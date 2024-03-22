@@ -21,8 +21,8 @@ final class HedgeService
 {
     use LoggerTrait;
 
-    private const MIN = 100;
-    private const RANGES = [
+    public const M_POSITION_IM_PERCENT_TO_SUPPORT_MIN = 100;
+    public const M_POSITION_IM_PERCENT_TO_SUPPORT_RANGES = [
         [-200, 500, 140],
         [500, 650, 120],
         [650, 800, 100],
@@ -31,7 +31,7 @@ final class HedgeService
         [1050, 1200, 65],
         [1200, 1350, 60],
     ];
-    private const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT = 50;
+    public const M_POSITION_IM_PERCENT_TO_SUPPORT_DEFAULT = 50;
 
     public function __construct(
         private readonly StopService $stopService,
@@ -49,10 +49,10 @@ final class HedgeService
         $ticker = $this->exchangeService->ticker($hedge->mainPosition->symbol);
         $currentMainPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($hedge->mainPosition);
 
-        $mainImPercentToSupport = self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_DEFAULT;
-        foreach (self::RANGES as $key => [$fromPnl, $toPnl, $expectedMainImPercentToSupport]) {
+        $mainImPercentToSupport = self::M_POSITION_IM_PERCENT_TO_SUPPORT_DEFAULT;
+        foreach (self::M_POSITION_IM_PERCENT_TO_SUPPORT_RANGES as $key => [$fromPnl, $toPnl, $expectedMainImPercentToSupport]) {
             if ($key === 0 && $currentMainPositionPnlPercent < $fromPnl) {
-                $mainImPercentToSupport = self::MIN;
+                $mainImPercentToSupport = self::M_POSITION_IM_PERCENT_TO_SUPPORT_MIN;
                 break;
             }
             if ($currentMainPositionPnlPercent >= $fromPnl && $currentMainPositionPnlPercent <= $toPnl) {
