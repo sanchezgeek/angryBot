@@ -22,6 +22,7 @@ final class WorkerExceptionEventListener
     private const CONNECTION_ERR_MESSAGES = [
         'timestamp or recv_window param',
         'Server Timeout',
+//        'Timestamp for this request is outside of the recvWindow',
     ];
 
     public function __construct(
@@ -77,7 +78,7 @@ final class WorkerExceptionEventListener
     }
 
     private const CONN_ERR_PENDING_INTERVAL = 5;
-    private const CONN_ERR_RESET_INTERVAL = 25;
+    private const CONN_ERR_RESET_INTERVAL = 35;
 
     private ?int $connErrorRecievedAt = null;
     private ?int $resetAt = null;
