@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Application\UseCase\CalcPositionLiquidationPrice;
 
-use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceEntryDto;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
+use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
-use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
-use App\Domain\Value\Percent\Percent;
+use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\PositionFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -24,33 +22,47 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
         $this->handler = self::getContainer()->get(CalcPositionLiquidationPriceHandler::class);
     }
 
-    public function testCalcLiqPrice(): void
+    public function testSimpleCalc(): void
     {
-        // Arrange
         $symbol = Symbol::BTCUSDT;
 
-        $usdtDeposit = new CoinAmount($symbol->associatedCoin(), 28.5);
+        $position = PositionFactory::short($symbol, 50000, 0.1, 100);
 
-        $size = 0.057;
-        $entry = 34432;
-        $leverage = 100;
+        $totalPositionsBalance = $position->initialMargin->value();
+        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
 
-        $position = PositionFactory::short($symbol, $entry, $size, $leverage);
-        $openPositionCommission = Percent::string('10%')->of($position->initialMargin);
-        $contractBalanceAfterOpenPosition = $usdtDeposit->sub($openPositionCommission);
-
-        $entryDto = new CalcPositionLiquidationPriceEntryDto($position, $contractBalanceAfterOpenPosition);
-
-        $expectedLiquidationPrice = $entry + ($entry / $leverage / 2) + $contractBalanceAfterOpenPosition->sub($position->initialMargin)->value() / $position->size; // 34725.41
+        $expectedLiquidationPrice = 50450;
 
         // Act
-        $result = $this->handler->handle($entryDto);
-        $docsResult = $this->handler->handleFromDocs($entryDto);
+        $result = $this->handler->handle($position, $contractWalletBalance);
+        $docsResult = $this->handler->handleFromDocs($position, $contractWalletBalance);
 
         // Assert
         $diff = $result->estimatedLiquidationPrice()->value() - $docsResult->estimatedLiquidationPrice()->value();
         self::assertTrue(abs($diff) <= 0.02);
-        self::assertEquals(34725.41, PriceHelper::round($expectedLiquidationPrice));
         self::assertEquals(new CalcPositionLiquidationPriceResult(Price::float($expectedLiquidationPrice)), $docsResult);
+    }
+
+    /**
+     * @todo | is there hedge case explained in docs?
+     */
+    public function testCalcForPositionWithSupport(): void
+    {
+        $symbol = Symbol::BTCUSDT;
+
+        $main = PositionFactory::short($symbol, 50000, 0.1, 100);
+        $support = PositionFactory::long($symbol, 49000, 0.01, 100);
+        $main->setOppositePosition($support);
+
+        $totalPositionsBalance = $main->initialMargin->value() + $support->initialMargin->value();
+        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
+
+        $expectedLiquidationPrice = 50583.333;
+
+        // Act
+        $result = $this->handler->handle($main, $contractWalletBalance);
+
+        // Assert
+        self::assertEquals(new CalcPositionLiquidationPriceResult(Price::float($expectedLiquidationPrice)), $result);
     }
 }
