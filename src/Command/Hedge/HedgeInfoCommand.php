@@ -6,22 +6,22 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
+use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Value\Percent\Percent;
-use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use function explode;
 use function sprintf;
 
 #[AsCommand(name: 'hedge:info')]
 class HedgeInfoCommand extends AbstractCommand
 {
     use SymbolAwareCommand;
+    use PriceRangeAwareCommand;
     use CommandRunnerCommand;
 
     public const MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_OPTION = 'supportMainIMPercent';
@@ -43,7 +43,7 @@ class HedgeInfoCommand extends AbstractCommand
         $supportPosition = $hedge->supportPosition;
         $specifiedMainPositionIMPercentToSupport = $this->paramFetcher->percentOption(self::MAIN_POSITION_IM_PERCENT_FOR_SUPPORT_OPTION);
 
-        $mainPositionIMPercentToSupport = $specifiedMainPositionIMPercentToSupport ? new Percent($specifiedMainPositionIMPercentToSupport) : $this->hedgeService->getDefaultMainPositionIMPercentToSupport($hedge);
+        $mainPositionIMPercentToSupport = $specifiedMainPositionIMPercentToSupport ? new Percent($specifiedMainPositionIMPercentToSupport, false) : $this->hedgeService->getDefaultMainPositionIMPercentToSupport($hedge);
         $applicableSupportSize = $this->hedgeService->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
         $sizeDiff = $supportPosition->size - $applicableSupportSize;
 
@@ -53,7 +53,7 @@ class HedgeInfoCommand extends AbstractCommand
 
         if ($sizeDiff > 0) {
             if ($this->io->confirm(sprintf('Do you want to add stops for this size diff? [%.3f]', $sizeDiff), false)) {
-                $range = $this->getRange($this->io->ask('Provide `sl:grid` range:', '-10%..10%'));
+                $range = $this->getRangePretty($this->io->ask('Provide `sl:grid` range:', '-10%..10%'));
                 $slGridOptions = $this->io->ask('Provide `sl:grid` options:', '');
                 $cmd = sprintf('php bin/console sl:grid %s -f%s -t%s %.3f %s',
                     $supportPosition->side->value,
@@ -69,33 +69,6 @@ class HedgeInfoCommand extends AbstractCommand
         }
 
         return Command::SUCCESS;
-    }
-
-    private function getRange(string $input): array
-    {
-        $input = explode('..', $input);
-        if (count($input) !== 2) {
-            throw new InvalidArgumentException('Invalid range provided');
-        }
-
-        $from = $this->getRangeValue($input[0], 'from');
-        $to = $this->getRangeValue($input[1], 'to');
-
-        return [$from, $to];
-    }
-
-    protected function getRangeValue(string $input, string $name): string
-    {
-        try {
-            $percent = $this->paramFetcher->fetchPercentValue($input, $name, 'option');
-            return $percent . '%';
-        } catch (InvalidArgumentException) {
-            try {
-                return $this->paramFetcher->fetchFloatValue($input, $name, 'option');
-            } catch (InvalidArgumentException $e) {
-                throw $e;
-            }
-        }
     }
 
     public function __construct(

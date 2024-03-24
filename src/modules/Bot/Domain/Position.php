@@ -40,6 +40,29 @@ final class Position
         $this->leverage = new Leverage($leverage);
     }
 
+    public function cloneWithNewSize(float $newSize): self
+    {
+        $entryPrice = $this->entryPrice;
+        $newValue = $entryPrice * $newSize; // linear
+
+        $position = new Position(
+            $this->side,
+            $this->symbol,
+            $entryPrice,
+            $newSize,
+            $newValue,
+            $this->liquidationPrice,
+            $newValue / $this->leverage->value(),
+            $this->leverage->value()
+        );
+
+        if ($this->oppositePosition) {
+            $position->setOppositePosition($this->oppositePosition);
+        }
+
+        return $position;
+    }
+
     /**
      * @todo Get from response
      */

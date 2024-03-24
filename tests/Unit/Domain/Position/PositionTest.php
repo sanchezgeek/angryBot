@@ -12,6 +12,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -22,6 +23,8 @@ use function sprintf;
  */
 final class PositionTest extends TestCase
 {
+    use PositionSideAwareTest;
+
     public function testShortPosition(): void
     {
         $side = Side::Sell;
@@ -237,5 +240,18 @@ final class PositionTest extends TestCase
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => true];
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testCloneWithNewSize(Side $side): void
+    {
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000, 50, 100);
+
+        self::assertEquals(
+            new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, 51000, 55, 100),
+            $position->cloneWithNewSize(0.11)
+        );
     }
 }
