@@ -10,6 +10,9 @@ use App\Domain\Value\Percent\Percent;
 
 use function abs;
 
+/**
+ * @see \App\Tests\Unit\Bot\Application\Service\Hedge\HedgeTest
+ */
 final readonly class Hedge
 {
     private function __construct(
@@ -99,5 +102,14 @@ final readonly class Hedge
     public function getPositionsDistance(): float
     {
         return abs($this->supportPosition->entryPrice - $this->mainPosition->entryPrice);
+    }
+
+    public function isProfitableHedge(): bool
+    {
+        if ($this->mainPosition->isShort()) {
+            return $this->mainPosition->entryPrice >= $this->supportPosition->entryPrice;
+        }
+
+        return $this->mainPosition->entryPrice <= $this->supportPosition->entryPrice;
     }
 }
