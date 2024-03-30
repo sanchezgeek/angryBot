@@ -185,8 +185,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
 
                 // reopen closed volume on further movement
-                $diff = 50 + random_int(-20, 35);
-                $reopenPrice = $position->isShort() ? $ticker->indexPrice->sub($diff) : $ticker->indexPrice->add($diff);
+                $distance = 100; if ($_ENV['APP_ENV'] !== 'test') $distance += random_int(-20, 35);
+                $reopenPrice = $position->isShort() ? $ticker->indexPrice->sub($distance) : $ticker->indexPrice->add($distance);
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
                 );

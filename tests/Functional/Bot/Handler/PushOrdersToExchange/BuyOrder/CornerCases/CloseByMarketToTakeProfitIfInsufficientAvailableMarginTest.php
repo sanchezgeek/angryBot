@@ -25,6 +25,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
     private const USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
     private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = PushBuyOrdersHandler::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
     private const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
+    private const REOPEN_DISTANCE = 100;
 
     /**
      * @dataProvider doNotCloseByMarketCasesProvider
@@ -110,12 +111,12 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         ($this->handler)(new PushBuyOrders($symbol, $side));
 
         // Assert
-        $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(50) : $ticker->indexPrice->add(50);
+        $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(self::REOPEN_DISTANCE) : $ticker->indexPrice->add(self::REOPEN_DISTANCE);
 
         self::seeBuyOrdersInDb(
             clone $buyOrder,
             # also must create BuyOrder to reopen closed volume on further movement
-            new BuyOrder($buyOrder->getId() + 1, $reopenOnPrice, $expectedCloseOrderVolume, $position->side)
+            new BuyOrder($buyOrder->getId() + 1, $reopenOnPrice, $expectedCloseOrderVolume, $position->side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
         );
     }
 

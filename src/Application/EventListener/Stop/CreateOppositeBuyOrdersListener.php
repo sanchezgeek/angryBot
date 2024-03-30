@@ -44,7 +44,8 @@ final class CreateOppositeBuyOrdersListener
         $side = $stop->getPositionSide();
         $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         // @todo | how to check in tests?
-        $distance = $this->getBuyOrderOppositePriceDistance($side) + random_int(-30, 35);
+
+        $distance = $this->getBuyOrderOppositePriceDistance($side); if ($_ENV['APP_ENV'] !== 'test') $distance += random_int(-30, 35);
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
