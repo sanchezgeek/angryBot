@@ -57,6 +57,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
+    public const FIX_SUPPORT_ENABLED = true;
     public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = false;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
@@ -120,8 +121,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
-            // @todo test
-            return;
+            $ignoreBuy = true;
         }
 
         $orders = $this->findOrdersNearTicker($side, $position, $ticker);
@@ -175,22 +175,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             if (!$lastBuy->isOnlyIfHasAvailableBalanceContextSet() && $this->canTakeProfit($position, $ticker)) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-                $volumeClosedForTakeProfit = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
-                $this->orderService->closeByMarket($position, $volumeClosedForTakeProfit);
+                $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
+                $this->orderService->closeByMarket($position, $volumeClosed);
 
                 if (!$position->isSupportPosition()) {
-                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosedForTakeProfit);
+                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosed);
                     $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
                     $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
                 }
 
-                $this->buyOrderRepository->save($lastBuy);
-
                 // reopen closed volume on further movement
                 $diff = 50 + random_int(-20, 35);
-                $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub($diff) : $ticker->indexPrice->add($diff);
+                $reopenPrice = $position->isShort() ? $ticker->indexPrice->sub($diff) : $ticker->indexPrice->add($diff);
                 $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
+                    new CreateBuyOrderEntryDto($side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
                 );
 
                 return;
@@ -198,7 +196,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             $priceToCalcLiqDiff = $position->isShort() ? max($position->entryPrice, $ticker->markPrice->value()) : min($position->entryPrice, $ticker->markPrice->value());
             if (
-                (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->getOnlyAfterExchangeOrderExecutedContext())
+                self::FIX_SUPPORT_ENABLED
+                && (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->getOnlyAfterExchangeOrderExecutedContext())
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
                 && ($hedge = $position->getHedge())
                 && $hedge->isMainPosition($position)
@@ -217,34 +216,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->buyOrderRepository->save($lastBuy);
                 return;
             }
-
-            /**
-             * (1) option
-             *      just hard "off" / "on"
-             * Then options divide into three branches:
-             * (1) For support position
-             *      1) just "off"
-             *         => from which position profit must be taken?
-             *      3) from self
-             *      4) from opposite
-             *
-             *    For 3 and 4 options there must be some setting to choose minimum applicable PNL%
-             *
-             *
-             *
-             * Maybe decision about ability to use profit from current position also must be made based on selected option?
-             */
-
-//            if (($hedge = $position->getHedge())) {
-//                if (
-//                    $hedge->isSupportPosition($position) && $hedge->needIncreaseSupport()
-//                    && ($ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 200 // mainPosition PNL%
-//                ) {
-//                    $this->orderService->closeByMarket($position->oppositePosition, 0.001); // $this->messageBus->dispatch(new IncreaseHedgeSupportPositionByGetProfitFromMain($e->symbol, $e->side, $e->qty));
-//                } // elseif ($hedge->isMainPosition($position)) @todo придумать логику по восстановлению убытков главной позиции
-//                // если $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop) (@see PushStopsHandler) окажется неработоспособной
-//                // например, если на момент проверки ещё нужно было держать объём саппорта и сервис не был вызван
-//            }
 
             $this->lastCannotAffordAtPrice = $ticker->indexPrice->value();
             $this->lastCannotAffordAt = $this->clock->now();
