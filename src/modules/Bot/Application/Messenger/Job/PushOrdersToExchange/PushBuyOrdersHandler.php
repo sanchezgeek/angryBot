@@ -187,8 +187,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->buyOrderRepository->save($lastBuy);
 
                 // reopen closed volume on further movement
-                $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub(50) : $ticker->indexPrice->add(50);
-                $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value()));
+                $diff = 50 + random_int(-20, 35);
+                $reopenOnPrice = $position->isShort() ? $ticker->indexPrice->sub($diff) : $ticker->indexPrice->add($diff);
+                $this->createBuyOrderHandler->handle(
+                    new CreateBuyOrderEntryDto($side, $volumeClosedForTakeProfit, $reopenOnPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
+                );
 
                 return;
             }
