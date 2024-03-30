@@ -27,6 +27,7 @@ class BuyOrder implements HasEvents
     public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
     public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
     public const FORCE_BUY_CONTEXT = 'forceBuy';
+    public const ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
 
     /**
      * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
@@ -110,6 +111,11 @@ class BuyOrder implements HasEvents
     public function isForceBuyOrder(): bool
     {
         return ($this->context[self::FORCE_BUY_CONTEXT] ?? null) === true;
+    }
+
+    public function isOnlyIfHasAvailableBalanceContextSet(): bool
+    {
+        return ($this->context[self::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT] ?? null) === true;
     }
 
     public function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId): self

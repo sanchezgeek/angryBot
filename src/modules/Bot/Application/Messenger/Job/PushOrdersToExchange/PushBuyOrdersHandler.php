@@ -173,7 +173,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
 
-            if ($this->canTakeProfit($position, $ticker)) {
+            if (!$lastBuy->isOnlyIfHasAvailableBalanceContextSet() && $this->canTakeProfit($position, $ticker)) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
                 $volumeClosedForTakeProfit = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
                 $this->orderService->closeByMarket($position, $volumeClosedForTakeProfit);

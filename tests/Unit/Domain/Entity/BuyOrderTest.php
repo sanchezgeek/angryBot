@@ -217,6 +217,31 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
+    public function testEmptyIsOnlyIfHasAvailableBalanceWhenContextIsNotSet(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+
+        self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testIsOnlyIfHasAvailableBalanceWhenContext(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => 100500]);
+        self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => false]);
+        self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true]);
+        self::assertTrue($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
     public function testEmptyStopDistanceContext(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
