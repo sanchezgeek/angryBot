@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest;
 
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Tests\Functional\Infrastructure\BybBit\Service\ApiErrorTestCaseData;
 use App\Tests\Functional\Infrastructure\BybBit\Service\ApiTestCaseData;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;

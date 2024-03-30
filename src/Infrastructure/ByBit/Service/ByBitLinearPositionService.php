@@ -21,11 +21,9 @@ use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
-use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-
 use LogicException;
 
 use function end;

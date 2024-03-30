@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\Service\Exception\Trade;
+namespace App\Bot\Application\Service\Exchange\Trade;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;

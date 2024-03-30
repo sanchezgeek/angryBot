@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service\Trade;
 
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -18,7 +19,6 @@ use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
-use App\Infrastructure\ByBit\Service\Exception\Trade\CannotAffordOrderCost;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use Closure;

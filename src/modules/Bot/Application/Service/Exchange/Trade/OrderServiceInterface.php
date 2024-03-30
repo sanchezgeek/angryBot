@@ -10,6 +10,8 @@ interface OrderServiceInterface
 {
     /**
      * @return string `orderId` received from the exchange in case of success
+     *
+     * @throws CannotAffordOrderCost
      */
     public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string;
 
