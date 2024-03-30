@@ -8,7 +8,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use Exception;
 
-final class CannotAffordOrderCost extends Exception
+final class CannotAffordOrderCostException extends Exception
 {
     private function __construct(
         public readonly Symbol $symbol,

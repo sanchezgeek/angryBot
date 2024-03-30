@@ -11,7 +11,7 @@ use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -160,7 +160,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     }
                 }
             }
-        } catch (CannotAffordOrderCost $e) {
+        } catch (CannotAffordOrderCostException $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($lastBuy->getSuccessSpotTransfersCount() < 1 && $this->canUseSpot($ticker, $position, $spotBalance)) {
                 $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
@@ -223,7 +223,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @throws CannotAffordOrderCost
+     * @throws CannotAffordOrderCostException
      */
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest;
 
-use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -111,7 +111,7 @@ final class MarketBuyTest extends ByBitOrderServiceTestAbstract
             $cases[] = ApiErrorTestCaseData::knownApiError(
                 ApiV5Errors::CannotAffordOrderCost,
                 'Cannot afford',
-                CannotAffordOrderCost::forBuy($symbol, $side, self::ORDER_QTY),
+                CannotAffordOrderCostException::forBuy($symbol, $side, self::ORDER_QTY),
             )->with(['category' => $category, 'symbol' => $symbol, 'positionSide' => $side]);
         }
 

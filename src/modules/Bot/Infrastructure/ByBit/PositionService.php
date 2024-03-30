@@ -7,7 +7,7 @@ namespace App\Bot\Infrastructure\ByBit;
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -133,7 +133,7 @@ final class PositionService implements PositionServiceInterface
      *
      * @inheritDoc
      *
-     * @throws CannotAffordOrderCost
+     * @throws CannotAffordOrderCostException
      *
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
@@ -156,7 +156,7 @@ final class PositionService implements PositionServiceInterface
         ]);
 
         if ($result['ret_code'] === 130021 && \str_contains($result['ret_msg'], 'CannotAffordOrderCost')) {
-            throw CannotAffordOrderCost::forBuy($position->symbol, $position->side, $qty);
+            throw CannotAffordOrderCostException::forBuy($position->symbol, $position->side, $qty);
         }
 
         if ($result['ret_code'] === 10006 && $result['ret_msg'] === 'Too many visits. Exceeded the API Rate Limit.') {

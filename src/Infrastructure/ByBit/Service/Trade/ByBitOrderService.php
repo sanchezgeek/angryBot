@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service\Trade;
 
-use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCost;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -41,7 +41,7 @@ final class ByBitOrderService implements OrderServiceInterface
     /**
      * @inheritDoc
      *
-     * @throws CannotAffordOrderCost
+     * @throws CannotAffordOrderCostException
      *
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
@@ -55,7 +55,7 @@ final class ByBitOrderService implements OrderServiceInterface
             PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
             static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
                 match ($error->code()) {
-                    ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCost::forBuy(
+                    ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
                         $symbol,
                         $positionSide,
                         $qty,

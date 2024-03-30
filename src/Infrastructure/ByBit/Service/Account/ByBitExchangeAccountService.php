@@ -6,7 +6,6 @@ namespace App\Infrastructure\ByBit\Service\Account;
 
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
-use App\Bot\Application\Service\Exchange\Exception\AccountCoinDataNotFound;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Helper\FloatHelper;
@@ -20,6 +19,9 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 
+use Psr\Log\LoggerInterface;
+
+use function debug_backtrace;
 use function is_array;
 use function sprintf;
 use function uuid_create;
@@ -28,13 +30,14 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 {
     use ByBitApiCallHandler;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly LoggerInterface $appErrorLogger,
+    ) {
         $this->apiClient = $apiClient;
     }
 
     /**
-     * @throws AccountCoinDataNotFound
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
@@ -45,8 +48,6 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     }
 
     /**
-     * @throws AccountCoinDataNotFound
-     *
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
@@ -86,8 +87,6 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     }
 
     /**
-     * @throws AccountCoinDataNotFound
-     *
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
@@ -117,7 +116,12 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         if (!$walletBalance) {
-            throw new AccountCoinDataNotFound('ByBit', $accountType, $coin);
+            $this->appErrorLogger->critical(
+                sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value),
+                ['file' => __FILE__, 'line' => __LINE__]
+            );
+
+            return new WalletBalance($accountType, $coin, 0, 0);
         }
 
         return $walletBalance;
