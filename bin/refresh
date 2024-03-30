@@ -3,5 +3,6 @@
 rm -rf /srv/app/var/log/*
 
 touch /srv/app/var/log/dev.log
+touch /srv/app/var/log/bot-supervizord-out.log
 touch /srv/app/var/log/app_errors.log
 touch /srv/app/var/log/connection_errors.log
