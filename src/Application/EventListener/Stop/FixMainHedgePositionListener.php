@@ -17,6 +17,7 @@ use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
+use function random_int;
 use function sprintf;
 use function var_dump;
 
@@ -29,7 +30,7 @@ final class FixMainHedgePositionListener
     const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
 
     const SUPPLY_STOP_VOLUME = 0.001;
-    const SUPPLY_STOP_DISTANCE = 350;
+    const SUPPLY_STOP_DISTANCE = 500;
 
     public function __construct(
         private readonly OrderCostHelper $orderCostHelper,
@@ -92,7 +93,8 @@ final class FixMainHedgePositionListener
         }
 
         $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
-        $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + self::SUPPLY_STOP_DISTANCE : $stopPrice - self::SUPPLY_STOP_DISTANCE;
+        $distance = self::SUPPLY_STOP_DISTANCE + random_int(-150, 30);
+        $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance;
         $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
 
         var_dump('supply stop created');
