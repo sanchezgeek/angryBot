@@ -446,10 +446,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     public const LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 105, 1800],
-        83 => [-30, 70, 1500],
-        73 => [-25, 50, 1000],
-        63 => [-15, 30, 850],
+        92 => [-40, 125, 1250],
+        83 => [-30, 90, 1000],
+        73 => [-25, 70, 900],
+        63 => [-15, 50, 750],
     ];
 
     public const HEDGE_LEVERAGE_SLEEP_RANGES = [
