@@ -10,10 +10,14 @@ use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 
+use function count;
+use function explode;
 use function sprintf;
 
 trait PriceRangeAwareCommand
 {
+    use ConsoleInputAwareCommand;
+
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
 
@@ -56,5 +60,37 @@ trait PriceRangeAwareCommand
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
 
         return PriceRange::create($fromPrice, $toPrice);
+    }
+
+    protected function getRangePretty(string $input): array
+    {
+        $input = explode('..', $input);
+        if (count($input) !== 2) {
+            throw new InvalidArgumentException('Invalid range provided');
+        }
+
+        $from = $this->getRangeValue($input[0], 'from');
+        $to = $this->getRangeValue($input[1], 'to');
+
+        return [$from, $to];
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    private function getRangeValue(string $input, string $name): string|float
+    {
+        try {
+            $percent = $this->paramFetcher->fetchPercentValue($input, $name, 'option');
+            return $percent . '%';
+        } catch (InvalidArgumentException) {
+            try {
+                return $this->paramFetcher->fetchFloatValue($input, $name, 'option');
+            } catch (InvalidArgumentException) {
+                throw new InvalidArgumentException(
+                    sprintf('Percent or float value expected ("%s" provided).', $input)
+                );
+            }
+        }
     }
 }
