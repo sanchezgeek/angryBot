@@ -19,8 +19,8 @@ use function in_array;
 use function sprintf;
 use function str_contains;
 
-#[AsCommand(name: 'acc:info')]
-class AccInfoCommand extends AbstractCommand
+#[AsCommand(name: 'balance:info')]
+class BalanceInfoCommand extends AbstractCommand
 {
     use SymbolAwareCommand;
 
@@ -40,17 +40,6 @@ class AccInfoCommand extends AbstractCommand
     {
         $coin = $this->getSymbol()->associatedCoin();
 
-        try {
-            $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
-            $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-            $this->io->note(sprintf('spot: %.3f available / %.3f total', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
-            $this->io->note(sprintf('contract: %.3f available / %.3f total', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
-        } catch (Exception $e) {
-            if (!str_contains($e->getMessage(), 'coin data not found')) {
-                throw $e;
-            }
-        }
-
         if ($transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION)) {
             $to = $this->paramFetcher->getStringOption(self::TRANSFER_TO_OPTION);
             if (!in_array($to, ['c', 's'])) {
@@ -61,6 +50,22 @@ class AccInfoCommand extends AbstractCommand
                 $this->exchangeAccountService->interTransferFromSpotToContract($coin, $transferAmount);
             } else {
                 $this->exchangeAccountService->interTransferFromContractToSpot($coin, $transferAmount);
+            }
+            return Command::SUCCESS;
+        }
+
+        try {
+            $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+            $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
+//             var_dump(
+//                 $spotWalletBalance,
+//                 $contractWalletBalance->availableBalance
+//             );die;
+            $this->io->note(sprintf('spot: %.3f available / %.3f total', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
+            $this->io->note(sprintf('contract: %.3f available / %.3f total', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
+        } catch (Exception $e) {
+            if (!str_contains($e->getMessage(), 'coin data not found')) {
+                throw $e;
             }
         }
 
