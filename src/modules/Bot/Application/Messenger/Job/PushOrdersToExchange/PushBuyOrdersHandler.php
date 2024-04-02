@@ -52,20 +52,22 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     public const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 5.5;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 100;
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 55.5;
+    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     public const FIX_SUPPORT_ENABLED = true;
     public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = false;
 
+    private const RESERVED_BALANCE = 0;
+
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position) < 60) {
+        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
             return true;
         }
 
@@ -175,6 +177,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             if (!$lastBuy->isOnlyIfHasAvailableBalanceContextSet() && $this->canTakeProfit($position, $ticker)) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+                // @todo | move to some service | DRY (below)
                 $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
                 $this->orderService->closeByMarket($position, $volumeClosed);
 
@@ -391,9 +394,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return $canBuy;
     }
 
-    public function totalPositionLeverage(Position $position): float
+    public function totalPositionLeverage(Position $position, Ticker $ticker): float
     {
         $totalBalance = $this->exchangeAccountService->getCachedTotalBalance($position->symbol);
+
+        if ($ticker->isIndexAlreadyOverBuyOrder($position->side, $position->entryPrice)) {
+            $totalBalance -= self::RESERVED_BALANCE;
+        }
 
         return ($position->initialMargin->value() / (0.94 * $totalBalance)) * 100;
     }
@@ -440,7 +447,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
-            $totalPositionLeverage = $this->totalPositionLeverage($position);
+            $totalPositionLeverage = $this->totalPositionLeverage($position, $ticker);
 
             $sleepRanges = $hedge?->isMainPosition($position) ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
             foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
