@@ -5,8 +5,8 @@
 
 namespace Lin\Bybit;
 
-use Lin\Bybit\Api\WebSocket\SocketServer;
 use Lin\Bybit\Api\WebSocket\SocketClient;
+use Lin\Bybit\Api\WebSocket\SocketServer;
 
 
 class BybitWebSocket

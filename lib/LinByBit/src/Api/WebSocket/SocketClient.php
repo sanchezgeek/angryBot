@@ -8,6 +8,10 @@ namespace Lin\Bybit\Api\WebSocket;
 use Workerman\Lib\Timer;
 use Workerman\Worker;
 
+use function Lin\Bybit\Api\WebSocket\phpjson_encode;
+
+use const Lin\Bybit\Api\WebSocket\MySocketClient;
+
 class SocketClient
 {
   use SocketGlobal;

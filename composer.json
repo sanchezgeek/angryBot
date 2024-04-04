@@ -48,7 +48,7 @@
         "psr-4": {
             "App\\": "src/",
             "App\\Bot\\": "src/modules/Bot",
-            "Lin\\Bybit\\": "src/modules/LinByBit/src"
+            "Lin\\Bybit\\": "lib/LinByBit/src"
         }
     },
     "autoload-dev": {

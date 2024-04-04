@@ -5,8 +5,8 @@
 
 namespace Lin\Bybit\Api\WebSocket;
 
-use GlobalData\Server;
 use GlobalData\Client;
+use GlobalData\Server;
 
 trait SocketGlobal
 {
@@ -185,7 +185,7 @@ trait SocketGlobal
 
     protected function getId()
     {
-        list($msec, $sec) = explode(' ', microtime());
+        [$msec, $sec] = explode(' ', microtime());
         return (float)sprintf('%.0f', (floatval($msec) + floatval($sec)) * 1000);
     }
 }

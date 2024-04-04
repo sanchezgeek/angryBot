@@ -5,11 +5,9 @@
 
 namespace Lin\Bybit\Api\WebSocket;
 
-use Lin\Bybit\Api\WebSocket\SocketGlobal;
-use Lin\Bybit\Api\WebSocket\SocketFunction;
+use Workerman\Connection\AsyncTcpConnection;
 use Workerman\Lib\Timer;
 use Workerman\Worker;
-use Workerman\Connection\AsyncTcpConnection;
 
 class SocketServer
 {
