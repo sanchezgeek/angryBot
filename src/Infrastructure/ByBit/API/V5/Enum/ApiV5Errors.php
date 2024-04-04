@@ -9,6 +9,7 @@ enum ApiV5Errors: int
     case MaxActiveCondOrdersQntReached = 110009;
     case BadRequestParams = 10001;
     case BadRequestParams2 = 110092;
+    case BadRequestParams3 = 110093;
     case PermissionDenied = 10005;
 
     public function code(): int

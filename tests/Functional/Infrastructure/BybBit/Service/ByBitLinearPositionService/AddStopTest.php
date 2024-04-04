@@ -148,6 +148,13 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
             '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
         ];
 
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::BadRequestParams3, $msg = 'expect Rising, but trigger_price[346380000] <= current[346388800]??3');
+        yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => ErrorResponseFactory::error($error->code(), $msg),
+            '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
+        ];
+
         $error = ByBitV5ApiError::unknown(100500, 'Some other error');
         yield sprintf('API returned %d code (%s) => UnknownByBitApiErrorException', $error->code(), $error->msg()) => [
             $symbol, $category, $positionSide,
@@ -160,6 +167,29 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
             $symbol, $category, $positionSide,
             '$apiResponse' => PlaceOrderResponseBuilder::error($error)->build(),
             '$expectedException' => self::unexpectedV5ApiErrorException(self::REQUEST_URL, $error, self::CALLED_METHOD),
+        ];
+
+        $positionSide = Side::Buy;
+
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::BadRequestParams, $msg = 'expect Falling, but trigger_price[346380000] >= current[346388800]??3');
+        yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => ErrorResponseFactory::error($error->code(), $msg),
+            '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
+        ];
+
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::BadRequestParams2, $msg = 'expect Falling, but trigger_price[346380000] >= current[346388800]??3');
+        yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => ErrorResponseFactory::error($error->code(), $msg),
+            '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
+        ];
+
+        $error = ByBitV5ApiError::knownError(ApiV5Errors::BadRequestParams3, $msg = 'expect Falling, but trigger_price[346380000] >= current[346388800]??3');
+        yield sprintf('API returned %d code (%s)', $error->code(), $msg) => [
+            $symbol, $category, $positionSide,
+            '$apiResponse' => ErrorResponseFactory::error($error->code(), $msg),
+            '$expectedException' => new TickerOverConditionalOrderTriggerPrice($msg),
         ];
     }
 }

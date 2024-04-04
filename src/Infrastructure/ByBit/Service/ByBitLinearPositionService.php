@@ -173,7 +173,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             }
 
             if (
-                in_array($code, [ApiV5Errors::BadRequestParams->value, ApiV5Errors::BadRequestParams2->value], true)
+                in_array($code, [ApiV5Errors::BadRequestParams->value, ApiV5Errors::BadRequestParams2->value, ApiV5Errors::BadRequestParams3->value], true)
                 && preg_match(
                     sprintf(
                         '/expect %s, but trigger_price\[\d+\] %s current\[\d+\]/',
