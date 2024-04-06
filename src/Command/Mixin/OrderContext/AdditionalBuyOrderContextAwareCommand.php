@@ -25,6 +25,10 @@ trait AdditionalBuyOrderContextAwareCommand
             'caption' => 'Force buy',
             'mappedContext' => BuyOrder::FORCE_BUY_CONTEXT,
         ],
+        'oAB' => [
+            'caption' => 'Only available balance',
+            'mappedContext' => BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT,
+        ],
     ];
 
     protected function configureBuyOrderAdditionalContexts(): static
