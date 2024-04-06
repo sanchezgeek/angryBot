@@ -12,6 +12,7 @@ use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
@@ -21,7 +22,6 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 
 use Psr\Log\LoggerInterface;
 
-use function debug_backtrace;
 use function is_array;
 use function sprintf;
 use function uuid_create;
@@ -41,6 +41,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      */
     public function getSpotWalletBalance(Coin $coin): WalletBalance
     {
@@ -51,26 +52,62 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      */
     public function getContractWalletBalance(Coin $coin): WalletBalance
     {
         return $this->getWalletBalance(AccountType::CONTRACT, $coin);
     }
 
+    /**
+     * @throws UnexpectedApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
         $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 3));
     }
 
+    /**
+     * @throws UnexpectedApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
         $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 3));
     }
 
     /**
+     * @throws UnexpectedApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     */
+    public function interTransferFromFundingToSpot(Coin $coin, float $amount): void
+    {
+        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, FloatHelper::round($amount, 3));
+    }
+
+    /**
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     */
+    public function interTransferFromSpotToFunding(Coin $coin, float $amount): void
+    {
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, FloatHelper::round($amount, 3));
+    }
+
+    /**
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      */
     private function interTransfer(Coin $coin, AccountType $from, AccountType $to, float $amount): void
     {
@@ -90,6 +127,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      */
     private function getWalletBalance(AccountType $accountType, Coin $coin): WalletBalance
     {

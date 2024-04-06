@@ -24,7 +24,7 @@ class BalanceInfoCommand extends AbstractCommand
 {
     use SymbolAwareCommand;
 
-    private const TRANSFER_TO_OPTION = 'transferTo';
+    private const TRANSFER_DIRECTION_OPTION = 'transferDirection';
     private const TRANSFER_AMOUNT_OPTION = 'transferAmount';
 
     protected function configure(): void
@@ -32,7 +32,9 @@ class BalanceInfoCommand extends AbstractCommand
         $this
             ->configureSymbolArgs()
             ->addOption(self::TRANSFER_AMOUNT_OPTION, 'a', InputOption::VALUE_REQUIRED, 'Transfer amount')
-            ->addOption(self::TRANSFER_TO_OPTION, 't', InputOption::VALUE_REQUIRED, 'Transfer to (`c` - to CONTRACT, `s` - to SPOT)')
+            ->addOption(self::TRANSFER_DIRECTION_OPTION, 't', InputOption::VALUE_REQUIRED,
+                'Transfer direction (`sc` === SPOT → CONTRACT, `cs` === CONTRACT → SPOT, `fs` === FUNDING → SPOT, `sf` === SPOT → FUNDING, )'
+            )
         ;
     }
 
@@ -41,26 +43,30 @@ class BalanceInfoCommand extends AbstractCommand
         $coin = $this->getSymbol()->associatedCoin();
 
         if ($transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION)) {
-            $to = $this->paramFetcher->getStringOption(self::TRANSFER_TO_OPTION);
-            if (!in_array($to, ['c', 's'])) {
+            $to = $this->paramFetcher->getStringOption(self::TRANSFER_DIRECTION_OPTION);
+            if (!in_array($to, ['sc', 'cs', 'fs', 'sf'])) {
                 throw new InvalidArgumentException('`c` (contract) or `s`(spot) transferTo option values allowed.');
             }
 
-            if ($to === 'c') {
+            if ($to === 'sc') {
                 $this->exchangeAccountService->interTransferFromSpotToContract($coin, $transferAmount);
-            } else {
+            } elseif ($to === 'cs') {
                 $this->exchangeAccountService->interTransferFromContractToSpot($coin, $transferAmount);
+            } elseif ($to === 'fs') {
+                $this->exchangeAccountService->interTransferFromFundingToSpot($coin, $transferAmount);
+            } elseif ($to === 'sf') {
+                $this->exchangeAccountService->interTransferFromSpotToFunding($coin, $transferAmount);
+            } else {
+                throw new InvalidArgumentException(sprintf('Unknown direction ("%s")', $to));
             }
+
             return Command::SUCCESS;
         }
 
         try {
             $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
             $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-//             var_dump(
-//                 $spotWalletBalance,
-//                 $contractWalletBalance->availableBalance
-//             );die;
+//             var_dump($spotWalletBalance, $contractWalletBalance->availableBalance);die;
             $this->io->note(sprintf('spot: %.3f available / %.3f total', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
             $this->io->note(sprintf('contract: %.3f available / %.3f total', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
         } catch (Exception $e) {

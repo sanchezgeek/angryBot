@@ -9,4 +9,5 @@ enum AccountType: string
 {
     case SPOT = 'SPOT';
     case CONTRACT = 'CONTRACT';
+    case FUNDING = 'FUND';
 }
