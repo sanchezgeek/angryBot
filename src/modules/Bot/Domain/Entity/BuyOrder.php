@@ -33,6 +33,7 @@ class BuyOrder implements HasEvents
      * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
      */
     public const ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
+    public const IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
     public const STOP_DISTANCE_CONTEXT = 'stopDistance';
 
     use HasVolume;
@@ -116,6 +117,11 @@ class BuyOrder implements HasEvents
     public function isOnlyIfHasAvailableBalanceContextSet(): bool
     {
         return ($this->context[self::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT] ?? null) === true;
+    }
+
+    public function isOppositeBuyOrderAfterStopLoss(): bool
+    {
+        return ($this->context[self::IS_OPPOSITE_AFTER_SL_CONTEXT] ?? null) === true;
     }
 
     public function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId): self

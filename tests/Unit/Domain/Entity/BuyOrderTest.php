@@ -201,6 +201,24 @@ final class BuyOrderTest extends TestCase
         self::assertSame(100500.0, $buyOrder->getStopDistance());
     }
 
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testisOppositeBuyOrderAfterStopLoss(Side $side): void
+    {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => 100500]);
+        self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => false]);
+        self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true]);
+        self::assertTrue($buyOrder->isOppositeBuyOrderAfterStopLoss());
+    }
+
     public function testDummy(): void
     {
         self::markTestIncomplete();

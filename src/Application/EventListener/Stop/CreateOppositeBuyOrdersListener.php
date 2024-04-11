@@ -50,7 +50,10 @@ final class CreateOppositeBuyOrdersListener
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
 
-        $context = [BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId()];
+        $context = [
+            BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
+            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
+        ];
 
         $orders = [
             ['volume' => $volume, 'price' => $triggerPrice]
