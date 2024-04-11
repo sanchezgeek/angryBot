@@ -75,38 +75,23 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyExchangeOrderIdContext(Side $side): void
+    public function testExchangeOrderIdContext(Side $side): void
     {
+        # after create with empty context
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
         self::assertFalse($buyOrder->hasExchangeOrderId());
         self::assertNull($buyOrder->getExchangeOrderId());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testGetExchangeOrderIdContext(Side $side): void
-    {
+        # after create with context
         $exchangeOrderId = uuid_create();
-
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
-
         self::assertTrue($buyOrder->hasExchangeOrderId());
         self::assertSame($exchangeOrderId, $buyOrder->getExchangeOrderId());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testSetExchangeOrderIdContext(Side $side): void
-    {
+        # after set by method
         $exchangeOrderId = uuid_create();
-
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
         $buyOrder->setExchangeOrderId($exchangeOrderId);
-
         self::assertTrue($buyOrder->hasExchangeOrderId());
         self::assertSame($exchangeOrderId, $buyOrder->getExchangeOrderId());
     }
@@ -117,7 +102,6 @@ final class BuyOrderTest extends TestCase
     public function testClearExchangeOrderIdContext(Side $side): void
     {
         $exchangeOrderId = uuid_create();
-
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
 
         $buyOrder->clearExchangeOrderId();
@@ -129,36 +113,23 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testCanGetEmptyOnlyAfterExchangeOrderExecutedContext(Side $side): void
+    public function testOnlyAfterExchangeOrderExecutedContext(Side $side): void
     {
+        # after create with empty context
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, []);
-
+        self::assertNull($buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertNull($buyOrder->getOnlyAfterExchangeOrderExecutedContext());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testCanGetOnlyAfterExchangeOrderExecutedContext(Side $side): void
-    {
+        # after create with context
         $exchangeOrderId = uuid_create();
-
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
-
+        self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertSame($exchangeOrderId, $buyOrder->getOnlyAfterExchangeOrderExecutedContext());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testCanSetOnlyAfterExchangeOrderExecutedContext(Side $side): void
-    {
+        # after set by method
         $exchangeOrderId = uuid_create();
-
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
         $buyOrder->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
-
         self::assertSame([self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId], $buyOrder->getContext());
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertSame($exchangeOrderId, $buyOrder->getOnlyAfterExchangeOrderExecutedContext());
@@ -167,18 +138,11 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyIsWithShortStopWhenContextIsNotSet(Side $side): void
-    {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
-        self::assertFalse($buyOrder->isWithShortStop());
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
     public function testIsWithShortStop(Side $side): void
     {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        self::assertFalse($buyOrder->isWithShortStop());
+
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isWithShortStop());
 
@@ -192,18 +156,11 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyIsForceBuyOrderWhenContextIsNotSet(Side $side): void
-    {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
-        self::assertFalse($buyOrder->isForceBuyOrder());
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
     public function testIsForceBuyOrder(Side $side): void
     {
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        self::assertFalse($buyOrder->isForceBuyOrder());
+
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::FORCE_BUY_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isForceBuyOrder());
 
@@ -217,18 +174,11 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyIsOnlyIfHasAvailableBalanceWhenContextIsNotSet(Side $side): void
+    public function testIsOnlyIfHasAvailableBalanceContext(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
         self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testIsOnlyIfHasAvailableBalanceWhenContext(Side $side): void
-    {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
 
@@ -242,20 +192,12 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testEmptyStopDistanceContext(Side $side): void
+    public function testGetStopDistance(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
-
         self::assertNull($buyOrder->getStopDistance());
-    }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testGetStopDistanceContext(Side $side): void
-    {
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
-
         self::assertSame(100500.0, $buyOrder->getStopDistance());
     }
 
