@@ -21,6 +21,7 @@ use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use Doctrine\ORM\QueryBuilder;
@@ -43,16 +44,19 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     # Transfer from spot
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE / 2;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
-    public const MIN_TRANSFER_AMOUNT = 12;
+    public const MIN_TRANSFER_AMOUNT = 10;
 
     # To check stopped position volume
-    public const CHECK_STOPS_ON_DISTANCE = 650;
+    public const CHECK_STOPS_ON_DISTANCE = 1500;
     public const CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION = 30;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 60;
 
-    public const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = 25;
-    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 4;
-    public const ADDITIONAL_STOP_TRIGGER_DELTA = 45;
+    public const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = 22;
+    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 2.2;
+    public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 45;
+    public const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = 1;
+
+    const NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP = 5;
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -69,7 +73,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
-        $acceptableStoppedPartBeforeLiquidation = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION;
+        $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION, 0.1);
         $symbol = $message->symbol; $positionSide = $message->side;
         $position = $this->positionService->getPosition($symbol, $positionSide);
         $ticker = $this->exchangeService->ticker($symbol);
@@ -86,44 +90,49 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $liquidation = Price::float($position->liquidationPrice);
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
 
-        if ($priceDeltaToLiquidation <= self::TRANSFER_FROM_SPOT_ON_DISTANCE) {
+        $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
+        if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
                 if ($spotBalance->availableBalance > 2) {
                     $amount = $this->amountToTransferFromSpot($spotBalance, $position);
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
-//                    if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position) && $hedge->getSupportRate()->part() > 0.2) return; || $acceptablePositionStopsPartBeforeLiquidation /= 2;
+
+                    $newSpotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+                    if ($newSpotBalance->availableBalance / self::MIN_TRANSFER_AMOUNT >= self::NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP) {
+                        return;
+                    }
                 }
             } catch (Throwable $e) {var_dump($e->getMessage());}
         }
 
-        if ($priceDeltaToLiquidation <= self::CHECK_STOPS_ON_DISTANCE) {
+        $checkStopsOnDistance = FloatHelper::modify(self::CHECK_STOPS_ON_DISTANCE, 0.1);
+        if ($priceDeltaToLiquidation <= $checkStopsOnDistance) {
             $volumeMustBeStopped = $position->size;
 
-            // @todo | maybe need also check that hedge has positive distance
-            if (($hedge = $position->getHedge()) && $hedge->isMainPosition($position)) {
+            // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
+            if (($hedge = $position->getHedge())?->isMainPosition($position)) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
-                if ($hedge->getSupportRate()->value() > 20) {
-                    $acceptableStoppedPartBeforeLiquidation = 15;
+                if ($hedge->getSupportRate()->value() > 50) {
+                    $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION / 2, 0.05);
                 }
             }
 
             $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker);
             $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $volumeMustBeStopped) * 100; // @todo | maybe need update position before calc
-
             $volumePartDelta = $acceptableStoppedPartBeforeLiquidation - $stoppedPositionPart;
             if ($volumePartDelta > 0) {
+                $stopQty = VolumeHelper::round((new Percent($volumePartDelta))->of($position->size));
+
                 if ($priceDeltaToLiquidation <= self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN) {
-                    $this->orderService->closeByMarket($position, (new Percent($volumePartDelta))->of($position->size));
+                    $this->orderService->closeByMarket($position, $stopQty);
                 } else {
-                    $delta = self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
-                    $additionalStopPrice = $position->isShort() ? $liquidation->sub($delta) : $liquidation->add($delta);
-                    $this->stopService->create(
-                        $positionSide,
-                        $additionalStopPrice->value(),
-                        VolumeHelper::round((new Percent($volumePartDelta))->of($position->size)),
-                        self::ADDITIONAL_STOP_TRIGGER_DELTA,
-                    );
+                    $stopPriceDelta = FloatHelper::modify(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, 0.15, 0.05);
+
+                    $stopPrice = $position->isShort() ? $liquidation->sub($stopPriceDelta) : $liquidation->add($stopPriceDelta);
+                    $triggerDelta = $stopPriceDelta > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : FloatHelper::modify(self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA, 0.1);
+
+                    $this->stopService->create($positionSide, $stopPrice, $stopQty, $triggerDelta);
                 }
             }
         } elseif (
@@ -187,6 +196,9 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     private function amountToTransferFromSpot(WalletBalance $spotBalance, Position $position): float
     {
         // @todo | need calc $amount based on Position size (for bigger position DEFAULT_TRANSFER_AMOUNT will change liquidationPrice very little)
-        return min(self::MIN_TRANSFER_AMOUNT, PriceHelper::round($spotBalance->availableBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE));
+        return min(
+            FloatHelper::modify(self::MIN_TRANSFER_AMOUNT, 0.2),
+            PriceHelper::round($spotBalance->availableBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)
+        );
     }
 }

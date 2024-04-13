@@ -109,9 +109,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([]);
         $this->stopService->expects(self::never())->method(self::anything());
 
-        $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
-            new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance),
-        );
+        if ($spotAvailableBalance > 2) {
+            $this->exchangeAccountService->expects(self::exactly(2))->method('getSpotWalletBalance')->with($coin)->willReturnOnConsecutiveCalls(
+                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance), // old
+                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance - $expectedTransferAmount, $spotAvailableBalance - $expectedTransferAmount) // new
+            );
+        }
 
         if ($expectedTransferAmount !== null) {
             $this->exchangeAccountService->expects(self::once())->method('interTransferFromSpotToContract')->with($coin, $expectedTransferAmount);
