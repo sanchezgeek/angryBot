@@ -9,10 +9,13 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostHelper;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
+use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -47,6 +50,10 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
 
         // Assert
         $this->exchangeAccountServiceMock->shouldReceive('interTransferFromContractToSpot')->never();
+        if ($availableSpotBalance > 0) {
+            $buyCost = (new OrderCostHelper(new ByBitCommissionProvider()))->getOrderBuyCost(new ExchangeOrder($symbol, $buyOrder->getVolume(), $ticker->lastPrice), $position->leverage)->value() * 1.1;
+            $this->exchangeAccountServiceMock->shouldReceive('interTransferFromSpotToContract')->once()->with($symbol->associatedCoin(), $buyCost);
+        }
 
         // Act
         ($this->handler)(new PushBuyOrders($symbol, $side));

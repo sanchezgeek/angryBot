@@ -124,6 +124,13 @@ class BuyOrder implements HasEvents
         return ($this->context[self::IS_OPPOSITE_AFTER_SL_CONTEXT] ?? null) === true;
     }
 
+    public function setIsOppositeBuyOrderAfterStopLossContext(): self
+    {
+        $this->context[self::IS_OPPOSITE_AFTER_SL_CONTEXT] = true;
+
+        return $this;
+    }
+
     public function setOnlyAfterExchangeOrderExecutedContext(string $exchangeOrderId): self
     {
         $this->context[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT] = $exchangeOrderId;

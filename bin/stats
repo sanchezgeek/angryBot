@@ -17,7 +17,7 @@ if [ $3 = "true" ]; then
 fi
 
 echo "---- ACCOUNT info ----"
-./bin/console acc:info
+./bin/console balance:info
 
 echo "----  SHORT info -----"
 ./bin/console sl:info sell --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
