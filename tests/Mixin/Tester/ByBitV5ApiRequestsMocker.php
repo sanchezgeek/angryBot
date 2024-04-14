@@ -160,12 +160,10 @@ trait ByBitV5ApiRequestsMocker
         $byBitApiCallExpectation = self::tickerApiCallExpectation($ticker);
         $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
 
-        $this->expectsToMakeApiCalls(
-            $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck()
-        );
+        $this->expectsToMakeApiCalls($byBitApiCallExpectation);
     }
 
-    protected function havePosition(Symbol $symbol, Position ... $positions): void
+    protected function havePosition(Symbol $symbol, Position ...$positions): void
     {
         $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
         $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();

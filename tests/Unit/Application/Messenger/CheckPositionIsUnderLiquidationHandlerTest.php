@@ -75,7 +75,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $position = new Position(Side::Sell, Symbol::BTCUSDT, 34000, 0.5, 20000, $liquidationPrice, 200, 100);
         $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
 
-        $this->havePosition($position);
+        $this->havePositions($position);
         $this->haveTicker($ticker);
 
         // Assert
@@ -83,7 +83,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->orderService->expects(self::never())->method(self::anything());
 
         // Act
-        ($this->handler)(new CheckPositionIsUnderLiquidation($position->symbol, $position->side));
+        ($this->handler)(new CheckPositionIsUnderLiquidation($position->symbol));
     }
 
     /**
@@ -99,10 +99,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $markPrice = $position->isShort() ? $liquidationPrice - self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN : $liquidationPrice + self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
         $ticker = TickerFactory::create($position->symbol, $position->isShort() ? $markPrice - 10 : $markPrice + 10, $markPrice);
 
-        $this->havePosition($position);
+        $this->havePositions($position);
         $this->haveTicker($ticker);
 
-        $side = $position->side;
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
@@ -131,7 +130,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             )
         ;
 
-        ($this->handler)(new CheckPositionIsUnderLiquidation($symbol, $side));
+        ($this->handler)(new CheckPositionIsUnderLiquidation($symbol));
     }
 
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
@@ -159,9 +158,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         ];
     }
 
-    private function havePosition(Position $position): void
+    private function havePositions(Position ...$positions): void
     {
-        $this->positionService->expects(self::once())->method('getPosition')->with($position->symbol, $position->side)->willReturn($position);
+        $this->positionService->expects(self::once())->method('getPositions')->with($positions[0]->symbol)->willReturn($positions);
     }
 
     public function haveTicker(Ticker $ticker): void

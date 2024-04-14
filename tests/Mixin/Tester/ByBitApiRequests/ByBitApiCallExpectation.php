@@ -22,10 +22,8 @@ final class ByBitApiCallExpectation
         return $this->trackPositionCallToFurtherCheck;
     }
 
-    public function setNoNeedToTrackRequestCallToFurtherCheck(): self
+    public function setNoNeedToTrackRequestCallToFurtherCheck(): void
     {
         $this->trackPositionCallToFurtherCheck = false;
-
-        return $this;
     }
 }

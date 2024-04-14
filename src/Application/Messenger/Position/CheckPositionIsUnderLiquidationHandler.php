@@ -42,17 +42,17 @@ use function min;
 final readonly class CheckPositionIsUnderLiquidationHandler
 {
     # Transfer from spot
-    public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE / 2;
+    public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
     public const MIN_TRANSFER_AMOUNT = 10;
 
     # To check stopped position volume
-    public const CHECK_STOPS_ON_DISTANCE = 1500;
+    public const CHECK_STOPS_ON_DISTANCE = 650;
     public const CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION = 30;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 60;
 
     public const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = 22;
-    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 2.2;
+    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 3;
     public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 45;
     public const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = 1;
 
@@ -73,22 +73,20 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
-        $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION, 0.1);
-        $symbol = $message->symbol; $positionSide = $message->side;
-        $position = $this->positionService->getPosition($symbol, $positionSide);
+        $symbol = $message->symbol;
+        if (!($positions = $this->positionService->getPositions($symbol))) {
+            return;
+        }
+        $hedge = $positions[0]->getHedge();
+        $position = $hedge ? $hedge->mainPosition : $positions[0];
+        $positionSide = $position->side;
+
         $ticker = $this->exchangeService->ticker($symbol);
         $coin = $symbol->associatedCoin();
 
-        if (!$position) {
-            return;
-        }
-
-        if (!$position->liquidationPrice) {
-            return;
-        }
-
         $liquidation = Price::float($position->liquidationPrice);
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+        $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION, 0.1);
 
         $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
         if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
@@ -111,7 +109,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             $volumeMustBeStopped = $position->size;
 
             // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
-            if (($hedge = $position->getHedge())?->isMainPosition($position)) {
+            if ($hedge) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
                 if ($hedge->getSupportRate()->value() > 50) {
                     $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION / 2, 0.05);
