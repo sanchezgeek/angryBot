@@ -111,7 +111,8 @@ sl-info: ## Get position SLs info ("s=" - to specify `position_side`, "p=" - to 
 	@$(eval a ?= )
 	@$(eval sp ?= )
 	@$(eval stp ?= )
-	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp) $(stp)
+	@$(eval im_value ?= )
+	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp) $(stp) $(im_value)
 
 ## —— SHORT 🐻 ——
 s-info: ## Get SHORT-position SLs info ("p=" - to specify `pnlStep`, example: s-info p=30)

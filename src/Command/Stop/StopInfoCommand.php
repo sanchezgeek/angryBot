@@ -31,6 +31,7 @@ use function end;
 use function implode;
 use function is_bool;
 use function sprintf;
+use function var_dump;
 
 #[AsCommand(name: 'sl:info')]
 class StopInfoCommand extends AbstractCommand
@@ -42,6 +43,7 @@ class StopInfoCommand extends AbstractCommand
     private const SHOW_SIZE_LEFT_OPTION = 'showSize';
     private const SHOW_POSITION_PNL = 'showPositionPnl';
     private const SHOW_TP = 'showTP';
+    private const IM_VALUE = 'imValue';
 
     private string $aggregateWith;
     private array $aggOrder = [];
@@ -56,6 +58,7 @@ class StopInfoCommand extends AbstractCommand
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
             ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
             ->addOption(self::SHOW_TP, '-t', InputOption::VALUE_NEGATABLE, 'Show TP orders', false)
+            ->addOption(self::IM_VALUE, null, InputOption::VALUE_OPTIONAL, 'Position IM value to check')
         ;
     }
 
@@ -75,10 +78,14 @@ class StopInfoCommand extends AbstractCommand
         $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
         $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
+        $imValue = $this->paramFetcher->floatOption(self::IM_VALUE);
         if ($position->isSupportPosition()) {
-            $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
-            $showSizeLeft = true;
+            if ($imValue) {var_dump($position->initialMargin->value() > $imValue);die;} else {
+                $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
+                $showSizeLeft = true;
+            }
         } else {
+            if ($imValue) {var_dump($position->initialMargin->value() > $imValue);die;}
 //            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
 
