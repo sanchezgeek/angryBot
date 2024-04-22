@@ -1,0 +1,3 @@
+#!/bin/sh
+
+cat /srv/app/var/log/app_errors.log
