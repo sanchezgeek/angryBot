@@ -69,6 +69,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
+        if ($position->getHedge()?->isMainPosition($position) && !$position->isPositionInProfit($ticker->indexPrice)) {
+            return true;
+        }
+
         if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
             return true;
         }
