@@ -23,8 +23,6 @@ use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
-use function min;
-
 /**
  * @group liquidation
  *
@@ -109,9 +107,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->stopService->expects(self::never())->method(self::anything());
 
         if ($spotAvailableBalance > 2) {
-            $this->exchangeAccountService->expects(self::exactly(2))->method('getSpotWalletBalance')->with($coin)->willReturnOnConsecutiveCalls(
-                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance), // old
-                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance - $expectedTransferAmount, $spotAvailableBalance - $expectedTransferAmount) // new
+            $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
+                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance)
             );
         }
 
