@@ -11,6 +11,9 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
@@ -54,11 +57,17 @@ final class TryReleaseActiveOrdersHandler
 
         $ticker = $this->exchangeService->ticker($command->symbol);
 
+        /** @var Price[] $compareWithPrices */
+        $compareWithPrices = [];
+        $compareWithPrices[Side::Sell->value] = PriceHelper::max($ticker->indexPrice, $ticker->markPrice);
+        $compareWithPrices[Side::Buy->value] = PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
+
         foreach ($activeOrders as $key => $order) {
             if (!$command->force && \count($activeOrders) < self::MIN_LEFT_ORDERS_QNT) {
                 return;
             }
 
+            // @todo | m.b. `...ByIds` ?
             $existedStop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId);
             $distance = $existedStop ? $existedStop->getTriggerDelta() + 10 : self::DEFAULT_RELEASE_OVER_DISTANCE;
 
@@ -67,7 +76,7 @@ final class TryReleaseActiveOrdersHandler
             }
 
             if (
-                $ticker->indexPrice->deltaWith($order->triggerPrice) > $distance
+                $compareWithPrices[$order->positionSide->value]->deltaWith($order->triggerPrice) > $distance
 //                || ($order->positionSide === Side::Sell && $ticker->indexPrice < $order->triggerPrice)
 //                || ($order->positionSide === Side::Buy && $ticker->indexPrice > $order->triggerPrice)
             ) {

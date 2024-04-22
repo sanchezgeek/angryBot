@@ -99,7 +99,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
         $symbol = Symbol::BTCUSDT;
         $exchangeOrderId = uuid_create();
         yield 'no need to release' => [
-            '$ticker' => TickerFactory::create($symbol, 28510),
+            '$ticker' => TickerFactory::create($symbol, 28510, 28510, 28510),
             '$stopsFixtures' => [
                 new StopFixture(StopBuilder::long(1, 28500, 0.001)->withTD(10)->build()->setExchangeOrderId($exchangeOrderId))
             ],
@@ -120,7 +120,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
 
         $releaseOnDistance = self::DEFAULT_RELEASE_OVER_DISTANCE + 1;
         yield 'need to release' => [
-            '$ticker' => $ticker = TickerFactory::create($symbol, 28571),
+            '$ticker' => $ticker = TickerFactory::create($symbol, 28571, 28571, 28571),
             '$stopsFixtures' => [
                 new StopFixture(StopBuilder::long(1, 28500, 0.001)->withTD(10)->build()->setExchangeOrderId($exchangeOrderId))
             ],
