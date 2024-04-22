@@ -13,7 +13,7 @@ trait AdditionalBuyOrderContextAwareCommand
     use ConsoleInputAwareCommand;
 
     private const NEGATABLE_OPTIONS = [
-        'withShortStop' => [
+        'wSS' => [
             'caption' => 'With short stop',
             'mappedContext' => BuyOrder::WITH_SHORT_STOP_CONTEXT,
         ],
