@@ -38,9 +38,11 @@ use Throwable;
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
+    // @todo | need to review (based on other values through handling)
     public const LIQUIDATION_WARNING_DELTA = 50;
     public const LIQUIDATION_CRITICAL_DELTA = 35;
 
+    // @todo | need to review (based on other values through handling)
     public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
     public const TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 7;
 
@@ -116,7 +118,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 }
             }
 
-            if ($loss > 0) {
+            if (
+                $loss > 0
+                // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses from SPOT | + if some setting is set?
+                && !$position->isSupportPosition()
+            ) {
                 try {
                     $this->exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), FloatHelper::round($loss, 3));
                 } catch (Throwable) {}
