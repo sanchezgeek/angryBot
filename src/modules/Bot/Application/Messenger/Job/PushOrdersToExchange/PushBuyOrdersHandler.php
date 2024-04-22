@@ -40,6 +40,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
+use function abs;
 use function max;
 use function min;
 use function random_int;
@@ -57,8 +58,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
-    public const FIX_SUPPORT_ENABLED = true;
-    public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = false;
+    public const FIX_SUPPORT_ENABLED = false;
+    public const FIX_MAIN_POSITION_ENABLED = false;
+    public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
 
     private const RESERVED_BALANCE = 0;
 
@@ -175,6 +177,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
 
+            // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses by profit | + if some setting is set? | + rewrite with `force` rule
             if (!$lastBuy->isOnlyIfHasAvailableBalanceContextSet() && $this->canTakeProfit($position, $ticker)) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
                 // @todo | move to some service | DRY (below)
@@ -197,23 +200,43 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
+            # mainPosition BuyOrder => grab profit from Support
             $priceToCalcLiqDiff = $position->isShort() ? max($position->entryPrice, $ticker->markPrice->value()) : min($position->entryPrice, $ticker->markPrice->value());
-            if (
-                self::FIX_SUPPORT_ENABLED
-                && (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->getOnlyAfterExchangeOrderExecutedContext())
+            if (self::FIX_SUPPORT_ENABLED && ($hedge = $position->getHedge())?->isMainPosition($position)
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
-                && ($hedge = $position->getHedge())
-                && $hedge->isMainPosition($position)
+                && (
+                    $lastBuy->isForceBuyOrder()
+                    || (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->isOppositeBuyOrderAfterStopLoss())
+                )
                 && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
                 && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
                 && (
-                    abs($priceToCalcLiqDiff - $position->liquidationPrice) > 1500               # position liquidation too far
+                    $lastBuy->isForceBuyOrder()
+                    || abs($priceToCalcLiqDiff - $position->liquidationPrice) > 2500               # position liquidation too far
                     || $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)   # or support size enough
                 )
             ) {
                 $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
 
                 $this->orderService->closeByMarket($hedge->supportPosition, $volume);
+                $lastBuy->incHedgeSupportFixationsCounter();
+
+                $this->buyOrderRepository->save($lastBuy);
+                return;
+            }
+
+            # support BuyOrder => grab profit from MainPosition
+            if (self::FIX_MAIN_POSITION_ENABLED && ($hedge = $position->getHedge())?->isSupportPosition($position)
+                && $lastBuy->getHedgeSupportFixationsCount() < 1
+                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 152.228
+                && (
+                    $lastBuy->isForceBuyOrder()
+                    || !$this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
+                )
+            ) {
+                $volume = VolumeHelper::forceRoundUp($e->qty / ($mainPositionPnlPercent * 0.75 / 100));
+
+                $this->orderService->closeByMarket($hedge->mainPosition, $volume);
                 $lastBuy->incHedgeSupportFixationsCounter();
 
                 $this->buyOrderRepository->save($lastBuy);
@@ -273,6 +296,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $triggerPrice = null;
 
+        // @todo | based on liquidation if position under hedge?
         $strategy = $this->getStopStrategy($position, $buyOrder, $ticker);
 
         $stopStrategy = $strategy['strategy'];
