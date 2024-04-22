@@ -91,8 +91,6 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     public function addStopTestCases(): iterable
     {
         # CONST
-        $delayedStopsPercent = 3.2; $pushedStopsPercent = 2.9;
-
         $additionalStopDistanceWithLiquidation = self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
         $additionalStopTriggerDelta = $additionalStopDistanceWithLiquidation > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 
@@ -106,7 +104,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $positions = [$shortPosition];
 
         $additionalStopPrice = PriceHelper::round($liquidationPrice - $additionalStopDistanceWithLiquidation);
-        $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - (3.3 + 2.9);
+        $delayedStopsPercent = 3; $pushedStopsPercent = 5;
+        $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
         yield sprintf(
             '[BTCUSDT SHORT without hedge] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
@@ -125,7 +124,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $positions = [$longPosition];
 
         $additionalStopPrice = PriceHelper::round($liquidationPrice + $additionalStopDistanceWithLiquidation);
-        $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - (3.3 + 2.9);
+        $delayedStopsPercent = 6; $pushedStopsPercent = 4;
+        $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
         yield sprintf(
             '[BTCUSDT LONG without hedge] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
