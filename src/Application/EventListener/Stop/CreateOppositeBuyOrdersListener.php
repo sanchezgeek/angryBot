@@ -11,6 +11,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Event\StopPushedToExchange;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -19,8 +20,11 @@ use function random_int;
 #[AsEventListener]
 final class CreateOppositeBuyOrdersListener
 {
-    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 181;
-    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 211;
+    /*
+     * @todo MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE
+     */
+    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 500;
+    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 400;
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
@@ -45,7 +49,7 @@ final class CreateOppositeBuyOrdersListener
         $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         // @todo | how to check in tests?
 
-        $distance = $this->getBuyOrderOppositePriceDistance($side); if ($_ENV['APP_ENV'] !== 'test') $distance += random_int(-30, 35);
+        $distance = FloatHelper::modify($this->getBuyOrderOppositePriceDistance($side), 0.1);
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
