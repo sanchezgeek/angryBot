@@ -10,7 +10,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostHelper;
@@ -21,6 +20,13 @@ use function random_int;
 use function sprintf;
 use function var_dump;
 
+/**
+ * `stop.pushedToExchange` [
+ *      1) after supportPosition stop loss
+ *      2) for stops closed by market
+ *      3) withOppositeOrder
+ * ] => cover losses by adding SL on MainPosition.
+ */
 #[AsEventListener]
 final class FixMainHedgePositionListener
 {
@@ -54,8 +60,7 @@ final class FixMainHedgePositionListener
         $stopPrice = $stop->getPrice();
         $closedVolume = $stop->getVolume();
 
-        # only for stops closed by market
-        if (!$stop->isCloseByMarketContextSet()) {
+        if (!($stop->isCloseByMarketContextSet() && $stop->isWithOppositeOrder())) {
             return;
         }
 
