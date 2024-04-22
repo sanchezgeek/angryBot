@@ -459,10 +459,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     ];
 
     public const HEDGE_LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 70, 1400],
-        85 => [-25, 55, 1300],
-        75 => [-20, 40, 1200],
-        65 => [-5, 5, 850],
+        92 => [-40, 70, 3500],
+        85 => [-25, 55, 3000],
+        75 => [-20, 40, 2000],
+        65 => [-5, 5, 1500],
     ];
 
     private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): bool
