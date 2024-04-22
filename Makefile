@@ -72,6 +72,9 @@ test: ## Run tests
 run: ## Run bot
 	@$(PHP_CONT) /usr/bin/supervisord
 
+refresh: ## Restart bot
+	@$(PHP_CONT) /srv/app/bin/refresh
+
 reload: ## Reload supervisor config
 	@$(PHP_CONT) /usr/bin/supervisorctl reload
 
