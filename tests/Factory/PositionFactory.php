@@ -25,7 +25,7 @@ final class PositionFactory
         ?float $liquidationPrice = null,
     ): Position {
         $positionValue = $at * $size;
-        $liquidationPrice = $liquidationPrice ?: $at + 1000;
+        $liquidationPrice = ($liquidationPrice !== null) ? $liquidationPrice : $at + 1000; // @todo calc
 
         return new Position(
             Side::Sell,
@@ -47,7 +47,7 @@ final class PositionFactory
         ?float $liquidationPrice = null,
     ): Position {
         $positionValue = $at * $size;
-        $liquidationPrice = $liquidationPrice ?: $at - 1000; // @todo calc
+        $liquidationPrice = ($liquidationPrice !== null) ? $liquidationPrice : $at - 1000; // @todo calc
 
         return new Position(
             Side::Buy,
