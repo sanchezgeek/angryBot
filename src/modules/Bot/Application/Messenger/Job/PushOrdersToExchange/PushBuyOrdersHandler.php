@@ -83,15 +83,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $indexPnlPercent = $ticker->indexPrice->getPnlPercentFor($position);
-        $minIndexPricePnlPercentToUseSpot = $position->isSupportPosition() ? self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT / 2 : self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
 
-        return $indexPnlPercent >= $minIndexPricePnlPercentToUseSpot;
+        return $indexPnlPercent >= self::USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT;
     }
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
         $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-        $minLastPricePnlPercentToTakeProfit = $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT / 1.6 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
+        $minLastPricePnlPercentToTakeProfit = $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT / 1.3 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
 
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
