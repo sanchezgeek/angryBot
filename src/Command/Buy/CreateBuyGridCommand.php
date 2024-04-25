@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
@@ -26,6 +25,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use Throwable;
 
 use function array_merge;
 use function array_unshift;
@@ -108,13 +109,27 @@ class CreateBuyGridCommand extends AbstractCommand
         }
     }
 
+    /**
+     * @throws Throwable
+     */
     protected function getStopDistanceOption(): ?float
     {
         $name = self::STOP_DISTANCE_OPTION;
 
         try {
             $pnlValue = $this->paramFetcher->requiredPercentOption($name);
-            $pp100 = $this->exchangeService->ticker($this->getSymbol())->indexPrice->value() / 100;
+
+            try {
+                $basedOnPrice = $this->exchangeService->ticker($this->getSymbol())->indexPrice;
+            } catch (\Throwable $e) {
+                if (!$this->io->confirm(sprintf('Got "%s" error while do `ticker` request. Want to use price from specified price range?', $e->getMessage()), true)) {
+                    throw $e;
+                }
+                $basedOnPrice = $this->getPriceRange()->getMiddlePrice();
+            }
+
+            // @todo | can calc with existed helpers?
+            $pp100 = $basedOnPrice->value() / 100;
 
             return FloatHelper::round((new Percent($pnlValue, false))->of($pp100));
         } catch (InvalidArgumentException) {
