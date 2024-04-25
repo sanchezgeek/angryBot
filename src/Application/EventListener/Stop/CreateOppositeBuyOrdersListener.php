@@ -23,7 +23,7 @@ final class CreateOppositeBuyOrdersListener
     /*
      * @todo MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE
      */
-    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 500;
+    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 600;
     public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 400;
 
     public function __construct(
@@ -49,7 +49,7 @@ final class CreateOppositeBuyOrdersListener
         $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
         // @todo | how to check in tests?
 
-        $distance = FloatHelper::modify($this->getBuyOrderOppositePriceDistance($side), 0.1);
+        $distance = FloatHelper::modify($this->getBuyOrderOppositePriceDistance($side), 0.1, 0.2);
 
         $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
         $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
@@ -57,6 +57,7 @@ final class CreateOppositeBuyOrdersListener
         $context = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
             BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
+            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance, 0.1)
         ];
 
         $orders = [
