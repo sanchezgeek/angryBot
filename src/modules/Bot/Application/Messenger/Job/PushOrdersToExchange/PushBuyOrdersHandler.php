@@ -32,7 +32,12 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
+use App\Infrastructure\ByBit\Service\ByBitMarketService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
@@ -499,6 +504,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return false;
     }
 
+    /**
+     * @param CreateBuyOrderHandler $createBuyOrderHandler
+     * @param HedgeService $hedgeService
+     * @param BuyOrderRepository $buyOrderRepository
+     * @param StopRepository $stopRepository
+     * @param StopService $stopService
+     * @param OrderCostHelper $orderCostHelper
+     * @param ByBitExchangeAccountService $exchangeAccountService
+     * @param ByBitMarketService $marketService
+     * @param ByBitOrderService $orderService
+     * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
+     * @param ByBitLinearPositionCacheDecoratedService $positionService
+     * @param ClockInterface $clock
+     * @param LoggerInterface $logger
+     */
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly HedgeService $hedgeService,
