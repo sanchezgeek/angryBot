@@ -119,10 +119,15 @@ final class Position
     {
         $currentPrice = $currentPrice instanceof Price ? $currentPrice->value() : $currentPrice;
 
-        return $this->isShort()
-            ? $this->entryPrice > $currentPrice
-            : $this->entryPrice < $currentPrice
+        return $this->isShort() ? $this->entryPrice > $currentPrice : $this->entryPrice < $currentPrice
         ;
+    }
+
+    public function isPositionInLoss(Price|float $currentPrice): bool
+    {
+        $currentPrice = $currentPrice instanceof Price ? $currentPrice->value() : $currentPrice;
+
+        return $this->isShort() ? $this->entryPrice < $currentPrice : $this->entryPrice > $currentPrice;
     }
 
     public function getVolumePart(float $percent): float

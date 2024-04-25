@@ -243,6 +243,30 @@ final class PositionTest extends TestCase
     }
 
     /**
+     * @dataProvider isPositionInLossTestDataProvider
+     */
+    public function testIsPositionInLoss(Position $position, float $currentPrice, bool $expectedResult): void
+    {
+        self::assertEquals($expectedResult, $position->isPositionInLoss($currentPrice));
+        self::assertEquals($expectedResult, $position->isPositionInLoss(Price::float($currentPrice)));
+    }
+
+    public function isPositionInLossTestDataProvider(): iterable
+    {
+        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+
+        yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => true];
+
+        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+
+        yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => true];
+        yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
+        yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => false];
+    }
+
+    /**
      * @dataProvider positionSideProvider
      */
     public function testCloneWithNewSize(Side $side): void

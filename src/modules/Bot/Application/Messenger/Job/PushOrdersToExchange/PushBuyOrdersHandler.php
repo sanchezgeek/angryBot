@@ -185,8 +185,16 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
             }
 
-            // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses by profit | + if some setting is set? | + rewrite with `force` rule
-            if (!$lastBuy->isOnlyIfHasAvailableBalanceContextSet() && $this->canTakeProfit($position, $ticker)) {
+            // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses by profit | + if some setting is set? | + rewrite with `force` rule.
+            // @todo | but be careful: if there is no hedge then m.b. you want to get profit anyway?
+            if (
+                !$lastBuy->isOnlyIfHasAvailableBalanceContextSet()
+                && $this->canTakeProfit($position, $ticker)
+                && !(
+                    ($hedge = $position->getHedge())?->isSupportPosition($position)
+                    && $hedge->mainPosition->isPositionInLoss($ticker->lastPrice)
+                )
+            ) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
                 // @todo | move to some service | DRY (below)
                 $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
@@ -485,7 +493,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
                 // @todo | by now only for linear
                 if ($totalPositionLeverage >= $leverage) {
-                    if (!$position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
+                    if ($position->isPositionInLoss($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
                         break;
                     }
                     if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
