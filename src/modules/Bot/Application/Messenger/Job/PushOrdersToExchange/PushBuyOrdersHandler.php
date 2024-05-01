@@ -197,7 +197,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             ) {
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
                 // @todo | move to some service | DRY (below)
-                $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.75 / 100));
+                $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.5 / 100));
                 $this->orderService->closeByMarket($position, $volumeClosed);
 
                 if (!$position->isSupportPosition()) {
