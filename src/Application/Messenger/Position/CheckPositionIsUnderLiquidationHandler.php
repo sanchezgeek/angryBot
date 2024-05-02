@@ -133,7 +133,10 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                 }
             }
         } elseif (
-            ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
+            (
+                $priceDeltaToLiquidation > 2000
+                || ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
+            )
             && ($contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin))
             && ($totalBalance = $this->exchangeAccountService->getCachedTotalBalance($symbol))
             && ($contractBalance->availableBalance / $totalBalance) > 0.5
