@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+ACTION=${1}
+
+if [[ -z "${BOT_LOGS_DIR}" ]]; then
+  echo "BOT_LOGS_DIR is undefined"
+  exit 1
+else
+  LOGS_DIR="${BOT_LOGS_DIR}"
+fi
+LOG_PATH="${LOGS_DIR}/${ACTION}.$(cat /proc/sys/kernel/random/uuid).log"
+
+read -p "Remove old? " -n 1 -r
+echo    # (optional) move to a new line
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+  rm -rf ${LOGS_DIR}/${ACTION}.*.log
+fi
+
+
+if [[ -z "${BOT_BIN_DIR}" ]]; then
+  echo "BOT_BIN_DIRS is undefined"
+else
+  BIN_DIR="${BOT_BIN_DIR}"
+fi
+
+instances=()
+for line in $(cat ${BIN_DIR}/data/instances.list); do
+    instances+=("$line")
+done
+
+for path in "${instances[@]}"
+  do
+    cmd="sudo make -C ${path} ${ACTION} > ${LOG_PATH} &"
+    $(eval "${cmd}")
+  done
+
+tail -f ${LOG_PATH} | while read line ; do aplay ${BIN_DIR}/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done
+
+
