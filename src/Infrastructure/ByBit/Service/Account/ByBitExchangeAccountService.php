@@ -17,6 +17,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
+use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 
@@ -57,6 +58,33 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     public function getContractWalletBalance(Coin $coin): WalletBalance
     {
         return $this->getWalletBalance(AccountType::CONTRACT, $coin);
+    }
+
+    public function universalTransfer(
+        Coin $coin,
+        float $amount,
+        AccountType $fromAccountType,
+        AccountType $toAccountType,
+        string $fromMemberUid,
+        string $toMemberUid,
+    ): void {
+        $request = new CoinUniversalTransferRequest(
+            new CoinAmount($coin, $amount),
+            $fromAccountType,
+            $toAccountType,
+            $fromMemberUid,
+            $toMemberUid,
+            $transferId = uuid_create(),
+        );
+
+        $result = $this->sendRequest($request);
+
+        $data = $result->data();
+
+        $actualId = $data['transferId'];
+        if ($actualId !== $transferId) {
+            throw BadApiResponseException::common($request, sprintf('got another `transferId` (%s insteadof %s)', $actualId, $transferId), __METHOD__);
+        }
     }
 
     /**
