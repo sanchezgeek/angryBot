@@ -330,22 +330,24 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $baseDistance = $side->isLong() ? CreateOppositeBuyOrdersListener::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : CreateOppositeBuyOrdersListener::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
-        $baseDistance = $side->isLong() ? $baseDistance : -$baseDistance;
+        $distance = $side->isLong() ? CreateOppositeBuyOrdersListener::LONG_OPPOSITE_PRICE_DISTANCE : CreateOppositeBuyOrdersListener::SHORT_OPPOSITE_PRICE_DISTANCE;
+        $priceModifier = $side->isLong() ? $distance : -$distance;
 
         if ($stopVolume >= 0.006) {
             $orders = [
-                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance), VolumeHelper::round($stopVolume / 3), $side),
-                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 3.8), VolumeHelper::round($stopVolume / 4.5), $side),
-                new BuyOrder($fromId, PriceHelper::round($stopPrice + $baseDistance + $baseDistance / 2), VolumeHelper::round($stopVolume / 3.5), $side),
+                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $priceModifier), VolumeHelper::round($stopVolume / 3), $side),
+                new BuyOrder($fromId++, PriceHelper::round($stopPrice + $priceModifier + $priceModifier / 3.8), VolumeHelper::round($stopVolume / 4.5), $side),
+                new BuyOrder($fromId, PriceHelper::round($stopPrice + $priceModifier + $priceModifier / 2), VolumeHelper::round($stopVolume / 3.5), $side),
             ];
         } else {
-            $orders = [new BuyOrder($fromId, $stopPrice + $baseDistance, $stopVolume, $side)];
+            $orders = [new BuyOrder($fromId, $stopPrice + $priceModifier, $stopVolume, $side)];
         }
 
         foreach ($orders as $order) {
             $order->setOnlyAfterExchangeOrderExecutedContext($pushedStopExchangeOrderId);
             $order->setIsOppositeBuyOrderAfterStopLossContext();
+            $order->setIsForceBuyOrderContext();
+            $order->setStopDistanceContext($distance);
         }
 
         return $orders;

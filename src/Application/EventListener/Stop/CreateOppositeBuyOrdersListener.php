@@ -7,75 +7,56 @@ namespace App\Application\EventListener\Stop;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Stop;
-use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
-use function random_int;
-
 #[AsEventListener]
 final class CreateOppositeBuyOrdersListener
 {
     /*
-     * @todo MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE
+     * @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
      */
-    public const SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 600;
-    public const LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE = 400;
+    public const SHORT_OPPOSITE_PRICE_DISTANCE = 300;
+    public const LONG_OPPOSITE_PRICE_DISTANCE = 400;
 
-    public function __construct(
-        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-    ) {
-    }
+    public function __construct(private readonly CreateBuyOrderHandler $createBuyOrderHandler) {}
 
     public function __invoke(StopPushedToExchange $event): void
     {
         $stop = $event->stop;
-
-        if ($stop->isWithOppositeOrder()) {
-            $this->createOpposite($stop);
+        if (!$stop->isWithOppositeOrder()) {
+            return;
         }
-    }
 
-    /**
-     * @return array<array{volume: float, price: float}>
-     */
-    private function createOpposite(Stop $stop): array
-    {
         $side = $stop->getPositionSide();
-        $price = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
-        // @todo | how to check in tests?
+        $stopVolume = $stop->getVolume();
+        $stopPrice = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
-        $distance = FloatHelper::modify($this->getBuyOrderOppositePriceDistance($side), 0.1, 0.2);
-
-        $triggerPrice = $side === Side::Sell ? $price - $distance : $price + $distance;
-        $volume = $stop->getVolume() >= 0.006 ? VolumeHelper::round($stop->getVolume() / 3) : $stop->getVolume();
+        $distance = FloatHelper::modify($side->isShort() ? self::SHORT_OPPOSITE_PRICE_DISTANCE : self::LONG_OPPOSITE_PRICE_DISTANCE, 0.1, 0.2);
+        $triggerPrice = $side->isShort() ? $stopPrice - $distance : $stopPrice + $distance;
 
         $context = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
             BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
-            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance, 0.1)
+            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance, 0.1),
+            BuyOrder::FORCE_BUY_CONTEXT => true,
         ];
 
         $orders = [
-            ['volume' => $volume, 'price' => $triggerPrice]
+            ['volume' => $stopVolume >= 0.006 ? VolumeHelper::round($stopVolume / 3) : $stopVolume, 'price' => $triggerPrice]
         ];
 
-        if ($stop->getVolume() >= 0.006) {
+        if ($stopVolume >= 0.006) {
             $orders[] = [
-                'volume' => VolumeHelper::round($stop->getVolume() / 4.5),
-                'price' => PriceHelper::round(
-                    $side === Side::Sell ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8
-                ),
+                'volume' => VolumeHelper::round($stopVolume / 4.5),
+                'price' => PriceHelper::round($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8),
             ];
             $orders[] = [
-                'volume' => VolumeHelper::round($stop->getVolume() / 3.5),
-                'price' => PriceHelper::round(
-                    $side === Side::Sell ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2
-                ),
+                'volume' => VolumeHelper::round($stopVolume / 3.5),
+                'price' => PriceHelper::round($side->isShort() ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2),
             ];
         }
 
@@ -84,13 +65,6 @@ final class CreateOppositeBuyOrdersListener
                 new CreateBuyOrderEntryDto($side, $order['volume'], $order['price'], $context)
             );
         }
-
-        return $orders;
-    }
-
-    private function getBuyOrderOppositePriceDistance(Side $side): float
-    {
-        return $side->isLong() ? self::LONG_BUY_ORDER_OPPOSITE_PRICE_DISTANCE : self::SHORT_BUY_ORDER_OPPOSITE_PRICE_DISTANCE;
     }
 }
 

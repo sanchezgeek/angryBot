@@ -114,6 +114,13 @@ class BuyOrder implements HasEvents
         return ($this->context[self::FORCE_BUY_CONTEXT] ?? null) === true;
     }
 
+    public function setIsForceBuyOrderContext(): self
+    {
+        $this->context[self::FORCE_BUY_CONTEXT] = true;
+
+        return $this;
+    }
+
     public function isOnlyIfHasAvailableBalanceContextSet(): bool
     {
         return ($this->context[self::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT] ?? null) === true;
@@ -146,6 +153,13 @@ class BuyOrder implements HasEvents
     public function getStopDistance(): ?float
     {
         return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;
+    }
+
+    public function setStopDistanceContext(float $stopDistance): self
+    {
+        $this->context[self::STOP_DISTANCE_CONTEXT] = $stopDistance;
+
+        return $this;
     }
 
     public function incSuccessSpotTransfersCounter(): self

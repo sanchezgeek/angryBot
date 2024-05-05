@@ -169,6 +169,10 @@ final class BuyOrderTest extends TestCase
 
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::FORCE_BUY_CONTEXT => true]);
         self::assertTrue($buyOrder->isForceBuyOrder());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        $buyOrder->setIsForceBuyOrderContext();
+        self::assertTrue($buyOrder->isForceBuyOrder());
     }
 
     /**
@@ -199,6 +203,10 @@ final class BuyOrderTest extends TestCase
 
         $buyOrder = new BuyOrder(1, 100500, 123.456, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
         self::assertSame(100500.0, $buyOrder->getStopDistance());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, $side);
+        $buyOrder->setStopDistanceContext(123.1);
+        self::assertSame(123.1, $buyOrder->getStopDistance());
     }
 
     /**
