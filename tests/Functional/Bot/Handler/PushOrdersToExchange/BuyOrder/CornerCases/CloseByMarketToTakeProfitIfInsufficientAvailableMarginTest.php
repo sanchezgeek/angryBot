@@ -153,6 +153,6 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
 
     private static function getExpectedVolumeToClose(float $needBuyVolume, float $lastPriceCurrentPnlPercent): float
     {
-        return VolumeHelper::forceRoundUp($needBuyVolume / ($lastPriceCurrentPnlPercent * 0.75 / 100));
+        return VolumeHelper::forceRoundUp($needBuyVolume / ($lastPriceCurrentPnlPercent * 0.5 / 100));
     }
 }
