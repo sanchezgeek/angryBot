@@ -14,6 +14,7 @@ fi
 
 echo "---- ACCOUNT info ----"
 ./bin/console balance:info
+printf "\n"
 
 echo "----  SHORT info -----"
 ./bin/console sl:info sell --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
