@@ -84,6 +84,10 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $ticker = $this->exchangeService->ticker($symbol);
         $coin = $symbol->associatedCoin();
 
+        if (!$position->liquidationPrice) {
+            return;
+        }
+
         $liquidation = Price::float($position->liquidationPrice);
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
         $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION, 0.15);
