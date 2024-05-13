@@ -14,6 +14,7 @@ use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
+use Exception;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -22,6 +23,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use Throwable;
 
 use function array_merge;
 use function implode;
@@ -76,14 +79,19 @@ class CreateStopsGridCommand extends AbstractCommand
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
         $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
-        $position = $this->getPosition();
+        $positionSide = $this->getPositionSide();
 
-        if ($forVolume >= $position->size) {
-            throw new LogicException('$forVolume is greater than whole position size');
-        }
-
-        if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
-            return Command::FAILURE;
+        $position = null;
+        try {
+            $position = $this->getPosition();
+            if ($forVolume >= $position->size) {
+                throw new LogicException('$forVolume is greater than whole position size');
+            }
+            if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
+                return Command::FAILURE;
+            }
+        } catch (Throwable $e) {
+            $this->io->warning($e->getMessage());
         }
 
         $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid')];
@@ -109,25 +117,25 @@ class CreateStopsGridCommand extends AbstractCommand
         }
 
         $alreadyStopped = 0;
-        $stops = new StopsCollection(...$this->stopRepository->findActive($position->side));
+        $stops = new StopsCollection(...$this->stopRepository->findActive($positionSide));
         $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
         }
 
-        if ($position->size <= $alreadyStopped) {
+        if ($position && $position->size <= $alreadyStopped) {
             if (!$this->io->confirm('All position volume already under SL\'ses. Want to continue? ')) {
                 return Command::FAILURE;
             }
         }
 
         foreach ($orders as $order) {
-            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);
+            $this->stopService->create($positionSide, $order->price()->value(), $order->volume(), $triggerDelta, $context);
         }
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
         $this->io->writeln(
-            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:range-edit %s -aremove --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $position->side->value, $uniqueId)
+            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:range-edit %s -aremove --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $positionSide->value, $uniqueId)
         );
 
         return Command::SUCCESS;
