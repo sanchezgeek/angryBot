@@ -30,7 +30,7 @@ use function var_dump;
 #[AsEventListener]
 final class FixMainHedgePositionListener
 {
-    public const ENABLED = true;
+    public const ENABLED = false;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
     const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
