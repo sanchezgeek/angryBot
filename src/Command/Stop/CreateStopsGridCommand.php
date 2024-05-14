@@ -135,7 +135,7 @@ class CreateStopsGridCommand extends AbstractCommand
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
         $this->io->writeln(
-            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:range-edit %s -aremove --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $positionSide->value, $uniqueId)
+            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:range-edit %s -aremove --filterCallbacks="getContext(\'uniqid\')===\'%s\'"', $positionSide->value, $uniqueId) . PHP_EOL . PHP_EOL
         );
 
         return Command::SUCCESS;
