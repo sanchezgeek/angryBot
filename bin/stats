@@ -1,14 +1,20 @@
 #!/bin/sh
 
 PNL_STEP=${1:-30}
-
+SHOW_PNL=""
 AGG_WITH=""
 
 if [ ${2:-false} = "true" ]; then
+    SHOW_PNL='--showPnl'
+fi
+
+echo ${SHOW_PNL}
+
+if [ ${3:-false} = "true" ]; then
     AGG_WITH='isWithOppositeOrder()'
 fi
 
-if [ ${3:-false} = "true" ]; then
+if [ ${4:-false} = "true" ]; then
     AGG_WITH='isCloseByMarketContextSet()'
 fi
 
@@ -17,7 +23,7 @@ echo "---- ACCOUNT info ----"
 printf "\n"
 
 echo "----  SHORT info -----"
-./bin/console sl:info sell --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
+./bin/console sl:info sell ${SHOW_PNL} -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
 
 echo "----  LONG info  -----"
-./bin/console sl:info buy --showPnl -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
+./bin/console sl:info buy ${SHOW_PNL} -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
