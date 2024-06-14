@@ -28,3 +28,5 @@ vendor/
 .env.local
 .env.local.php
 .env.test
+.idea
+.git
