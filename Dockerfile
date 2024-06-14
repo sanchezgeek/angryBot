@@ -43,6 +43,7 @@ RUN set -eux; \
     	zip \
     	apcu \
 		opcache \
+		xdebug \
     ;
 
 ###> recipes ###
@@ -99,20 +100,26 @@ RUN set -eux; \
 		chmod +x bin/console; sync; \
     fi
 
+# xdebug
+ENV XDEBUG_MODE=off
+COPY --link docker/php/conf.d/app.dev.ini $PHP_INI_DIR/conf.d/
+
+ARG BYBIT_API_KEY
+ARG BYBIT_API_SECRET
+ENV BYBIT_API_KEY=${BYBIT_API_KEY} BYBIT_API_SECRET=${BYBIT_API_SECRET}
+
 # Dev image
 FROM app_php AS app_php_dev
 
-ENV APP_ENV=dev XDEBUG_MODE=off
+ENV APP_ENV=dev
 VOLUME /srv/app/var/
 
 RUN rm "$PHP_INI_DIR/conf.d/app.prod.ini"; \
 	mv "$PHP_INI_DIR/php.ini" "$PHP_INI_DIR/php.ini-production"; \
 	mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
-
-COPY --link docker/php/conf.d/app.dev.ini $PHP_INI_DIR/conf.d/
-
-RUN set -eux; \
-	install-php-extensions xdebug
+## xdebug (temporarily moved to 'app_php')
+#COPY --link docker/php/conf.d/app.dev.ini $PHP_INI_DIR/conf.d/
+#RUN set -eux; install-php-extensions xdebug
 
 RUN rm -f .env.local.php
 

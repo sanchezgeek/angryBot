@@ -25,7 +25,11 @@ help: ## Outputs this help screen
 
 ## —— Docker 🐳 ————————————————————————————————————————————————————————————
 build: ## Builds the Docker images
-	@$(DOCKER_COMP) build
+	@ bash -c "read -p 'Go get_build_args? ' -n 1 -r"
+	@ bash -c ' \
+		export ARGS="$$(./bin/get_build_args $$ENV_BUILD_FILEPATH)" && \
+		read -p "Go build? " -n 1 -r && \
+		docker compose build $$ARGS'
 
 rebuild: ## Rebuilds the Docker images
 	@$(DOCKER_COMP) build --pull --no-cache
@@ -33,7 +37,7 @@ rebuild: ## Rebuilds the Docker images
 up: ## Up the docker hub in detached mode (no logs)
 	@$(DOCKER_COMP) up --detach
 
-start: prepare_files build up ## Build and start the containers
+start: prepare_files up ## Start the containers
 
 dc-stop: ## Stop the docker hub
 	@$(DOCKER_COMP) stop

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+#prepare
+PWD=$(pwd)
+export ENV_BUILD_DIST_FILE=$PWD/.env.local.build.dist
+export ENV_BUILD_FILE=$PWD/.env.local.build
+
+read_and_replace_build_envs() {
+  read -p "BYBIT_API_KEY[100500]:" BYBIT_API_KEY
+  BYBIT_API_KEY=${BYBIT_API_KEY:-100500}
+  read -p "BYBIT_API_SECRET[200500]:" BYBIT_API_SECRET
+  BYBIT_API_SECRET=${BYBIT_API_SECRET:-200500}
+
+  sed -i "s/^BYBIT_API_KEY=.*/BYBIT_API_KEY=${BYBIT_API_KEY}/" $ENV_BUILD_FILE
+  sed -i "s/^BYBIT_API_SECRET=.*/BYBIT_API_SECRET=${BYBIT_API_SECRET}/" $ENV_BUILD_FILE
+}
+
+# act
+if [ -f "$ENV_BUILD_FILE" ] ; then
+  echo 'Already initialized!';
+  else
+    cp $ENV_BUILD_DIST_FILE $ENV_BUILD_FILE
+    read_and_replace_build_envs
+fi

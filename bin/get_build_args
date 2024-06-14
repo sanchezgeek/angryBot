@@ -1,0 +1,10 @@
+#!/bin/bash
+
+ENV_BUILD_FILEPATH=${1}
+
+ARGS=""
+for env_definition in $(cat ${ENV_BUILD_FILEPATH}); do
+  ARGS+=" --build-arg ${env_definition}"
+done
+
+echo $ARGS

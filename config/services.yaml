@@ -5,6 +5,8 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     account_uids: '%env(ACCOUNTS_UIDS)%'
+    env_bybit_api_key: '%env(BYBIT_API_KEY)%'
+    env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
 
 services:
     # default configuration for services in *this* file
@@ -81,8 +83,8 @@ services:
         class: App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
         arguments:
             $host: 'https://%env(BYBIT_API_HOST)%'
-            $apiKey: '%env(BYBIT_API_KEY)%'
-            $secretKey: '%env(BYBIT_API_SECRET)%'
+            $apiKey: '%env(default:env_bybit_api_key:BYBIT_API_KEY_OVERRIDE)%'
+            $secretKey: '%env(default:env_bybit_api_secret:BYBIT_API_SECRET_OVERRIDE)%'
 
     App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler:
         arguments:
