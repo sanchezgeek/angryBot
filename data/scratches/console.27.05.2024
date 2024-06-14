@@ -1,0 +1,43 @@
+DELETE FROM stop WHERE 1::boolean=true;
+DELETE FROM buy_order WHERE 1::boolean=true;
+SELECT count(*) FROM stop;
+SELECT count(*) FROM buy_order;
+SELECT COUNT(*) FROM buy_order WHERE position_side = 'sell' AND price < 71000 -- 135
+
+--STOP
+DELETE FROM stop WHERE position_side = 'sell';
+DELETE FROM stop WHERE position_side = 'buy';
+SELECT COUNT(*) FROM stop WHERE position_side = 'sell'
+SELECT COUNT(*) FROM stop WHERE position_side = 'sell' AND volume > 0.001
+SELECT COUNT(*) FROM stop WHERE position_side = 'buy' AND volume > 0.001
+
+DELETE FROM stop WHERE position_side = 'sell' AND price < 67250;
+
+-- BO
+
+SELECT count(1) FROM buy_order where position_side = 'sell';
+DELETE FROM buy_order WHERE position_side = 'sell';
+DELETE FROM buy_order WHERE position_side = 'sell'  AND price < 69500;
+
+SELECT count(1) FROM buy_order where position_side = 'buy';
+DELETE FROM buy_order WHERE position_side = 'buy';
+
+SELECT count(*) FROM buy_order WHERE position_side = 'sell' AND price < 69250;
+SELECT count(*) FROM buy_order WHERE position_side = 'buy' AND price < 61000;
+
+DELETE FROM buy_order WHERE position_side = 'buy' AND price < 61400;
+DELETE FROM buy_order WHERE position_side = 'buy' AND price > 58000;
+
+SELECT COUNT(1) FROM buy_order WHERE position_side = 'sell' AND price < 69450;
+
+
+UPDATE stop set price = price - 500 WHERE position_side = 'buy'
+UPDATE stop set price = price - 100 WHERE position_side = 'buy' AND volume > 0.001
+UPDATE stop set price = price + 200 WHERE position_side = 'buy'
+
+UPDATE stop set volume = volume - 0.001 WHERE position_side = 'buy' AND volume > 0.001
+
+
+SELECT COUNT(*) FROM stop WHERE position_side = 'sell'
+
+
