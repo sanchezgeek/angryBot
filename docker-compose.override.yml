@@ -22,6 +22,6 @@ services:
 
 ###> doctrine/doctrine-bundle ###
   postgres:
-    ports:
-      - "5432"
+ #   ports:
+ #     - "5432"
 ###< doctrine/doctrine-bundle ###
