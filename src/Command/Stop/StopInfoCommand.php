@@ -78,14 +78,15 @@ class StopInfoCommand extends AbstractCommand
         $showCurrentPositionPnl = $this->paramFetcher->getBoolOption(self::SHOW_POSITION_PNL);
         $showTPs = $this->paramFetcher->getBoolOption(self::SHOW_TP);
 
-        $imValue = $this->paramFetcher->floatOption(self::IM_VALUE);
+        if ($imValue = $this->paramFetcher->floatOption(self::IM_VALUE)) {
+            var_dump($position->initialMargin->value() > $imValue);die;
+        }
+
         if ($position->isSupportPosition()) {
-            if ($imValue) {var_dump($position->initialMargin->value() > $imValue);die;} else {
-                $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
-                $showSizeLeft = true;
-            }
+            $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
+            $showSizeLeft = true;
         } else {
-            if ($imValue) {var_dump($position->initialMargin->value() > $imValue);die;}
+            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationPrice - $position->entryPrice));
 //            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
 
