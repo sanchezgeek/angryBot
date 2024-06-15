@@ -60,7 +60,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 55.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 234;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 200;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     public const FIX_SUPPORT_ENABLED = false;
@@ -74,7 +74,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
     {
-        if ($position->getHedge()?->isMainPosition($position) && !$position->isPositionInProfit($ticker->indexPrice)) {
+        if ($position->getHedge()?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
             return true;
         }
 
