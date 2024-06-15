@@ -47,6 +47,7 @@ class HedgeInfoCommand extends AbstractCommand
         $applicableSupportSize = $this->hedgeService->getApplicableSupportSize($hedge, $mainPositionIMPercentToSupport);
         $sizeDiff = $supportPosition->size - $applicableSupportSize;
 
+        $this->io->block(sprintf('Hedge distance: %.3f', $hedge->getPositionsDistance()));
         $this->io->block(sprintf('Support size applicable for support %s of mainPosition.InitialMargin: %.3f', $mainPositionIMPercentToSupport, $applicableSupportSize));
         $this->io->block(sprintf('Current support size: %.3f', $supportPosition->size));
         $this->io->block(sprintf('Diff: %.3f', $sizeDiff));
