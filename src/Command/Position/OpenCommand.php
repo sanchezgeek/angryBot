@@ -16,6 +16,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
@@ -84,13 +85,15 @@ class OpenCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // @todo | reopen | remove all BO left from previous position (without `uniq` or just bigger than 0.005)
+# close current opened position
+        // @todo | reopen | remove all BO left from previous position? (without `uniq` or just bigger than 0.005)
 
-        $reopenPosition = $this->paramFetcher->getBoolOption(self::REOPEN_OPTION);
-        if ($reopenPosition && ($closePositionError = $this->closeCurrentPosition()) !== null) {
+        $currentOpenedPosition = $this->getPosition(false);
+        if ($this->paramFetcher->getBoolOption(self::REOPEN_OPTION) && ($closePositionError = $this->closeCurrentPosition($currentOpenedPosition)) !== null) {
             return $closePositionError;
         }
 
+# get data
         $positionSide = $this->getPositionSide();
         $symbolTicker = $this->getTicker($this->symbol);
         $indexPrice = $symbolTicker->indexPrice;
@@ -100,49 +103,69 @@ class OpenCommand extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $removeStops = true;
-        if ($this->getPosition(false) && !$this->io->confirm('Remove existed stops?', false)) {
-            $removeStops = false;
-        }
+# remove stops?
+        $existedStops = $this->stopRepository->findActive($positionSide); // @todo | or findAll?
+        $removeStops = $currentOpenedPosition === null /* position not opened => force remove */ || ($existedStops && $this->io->confirm('Remove existed stops?', false));
 
+# begin position open
         $this->entityManager->beginTransaction();
 
         if ($removeStops) {
-            $this->removeCurrentPositionStops();
+            foreach ($existedStops as $stop) $this->entityManager->remove($stop);
+            $this->entityManager->flush();
         }
 
         $size = $this->getSizeArgument();
 
-        $expectedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 100);
+        // fake position to make some calc
+        $addedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 100);
 
         if ($this->isWithStopsOptionChecked()) {
-            $this->createStopsGrid($expectedPosition);
+            $this->createStopsGrid($addedPosition);
         }
 
-        ['range' => $buyGridRange, 'part' => $buyGridPart] = $this->getGridRangeOption($expectedPosition);
+# first calc size of buy orders
+        ['range' => $buyGridRange, 'part' => $buyGridPart] = $this->getGridRangeOption($addedPosition);
         $buyGridVolume = $buyGridPart->of($size);
-        $buyGridOrdersVolumeSum = $this->createBuyOrdersGrid($buyGridRange, $buyGridVolume, self::DEFAULT_BUY_GRID_QNT);
+        $buyOrders = $this->createBuyOrdersGrid($buyGridRange, $buyGridVolume, self::DEFAULT_BUY_GRID_QNT);
+        $buyGridOrdersVolumeSum = 0;
+        foreach ($buyOrders as $buyOrder) {
+            $buyGridOrdersVolumeSum += $buyOrder->volume();
+        }
 
-        // market
+# do market buy
         $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
         $this->tradeService->marketBuy($this->symbol, $positionSide, $marketBuyVolume);
 
         $this->entityManager->flush();
         $this->entityManager->commit();
 
+        $resultPosition = $this->getPosition();
+
+# create buy orders grid
+        $buyOrdersContext = [BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
+        if ($resultPosition->isSupportPosition()) {
+            $buyOrdersContext[BuyOrder::FORCE_BUY_CONTEXT] = true;
+        }
+
+        foreach ($buyOrders as $order) {
+            $this->createBuyOrderHandler->handle(
+                new CreateBuyOrderEntryDto($positionSide, $order->volume(), $order->price()->value(), $buyOrdersContext)
+            );
+        }
+
         return Command::SUCCESS;
     }
 
-    private function closeCurrentPosition(): ?int
+    private function closeCurrentPosition(?Position $currentOpenedPosition): ?int
     {
-        $position = $this->getPosition(false);
-        if (!$position) {
+        if (!$currentOpenedPosition) {
             $this->io->warning('Position not found. Skip closeCurrentPosition.');
             return null;
         }
 
-        $unrealizedPnl = $position->unrealizedPnl;
-        if (!$this->io->confirm(sprintf('Current unrealized PNL: %.3f', $unrealizedPnl))) {
+        $unrealizedPnl = $currentOpenedPosition->unrealizedPnl;
+        if (!$this->io->confirm(sprintf('Current unrealized PNL: %.3f. Continue?', $unrealizedPnl))) {
             return Command::FAILURE;
         }
 
@@ -155,49 +178,34 @@ class OpenCommand extends AbstractCommand
             return null;
         }
 
-        $this->tradeService->closeByMarket($position, $position->size);
+        $this->tradeService->closeByMarket($currentOpenedPosition, $currentOpenedPosition->size);
 
         $currentLoss = PriceHelper::round(-$unrealizedPnl, 2);
         $spotBalance = $this->accountService->getSpotWalletBalance($this->symbol->associatedCoin());
         if ($spotBalance->availableBalance > 2) {
             $this->accountService->interTransferFromSpotToContract(
                 $this->symbol->associatedCoin(),
-                min(PriceHelper::round($spotBalance->availableBalance - 1), $currentLoss)
+                min(PriceHelper::round($spotBalance->availableBalance - 1), $currentLoss),
             );
         }
 
         return null;
     }
 
-    public function removeCurrentPositionStops(): void
-    {
-        foreach ($this->stopRepository->findActive($this->getPositionSide()) as $stop) {
-            $this->entityManager->remove($stop);
-        }
-        $this->entityManager->flush();
-    }
-
     /**
-     * @return float Created BuyOrders volume sum
+     * @return Order[]
      */
-    private function createBuyOrdersGrid(PriceRange $gridPriceRange, float $forVolume, int $ordersQnt): float
+    private function createBuyOrdersGrid(PriceRange $gridPriceRange, float $forVolume, int $ordersQnt): array
     {
-        $context = [BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
-        $side = $this->getPositionSide();
-        $buyOrdersGrid = new OrdersGrid($gridPriceRange);
+        $grid = new OrdersGrid($gridPriceRange);
 
-        $volumeSum = 0;
-        foreach ($buyOrdersGrid->ordersByQnt($forVolume, $ordersQnt) as $order) {
+        $orders = [];
+        foreach ($grid->ordersByQnt($forVolume, $ordersQnt) as $order) {
             $rand = round(random_int(-7, 8) * 0.4, 2);
-
-            $this->createBuyOrderHandler->handle(
-                new CreateBuyOrderEntryDto($side, $order->volume(), $order->price()->sub($rand)->value(), $context)
-            );
-
-            $volumeSum += $order->volume();
+            $orders[] = new Order($order->price()->sub($rand), $order->volume());
         }
 
-        return $volumeSum;
+        return $orders;
     }
 
     private function createStopsGrid(Position $position, int $rangeOrdersQnt = self::DEFAULT_STOP_GRID_QNT): void
@@ -234,7 +242,7 @@ class OpenCommand extends AbstractCommand
 
     private function getSizeArgument(): float
     {
-        $availableBalancePart = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
+        $specifiedPartOfAvailableBalance = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
 
         $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
         if (!($contractBalance->availableBalance > 0)) {
@@ -243,7 +251,7 @@ class OpenCommand extends AbstractCommand
 
         $contractCost = $this->getCurrentContractCost($this->symbol);
 
-        return $availableBalancePart->of($contractBalance->availableBalance / $contractCost);
+        return $specifiedPartOfAvailableBalance->of($contractBalance->availableBalance / $contractCost);
     }
 
     private function getCurrentContractCost(Symbol $symbol): float
@@ -263,7 +271,7 @@ class OpenCommand extends AbstractCommand
         $pattern = '/\d+%\|\d+%/';
         if (!preg_match($pattern, $gridRangesDef)) {
             throw new InvalidArgumentException(
-                sprintf('Invalid `%s` def "%s" ("%s" expected)', self::GRID_RANGE_OPTION, $gridRangesDef, $pattern)
+                sprintf('Invalid `%s` def "%s" ("%s" expected)', self::GRID_RANGE_OPTION, $gridRangesDef, $pattern),
             );
         }
 
@@ -272,7 +280,7 @@ class OpenCommand extends AbstractCommand
 
         return [
             'range' => PriceRange::byPositionPnlRange($expectedPosition, -$rangePnl->value(), $rangePnl->value()),
-            'part' => $sizePart
+            'part' => $sizePart,
         ];
     }
 
