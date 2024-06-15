@@ -84,14 +84,16 @@ class CreateStopsGridCommand extends AbstractCommand
         $position = null;
         try {
             $position = $this->getPosition();
-            if ($forVolume >= $position->size) {
-                throw new LogicException('$forVolume is greater than whole position size');
-            }
-            if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
-                return Command::FAILURE;
-            }
         } catch (Throwable $e) {
             $this->io->warning($e->getMessage());
+        }
+
+        if ($position && $forVolume >= $position->size) {
+            throw new LogicException('$forVolume is greater than whole position size');
+        }
+
+        if ($position && ($forVolume > $position->size / 3 && !$this->io->confirm('Are you sure?'))) {
+            return Command::FAILURE;
         }
 
         $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid')];
