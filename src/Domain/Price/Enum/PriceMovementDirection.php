@@ -8,7 +8,6 @@ enum PriceMovementDirection
 {
     case TO_LOSS;
     case TO_PROFIT;
-    case NONE;
 
     public function isLoss(): bool
     {
@@ -18,10 +17,5 @@ enum PriceMovementDirection
     public function isProfit(): bool
     {
         return $this === self::TO_PROFIT;
-    }
-
-    public function isNone(): bool
-    {
-        return $this === self::NONE;
     }
 }

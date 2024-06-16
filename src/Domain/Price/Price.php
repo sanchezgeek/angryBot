@@ -6,11 +6,14 @@ namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
+
+use RuntimeException;
 
 use function abs;
 use function round;
+use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceTest
@@ -44,49 +47,37 @@ readonly final class Price
 
     public function add(Price|float $addValue): self
     {
-        $addValue = $addValue instanceof self ? $addValue->value : $addValue;
-
-        return self::float($this->value + $addValue);
+        return self::float($this->value + self::toFloat($addValue));
     }
 
     public function sub(Price|float $subValue): self
     {
-        $subValue = $subValue instanceof self ? $subValue->value : $subValue;
-
-        return self::float($this->value - $subValue);
+        return self::float($this->value - self::toFloat($subValue));
     }
 
-    public function eq(Price $price): bool
+    public function eq(Price|float $otherPrice): bool
     {
-        return $this->value === $price->value;
+        return $this->value === self::toFloat($otherPrice);
     }
 
-    public function greaterThan(Price|float $price): bool
+    public function greaterThan(Price|float $otherPrice): bool
     {
-        $price = $price instanceof self ? $price->value : $price;
-
-        return $this->value > $price;
+        return $this->value > self::toFloat($otherPrice);
     }
 
-    public function greaterOrEquals(Price|float $price): bool
+    public function greaterOrEquals(Price|float $otherPrice): bool
     {
-        $price = $price instanceof self ? $price->value : $price;
-
-        return $this->value >= $price;
+        return $this->value >= self::toFloat($otherPrice);
     }
 
-    public function lessThan(Price|float $price): bool
+    public function lessThan(Price|float $otherPrice): bool
     {
-        $price = $price instanceof self ? $price->value : $price;
-
-        return $this->value < $price;
+        return $this->value < self::toFloat($otherPrice);
     }
 
-    public function lessOrEquals(Price|float $price): bool
+    public function lessOrEquals(Price|float $otherPrice): bool
     {
-        $price = $price instanceof self ? $price->value : $price;
-
-        return $this->value <= $price;
+        return $this->value <= self::toFloat($otherPrice);
     }
 
     public function isPriceInRange(PriceRange $priceRange): bool
@@ -99,7 +90,7 @@ readonly final class Price
         return PnlHelper::getPnlInPercents($position, $this->value());
     }
 
-    public function getTargetPriceByPnlPercent(float $pnlPercent, Position $position): Price
+    public function getTargetPriceByPnlPercent(float $pnlPercent, Position $position): self
     {
         return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $position);
     }
@@ -114,17 +105,35 @@ readonly final class Price
         return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
     }
 
-    public function differenceWith(Price|float $price): PriceMovement
+    public function differenceWith(Price|float $otherPrice): PriceMovement
     {
-        $price = $price instanceof self ? $price : self::float($price);
-
-        return PriceMovement::fromToTarget($price, $this);
+        return PriceMovement::fromToTarget(self::toObj($otherPrice), $this);
     }
 
-    public function deltaWith(Price|float $price): float
+    public function deltaWith(Price|float $otherPrice): float
     {
-        $price = $price instanceof self ? $price->value : $price;
+        return abs($this->value - self::toFloat($otherPrice));
+    }
 
-        return abs($this->value - $price);
+    public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self
+    {
+        return match ($direction) {
+            PriceMovementDirection::TO_LOSS => $positionSide->isShort() ? $this->add($diff) : $this->sub($diff),
+            PriceMovementDirection::TO_PROFIT => $positionSide->isShort() ? $this->sub($diff) : $this->add($diff),
+            default => throw new RuntimeException(sprintf('Unknown direction "%s".', $direction->name))
+        };
+    }
+
+    /**
+     * @todo Or move to PriceHelper?
+     */
+    private static function toFloat(self|float $value): float
+    {
+        return $value instanceof self ? $value->value : $value;
+    }
+
+    private static function toObj(self|float $value): self
+    {
+        return $value instanceof self ? $value : self::float($value);
     }
 }

@@ -27,15 +27,15 @@ readonly class PriceMovement
 
     public function isLossFor(Side $positionSide): bool
     {
-        return $this->movementDirection($positionSide)->isLoss();
+        return (bool)$this->movementDirection($positionSide)?->isLoss();
     }
 
     public function isProfitFor(Side $positionSide): bool
     {
-        return $this->movementDirection($positionSide)->isProfit();
+        return (bool)$this->movementDirection($positionSide)?->isProfit();
     }
 
-    public function movementDirection(Side $relatedToPositionSide): PriceMovementDirection
+    private function movementDirection(Side $relatedToPositionSide): ?PriceMovementDirection
     {
         if ($this->toTargetPrice->greaterThan($this->fromPrice)) {
             return $relatedToPositionSide->isShort() ? PriceMovementDirection::TO_LOSS : PriceMovementDirection::TO_PROFIT;
@@ -45,6 +45,6 @@ readonly class PriceMovement
             return $relatedToPositionSide->isShort() ? PriceMovementDirection::TO_PROFIT : PriceMovementDirection::TO_LOSS;
         }
 
-        return PriceMovementDirection::NONE;
+        return null;
     }
 }

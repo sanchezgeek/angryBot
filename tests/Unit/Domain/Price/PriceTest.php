@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Domain\Price;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
@@ -341,5 +342,14 @@ final class PriceTest extends TestCase
         self::assertEquals(Price::float(29940), $price->getTargetPriceByPnlPercent(-20, $position));
         self::assertEquals(Price::float(29700), $price->getTargetPriceByPnlPercent(-100, $position));
         self::assertEquals(Price::float(29640), $price->getTargetPriceByPnlPercent(-120, $position));
+    }
+
+    public function testModifyByDirection(): void
+    {
+        self::assertEquals(Price::float(50000.2), Price::float(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_LOSS, 0.2));
+        self::assertEquals(Price::float(50000.2), Price::float(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_PROFIT, 0.2));
+
+        self::assertEquals(Price::float(49999.8), Price::float(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_LOSS, 0.2));
+        self::assertEquals(Price::float(49999.8), Price::float(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_PROFIT, 0.2));
     }
 }
