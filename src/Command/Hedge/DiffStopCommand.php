@@ -65,7 +65,7 @@ class DiffStopCommand extends AbstractCommand
             || ($mainPosition->isLong() && $liquidationPrice > $targetPrice)
         ) {
             $position = $position->withNewSize($position->size - 0.001);
-            $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance);
+            $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, new CoinAmount($coin, $contractBalance->totalBalance));
 
             $liquidationPrice = $liquidationCalcResult->estimatedLiquidationPrice()->value();
         }

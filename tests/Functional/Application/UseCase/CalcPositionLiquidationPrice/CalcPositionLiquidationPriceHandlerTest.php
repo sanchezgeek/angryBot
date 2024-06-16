@@ -6,12 +6,11 @@ namespace App\Tests\Functional\Application\UseCase\CalcPositionLiquidationPrice;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Price;
 use App\Helper\FloatHelper;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\PositionFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -29,13 +28,14 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
     /**
      * @dataProvider simpleCalcTestData
      */
-    public function testSimpleCalc(Position $position, WalletBalance $contractWalletBalance, float $expectedLiquidationPrice): void
+    public function testSimpleCalc(Position $position, float $totalContractBalance, float $expectedLiquidationPrice): void
     {
+        $totalContractBalance = new CoinAmount($position->symbol->associatedCoin(), $totalContractBalance);
         $expectedLiquidationDistance = FloatHelper::round(Price::float($position->entryPrice)->deltaWith($expectedLiquidationPrice));
 
         // Act
-        $result = $this->handler->handle($position, $contractWalletBalance);
-        $docsResult = $this->handler->handleFromDocs($position, $contractWalletBalance);
+        $result = $this->handler->handle($position, $totalContractBalance);
+        $docsResult = $this->handler->handleFromDocs($position, $totalContractBalance);
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $result);
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $docsResult);
 
@@ -54,19 +54,13 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
 
         # SHORT
         $position = PositionFactory::short($symbol, 50000, 0.1, 100);
-
-        $totalPositionsBalance = $position->initialMargin->value() + 20;
-        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
-
-        yield 'BTCUSDT SHORT' => [$position, $contractWalletBalance, 50450];
+        $totalContractBalance = $position->initialMargin->value() + 20;
+        yield 'BTCUSDT SHORT' => [$position, $totalContractBalance, 50450];
 
         # LONG
         $position = PositionFactory::long($symbol, 50000, 0.1, 100);
-
-        $totalPositionsBalance = $position->initialMargin->value() + 20;
-        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
-
-        yield 'BTCUSDT LONG' => [$position, $contractWalletBalance, 49550];
+        $totalContractBalance = $position->initialMargin->value() + 20;
+        yield 'BTCUSDT LONG' => [$position, $totalContractBalance, 49550];
     }
 
     /**
@@ -74,12 +68,12 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
      *
      * @dataProvider calcForPositionWithSupportTestData
      */
-    public function testCalcForPositionWithSupport(Position $mainPosition, WalletBalance $contractWalletBalance, float $expectedLiquidationPrice): void
+    public function testCalcForPositionWithSupport(Position $mainPosition, float $totalContractBalance, float $expectedLiquidationPrice): void
     {
         $expectedLiquidationDistance = FloatHelper::round(Price::float($mainPosition->entryPrice)->deltaWith($expectedLiquidationPrice));
 
         // Act
-        $result = $this->handler->handle($mainPosition, $contractWalletBalance);
+        $result = $this->handler->handle($mainPosition, new CoinAmount($mainPosition->symbol->associatedCoin(), $totalContractBalance));
 
         // Assert
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $result);
@@ -96,19 +90,15 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
         $support = PositionFactory::long($symbol, 49000, 0.01, 100);
         $main->setOppositePosition($support); $support->setOppositePosition($main);
 
-        $totalPositionsBalance = $main->initialMargin->value() + $support->initialMargin->value() + 20;
-        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
-
-        yield 'BTCUSDT SHORT' => [$main, $contractWalletBalance, 50583.33];
+        $totalContractBalance = $main->initialMargin->value() + $support->initialMargin->value() + 20;
+        yield 'BTCUSDT SHORT' => [$main, $totalContractBalance, 50588.89];
 
         # LONG
         $main = PositionFactory::long($symbol, 50000, 0.1, 100);
         $support = PositionFactory::short($symbol, 51000, 0.01, 100);
         $main->setOppositePosition($support); $support->setOppositePosition($main);
 
-        $totalPositionsBalance = $main->initialMargin->value() + $support->initialMargin->value() + 20;
-        $contractWalletBalance = new WalletBalance(AccountType::CONTRACT, $symbol->associatedCoin(), $totalPositionsBalance, 20);
-
-        yield 'BTCUSDT LONG' => [$main, $contractWalletBalance, 49416.67];
+        $totalContractBalance = $main->initialMargin->value() + $support->initialMargin->value() + 20;
+        yield 'BTCUSDT LONG' => [$main, $totalContractBalance, 49411.11];
     }
 }

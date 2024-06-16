@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Domain\Position;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use LogicException;
 
 /**
@@ -17,29 +16,29 @@ use LogicException;
  */
 final class CalcPositionLiquidationPriceHandler
 {
-    public function handle(Position $position, WalletBalance $contractWalletBalance): CalcPositionLiquidationPriceResult
+    public function handle(Position $position, CoinAmount $totalContractBalance): CalcPositionLiquidationPriceResult
     {
-        if ($contractWalletBalance->accountType !== AccountType::CONTRACT) {
-            throw new LogicException('Incorrect action run (expected CONTRACT balance provided)');
+        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
+            throw new LogicException(__CLASS__ . ': incorrect usage (support position cannot be under liquidation)');
         }
 
-        $estimatedBalance = $contractWalletBalance->availableBalance;
-        if ($hedge = $position->getHedge()) {
-            if (!$position->isMainPosition()) {
-                throw new LogicException('Incorrect use: support position cannot be under liquidation?');
-            }
+        $freeContractBalance = self::getFreeContractBalance($totalContractBalance, $position);
 
-            if ($position->getHedge()->isProfitableHedge()) {
-                $expectedSupportProfit = $hedge->supportPosition->size * $position->getHedge()->getPositionsDistance();
-                $estimatedBalance += $expectedSupportProfit;
-            }
+        # freeContractBalance liquidation
+        $balanceLiquidationDistance = $freeContractBalance->value() / $position->size;
+
+        # supportPosition profit liquidation
+        if ($hedge?->isProfitableHedge()) {
+            // @todo | move calc to Position (information expert)?
+            $expectedSupportProfit = $hedge->supportPosition->size * $position->getHedge()->getPositionsDistance();
+            $balanceLiquidationDistance += $expectedSupportProfit / $position->getSizeForCalcLoss();
         }
-        $freeBalanceLiquidationDistance = $estimatedBalance / $position->getSizeForCalcLoss();
 
+        # maintenanceMargin liquidation
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
-        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $position->size;
+        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $position->getSizeForCalcLoss();
 
-        $liquidationDistance = $freeBalanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
+        $liquidationDistance = $balanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
 
         $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
 
@@ -49,9 +48,9 @@ final class CalcPositionLiquidationPriceHandler
     /**
      * @see https://www.bybit.com/en-US/help-center/article/Liquidation-Price-USDT-Contract
      */
-    public function handleFromDocs(Position $position, WalletBalance $contractWalletBalance): CalcPositionLiquidationPriceResult
+    public function handleFromDocs(Position $position, CoinAmount $totalContractBalance): CalcPositionLiquidationPriceResult
     {
-        $freeBalanceLiquidationDistance = $contractWalletBalance->availableBalance / $position->size;
+        $freeBalanceLiquidationDistance = self::getFreeContractBalance($totalContractBalance, $position)->value() / $position->size;
 
         $maintenanceMarginRate = Percent::string('0.5%');
         $initialMarginRate = 1 / $position->leverage->value();
@@ -62,5 +61,17 @@ final class CalcPositionLiquidationPriceHandler
         ;
 
         return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
+    }
+
+    private static function getFreeContractBalance(CoinAmount $totalContractBalance, Position $position): CoinAmount
+    {
+        $sumPositionsIM = $position->initialMargin;
+
+        if ($hedge = $position->getHedge()) {
+            // @todo | recalculate support initial margin based on hedge data?
+            $sumPositionsIM = $sumPositionsIM->add($hedge->supportPosition->initialMargin);
+        }
+
+        return $totalContractBalance->sub($sumPositionsIM);
     }
 }
