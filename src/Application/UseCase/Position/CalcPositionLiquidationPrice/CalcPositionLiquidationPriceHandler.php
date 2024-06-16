@@ -23,34 +23,27 @@ final class CalcPositionLiquidationPriceHandler
             throw new LogicException('Incorrect action run (expected CONTRACT balance provided)');
         }
 
-        $positionSize = $position->size;
-        $sizeInLoss = $position->size;
         $estimatedBalance = $contractWalletBalance->availableBalance;
-
-        $oppositePosition = $position->oppositePosition;
-        if ($oppositePosition !== null) {
+        if ($hedge = $position->getHedge()) {
             if (!$position->isMainPosition()) {
                 throw new LogicException('Incorrect use: support position cannot be under liquidation?');
             }
 
             if ($position->getHedge()->isProfitableHedge()) {
-                $expectedSupportProfit = $oppositePosition->size * $position->getHedge()->getPositionsDistance();
+                $expectedSupportProfit = $hedge->supportPosition->size * $position->getHedge()->getPositionsDistance();
                 $estimatedBalance += $expectedSupportProfit;
             }
-
-            $sizeInLoss -= $oppositePosition->size;
         }
-
-        $estimatedBalanceLiquidationDistance = $estimatedBalance / $sizeInLoss;
+        $freeBalanceLiquidationDistance = $estimatedBalance / $position->getSizeForCalcLoss();
 
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
-        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $positionSize;
+        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $position->size;
 
-        $resLiquidationDelta = $maintenanceMarginLiquidationDistance + $estimatedBalanceLiquidationDistance;
+        $liquidationDelta = $freeBalanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
 
-        $liquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $resLiquidationDelta);
+        $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDelta);
 
-        return new CalcPositionLiquidationPriceResult($liquidationPrice);
+        return new CalcPositionLiquidationPriceResult($estimatedLiquidationPrice);
     }
 
     /**
