@@ -39,6 +39,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDeco
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Worker\AppContext;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -207,7 +208,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
 
                 // reopen closed volume on further movement
-                $distance = 100; if ($_ENV['APP_ENV'] !== 'test') $distance += random_int(-20, 35);
+                $distance = 100; if (!AppContext::isTest()) $distance += random_int(-20, 35);
                 $reopenPrice = $position->isShort() ? $ticker->indexPrice->sub($distance) : $ticker->indexPrice->add($distance);
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Helper;
 
+use App\Worker\AppContext;
+
 use function random_int;
 
 final class FloatHelper
@@ -20,7 +22,7 @@ final class FloatHelper
      */
     public static function modify(int|float $number, float $subPercentPart, float $addPercentPart = null): int|float
     {
-        if ($_ENV['APP_ENV'] === 'test') {
+        if (AppContext::isTest()) {
             return $number;
         }
 
