@@ -6,12 +6,15 @@ namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Domain\Position;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
-use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use LogicException;
 
+/**
+ * @todo It seems that the situation where `$contractWalletBalance->totalBalance < summaryPositionsIM` is not taken into account here (but must)
+ */
 final class CalcPositionLiquidationPriceHandler
 {
     public function handle(Position $position, WalletBalance $contractWalletBalance): CalcPositionLiquidationPriceResult
@@ -21,7 +24,6 @@ final class CalcPositionLiquidationPriceHandler
         }
 
         $positionSize = $position->size;
-
         $sizeInLoss = $position->size;
         $estimatedBalance = $contractWalletBalance->availableBalance;
 
@@ -46,9 +48,9 @@ final class CalcPositionLiquidationPriceHandler
 
         $resLiquidationDelta = $maintenanceMarginLiquidationDistance + $estimatedBalanceLiquidationDistance;
 
-        $liquidationPrice = $resLiquidationDelta + $position->entryPrice;
+        $liquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $resLiquidationDelta);
 
-        return $this->result($liquidationPrice);
+        return new CalcPositionLiquidationPriceResult($liquidationPrice);
     }
 
     /**
@@ -66,13 +68,6 @@ final class CalcPositionLiquidationPriceHandler
             : $position->entryPrice * (1 - $initialMarginRate + $maintenanceMarginRate->part()) - $freeBalanceLiquidationDistance
         ;
 
-        return $this->result($liquidationPrice);
-    }
-
-    private function result(float $liquidationPrice): CalcPositionLiquidationPriceResult
-    {
-        return new CalcPositionLiquidationPriceResult(
-            Price::float(FloatHelper::round($liquidationPrice)),
-        );
+        return new CalcPositionLiquidationPriceResult(Price::float($liquidationPrice));
     }
 }
