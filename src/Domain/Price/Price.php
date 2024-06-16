@@ -17,6 +17,8 @@ use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceTest
+ *
+ * @todo | ctrl-f: round(..., 2) | Need to pass precision in __construct on creation (in order to using not only in BTCUSDT context)
  */
 readonly final class Price
 {
@@ -112,7 +114,7 @@ readonly final class Price
 
     public function deltaWith(Price|float $otherPrice): float
     {
-        return abs($this->value - self::toFloat($otherPrice));
+        return round(abs($this->value() - self::toFloat($otherPrice)), 2);
     }
 
     public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self

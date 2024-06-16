@@ -39,11 +39,11 @@ final class CalcPositionLiquidationPriceHandler
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
         $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $position->size;
 
-        $liquidationDelta = $freeBalanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
+        $liquidationDistance = $freeBalanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
 
-        $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDelta);
+        $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
 
-        return new CalcPositionLiquidationPriceResult($estimatedLiquidationPrice);
+        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), $estimatedLiquidationPrice);
     }
 
     /**
@@ -61,6 +61,6 @@ final class CalcPositionLiquidationPriceHandler
             : $position->entryPrice * (1 - $initialMarginRate + $maintenanceMarginRate->part()) - $freeBalanceLiquidationDistance
         ;
 
-        return new CalcPositionLiquidationPriceResult(Price::float($liquidationPrice));
+        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
     }
 }

@@ -12,8 +12,9 @@ final class CalcPositionLiquidationPriceResultTest extends TestCase
 {
     public function testGetLiquidationPrice(): void
     {
-        $result = new CalcPositionLiquidationPriceResult(Price::float(35000));
+        $result = new CalcPositionLiquidationPriceResult(Price::float(35000), Price::float(36000));
 
-        self::assertEquals(Price::float(35000), $result->estimatedLiquidationPrice());
+        self::assertEquals(Price::float(36000), $result->estimatedLiquidationPrice());
+        self::assertEquals(1000, $result->liquidationDistance());
     }
 }
