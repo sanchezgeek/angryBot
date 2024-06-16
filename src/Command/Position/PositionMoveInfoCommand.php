@@ -63,8 +63,7 @@ class PositionMoveInfoCommand extends AbstractCommand
 
         $this->io->note(sprintf('Price diff: %.2f', $newEntry - $position->entryPrice));
 
-        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-        if ($isHedge && Hedge::create($position, $oppositePosition)->isSupportPosition($position)) {
+        if ($position->isSupportPosition()) {
             $this->io->note(sprintf('Result hedge support size: %.3f', $position->size + $buyOrders->totalVolume()));
         } else {
             $this->io->note(sprintf('Volume diff: %.3f', $buyOrders->totalVolume()));

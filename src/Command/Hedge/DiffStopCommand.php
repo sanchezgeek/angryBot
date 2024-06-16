@@ -12,6 +12,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Value\Percent\Percent;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -40,14 +41,15 @@ class DiffStopCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $symbol = $this->getSymbol();
+        $coin = $symbol->associatedCoin();
+        $targetPrice = $this->paramFetcher->floatOption(self::TARGET_PRICE_OPTION);
         $positions = $this->positionService->getPositions($symbol);
+
         if (!($hedge = $positions[0]->getHedge())) {
             return Command::INVALID;
         }
 
-        $targetPrice = $this->paramFetcher->floatOption(self::TARGET_PRICE_OPTION);
-        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-
+        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
         $mainPosition = $hedge->mainPosition;
 
 
@@ -62,7 +64,7 @@ class DiffStopCommand extends AbstractCommand
             ($mainPosition->isShort() && $liquidationPrice < $targetPrice)
             || ($mainPosition->isLong() && $liquidationPrice > $targetPrice)
         ) {
-            $position = $position->cloneWithNewSize($position->size - 0.001);
+            $position = $position->withNewSize($position->size - 0.001);
             $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance);
 
             $liquidationPrice = $liquidationCalcResult->estimatedLiquidationPrice()->value();

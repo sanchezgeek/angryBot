@@ -40,7 +40,7 @@ final class Position
         $this->leverage = new Leverage($leverage);
     }
 
-    public function cloneWithNewSize(float $newSize): self
+    public function withNewSize(float $newSize): self
     {
         $entryPrice = $this->entryPrice;
         $newValue = $entryPrice * $newSize; // linear
@@ -53,6 +53,26 @@ final class Position
             $newValue,
             $this->liquidationPrice,
             $newValue / $this->leverage->value(),
+            $this->leverage->value()
+        );
+
+        if ($this->oppositePosition) {
+            $position->setOppositePosition($this->oppositePosition);
+        }
+
+        return $position;
+    }
+
+    public function withNewLiquidation(float $liquidationPrice): self
+    {
+        $position = new Position(
+            $this->side,
+            $this->symbol,
+            $this->entryPrice,
+            $this->size,
+            $this->value,
+            $liquidationPrice,
+            $this->value / $this->leverage->value(),
             $this->leverage->value()
         );
 
@@ -97,6 +117,11 @@ final class Position
     public function isMainPosition(): bool
     {
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
+    }
+
+    public function getSizeForCalcLoss(): float
+    {
+        return ($hedge = $this->getHedge()) ? $this->size - $hedge->supportPosition->size : $this->size;
     }
 
     public function getCaption(): string
