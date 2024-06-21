@@ -6,6 +6,7 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
+use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
 
 use function abs;
@@ -99,6 +100,17 @@ final readonly class Hedge
         );
     }
 
+    /**
+     * @todo tests
+     */
+    public function getMainRate(): Percent
+    {
+        return new Percent(
+            ($this->mainPosition->size / $this->supportPosition->size) * 100,
+            false
+        );
+    }
+
     public function getPositionsDistance(): float
     {
         return abs($this->supportPosition->entryPrice - $this->mainPosition->entryPrice);
@@ -111,5 +123,85 @@ final readonly class Hedge
         }
 
         return $this->mainPosition->entryPrice <= $this->supportPosition->entryPrice;
+    }
+
+    /**
+     * @todo tests
+     */
+    public function getSupportProfitOnMainEntryPrice(): ?float
+    {
+        if ($this->isProfitableHedge()) {
+            return $this->supportPosition->size * $this->getPositionsDistance();
+        }
+
+        return null;
+    }
+
+    /**
+     * @todo tests
+     */
+    public function getMainProfitOnSupportEntryPrice(): ?float
+    {
+        if ($this->isProfitableHedge()) {
+            return $this->mainPosition->size * $this->getPositionsDistance();
+        }
+
+        return null;
+    }
+
+    /**
+     * @todo tests
+     */
+    public function getSupportPnlPercentOnMainEntryPrice(): Percent
+    {
+        return new Percent(Price::float($this->mainPosition->entryPrice)->getPnlPercentFor($this->supportPosition), false);
+    }
+
+    /**
+     * @todo tests
+     */
+    public function getMainPnlPercentOnSupportEntryPrice(): Percent
+    {
+        return new Percent(Price::float($this->supportPosition->entryPrice)->getPnlPercentFor($this->mainPosition), false);
+    }
+
+    /**
+     * @return array{
+     *      distance: float,
+     *      sizeDelta: float,
+     *      mainRate: Percent,
+     *      supportRate: Percent,
+     *      pnl: array{
+     *          absolute: array{
+     *              mainToSupportEntry: float,
+     *              supportToMainEntry: float,
+     *          },
+     *          percent: array{
+     *              mainToSupportEntry: Percent,
+     *              supportToMainEntry: Percent,
+     *          }
+     *      }
+     *  }
+     *
+     * @todo tests
+     */
+    public function info(): array
+    {
+        return [
+            'distance' => $this->getPositionsDistance(),
+            'sizeDelta' => $this->mainPosition->getSizeForCalcLoss(),
+            'mainRate' => $this->getMainRate(),
+            'supportRate' => $this->getSupportRate(),
+            'pnl' => [
+                'absolute' => [
+                    'mainToSupportEntry' => $this->getMainProfitOnSupportEntryPrice(),
+                    'supportToMainEntry' => $this->getSupportProfitOnMainEntryPrice(),
+                ],
+                'percent' => [
+                    'mainToSupportEntry' => $this->getMainPnlPercentOnSupportEntryPrice(),
+                    'supportToMainEntry' => $this->getSupportPnlPercentOnMainEntryPrice(),
+                ],
+            ],
+        ];
     }
 }
