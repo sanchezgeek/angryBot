@@ -49,16 +49,20 @@ abstract class AbstractFloat implements PercentModifiableValue
         return $clone;
     }
 
-    final public function subPercent(Percent $percent): self
+    final public function subPercent(Percent|string $percent): self
     {
+        $percent = $percent instanceof Percent ? $percent : Percent::string($percent);
+
         $clone = clone $this;
         $clone->value -= $percent->of($this->value);
 
         return $clone;
     }
 
-    final public function addPercent(Percent $percent): self
+    final public function addPercent(Percent|string $percent): self
     {
+        $percent = $percent instanceof Percent ? $percent : Percent::string($percent);
+
         $clone = clone $this;
         $clone->value += $percent->of($this->value);
 
