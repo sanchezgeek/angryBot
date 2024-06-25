@@ -57,6 +57,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = 1;
 
     const NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP = 5;
+    const MOVE_BACK_TO_SPOT_ENABLED = false;
 
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
@@ -137,7 +138,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                 }
             }
         } elseif (
-            (
+            self::MOVE_BACK_TO_SPOT_ENABLED && (
                 $priceDeltaToLiquidation > 2000
                 || ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
             )
