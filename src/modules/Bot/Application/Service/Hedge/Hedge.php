@@ -165,43 +165,43 @@ final readonly class Hedge
         return new Percent(Price::float($this->supportPosition->entryPrice)->getPnlPercentFor($this->mainPosition), false);
     }
 
-    /**
-     * @return array{
-     *      distance: float,
-     *      sizeDelta: float,
-     *      mainRate: Percent,
-     *      supportRate: Percent,
-     *      pnl: array{
-     *          absolute: array{
-     *              mainToSupportEntry: float,
-     *              supportToMainEntry: float,
-     *          },
-     *          percent: array{
-     *              mainToSupportEntry: Percent,
-     *              supportToMainEntry: Percent,
-     *          }
-     *      }
-     *  }
-     *
-     * @todo tests
-     */
-    public function info(): array
-    {
-        return [
-            'distance' => $this->getPositionsDistance(),
-            'sizeDelta' => $this->mainPosition->getSizeForCalcLoss(),
-            'mainRate' => $this->getMainRate(),
-            'supportRate' => $this->getSupportRate(),
-            'pnl' => [
-                'absolute' => [
-                    'mainToSupportEntry' => $this->getMainProfitOnSupportEntryPrice(),
-                    'supportToMainEntry' => $this->getSupportProfitOnMainEntryPrice(),
-                ],
-                'percent' => [
-                    'mainToSupportEntry' => $this->getMainPnlPercentOnSupportEntryPrice(),
-                    'supportToMainEntry' => $this->getSupportPnlPercentOnMainEntryPrice(),
-                ],
-            ],
-        ];
-    }
+//    /**
+//     * @return array{
+//     *      distance: float,
+//     *      sizeDelta: float,
+//     *      mainRate: Percent,
+//     *      supportRate: Percent,
+//     *      pnl: array{
+//     *          absolute: array{
+//     *              mainToSupportEntry: float,
+//     *              supportToMainEntry: float,
+//     *          },
+//     *          percent: array{
+//     *              mainToSupportEntry: Percent,
+//     *              supportToMainEntry: Percent,
+//     *          }
+//     *      }
+//     *  }
+//     *
+//     * @todo tests
+//     */
+//    public function info(): array
+//    {
+//        return [
+//            'distance' => $this->getPositionsDistance(),
+//            'sizeDelta' => $this->mainPosition->getSizeForCalcLoss(),
+//            'mainRate' => $this->getMainRate(),
+//            'supportRate' => $this->getSupportRate(),
+//            'pnl' => [
+//                'absolute' => [
+//                    'mainToSupportEntry' => $this->getMainProfitOnSupportEntryPrice(),
+//                    'supportToMainEntry' => $this->getSupportProfitOnMainEntryPrice(),
+//                ],
+//                'percent' => [
+//                    'mainToSupportEntry' => $this->getMainPnlPercentOnSupportEntryPrice(),
+//                    'supportToMainEntry' => $this->getSupportPnlPercentOnMainEntryPrice(),
+//                ],
+//            ],
+//        ];
+//    }
 }
