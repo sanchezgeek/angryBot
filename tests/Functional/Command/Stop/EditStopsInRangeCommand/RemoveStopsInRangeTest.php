@@ -29,7 +29,7 @@ final class RemoveStopsInRangeTest extends KernelTestCase
     use CommandsTester;
     use ByBitV5ApiRequestsMocker;
 
-    private const COMMAND_NAME = 'sl:range-edit';
+    private const COMMAND_NAME = 'sl:edit';
     private const ACTION = EditStopsCommand::ACTION_REMOVE;
 
     private CommandTester $tester;
