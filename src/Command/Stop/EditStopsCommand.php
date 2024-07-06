@@ -32,7 +32,7 @@ use function implode;
 use function in_array;
 use function sprintf;
 
-#[AsCommand(name: 'sl:range-edit')]
+#[AsCommand(name: 'sl:edit')]
 class EditStopsCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
@@ -49,10 +49,10 @@ class EditStopsCommand extends AbstractCommand
     public const MOVE_TO_PRICE_OPTION = 'moveToPrice';
 
     /** `edit`-action options */
-    public const EDIT_CALLBACK_OPTION = 'editCallback';
+    public const EDIT_CALLBACK_OPTION = 'eC';
 
     /** Common options */
-    public const FILTER_CALLBACKS_OPTION = 'filterCallbacks';
+    public const FILTER_CALLBACKS_OPTION = 'fC';
 
     public const ACTION_MOVE = 'move';      /** @see MoveStopsInRangeTest */
     public const ACTION_REMOVE = 'remove';  /** @see RemoveStopsInRangeTest */
