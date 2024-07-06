@@ -73,10 +73,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
-    private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance): bool
+    private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
         if ($position->getHedge()?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
             return true;
+        }
+
+        if ($buyOrder && $buyOrder->getSuccessSpotTransfersCount() > 1) {
+            return false;
         }
 
         if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
@@ -165,7 +169,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 }
 
                 if ($spentCost > 0) {
-                    $multiplier = $position->isSupportPosition() ? 0.5 : 1.25;
+                    $multiplier = $position->isSupportPosition() ? 0.5 : 1.8;
                     $amount = $spentCost * $multiplier;
                     $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
                     if ($this->canUseSpot($ticker, $position, $spotBalance)) {
@@ -175,7 +179,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         } catch (CannotAffordOrderCostException $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
-            if ($lastBuy->getSuccessSpotTransfersCount() < 1 && $this->canUseSpot($ticker, $position, $spotBalance)) {
+            if ($this->canUseSpot($ticker, $position, $spotBalance, $lastBuy)) {
                 $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
                 $amount = $orderCost * 1.1; // $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
                 if ($this->transferToContract($spotBalance, $amount)) {
