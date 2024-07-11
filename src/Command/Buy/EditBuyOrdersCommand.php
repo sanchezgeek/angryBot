@@ -37,10 +37,10 @@ class EditBuyOrdersCommand extends AbstractCommand
 
     public const ACTION_OPTION = 'action';
 
-    public const FILTER_CALLBACKS_OPTION = 'filterCallbacks';
+    public const FILTER_CALLBACKS_OPTION = 'fC';
 
     /** `edit`-action options */
-    public const EDIT_CALLBACK_OPTION = 'editCallback';
+    public const EDIT_CALLBACK_OPTION = 'eC';
 
     public const ACTION_REMOVE = 'remove';
     public const ACTION_EDIT = 'edit';
