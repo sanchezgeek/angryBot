@@ -3,10 +3,8 @@
 namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Domain\Order\Service\OrderCostHelper;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -84,8 +82,6 @@ class BalanceInfoCommand extends AbstractCommand
 
     public function __construct(
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
-        private readonly OrderCostHelper $orderCostHelper,
-        private readonly MarketServiceInterface $marketService,
         string $name = null,
     ) {
         parent::__construct($name);
