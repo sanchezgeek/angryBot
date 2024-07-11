@@ -8,11 +8,10 @@ use App\Domain\Value\Common\AbstractFloat;
 use App\Domain\Value\Common\IntegerValue;
 use DomainException;
 use InvalidArgumentException;
-
+use JsonSerializable;
 use Stringable;
 
 use function is_numeric;
-use function round;
 use function sprintf;
 use function str_ends_with;
 use function substr;
@@ -20,10 +19,8 @@ use function substr;
 /**
  * @see \App\Tests\Unit\Domain\Value\Percent\PercentTest
  */
-final class Percent extends AbstractFloat implements Stringable
+final class Percent extends AbstractFloat implements Stringable, JsonSerializable
 {
-    private const PART_ROUND_PRECISION = 3;
-
     public function __construct(float $value, bool $strict = true)
     {
         if ($strict && ($value <= 0 || $value > 100)) {
@@ -51,7 +48,7 @@ final class Percent extends AbstractFloat implements Stringable
 
     public function part(): float
     {
-        return round($this->value() / 100, self::PART_ROUND_PRECISION);
+        return $this->value() / 100;
     }
 
     public function of(int|float|IntegerValue|AbstractFloat $value): float|AbstractFloat
@@ -69,6 +66,11 @@ final class Percent extends AbstractFloat implements Stringable
 
     public function __toString(): string
     {
-        return sprintf('%.2f%%', $this->value());
+        return (string)$this->value();
+    }
+
+    public function jsonSerialize(): string
+    {
+        return (string)$this;
     }
 }
