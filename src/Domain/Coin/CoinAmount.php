@@ -6,10 +6,11 @@ namespace App\Domain\Coin;
 
 use App\Domain\Value\Common\AbstractFloat;
 use JsonSerializable;
+use Stringable;
 
 use function round;
 
-final class CoinAmount extends AbstractFloat implements JsonSerializable
+final class CoinAmount extends AbstractFloat implements JsonSerializable, Stringable
 {
     public function __construct(private readonly Coin $coin, float $amount)
     {
@@ -31,5 +32,10 @@ final class CoinAmount extends AbstractFloat implements JsonSerializable
     public function jsonSerialize(): mixed
     {
         return $this->value();
+    }
+
+    public function __toString(): string
+    {
+        return (string)$this->value();
     }
 }

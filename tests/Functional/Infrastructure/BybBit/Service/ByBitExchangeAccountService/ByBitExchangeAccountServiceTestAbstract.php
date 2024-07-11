@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitExchangeAccountService;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
-use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
-use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Throwable;
-
-use function sprintf;
 
 abstract class ByBitExchangeAccountServiceTestAbstract extends KernelTestCase
 {
@@ -32,7 +28,9 @@ abstract class ByBitExchangeAccountServiceTestAbstract extends KernelTestCase
 
         $this->service = new ByBitExchangeAccountService(
             $this->initializeApiClient(),
-            $this->appErrorLogger
+            $this->appErrorLogger,
+            self::getContainer()->get(OrderCostCalculator::class),
+            self::getContainer()->get(ExchangeServiceInterface::class)
         );
     }
 }

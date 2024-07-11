@@ -24,7 +24,7 @@ use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
-use App\Domain\Order\Service\OrderCostHelper;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
@@ -69,6 +69,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
 
     private const RESERVED_BALANCE = 0;
+    public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
@@ -165,7 +166,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if ($boughtOrders) {
                 $spentCost = 0;
                 foreach ($boughtOrders as $boughtOrder) {
-                    $spentCost += $this->orderCostHelper->getOrderBuyCost($boughtOrder, $position->leverage)->value();
+                    $spentCost += $this->orderCostCalculator->totalBuyCost($boughtOrder, $position->leverage, $position->side)->value();
                 }
 
                 if ($spentCost > 0) {
@@ -180,8 +181,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } catch (CannotAffordOrderCostException $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($this->canUseSpot($ticker, $position, $spotBalance, $lastBuy)) {
-                $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage)->value();
-                $amount = $orderCost * 1.1; // $amount = $position->getDeltaWithTicker($ticker) < 200 ? self::SHORT_DISTANCE_TRANSFER_AMOUNT : self::LONG_DISTANCE_TRANSFER_AMOUNT;
+                $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage, $position->side)->value();
+                $amount = $orderCost * self::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
                 if ($this->transferToContract($spotBalance, $amount)) {
                     $lastBuy->incSuccessSpotTransfersCounter();
 
@@ -522,7 +523,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      * @param BuyOrderRepository $buyOrderRepository
      * @param StopRepository $stopRepository
      * @param StopService $stopService
-     * @param OrderCostHelper $orderCostHelper
+     * @param OrderCostCalculator $orderCostCalculator
      * @param ByBitExchangeAccountService $exchangeAccountService
      * @param ByBitMarketService $marketService
      * @param ByBitOrderService $orderService
@@ -537,7 +538,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
-        private readonly OrderCostHelper $orderCostHelper,
+        private readonly OrderCostCalculator $orderCostCalculator,
 
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MarketServiceInterface $marketService,

@@ -9,19 +9,17 @@ use App\Domain\Value\Percent\Percent;
 
 final class ByBitCommissionProvider implements ExchangeCommissionProvider
 {
-    private const DEFAULT_COMMISSION_PERCENT = '11%';
+    private const TAKER_FEE = '0.055%';
 
     private Percent $execOrderCommission;
 
-    public function __construct(string $orderExecCommissionPercent = self::DEFAULT_COMMISSION_PERCENT)
+    public function __construct(string $orderExecCommissionPercent = self::TAKER_FEE)
     {
         $this->execOrderCommission = Percent::string($orderExecCommissionPercent);
     }
 
-    public function getExecOrderCommission(): Percent
+    public function getTakerFee(): Percent
     {
         return $this->execOrderCommission;
     }
 }
-
-

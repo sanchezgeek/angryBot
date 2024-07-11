@@ -12,7 +12,7 @@ use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Domain\Order\ExchangeOrder;
-use App\Domain\Order\Service\OrderCostHelper;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -39,7 +39,7 @@ final class FixMainHedgePositionListener
     const SUPPLY_STOP_DISTANCE = 500;
 
     public function __construct(
-        private readonly OrderCostHelper $orderCostHelper,
+        private readonly OrderCostCalculator $orderCostCalculator,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService,
@@ -90,7 +90,7 @@ final class FixMainHedgePositionListener
         }
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-        $orderCost = $this->orderCostHelper->getOrderBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedPosition->leverage)->value();
+        $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedPosition->leverage, $stoppedPosition->side)->value();
 
         if ($contractBalance->availableBalance > $orderCost) {
             var_dump(sprintf('CONTRACT.availableBalance > %f (orderCost) => skip', $orderCost));

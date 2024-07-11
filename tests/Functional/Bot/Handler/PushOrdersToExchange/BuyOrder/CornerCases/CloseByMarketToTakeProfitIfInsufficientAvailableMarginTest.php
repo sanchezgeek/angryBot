@@ -10,7 +10,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Domain\Order\ExchangeOrder;
-use App\Domain\Order\Service\OrderCostHelper;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -29,6 +29,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
     private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = PushBuyOrdersHandler::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
     private const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
     private const REOPEN_DISTANCE = 100;
+    private const SPOT_TRANSFER_ON_BUY_MULTIPLIER = PushBuyOrdersHandler::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
 
     /**
      * @dataProvider doNotCloseByMarketCasesProvider
@@ -51,7 +52,10 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         // Assert
         $this->exchangeAccountServiceMock->shouldReceive('interTransferFromContractToSpot')->never();
         if ($availableSpotBalance > 0) {
-            $buyCost = (new OrderCostHelper(new ByBitCommissionProvider()))->getOrderBuyCost(new ExchangeOrder($symbol, $buyOrder->getVolume(), $ticker->lastPrice), $position->leverage)->value() * 1.1;
+            $buyCost = $this->orderCostCalculator->totalBuyCost(
+                new ExchangeOrder($symbol, $buyOrder->getVolume(), $ticker->lastPrice), $position->leverage, $buyOrder->getPositionSide()
+            );
+            $buyCost = $buyCost->value() * self::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
             $this->exchangeAccountServiceMock->shouldReceive('interTransferFromSpotToContract')->once()->with($symbol->associatedCoin(), $buyCost);
         }
 

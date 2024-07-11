@@ -8,5 +8,5 @@ use App\Domain\Value\Percent\Percent;
 
 interface ExchangeCommissionProvider
 {
-    public function getExecOrderCommission(): Percent;
+    public function getTakerFee(): Percent;
 }

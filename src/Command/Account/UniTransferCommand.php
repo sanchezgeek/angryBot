@@ -3,10 +3,8 @@
 namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Domain\Order\Service\OrderCostHelper;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use InvalidArgumentException;
@@ -77,8 +75,6 @@ class UniTransferCommand extends AbstractCommand
      */
     public function __construct(
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
-        private readonly OrderCostHelper $orderCostHelper,
-        private readonly MarketServiceInterface $marketService,
         string $accountUids,
         string $name = null,
     ) {

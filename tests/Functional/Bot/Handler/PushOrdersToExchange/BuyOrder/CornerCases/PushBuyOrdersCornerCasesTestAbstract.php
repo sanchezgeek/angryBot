@@ -20,7 +20,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
-use App\Domain\Order\Service\OrderCostHelper;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Tests\Mixin\BuyOrdersTester;
@@ -41,6 +41,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected const SYMBOL = Symbol::BTCUSDT;
 
+    protected OrderCostCalculator $orderCostCalculator;
     protected ExchangeAccountServiceInterface|Mockery\MockInterface $exchangeAccountServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
@@ -51,6 +52,9 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
+        /** @var OrderCostCalculator $orderCostCalculator */
+        $orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
+        $this->orderCostCalculator = $orderCostCalculator;
         $this->exchangeAccountServiceMock = Mockery::mock(AbstractExchangeAccountService::class)->makePartial();
 
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
@@ -64,7 +68,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(BuyOrderRepository::class),
             self::getContainer()->get(StopRepository::class),
             self::getContainer()->get(StopService::class),
-            self::getContainer()->get(OrderCostHelper::class),
+            $this->orderCostCalculator,
 
             $this->exchangeAccountServiceMock,
             self::getContainer()->get(ByBitMarketService::class),
