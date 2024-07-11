@@ -12,6 +12,7 @@ use JsonSerializable;
 use Stringable;
 
 use function is_numeric;
+use function round;
 use function sprintf;
 use function str_ends_with;
 use function substr;
@@ -48,7 +49,7 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
     public function part(): float
     {
-        return $this->value() / 100;
+        return round($this->value() / 100, 7);
     }
 
     public function of(int|float|IntegerValue|AbstractFloat $value): float|AbstractFloat
