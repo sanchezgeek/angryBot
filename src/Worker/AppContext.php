@@ -11,6 +11,7 @@ use function uniqid;
 final class AppContext
 {
     private static ?string $uniq = null;
+    private static bool $debug = false;
     private static ?RunningWorker $workerAlias = null;
 
     public static function workerHash(): string
@@ -39,5 +40,15 @@ final class AppContext
     public static function isTest(): bool
     {
         return $_ENV['APP_ENV'] === 'test';
+    }
+
+    public static function setIsDebug(bool $isDebug): void
+    {
+        self::$debug = $isDebug;
+    }
+
+    public static function isDebug(): bool
+    {
+        return self::$debug;
     }
 }
