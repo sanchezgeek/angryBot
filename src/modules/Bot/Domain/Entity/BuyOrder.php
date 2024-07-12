@@ -13,6 +13,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Helper\FloatHelper;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -63,7 +64,7 @@ class BuyOrder implements HasEvents
     public function __construct(int $id, Price|float $price, float $volume, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = $price instanceof Price ? $price->value() : $price;
+        $this->price = FloatHelper::round(Price::toFloat($price));
         $this->volume = $volume;
         $this->positionSide = $positionSide;
         $this->context = $context;

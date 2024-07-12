@@ -142,17 +142,12 @@ final class Position
 
     public function isPositionInProfit(Price|float $currentPrice): bool
     {
-        $currentPrice = $currentPrice instanceof Price ? $currentPrice->value() : $currentPrice;
-
-        return $this->isShort() ? $this->entryPrice > $currentPrice : $this->entryPrice < $currentPrice
-        ;
+        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isProfitFor($this->side);
     }
 
     public function isPositionInLoss(Price|float $currentPrice): bool
     {
-        $currentPrice = $currentPrice instanceof Price ? $currentPrice->value() : $currentPrice;
-
-        return $this->isShort() ? $this->entryPrice < $currentPrice : $this->entryPrice > $currentPrice;
+        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isLossFor($this->side);
     }
 
     public function getVolumePart(float $percent): float

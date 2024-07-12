@@ -8,7 +8,6 @@ use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
-
 use RuntimeException;
 
 use function abs;
@@ -22,6 +21,8 @@ use function sprintf;
  */
 readonly final class Price
 {
+    private const MIN = 0.01;
+
     private float $value;
 
     private function __construct(float $value)
@@ -30,7 +31,7 @@ readonly final class Price
             throw new \DomainException('Price cannot be less or equals zero.');
         }
 
-        if ($value < 0.01) {
+        if ($value < self::MIN) {
             throw new \DomainException('Price cannot be less min available value.');
         }
 
@@ -40,6 +41,11 @@ readonly final class Price
     public static function float(float $value): self
     {
         return new self($value);
+    }
+
+    public static function min(): self
+    {
+        return new self(self::MIN);
     }
 
     public function value(): float
@@ -126,15 +132,12 @@ readonly final class Price
         };
     }
 
-    /**
-     * @todo Or move to PriceHelper?
-     */
-    private static function toFloat(self|float $value): float
+    public static function toFloat(self|float $value): float
     {
         return $value instanceof self ? $value->value : $value;
     }
 
-    private static function toObj(self|float $value): self
+    public static function toObj(self|float $value): self
     {
         return $value instanceof self ? $value : self::float($value);
     }
