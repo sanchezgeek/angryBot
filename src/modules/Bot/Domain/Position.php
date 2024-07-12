@@ -48,7 +48,7 @@ final class Position implements Stringable
 
     public function liquidationDistance(): float
     {
-        return FloatHelper::round($this->entryPrice - $this->liquidationPrice);
+        return abs(FloatHelper::round($this->entryPrice - $this->liquidationPrice));
     }
 
     /**
