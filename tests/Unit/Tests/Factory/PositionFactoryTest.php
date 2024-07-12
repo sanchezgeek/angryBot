@@ -25,11 +25,14 @@ final class PositionFactoryTest extends TestCase
         $size = 0.5;
         $leverage = 100;
         $liquidation = 31000;
+        $expectedMargin = $entry / $leverage * $size;
 
+        // Act
         $position = PositionFactory::short($symbol, $entry, $size, $leverage, $liquidation);
 
+        // Assert
         self::assertEquals(
-            new Position(Side::Sell, $symbol, $entry, $size, 15000, 31000, 30000 / $leverage * $size, $leverage),
+            new Position(Side::Sell, $symbol, $entry, $size, 15000, $liquidation, $expectedMargin, $expectedMargin, $leverage),
             $position
         );
     }
@@ -42,9 +45,12 @@ final class PositionFactoryTest extends TestCase
         $size = 0.5;
         $leverage = 100;
         $expectedLiquidation = $entry + 1000;
+        $expectedMargin = $size * $entry / $leverage;
 
+        // Act
         $position = PositionFactory::short($symbol, $entry, $size, $leverage);
 
+        // Assert
         self::assertEquals($symbol, $position->symbol);
         self::assertEquals(Side::Sell, $position->side);
         self::assertEquals($entry, $position->entryPrice);
@@ -52,7 +58,8 @@ final class PositionFactoryTest extends TestCase
         self::assertEquals($size * $entry, $position->value);
         self::assertEquals($expectedLiquidation, $position->liquidationPrice);
         self::assertEquals(new Leverage($leverage), $position->leverage);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $size * $entry / $leverage), $position->initialMargin);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->initialMargin);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->positionBalance);
     }
 
     public function testLongFactoryWithDefaultValues(): void
@@ -63,9 +70,12 @@ final class PositionFactoryTest extends TestCase
         $size = 0.5;
         $leverage = 100;
         $expectedLiquidation = $entry - 1000;
+        $expectedMargin = $size * $entry / $leverage;
 
+        // Act
         $position = PositionFactory::long($symbol, $entry, $size, $leverage);
 
+        // Assert
         self::assertEquals($symbol, $position->symbol);
         self::assertEquals(Side::Buy, $position->side);
         self::assertEquals($entry, $position->entryPrice);
@@ -73,6 +83,7 @@ final class PositionFactoryTest extends TestCase
         self::assertEquals($size * $entry, $position->value);
         self::assertEquals($expectedLiquidation, $position->liquidationPrice);
         self::assertEquals(new Leverage($leverage), $position->leverage);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $size * $entry / $leverage), $position->initialMargin);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->initialMargin);
+        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->positionBalance);
     }
 }

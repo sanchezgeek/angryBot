@@ -78,6 +78,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
             'avgPrice' => (string)$position->entryPrice,
             'positionValue' => (string)$position->value,
             'positionIM' => (string)$position->initialMargin->value(),
+            'positionBalance' => (string)$position->positionBalance->value(),
             'size' => (string)$position->size,
             'liqPrice' => (string)$position->liquidationPrice,
             'leverage' => (string)$position->leverage->value(),

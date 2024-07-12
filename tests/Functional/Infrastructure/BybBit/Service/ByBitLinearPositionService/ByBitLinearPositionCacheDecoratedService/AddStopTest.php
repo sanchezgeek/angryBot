@@ -23,8 +23,7 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
         // Arrange
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
-        $ticker = TickerFactory::create($symbol, 29050);
-        $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
+        $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
         $volume = 0.1;
         $price = 30000;
 

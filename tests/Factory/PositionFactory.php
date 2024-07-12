@@ -27,6 +27,8 @@ final class PositionFactory
         $positionValue = $at * $size;
         $liquidationPrice = ($liquidationPrice !== null) ? $liquidationPrice : $at + 1000; // @todo calc
 
+        $im = $positionValue / $leverage;
+
         return new Position(
             Side::Sell,
             $symbol,
@@ -34,7 +36,8 @@ final class PositionFactory
             $size,
             $positionValue,
             $liquidationPrice,
-            $positionValue / $leverage,
+            $im,
+            $im,
             $leverage
         );
     }
@@ -48,6 +51,7 @@ final class PositionFactory
     ): Position {
         $positionValue = $at * $size;
         $liquidationPrice = ($liquidationPrice !== null) ? $liquidationPrice : $at - 1000; // @todo calc
+        $im = $positionValue / $leverage;
 
         return new Position(
             Side::Buy,
@@ -56,7 +60,8 @@ final class PositionFactory
             $size,
             $positionValue,
             $liquidationPrice,
-            $positionValue / $leverage,
+            $im,
+            $im,
             $leverage
         );
     }

@@ -74,7 +74,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         ?Position $position
     ): void {
         // Arrange
-        $oldCachedPosition = new Position($side, $symbol, 29000, 1.1, 30900, 31000, 330, 100);
+        $oldCachedPosition = new Position($side, $symbol, 29000, 1.1, 30900, 31000, 330, 330, 100);
 
         $item = $this->cache->getItem($this->getPositionCacheItemKey($symbol, $side));
         $item->set($oldCachedPosition);
@@ -103,7 +103,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        yield 'have position'    => [$symbol, $side, new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 100)];
+        yield 'have position'    => [$symbol, $side, new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100)];
         yield 'have no position' => [$symbol, $side, null];
     }
 }

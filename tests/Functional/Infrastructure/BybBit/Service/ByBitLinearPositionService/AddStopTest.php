@@ -45,7 +45,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         ?string $expectedExchangeOrderId
     ): void {
         // Arrange
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
         $this->matchPost(PlaceOrderRequest::stopConditionalOrder(
@@ -90,7 +90,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         Throwable $expectedException
     ): void {
         // Arrange
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
         $ticker = TickerFactory::create($symbol, 29050);
 
         $this->matchPost(PlaceOrderRequest::stopConditionalOrder(

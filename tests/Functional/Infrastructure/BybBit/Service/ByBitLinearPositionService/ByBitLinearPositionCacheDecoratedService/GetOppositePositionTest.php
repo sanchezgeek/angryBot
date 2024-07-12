@@ -34,7 +34,7 @@ final class GetOppositePositionTest extends ByBitLinearPositionCacheDecoratedSer
         // PreArrange
         $symbol = $oppositePosition->symbol ?? $symbol;
         $side = $oppositePosition->side ?? $side;
-        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 100);
+        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 330, 100);
 
         // Arrange
         if ($oppositePosition) {
@@ -63,7 +63,7 @@ final class GetOppositePositionTest extends ByBitLinearPositionCacheDecoratedSer
         // PreArrange
         $symbol = $oppositePosition->symbol ?? $symbol;
         $side = $oppositePosition->side ?? $side;
-        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 100);
+        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 330, 100);
 
         // Arrange
         $item = $this->cache->getItem($this->getPositionCacheItemKey($symbol, $side));
@@ -91,10 +91,10 @@ final class GetOppositePositionTest extends ByBitLinearPositionCacheDecoratedSer
         // PreArrange
         $symbol = $oppositePosition->symbol ?? $symbol;
         $side = $oppositePosition->side ?? $side;
-        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 100);
+        $position = new Position($side->getOpposite(), $symbol, 25000, 1.1, 30900, 31000, 330, 330, 100);
 
         // Arrange
-        $oldCachedOpposite = new Position($side, $symbol, 21000, 1.1, 30900, 31000, 330, 100);
+        $oldCachedOpposite = new Position($side, $symbol, 21000, 1.1, 30900, 31000, 330, 330, 100);
 
         $item = $this->cache->getItem($this->getPositionCacheItemKey($symbol, $side));
         $item->set($oldCachedOpposite);
@@ -123,7 +123,7 @@ final class GetOppositePositionTest extends ByBitLinearPositionCacheDecoratedSer
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        yield 'have position'    => [$symbol, $side, new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 100)];
+        yield 'have position'    => [$symbol, $side, new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100)];
         yield 'have no position' => [$symbol, $side, null];
     }
 }

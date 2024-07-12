@@ -70,7 +70,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $markPrice = 35000;
         $liquidationPrice = $markPrice + self::TRANSFER_FROM_SPOT_ON_DISTANCE + 1;
 
-        $position = new Position(Side::Sell, Symbol::BTCUSDT, 34000, 0.5, 20000, $liquidationPrice, 200, 100);
+        $position = new Position(Side::Sell, Symbol::BTCUSDT, 34000, 0.5, 20000, $liquidationPrice, 200, 200, 100);
         $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
 
         $this->havePositions($position);
@@ -134,7 +134,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     {
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
-        $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 100);
+        $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 200, 100);
 
         yield 'spot is empty' => [
             'position' => $position,

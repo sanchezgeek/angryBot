@@ -137,7 +137,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $ignoreBuy = $this->isNeedIgnoreBuy($position, $ticker);
 
         if (!$position) {
-            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
+            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
             $ignoreBuy = true;
         }

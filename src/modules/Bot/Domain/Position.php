@@ -10,7 +10,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
-use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use LogicException;
 
@@ -21,8 +21,10 @@ use function sprintf;
  */
 final class Position
 {
-    public readonly CoinAmount $initialMargin;
     public readonly Leverage $leverage;
+    public readonly CoinAmount $initialMargin;
+    public readonly CoinAmount $positionBalance;
+
     public ?Position $oppositePosition = null;
 
     public function __construct(
@@ -33,17 +35,28 @@ final class Position
         public readonly float $value,
         public readonly float $liquidationPrice,
         float $initialMargin,
+        float $positionBalance,
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
-        $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
         $this->leverage = new Leverage($leverage);
+        $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
+        $this->positionBalance = new CoinAmount($this->symbol->associatedCoin(), $positionBalance);
     }
 
+    public function liquidationDistance(): float
+    {
+        return FloatHelper::round($this->entryPrice - $this->liquidationPrice);
+    }
+
+    /**
+     * @todo | Builder
+     */
     public function withNewSize(float $newSize): self
     {
         $entryPrice = $this->entryPrice;
         $newValue = $entryPrice * $newSize; // linear
+        $newIM = $newValue / $this->leverage->value();
 
         $position = new Position(
             $this->side,
@@ -52,8 +65,9 @@ final class Position
             $newSize,
             $newValue,
             $this->liquidationPrice,
-            $newValue / $this->leverage->value(),
-            $this->leverage->value()
+            $newIM,
+            $newIM,
+            $this->leverage->value(),
         );
 
         if ($this->oppositePosition) {
@@ -63,6 +77,9 @@ final class Position
         return $position;
     }
 
+    /**
+     * @todo | Builder
+     */
     public function withNewLiquidation(float $liquidationPrice): self
     {
         $position = new Position(
@@ -72,8 +89,9 @@ final class Position
             $this->size,
             $this->value,
             $liquidationPrice,
-            $this->value / $this->leverage->value(),
-            $this->leverage->value()
+            $this->initialMargin->value(),
+            $this->positionBalance->value(),
+            $this->leverage->value(),
         );
 
         if ($this->oppositePosition) {

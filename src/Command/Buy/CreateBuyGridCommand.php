@@ -149,7 +149,7 @@ class CreateBuyGridCommand extends AbstractCommand
                 $symbol = $this->getSymbol();
                 $ticker = $this->exchangeService->ticker($symbol);
                 $indexPrice = $ticker->indexPrice;
-                return new Position($this->getPositionSide(), $symbol, $indexPrice->value(), $size = 0.001, $size * $indexPrice->value(), 0, 10, 100);
+                return new Position($this->getPositionSide(), $symbol, $indexPrice->value(), $size = 0.001, $size * $indexPrice->value(), 0, 10, 10, 100);
             }
 
             throw $e;
