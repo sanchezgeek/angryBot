@@ -23,4 +23,9 @@ final readonly class CalcPositionLiquidationPriceResult
     {
         return $this->positionEntryPrice->deltaWith($this->estimatedLiquidationPrice);
     }
+
+    public function positionEntryPrice(): Price
+    {
+        return $this->positionEntryPrice;
+    }
 }
