@@ -13,13 +13,15 @@ use App\Domain\Price\Price;
 use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use LogicException;
+use RuntimeException;
+use Stringable;
 
 use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Position\PositionTest
  */
-final class Position
+final class Position implements Stringable
 {
     public readonly Leverage $leverage;
     public readonly CoinAmount $initialMargin;
@@ -101,14 +103,6 @@ final class Position
         return $position;
     }
 
-    /**
-     * @todo Get from response
-     */
-    public function getPositionBalance(): CoinAmount
-    {
-        return $this->initialMargin->addPercent(Percent::string('5%'));
-    }
-
     public function setOppositePosition(Position $oppositePosition): void
     {
         if ($this->oppositePosition !== null) {
@@ -137,9 +131,19 @@ final class Position
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
     }
 
-    public function getSizeForCalcLoss(): float
+    public function getNotCoveredSize(): ?float
     {
-        return ($hedge = $this->getHedge()) ? $this->size - $hedge->supportPosition->size : $this->size;
+        if (!($hedge = $this->getHedge())) {
+            return $this->size;
+        }
+
+        if (!$hedge->isMainPosition($this)) {
+            throw new RuntimeException(
+                sprintf('Trying to get `notCoveredSize` of %s, but position is not mainPosition of the hedge.', $this)
+            );
+        }
+
+        return $hedge->mainPosition->size - $hedge->supportPosition->size;
     }
 
     public function getCaption(): string
@@ -194,5 +198,10 @@ final class Position
         }
 
         return abs($this->liquidationPrice - $ticker->markPrice->value());
+    }
+
+    public function __toString(): string
+    {
+        return $this->getCaption();
     }
 }

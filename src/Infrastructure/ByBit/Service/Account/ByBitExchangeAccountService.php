@@ -6,9 +6,15 @@ namespace App\Infrastructure\ByBit\Service\Account;
 
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Domain\Position;
+use App\Bot\Domain\Ticker;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
@@ -33,6 +39,8 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     public function __construct(
         ByBitApiClientInterface $apiClient,
         private readonly LoggerInterface $appErrorLogger,
+        private readonly OrderCostCalculator $orderCostCalculator,
+        private readonly ExchangeServiceInterface $exchangeService,
     ) {
         $this->apiClient = $apiClient;
     }
@@ -190,5 +198,46 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         return $walletBalance;
+    }
+
+    public function calcFreeContractBalance(Position $position, ?Ticker $ticker = null): CoinAmount
+    {
+        $contractBalance = $this->getContractWalletBalance($position->symbol->associatedCoin());
+
+        if (!($hedge = $position->getHedge())) {
+            // @todo | check value is actual
+            return new CoinAmount($contractBalance->assetCoin, $contractBalance->totalBalance - $position->initialMargin->value());
+        }
+
+        $main = $hedge->mainPosition;
+        $ticker = $ticker ?: $this->exchangeService->ticker($position->symbol);
+        $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
+
+        if ($priceDelta->isLossFor($main->side)) {
+            $notCoveredSize = $main->getNotCoveredSize();
+
+            if ($contractBalance->availableBalance === 0.0) {
+                $support = $hedge->supportPosition;
+
+                $result = ($main->positionBalance->value() - $main->initialMargin->value())
+                    + ($support->initialMargin->value() - $support->positionBalance->value());
+
+                $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
+
+                $feeForCloseNotCovered = $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
+                $feeForOpenNotCovered = $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
+
+                $result -= $feeForCloseNotCovered; // но comment сработал для ситуации, когда free всё таки больше 0 (sub#2  => delta   (real - calculated)   :   -0.300)
+                $result -= $feeForOpenNotCovered;
+            } else {
+                $loss = $notCoveredSize * $priceDelta->delta();
+                $result = $contractBalance->availableBalance + $loss;
+            }
+        } else {
+            $result = $contractBalance->availableBalance;
+        }
+
+        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
+        return new CoinAmount($contractBalance->assetCoin, $result);
     }
 }
