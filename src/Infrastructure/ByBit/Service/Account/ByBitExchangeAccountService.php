@@ -20,7 +20,6 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-
 use Psr\Log\LoggerInterface;
 
 use function is_array;
@@ -95,7 +94,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 3));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 8));
     }
 
     /**
@@ -106,7 +105,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 3));
+        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 8));
     }
 
     /**
@@ -117,7 +116,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromFundingToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, FloatHelper::round($amount, 3));
+        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, FloatHelper::round($amount, 8));
     }
 
     /**
@@ -128,7 +127,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToFunding(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, FloatHelper::round($amount, 3));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, FloatHelper::round($amount, 8));
     }
 
     /**
