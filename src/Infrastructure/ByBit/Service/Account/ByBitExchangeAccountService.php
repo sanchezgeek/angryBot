@@ -200,6 +200,9 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         return $walletBalance;
     }
 
+    /**
+     * @todo tests
+     */
     public function calcFreeContractBalance(Position $position, ?Ticker $ticker = null): CoinAmount
     {
         $contractBalance = $this->getContractWalletBalance($position->symbol->associatedCoin());
@@ -212,29 +215,30 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $main = $hedge->mainPosition;
         $ticker = $ticker ?: $this->exchangeService->ticker($position->symbol);
         $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
+        $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
+        $notCoveredSize = $main->getNotCoveredSize();
 
-        if ($priceDelta->isLossFor($main->side)) {
-            $notCoveredSize = $main->getNotCoveredSize();
+        if ($contractBalance->availableBalance === 0.0) {
+            $support = $hedge->supportPosition;
 
-            if ($contractBalance->availableBalance === 0.0) {
-                $support = $hedge->supportPosition;
+            $result = ($main->positionBalance->value() - $main->initialMargin->value())
+                + ($support->initialMargin->value() - $support->positionBalance->value());
 
-                $result = ($main->positionBalance->value() - $main->initialMargin->value())
-                    + ($support->initialMargin->value() - $support->positionBalance->value());
-
+            if ($isMainPositionInLoss) {
                 $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
-
                 $feeForCloseNotCovered = $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
                 $feeForOpenNotCovered = $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
 
                 $result -= $feeForCloseNotCovered; // но comment сработал для ситуации, когда free всё таки больше 0 (sub#2  => delta   (real - calculated)   :   -0.300)
                 $result -= $feeForOpenNotCovered;
-            } else {
-                $loss = $notCoveredSize * $priceDelta->delta();
-                $result = $contractBalance->availableBalance + $loss;
             }
         } else {
-            $result = $contractBalance->availableBalance;
+            if ($isMainPositionInLoss) {
+                $loss = $notCoveredSize * $priceDelta->delta();
+                $result = $contractBalance->availableBalance + $loss;
+            } else {
+                $result = $contractBalance->availableBalance;
+            }
         }
 
         OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
