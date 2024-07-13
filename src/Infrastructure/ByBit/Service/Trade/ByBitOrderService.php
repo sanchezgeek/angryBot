@@ -65,7 +65,7 @@ final class ByBitOrderService implements OrderServiceInterface
             }
         );
 
-        $this->positionsCache->clearPositionCache($symbol, $positionSide);
+        $this->positionsCache->clearPositionsCache($symbol);
 
         return $exchangeOrderId;
     }
@@ -81,11 +81,13 @@ final class ByBitOrderService implements OrderServiceInterface
      */
     public function closeByMarket(Position $position, float $qty): string
     {
+        $symbol = $position->symbol;
+
         $exchangeOrderId = $this->sendPlaceOrderRequest(
-            PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $position->symbol, $position->side, $qty)
+            PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $symbol, $position->side, $qty)
         );
 
-        $this->positionsCache->clearPositionCache($position->symbol, $position->side);
+        $this->positionsCache->clearPositionsCache($symbol);
 
         return $exchangeOrderId;
     }

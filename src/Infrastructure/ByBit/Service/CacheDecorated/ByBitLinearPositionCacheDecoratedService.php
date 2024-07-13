@@ -23,6 +23,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
+use function array_map;
 use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface, PositionsCache
@@ -47,36 +48,26 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      */
     public function getPosition(Symbol $symbol, Side $side): ?Position
     {
-        $key = self::positionCacheKey($symbol, $side);
+        $positions = $this->getPositions($symbol);
 
-        return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
-            $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
-
-            if ($position = $this->positionService->getPosition($symbol, $side)) {
-                $this->events->dispatch(new PositionUpdated($position));
+        foreach ($positions as $position) {
+            if ($position->side === $side) {
+                return $position;
             }
+        }
 
-            return $position;
-        });
+        return null;
     }
 
     public function getPositions(Symbol $symbol): array
     {
-        $key = sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
+        $key = self::positionsCacheKey($symbol);
 
         return $this->cache->get($key, function (ItemInterface $item) use ($symbol) {
             $item->expiresAfter(DateInterval::createFromDateString(self::POSITION_TTL));
 
             return $this->positionService->getPositions($symbol);
         });
-    }
-
-    /**
-     * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetOppositePositionTest
-     */
-    public function getOppositePosition(Position $position): ?Position
-    {
-        return $this->getPosition($position->symbol, $position->side->getOpposite());
     }
 
     /**
@@ -96,15 +87,15 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         return $this->positionService->addConditionalStop($position, $price, $qty, $triggerBy);
     }
 
-    public function clearPositionCache(Symbol $symbol, Side $positionSide): void
+    public function clearPositionsCache(Symbol $symbol, ?Side $positionSide = null): void
     {
         $this->cache->delete(
-            self::positionCacheKey($symbol, $positionSide)
+            self::positionsCacheKey($symbol)
         );
     }
 
-    private static function positionCacheKey(Symbol $symbol, Side $side): string
+    private static function positionsCacheKey(Symbol $symbol): string
     {
-        return sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
+        return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
     }
 }

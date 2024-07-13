@@ -51,16 +51,11 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        if (!$mainPosition = $this->positionService->getOppositePosition($supportedPosition)) {
+        if (!$supportedPosition->isSupportPosition()) {
             return;
         }
 
-        $hedge = Hedge::create($supportedPosition->position, $mainPosition);
-
-        if (!$hedge->isSupportPosition($supportedPosition->position)) {
-            return;
-        }
-
+        $hedge = $supportedPosition->getHedge();
         if (!$hedge->needIncreaseSupport()) {
 //            $this->info(
 //                \sprintf('Support is already filled. Current rate: %.3f', $hedge->getSupportRate())
@@ -68,6 +63,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
 
             return;
         }
+        $mainPosition = $hedge->mainPosition;
 
         $ticker = $this->exchangeService->ticker($command->symbol);
 

@@ -16,7 +16,7 @@ use function sprintf;
 
 /**
  * @covers \App\Infrastructure\ByBit\Service\ByBitLinearPositionService::getPosition
- * @todo | apiV5 | cover getOppositePosition
+ * @todo | test ::getPositions
  */
 final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
-use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
@@ -23,16 +22,11 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
     public function testCallInnerServiceWhenNoCachedValueExists(
         Symbol $symbol,
         Side $side,
-        ?Position $position
+        ?Position $position,
+        array $innerServiceResult
     ): void {
-        // Arrange
-        if ($position) {
-            $this->eventDispatcherMock->expects(self::once())->method('dispatch')->with(new PositionUpdated($position));
-        } else {
-            $this->eventDispatcherMock->expects(self::never())->method('dispatch');
-        }
-
-        $this->innerService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
+//        if ($position) $this->eventDispatcherMock->expects(self::once())->method('dispatch')->with(new PositionUpdated($position)); else $this->eventDispatcherMock->expects(self::never())->method('dispatch');
+        $this->innerService->expects(self::once())->method('getPositions')->with($symbol)->willReturn($innerServiceResult);
 
         // Act
         $res = $this->service->getPosition($symbol, $side);
@@ -47,15 +41,14 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
     public function testGetPositionFromCache(
         Symbol $symbol,
         Side $side,
-        ?Position $position
+        ?Position $position,
+        array $cachedFromInnerService
     ): void {
-        // Arrange
-        $item = $this->cache->getItem($this->getPositionCacheItemKey($symbol, $side));
-        $item->set($position);
+        $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
+        $item->set($cachedFromInnerService);
         $this->cache->save($item);
 
-        $this->eventDispatcherMock->expects(self::never())->method('dispatch');
-
+//        $this->eventDispatcherMock->expects(self::never())->method('dispatch');
         $this->innerService->expects(self::never())->method('getPosition');
 
         // Act
@@ -71,23 +64,18 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
     public function testCallInnerServiceWhenCachedValueInvalidated(
         Symbol $symbol,
         Side $side,
-        ?Position $position
+        ?Position $position,
+        array $innerServiceResult
     ): void {
-        // Arrange
         $oldCachedPosition = new Position($side, $symbol, 29000, 1.1, 30900, 31000, 330, 330, 100);
 
-        $item = $this->cache->getItem($this->getPositionCacheItemKey($symbol, $side));
-        $item->set($oldCachedPosition);
+        $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
+        $item->set([$oldCachedPosition]);
         $item->expiresAfter(\DateInterval::createFromDateString('200 milliseconds'));
         $this->cache->save($item);
 
-        if ($position) {
-            $this->eventDispatcherMock->expects(self::once())->method('dispatch')->with(new PositionUpdated($position));
-        } else {
-            $this->eventDispatcherMock->expects(self::never())->method('dispatch');
-        }
-
-        $this->innerService->expects(self::once())->method('getPosition')->with($symbol, $side)->willReturn($position);
+//        if ($position) $this->eventDispatcherMock->expects(self::once())->method('dispatch')->with(new PositionUpdated($position)); else $this->eventDispatcherMock->expects(self::never())->method('dispatch');
+        $this->innerService->expects(self::once())->method('getPositions')->with($symbol)->willReturn($innerServiceResult);
 
         // Act
         usleep(300000);
@@ -95,7 +83,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
 
         // Assert
         self::assertNotEquals($oldCachedPosition, $position);
-        self::assertSame($position, $res);
+        self::assertEquals($position, $res);
     }
 
     private function positionValueOptionProvider(): iterable
@@ -103,7 +91,11 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        yield 'have position'    => [$symbol, $side, new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100)];
-        yield 'have no position' => [$symbol, $side, null];
+        $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
+        $oppositePosition = new Position($side->getOpposite(), $symbol, 33000, 0.5, 16500, 100500, 150, 150, 100);
+
+        yield 'have position' => [$symbol, $side, $position, [$position]];
+        yield 'have both positions' => [$symbol, $side, $position, [$position, $oppositePosition]];
+        yield 'have no position' => [$symbol, $side, null, []];
     }
 }

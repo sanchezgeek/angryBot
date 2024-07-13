@@ -23,11 +23,6 @@ interface PositionServiceInterface
     public function getPositions(Symbol $symbol): array;
 
     /**
-     * @return Position|null Null - if there is no opposite position opened
-     */
-    public function getOppositePosition(Position $position): ?Position;
-
-    /**
      * @return string Created stop `orderId`
      */
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string;

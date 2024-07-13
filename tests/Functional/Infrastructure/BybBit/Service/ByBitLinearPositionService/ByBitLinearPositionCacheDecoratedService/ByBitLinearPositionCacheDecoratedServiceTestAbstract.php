@@ -6,12 +6,13 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+
+use function sprintf;
 
 abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends KernelTestCase
 {
@@ -36,8 +37,8 @@ abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends Kern
         );
     }
 
-    protected function getPositionCacheItemKey(Symbol $symbol, Side $side): string
+    protected static function getPositionsCacheKey(Symbol $symbol): string
     {
-        return sprintf('api_%s_%s_%s_position_data', self::ASSET_CATEGORY->value, $symbol->value, $side->value);
+        return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
     }
 }

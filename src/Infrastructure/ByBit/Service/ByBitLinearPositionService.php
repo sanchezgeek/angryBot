@@ -133,16 +133,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
-     * @throws ApiRateLimitReached
-     * @throws UnknownByBitApiErrorException
-     * @throws UnexpectedApiErrorException
-     */
-    public function getOppositePosition(Position $position): ?Position
-    {
-        return $this->getPosition($position->symbol, $position->side->getOpposite());
-    }
-
-    /**
      * @inheritDoc
      *
      * @throws MaxActiveCondOrdersQntReached

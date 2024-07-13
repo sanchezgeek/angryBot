@@ -7,5 +7,5 @@ use App\Domain\Position\ValueObject\Side;
 
 interface PositionsCache
 {
-    public function clearPositionCache(Symbol $symbol, Side $positionSide): void;
+    public function clearPositionsCache(Symbol $symbol, Side $positionSide): void;
 }

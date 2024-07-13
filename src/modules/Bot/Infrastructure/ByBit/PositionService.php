@@ -85,11 +85,6 @@ final class PositionService implements PositionServiceInterface
         throw new NotImplementedException(sprintf('%s: not implemented', __METHOD__));
     }
 
-    public function getOppositePosition(Position $position): ?Position
-    {
-        return $this->getPosition($position->symbol, $position->side->getOpposite());
-    }
-
     /**
      * @inheritDoc
      *

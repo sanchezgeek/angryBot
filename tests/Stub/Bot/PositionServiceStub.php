@@ -45,17 +45,6 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this->positions;
     }
 
-    public function getOppositePosition(Position $position): ?Position
-    {
-        foreach ($this->positions as $item) {
-            if ($item->symbol === $position->symbol && $item->side === $position->side->getOpposite()) {
-                return $position;
-            }
-        }
-
-        return null;
-    }
-
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
         $this->addStopMethodCalls[] = [$position, $price, $qty, $triggerBy];
