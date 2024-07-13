@@ -14,7 +14,7 @@ use LogicException;
 /**
  * @todo It seems that the situation where `$contractWalletBalance->totalBalance < summaryPositionsIM` is not taken into account here (but must)
  */
-final class CalcPositionLiquidationPriceHandler
+final readonly class CalcPositionLiquidationPriceHandler
 {
     public function handle(Position $position, CoinAmount $freeContractBalance): CalcPositionLiquidationPriceResult
     {
@@ -24,13 +24,10 @@ final class CalcPositionLiquidationPriceHandler
         if (($hedge = $position->getHedge())?->isProfitableHedge()) {
             $fundsAvailableForLiquidation += $hedge->getSupportProfitOnMainEntryPrice();
         }
-
-        $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
-        $maintenanceMarginLiquidationDistance = $maintenanceMargin->value() / $position->size;
-
-        $freeBalanceLiquidationDistance = $fundsAvailableForLiquidation / $position->getNotCoveredSize();
-
-        $liquidationDistance = $freeBalanceLiquidationDistance + $maintenanceMarginLiquidationDistance;
+        $notCoveredSize = $position->getNotCoveredSize();
+        $freeBalanceLiquidationDistance = $fundsAvailableForLiquidation / $notCoveredSize;
+//        $notCoveredPartOrderDto = new ExchangeOrder($position->symbol, $notCoveredSize, $position->entryPrice); $closeFee = $this->orderCostCalculator->openFee($notCoveredPartOrderDto, $position->leverage, $position->side); $freeBalanceLiquidationDistance -= $closeFee->value();
+        $liquidationDistance = $freeBalanceLiquidationDistance + $this->getMaintenanceMarginLiquidationDistance($position);
 
         if ($position->isLong() && $liquidationDistance >= $position->entryPrice) {
             return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::min());
@@ -64,6 +61,13 @@ final class CalcPositionLiquidationPriceHandler
         ;
 
         return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
+    }
+
+    public function getMaintenanceMarginLiquidationDistance(Position $position): float
+    {
+        $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
+
+        return $maintenanceMargin->value() / $position->size;
     }
 
     private static function checkPrerequisites(Position $position): void
