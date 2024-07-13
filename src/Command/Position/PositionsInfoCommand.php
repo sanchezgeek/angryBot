@@ -14,6 +14,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
+use App\Infrastructure\Cache\PositionsCache;
 use App\Worker\AppContext;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -46,14 +47,21 @@ class PositionsInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->positionsCache->clearPositionsCache($this->getSymbol());
+
         if ($this->isDebugEnabled()) {
             AppContext::setIsDebug(true);
         }
 
-        $positions = $this->positionService->getPositions($this->getSymbol());
-        $position = count($positions) > 1 ? $positions[0]->getHedge()->mainPosition : $positions[0];
+        $symbol = $this->getSymbol();
+        $positions = $this->positionService->getPositions($symbol);
 
-        $freeContractBalance = $this->exchangeAccountService->calcFreeContractBalance($position);
+        if (!$positions) {
+            $this->io->error('No positions found'); return Command::FAILURE;
+        }
+
+        $freeContractBalance = $this->exchangeAccountService->calcFreeContractBalance($symbol->associatedCoin());
+        $position = ($hedge = $positions[0]->getHedge()) ? $hedge->mainPosition : $positions[0];
 
         if ($this->isDebugEnabled() && ($hedge = $position->getHedge())) {
             $ticker = $this->exchangeService->ticker($position->symbol);
@@ -68,13 +76,11 @@ class PositionsInfoCommand extends AbstractCommand
 
     public function printState(?Position $position, CalcPositionLiquidationPriceResult $result): void
     {
-        OutputHelper::print('');
+        OutputHelper::print($position->getCaption());
         OutputHelper::positionStats('real      ', $position);
         OutputHelper::print(
             sprintf('calculated | entry = %.2f | Liquidation = %.2f | LiquidationDistance = %.2f', $result->positionEntryPrice()->value(), $result->estimatedLiquidationPrice()->value(), $result->liquidationDistance()),
-            sprintf('                                                            real - calculated : %.3f', (
-                $position->isShort() ? $result->liquidationDistance() - $position->liquidationDistance() : $position->liquidationDistance() - $result->liquidationDistance()
-            )),
+            sprintf('                                                            real - calculated : %.3f', $position->liquidationDistance() - $result->liquidationDistance()),
         );
     }
 
@@ -85,6 +91,7 @@ class PositionsInfoCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
+        private readonly PositionsCache $positionsCache,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

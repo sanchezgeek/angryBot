@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service\Account;
 
+use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\Position;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
@@ -41,6 +43,8 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         private readonly LoggerInterface $appErrorLogger,
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly CalcPositionLiquidationPriceHandler $positionLiquidationCalculator,
+        private readonly PositionServiceInterface $positionService
     ) {
         $this->apiClient = $apiClient;
     }
@@ -203,24 +207,51 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     /**
      * @todo tests
      */
-    public function calcFreeContractBalance(Position $position, ?Ticker $ticker = null): CoinAmount
+    public function calcFreeContractBalance(Coin $coin, ?Ticker $ticker = null): CoinAmount
     {
-        $contractBalance = $this->getContractWalletBalance($position->symbol->associatedCoin());
+        $contractBalance = $this->getContractWalletBalance($coin);
 
-        if (!($hedge = $position->getHedge())) {
-            // @todo | check value is actual
-            return new CoinAmount($contractBalance->assetCoin, $contractBalance->totalBalance - $position->initialMargin->value());
+        // @todo | Temporary solution? (only if there is only BTCUSDT position is opened)
+        $symbol = null;
+        foreach (Symbol::cases() as $symbol) {
+            if ($symbol->associatedCoin() === $coin) break;
+        }
+
+        $positions = $this->positionService->getPositions($symbol);
+        if (!($hedge = $positions[0]->getHedge())) {
+            // @todo | check value is actual (without hedge)
+            return new CoinAmount($contractBalance->assetCoin, $contractBalance->totalBalance - $positions[0]->initialMargin->value());
         }
 
         $main = $hedge->mainPosition;
+        $ticker = $ticker ?: $this->exchangeService->ticker($symbol);
+//        if ($main->isPositionInProfit($ticker->lastPrice)) {
+//            $result = $contractBalance->availableBalance;
+//        } else {
+            $totalLiquidationDistance = $main->liquidationDistance();
+
+            $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($main);
+            $availableFundsLiquidationDistance = $totalLiquidationDistance - $maintenanceMarginLiquidationDistance;
+            $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $main->getNotCoveredSize();
+
+            $result = $hedge->isProfitableHedge()
+                ? $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice()
+                : $fundsAvailableForLiquidation
+            ;
+
+            // @todo | take case when `$main->isLong() && $liquidationDistance >= $main->entryPrice)` into account
+//        }
+
+        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
+        return new CoinAmount($contractBalance->assetCoin, $result);
+
         $ticker = $ticker ?: $this->exchangeService->ticker($position->symbol);
         $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
         $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
-        $notCoveredSize = $main->getNotCoveredSize();
+
 
         if ($contractBalance->availableBalance === 0.0) {
             $support = $hedge->supportPosition;
-
             $result = ($main->positionBalance->value() - $main->initialMargin->value())
                 + ($support->initialMargin->value() - $support->positionBalance->value());
 
