@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
@@ -42,7 +41,6 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         ByBitApiClientInterface $apiClient,
         private readonly LoggerInterface $appErrorLogger,
         private readonly OrderCostCalculator $orderCostCalculator,
-        private readonly ExchangeServiceInterface $exchangeService,
         private readonly CalcPositionLiquidationPriceHandler $positionLiquidationCalculator,
         private readonly PositionServiceInterface $positionService
     ) {
@@ -207,7 +205,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     /**
      * @todo tests
      */
-    public function calcFreeContractBalance(Coin $coin, ?Ticker $ticker = null): CoinAmount
+    public function calcFreeContractBalance(Coin $coin): CoinAmount
     {
         $contractBalance = $this->getContractWalletBalance($coin);
 
@@ -220,14 +218,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $positions = $this->positionService->getPositions($symbol);
         if (!($hedge = $positions[0]->getHedge())) {
             // @todo | check value is actual (without hedge)
-            return new CoinAmount($contractBalance->assetCoin, $contractBalance->totalBalance - $positions[0]->initialMargin->value());
-        }
-
-        $main = $hedge->mainPosition;
-        $ticker = $ticker ?: $this->exchangeService->ticker($symbol);
-//        if ($main->isPositionInProfit($ticker->lastPrice)) {
-//            $result = $contractBalance->availableBalance;
-//        } else {
+            $result = $contractBalance->totalBalance->sub($positions[0]->initialMargin)->value();
+        } else {
+            $main = $hedge->mainPosition;
+//            if ($main->isPositionInProfit($ticker->lastPrice)) $result = $contractBalance->availableBalance;
             $totalLiquidationDistance = $main->liquidationDistance();
 
             $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($main);
@@ -240,12 +234,20 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             ;
 
             // @todo | take case when `$main->isLong() && $liquidationDistance >= $main->entryPrice)` into account
-//        }
-
+        }
         OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
-        return new CoinAmount($contractBalance->assetCoin, $result);
+        $freeContractBalance = new CoinAmount($contractBalance->assetCoin, $result);
 
-        $ticker = $ticker ?: $this->exchangeService->ticker($position->symbol);
+        # check is correct
+        $positionToReCalcLiquidation = $hedge ? $hedge->mainPosition : $positions[0];
+        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionToReCalcLiquidation, $freeContractBalance)->estimatedLiquidationPrice();
+        if ($positionToReCalcLiquidation->liquidationPrice !== $liquidationRecalculated->value()) {
+            OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one.', __FUNCTION__));
+        }
+
+        return $freeContractBalance;
+
+        $ticker = $ticker ?: $this->exchangeService->ticker($positionToReCalcLiquidation->symbol);
         $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
         $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
 
