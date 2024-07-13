@@ -182,10 +182,10 @@ class OpenCommand extends AbstractCommand
 
         $currentLoss = PriceHelper::round(-$unrealizedPnl, 2);
         $spotBalance = $this->accountService->getSpotWalletBalance($this->symbol->associatedCoin());
-        if ($spotBalance->availableBalance > 2) {
+        if ($spotBalance->available() > 2) {
             $this->accountService->interTransferFromSpotToContract(
                 $this->symbol->associatedCoin(),
-                min(PriceHelper::round($spotBalance->availableBalance - 1), $currentLoss),
+                min(PriceHelper::round($spotBalance->available() - 1), $currentLoss),
             );
         }
 
@@ -245,13 +245,13 @@ class OpenCommand extends AbstractCommand
         $specifiedPartOfAvailableBalance = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
 
         $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
-        if (!($contractBalance->availableBalance > 0)) {
+        if (!($contractBalance->available() > 0)) {
             throw new RuntimeException('Insufficient contract balance');
         }
 
         $contractCost = $this->getCurrentContractCost($this->symbol);
 
-        return $specifiedPartOfAvailableBalance->of($contractBalance->availableBalance / $contractCost);
+        return $specifiedPartOfAvailableBalance->of($contractBalance->available() / $contractCost);
     }
 
     private function getCurrentContractCost(Symbol $symbol): float

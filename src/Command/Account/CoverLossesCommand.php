@@ -36,7 +36,7 @@ class CoverLossesCommand extends AbstractCommand
         $symbol = $this->getSymbol();
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-        if ($contractBalance->availableBalance > 0) {
+        if ($contractBalance->available() > 0) {
             $this->io->info('Available contract balance is greater than 0. Exit.');
             return Command::FAILURE;
         }
@@ -48,7 +48,7 @@ class CoverLossesCommand extends AbstractCommand
             $summaryIM += $position->initialMargin->value();
         }
 
-        $diff = $summaryIM - $contractBalance->totalBalance;
+        $diff = $summaryIM - $contractBalance->total();
         if ($diff < 0) {
             $this->io->info('Nothing to cover. Exit.');
             return Command::FAILURE;

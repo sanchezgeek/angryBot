@@ -97,11 +97,11 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
-                if ($spotBalance->availableBalance > 2) {
+                if ($spotBalance->available() > 2) {
                     $amount = $this->amountToTransferFromSpot($spotBalance, $position);
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
 
-                    if (($newBalance = $spotBalance->availableBalance - $amount) / self::MIN_TRANSFER_AMOUNT >= self::NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP) {
+                    if (($newBalance = $spotBalance->available() - $amount) / self::MIN_TRANSFER_AMOUNT >= self::NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP) {
                         return;
                     }
                 }
@@ -144,7 +144,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             )
             && ($contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin))
             && ($totalBalance = $this->exchangeAccountService->getCachedTotalBalance($symbol))
-            && ($contractBalance->availableBalance / $totalBalance) > 0.5
+            && ($contractBalance->available() / $totalBalance) > 0.5
         ) {
             $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
         }
@@ -203,7 +203,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         // @todo | need calc $amount based on Position size (for bigger position DEFAULT_TRANSFER_AMOUNT will change liquidationPrice very little)
         return min(
             FloatHelper::modify(self::MIN_TRANSFER_AMOUNT, 0.2),
-            PriceHelper::round($spotBalance->availableBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)
+            PriceHelper::round($spotBalance->available() - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)
         );
     }
 }

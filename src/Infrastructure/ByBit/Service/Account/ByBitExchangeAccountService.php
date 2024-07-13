@@ -218,7 +218,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $positions = $this->positionService->getPositions($symbol);
         if (!($hedge = $positions[0]->getHedge())) {
             // @todo | check value is actual (without hedge)
-            $result = $contractBalance->totalBalance->sub($positions[0]->initialMargin)->value();
+            $result = $contractBalance->total->sub($positions[0]->initialMargin)->value();
         } else {
             $main = $hedge->mainPosition;
 //            if ($main->isPositionInProfit($ticker->lastPrice)) $result = $contractBalance->availableBalance;

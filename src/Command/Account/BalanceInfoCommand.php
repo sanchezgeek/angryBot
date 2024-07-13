@@ -64,13 +64,10 @@ class BalanceInfoCommand extends AbstractCommand
         try {
             $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
             $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-             var_dump(
-                 $spotWalletBalance->availableBalance,
-                 $contractWalletBalance->availableBalance
-             );die;
+//             var_dump($spotWalletBalance->availableBalance, $contractWalletBalance->availableBalance);die;
 
-            $this->io->note(sprintf('spot: %.3f available / %.3f total', $spotWalletBalance->availableBalance, $spotWalletBalance->totalBalance));
-            $this->io->note(sprintf('contract: %.3f available / %.3f total', $contractWalletBalance->availableBalance, $contractWalletBalance->totalBalance));
+            $this->io->note(sprintf('spot: %s', $spotWalletBalance));
+            $this->io->note(sprintf('contract: %s', $contractWalletBalance));
         } catch (Exception $e) {
             if (!str_contains($e->getMessage(), 'coin data not found')) {
                 throw $e;

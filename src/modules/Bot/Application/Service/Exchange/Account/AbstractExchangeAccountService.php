@@ -21,7 +21,7 @@ abstract class AbstractExchangeAccountService implements ExchangeAccountServiceI
                     $spotBalance = $this->getSpotWalletBalance($coin);
                     $contractBalance = $this->getContractWalletBalance($coin);
 
-                    return $spotBalance->totalBalance + $contractBalance->totalBalance;
+                    return $spotBalance->total->value() + $contractBalance->total->value();
                 }
             )
         );

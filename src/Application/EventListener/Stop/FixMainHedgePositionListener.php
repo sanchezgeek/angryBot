@@ -92,7 +92,7 @@ final class FixMainHedgePositionListener
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
         $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedPosition->leverage, $stoppedPosition->side)->value();
 
-        if ($contractBalance->availableBalance > $orderCost) {
+        if ($contractBalance->available() > $orderCost) {
             var_dump(sprintf('CONTRACT.availableBalance > %f (orderCost) => skip', $orderCost));
             return;
         }

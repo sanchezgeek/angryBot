@@ -84,7 +84,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             return false;
         }
 
-        if ($spotBalance->availableBalance > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
+        if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
             return true;
         }
 
@@ -453,7 +453,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function transferToContract(WalletBalance $spotBalance, float $amount): bool
     {
-        $availableBalance = $spotBalance->availableBalance - 0.1;
+        $availableBalance = $spotBalance->available() - 0.1;
 
         if ($availableBalance < $amount) {
             if ($availableBalance < 0.2) {

@@ -61,9 +61,4 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),
         ];
     }
-
-    public function testDummy(): void
-    {
-        self::markTestIncomplete('fail cases');
-    }
 }
