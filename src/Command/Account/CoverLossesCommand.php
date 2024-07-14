@@ -19,6 +19,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use function sprintf;
+
 #[AsCommand(name: 'balance:cover-losses')]
 class CoverLossesCommand extends AbstractCommand
 {
@@ -36,42 +38,36 @@ class CoverLossesCommand extends AbstractCommand
         $symbol = $this->getSymbol();
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-        if ($contractBalance->available() > 0) {
-            $this->io->info('Available contract balance is greater than 0. Exit.');
+        $freeBalance = $contractBalance->free;
+        if ($freeBalance->value() >= 0) {
+            $this->io->info('Free contract balance is greater than 0. Exit.');
             return Command::FAILURE;
         }
+        $this->io->info(sprintf('Current Free contract balance: %s', $freeBalance));
+        $diff = -$freeBalance->value();
 
         $positions = $this->positionService->getPositions($symbol);
 
-        $summaryIM = 0;
-        foreach ($positions as $position) {
-            $summaryIM += $position->initialMargin->value();
-        }
-
-        $diff = $summaryIM - $contractBalance->total();
-        if ($diff < 0) {
-            $this->io->info('Nothing to cover. Exit.');
-            return Command::FAILURE;
-        }
-
-        $position = null;
         if (count($positions) > 1) {
-            if (($fromPosition = $this->io->ask('Which position profit use to cover losses?', 'main')) === 'support') {
+            if (($fromPosition = $this->io->ask('Which position profit use to cover losses?', 'm')) === 's') {
                 $position = $positions[0]->getHedge()->supportPosition;
-            } elseif ($fromPosition === 'main') {
+            } elseif ($fromPosition === 'm') {
                 $position = $positions[0]->getHedge()->mainPosition;
             } else {
-                throw new \InvalidArgumentException('Provided value must be "main" or "support"');
+                throw new \InvalidArgumentException('Provided value must be m(main) or s(support)');
             }
         } else {
             $position = $positions[0];
         }
 
-        if (!$position->isPositionInProfit($this->exchangeService->ticker($symbol)->lastPrice)) {
+        $currentPrice = $this->exchangeService->ticker($symbol)->lastPrice;
+        if (!$position->isPositionInProfit($currentPrice)) {
             throw new \InvalidArgumentException('Position in loss');
         }
-
-        $percentToClose = new Percent($diff / $position->unrealizedPnl);
+        $percentToClose = Percent::fromPart($diff / $position->unrealizedPnl);
+        $this->io->info(
+            sprintf('Need to close %s of %s', $percentToClose, $position->getCaption())
+        );
 
         return Command::SUCCESS;
     }
