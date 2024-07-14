@@ -79,7 +79,7 @@ class PositionsInfoCommand extends AbstractCommand
         OutputHelper::print($position->getCaption());
         OutputHelper::positionStats('real      ', $position);
         OutputHelper::print(
-            sprintf('calculated | entry = %.2f | Liquidation = %.2f | LiquidationDistance = %.2f', $result->positionEntryPrice()->value(), $result->estimatedLiquidationPrice()->value(), $result->liquidationDistance()),
+            sprintf('calculated | LiquidationDistance = %.2f', $result->liquidationDistance()),
             sprintf('                                                            real - calculated : %.3f', $position->liquidationDistance() - $result->liquidationDistance()),
         );
     }

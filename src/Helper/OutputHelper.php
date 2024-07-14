@@ -19,7 +19,7 @@ class OutputHelper
         $liquidationDistance = FloatHelper::round($position->entryPrice - $position->liquidationPrice);
 
         OutputHelper::print(
-            sprintf('%s | entry = %.2f | Liquidation = %.2f | LiquidationDistance = %.2f', $desc, $position->entryPrice, $position->liquidationPrice, $liquidationDistance)
+            sprintf('%s | LiquidationDistance = %.2f', $desc, $liquidationDistance)
         );
     }
 
