@@ -9,13 +9,13 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
-use App\Tests\Mixin\Tester\ByBitV5ApiTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class ByBitExchangeAccountServiceTestAbstract extends KernelTestCase
 {
-    use ByBitV5ApiTester;
+    use ByBitV5ApiRequestsMocker;
 
     protected const ASSET_CATEGORY = AssetCategory::linear;
     protected const WORKER_DEBUG_HASH = '123456';

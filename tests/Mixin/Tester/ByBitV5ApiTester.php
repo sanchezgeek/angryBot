@@ -48,7 +48,7 @@ trait ByBitV5ApiTester
         $clockMock = $this->createMock(ClockInterface::class);
         $clockMock->method('now')->willReturn(new DateTimeImmutable());
 
-        $this->httpClientStub = new SymfonyHttpClientStub($host);
+        $this->httpClientStub = $this->getHttClientStub();
 
         return new ByBitV5ApiClient(
             $this->httpClientStub,

@@ -40,7 +40,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $side = $position->side;
 
         $this->haveTicker($ticker);
-        $this->havePosition($position);
+        $this->havePosition($ticker->symbol, $position);
 
         $buyOrder = new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, $side);
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
@@ -99,7 +99,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $side = $position->side;
 
         $this->haveTicker($ticker);
-        $this->havePosition($position);
+        $this->havePosition($ticker->symbol, $position);
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveAvailableSpotBalance($symbol, 0);

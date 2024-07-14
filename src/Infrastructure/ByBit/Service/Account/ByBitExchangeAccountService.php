@@ -9,6 +9,7 @@ use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
@@ -27,9 +28,14 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use Exception;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
+use function array_values;
+use function count;
 use function is_array;
+use function reset;
 use function sprintf;
 use function uuid_create;
 
@@ -183,7 +189,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                         if ($accountType === AccountType::SPOT) {
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
                         } elseif ($accountType === AccountType::CONTRACT) {
-                            $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['availableToWithdraw']);
+                            $total = (float)$coinData['walletBalance'];
+                            $free = $this->calcFreeContractBalance(new CoinAmount($coin, $total));
+
+                            $walletBalance = new WalletBalance($accountType, $coin, $total, (float)$coinData['availableToWithdraw'], $free->value());
                         }
                     }
                 }
@@ -205,9 +214,9 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     /**
      * @todo tests
      */
-    public function calcFreeContractBalance(Coin $coin): CoinAmount
+    private function calcFreeContractBalance(CoinAmount $total): CoinAmount
     {
-        $contractBalance = $this->getContractWalletBalance($coin);
+        $coin = $total->coin();
 
         // @todo | Temporary solution? (only if there is only BTCUSDT position is opened)
         $symbol = null;
@@ -215,13 +224,26 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             if ($symbol->associatedCoin() === $coin) break;
         }
 
-        $positions = $this->positionService->getPositions($symbol);
+        try {
+            $positions = $this->positionService->getPositions($symbol);
+        } catch (InvalidArgumentException $e) {
+            if ($e->getMessage() === 'Unsupported symbol associated category') {
+                $positions = [];
+            } else {
+                throw $e;
+            }
+        }
+
+        if (!$positions) {
+            return $total;
+        }
+
         if (!($hedge = $positions[0]->getHedge())) {
             // @todo | check value is actual (without hedge)
-            $result = $contractBalance->total->sub($positions[0]->initialMargin)->value();
+            $result = $total->sub($positions[0]->initialMargin)->value();
         } else {
             $main = $hedge->mainPosition;
-//            if ($main->isPositionInProfit($ticker->lastPrice)) $result = $contractBalance->availableBalance;
+//            if ($main->isPositionInProfit($ticker->lastPrice)) $result = $contractBalance->availableBalance; else {...}
             $totalLiquidationDistance = $main->liquidationDistance();
 
             $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($main);
@@ -233,10 +255,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                 : $fundsAvailableForLiquidation
             ;
 
-            // @todo | take case when `$main->isLong() && $liquidationDistance >= $main->entryPrice)` into account
+            // @todo | `$main->isLong() && $liquidationDistance >= $main->entryPrice)` case must be taken into account
         }
         OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
-        $freeContractBalance = new CoinAmount($contractBalance->assetCoin, $result);
+        $freeContractBalance = new CoinAmount($coin, $result);
 
         # check is correct
         $positionToReCalcLiquidation = $hedge ? $hedge->mainPosition : $positions[0];

@@ -65,6 +65,8 @@ trait ByBitV5ApiRequestsMocker
         $amountAvailable = $positionCost / 2;
 
         $this->haveContractWalletBalance($position->symbol, $positionCost + $amountAvailable, $amountAvailable);
+
+        $this->havePosition($position->symbol, $position);
     }
 
     protected  function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void
@@ -168,6 +170,7 @@ trait ByBitV5ApiRequestsMocker
     protected function havePosition(Symbol $symbol, Position ...$positions): void
     {
         $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
+
         $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
 
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);

@@ -20,11 +20,6 @@ use function sprintf;
  */
 final class GetSpotWalletBalanceTest extends ByBitExchangeAccountServiceTestAbstract
 {
-    use ByBitV5ApiTester;
-
-    private const REQUEST_URL = GetWalletBalanceRequest::URL;
-    private const CALLED_METHOD = 'ByBitExchangeAccountService::getSpotWalletBalance';
-
     /**
      * @dataProvider getSpotWalletBalanceSuccessTestCases
      */

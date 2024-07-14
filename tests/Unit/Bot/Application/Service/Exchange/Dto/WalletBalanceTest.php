@@ -9,6 +9,10 @@ use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use PHPUnit\Framework\TestCase;
+use Throwable;
+
+use function sprintf;
+use function str_contains;
 
 class WalletBalanceTest extends TestCase
 {
@@ -19,8 +23,9 @@ class WalletBalanceTest extends TestCase
     {
         $total = 1.050;
         $available = 0.501;
+        $free = 0.601;
 
-        $balance = new WalletBalance($accountType, $coin, $total, $available);
+        $balance = new WalletBalance($accountType, $coin, $total, $available, $free);
 
         self::assertEquals($accountType, $balance->accountType);
         self::assertEquals($coin, $balance->assetCoin);
@@ -30,6 +35,17 @@ class WalletBalanceTest extends TestCase
 
         self::assertEquals(new CoinAmount($coin, $available), $balance->available);
         self::assertEquals($available, $balance->available());
+
+        try {
+            self::assertEquals(new CoinAmount($coin, $free), $balance->free);
+            self::assertEquals($free, $balance->free());
+        } catch (Throwable $e) {
+            if ($accountType === AccountType::SPOT) {
+                self::assertTrue(str_contains($e->getMessage(), sprintf('incorrect usage of %s::free for SPOT accountType', WalletBalance::class)));
+            } else {
+                throw $e;
+            }
+        }
     }
 
     public function createTestData(): iterable

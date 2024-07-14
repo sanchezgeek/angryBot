@@ -60,7 +60,7 @@ class PositionsInfoCommand extends AbstractCommand
             $this->io->error('No positions found'); return Command::FAILURE;
         }
 
-        $freeContractBalance = $this->exchangeAccountService->calcFreeContractBalance($symbol->associatedCoin());
+        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
         $position = ($hedge = $positions[0]->getHedge()) ? $hedge->mainPosition : $positions[0];
 
         if ($this->isDebugEnabled() && ($hedge = $position->getHedge())) {
@@ -68,8 +68,8 @@ class PositionsInfoCommand extends AbstractCommand
             OutputHelper::printIfDebug($hedge->info($ticker));
         }
 
-        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $freeContractBalance));
-        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $freeContractBalance));
+        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->free));
+        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $contractBalance->free));
 
         return Command::SUCCESS;
     }

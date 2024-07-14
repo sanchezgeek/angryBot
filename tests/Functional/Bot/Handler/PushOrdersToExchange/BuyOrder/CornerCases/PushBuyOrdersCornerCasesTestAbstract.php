@@ -75,7 +75,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
 
             $this->exchangeServiceMock,
-            $this->positionServiceMock,
+            self::getContainer()->get(PositionServiceInterface::class),
             $this->clockMock,
             $this->loggerMock,
         );
@@ -88,11 +88,6 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         $this->exchangeServiceMock->method('ticker')->with($ticker->symbol)->willReturn($ticker);
     }
 
-    protected function havePosition(Position $position): void
-    {
-        $this->positionServiceMock->method('getPosition')->with($position->symbol, $position->side)->willReturn($position);
-    }
-
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $this->exchangeAccountServiceMock
@@ -102,12 +97,14 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
         ;
     }
 
-    protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
+    protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available, ?float $free = null): void
     {
+        $free = $free ?? $available;
+
         $this->exchangeAccountServiceMock
             ->shouldReceive('getContractWalletBalance')
             ->with($coin = $symbol->associatedCoin())
-            ->andReturn(new WalletBalance(AccountType::CONTRACT, $coin, $total, $available),)
+            ->andReturn(new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $free))
         ;
     }
 }

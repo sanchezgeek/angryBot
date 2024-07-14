@@ -24,6 +24,7 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use InvalidArgumentException;
 use LogicException;
 
 use function end;
@@ -79,6 +80,10 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function getPositions(Symbol $symbol): array
     {
+        if ($symbol->associatedCategory() !== self::ASSET_CATEGORY) {
+            throw new InvalidArgumentException('Unsupported symbol associated category');
+        }
+
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, $symbol);
 
         try {
