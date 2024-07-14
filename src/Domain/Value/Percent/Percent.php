@@ -47,6 +47,11 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         return new self($value);
     }
 
+    public static function fromPart(float $part): self
+    {
+        return new self($part * 100);
+    }
+
     public function part(): float
     {
         return round($this->value() / 100, 7);
@@ -67,7 +72,7 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
     public function __toString(): string
     {
-        return (string)$this->value();
+        return sprintf('%.3f%%', $this->value());
     }
 
     public function jsonSerialize(): string
