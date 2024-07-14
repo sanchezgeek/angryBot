@@ -51,9 +51,10 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     public const CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION = 30;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 60;
 
-    public const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = 33;
-    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 3;
-    public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 75;
+    public const ACCEPTABLE_STOPPED_PART = 25;              private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
+
+    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 3.6;
+    public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 150;
     public const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = 1;
 
     const NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP = 5;
@@ -91,7 +92,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         $liquidation = Price::float($position->liquidationPrice);
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
-        $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION, 0.15);
+        $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
 
         $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
         if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
@@ -116,7 +117,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             if ($hedge) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
                 if ($hedge->getSupportRate()->value() > 35) {
-                    $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION / 3, 0.05);
+                    $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART / 2.2, 0.05);
                 }
             }
 
