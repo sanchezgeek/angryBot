@@ -18,6 +18,7 @@ use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -85,13 +86,19 @@ class EditStopsCommand extends AbstractCommand
         }
 
         $action = $this->getAction();
-        $position = $this->getPosition();
+        $positionSide = $this->getPositionSide();
+        try {
+            $position = $this->getPosition();
+        } catch (Exception $e) {
+            $this->io->error($e->getMessage());
+            $position = null;
+        }
 
         $stops = $this->stopRepository->findActive(
-            side: $position->side,
-            qbModifier: static function (QueryBuilder $qb) use ($position) {
+            side: $positionSide,
+            qbModifier: static function (QueryBuilder $qb) use ($positionSide) {
                 QueryHelper::addOrder($qb, 'volume', 'ASC');
-                QueryHelper::addOrder($qb, 'price', $position->isShort() ? 'ASC' : 'DESC');
+                QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC');
                 QueryHelper::addOrder($qb, 'triggerDelta', 'ASC');
             }
         );
@@ -116,7 +123,7 @@ class EditStopsCommand extends AbstractCommand
 
         $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStopsCount));
 
-        if (!$this->io->confirm(
+        if ($position && !$this->io->confirm(
             sprintf(
                 'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
                 $action,
@@ -169,7 +176,7 @@ class EditStopsCommand extends AbstractCommand
             }
 
             $total = $removed->totalVolume() + $movedVolume;
-            $this->entityManager->wrapInTransaction(function() use ($filteredStops, $removed, $position, $price, $total, $tD) {
+            $this->entityManager->wrapInTransaction(function() use ($filteredStops, $removed, $positionSide, $price, $total, $tD) {
                 foreach ($filteredStops as $stop) {
                     $this->entityManager->persist($stop);
                 }
@@ -180,7 +187,7 @@ class EditStopsCommand extends AbstractCommand
 
                 // @todo some uniqueid to context
                 $this->stopService->create(
-                    $position->side,
+                    $positionSide,
                     $price->value(),
                     $total,
                     $tD,
