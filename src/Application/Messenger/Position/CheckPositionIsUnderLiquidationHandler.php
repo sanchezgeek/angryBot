@@ -115,7 +115,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
             if ($hedge) {
                 $volumeMustBeStopped -= $hedge->supportPosition->size;
-                if ($hedge->getSupportRate()->value() > 50) {
+                if ($hedge->getSupportRate()->value() > 35) {
                     $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION / 3, 0.05);
                 }
             }
