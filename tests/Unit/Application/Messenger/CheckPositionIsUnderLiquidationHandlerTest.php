@@ -35,7 +35,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
     private const DEFAULT_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MIN_TRANSFER_AMOUNT;
     private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
-    private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION;
+    private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
