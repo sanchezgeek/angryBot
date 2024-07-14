@@ -71,7 +71,7 @@ final readonly class WalletBalance implements JsonSerializable, Stringable
             return sprintf('%s available | %s total', $this->available, $this->total);
         }
 
-        return sprintf('%s available | %s total', $this->available, $this->total);
+        return sprintf('%s available | %s free | %s total', $this->available, $this->free, $this->total);
     }
 
     public function jsonSerialize(): string
