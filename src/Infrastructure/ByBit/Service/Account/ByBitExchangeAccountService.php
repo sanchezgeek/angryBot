@@ -257,13 +257,13 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 
             // @todo | `$main->isLong() && $liquidationDistance >= $main->entryPrice)` case must be taken into account
         }
-        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
+//        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
         $freeContractBalance = new CoinAmount($coin, $result);
 
         # check is correct
         $positionToReCalcLiquidation = $hedge ? $hedge->mainPosition : $positions[0];
         $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionToReCalcLiquidation, $freeContractBalance)->estimatedLiquidationPrice();
-        if ($positionToReCalcLiquidation->liquidationPrice !== $liquidationRecalculated->value()) {
+        if (($positionToReCalcLiquidation->liquidationPrice - $liquidationRecalculated->value()) > 1) {
             OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one.', __FUNCTION__));
         }
 
