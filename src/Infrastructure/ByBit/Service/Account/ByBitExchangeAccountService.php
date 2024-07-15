@@ -7,9 +7,7 @@ namespace App\Infrastructure\ByBit\Service\Account;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
@@ -28,14 +26,11 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-use Exception;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
-use function array_values;
-use function count;
 use function is_array;
-use function reset;
 use function sprintf;
 use function uuid_create;
 
@@ -190,7 +185,12 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
                         } elseif ($accountType === AccountType::CONTRACT) {
                             $total = (float)$coinData['walletBalance'];
-                            $free = $this->calcFreeContractBalance(new CoinAmount($coin, $total));
+                            try {
+                                $free = $this->calcFreeContractBalance(new CoinAmount($coin, $total));
+                            } catch (Throwable $e) {
+                                OutputHelper::warning($e->getMessage());
+                                $free = 0;
+                            }
 
                             $walletBalance = new WalletBalance($accountType, $coin, $total, (float)$coinData['availableToWithdraw'], $free->value());
                         }
