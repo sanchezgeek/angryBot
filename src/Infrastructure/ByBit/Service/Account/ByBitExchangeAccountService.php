@@ -252,7 +252,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
              * Case when this is almost equivalent hedge
              * @todo | need some normal solution
              */
-            if ($free < 0 && $positionForCalc->isLong()) {
+            if ($free < 0 && $positionForCalc->isLong() && $positionForCalc->liquidationPrice <= 0.00) {
                 $free = max($free, $available);
             }
         } else {

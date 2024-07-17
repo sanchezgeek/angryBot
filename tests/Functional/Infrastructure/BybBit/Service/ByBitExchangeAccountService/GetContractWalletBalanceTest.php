@@ -64,11 +64,22 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
         ];
 
-        # with hedge is opened
+        # with hedge is opened and there is some free balance
         $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 76433.16);
         $support = PositionFactory::long(Symbol::BTCUSDT, 60480.590, 0.284, 100, 0);
         $expectedFree = 307.0816;
-        yield sprintf('have / %s total and %s available / on %s contract balance (with hedge opened)', $total, $available, $coin->value) => [
+        yield sprintf('have / %s total and %s available / on %s contract balance (with hedge opened and there is some free balance)', $total, $available, $coin->value) => [
+            '$coin' => $coin,
+            '$positions' => [$main, $support],
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
+            'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
+        ];
+
+        # with hedge is opened and free balance is negative
+        $support = PositionFactory::short(Symbol::BTCUSDT, 67864.380, 0.410, 100, 0);
+        $main = PositionFactory::long(Symbol::BTCUSDT, 63983.600, 0.486, 100, 46382.900);
+        $expectedFree = -277.7804;
+        yield sprintf('have / %s total and %s available / on %s contract balance (with hedge opened and free balance is negative)', $total, $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [$main, $support],
             '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
