@@ -60,7 +60,13 @@ final readonly class CalcPositionLiquidationPriceHandler
             : $position->entryPrice * (1 - $initialMarginRate + $maintenanceMarginRate->part()) - $freeBalanceLiquidationDistance
         ;
 
-        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
+        if ($position->isLong() && $liquidationPrice < 0) {
+            $liquidationPrice = Price::min();
+        } else {
+            $liquidationPrice = Price::float($liquidationPrice);
+        }
+
+        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), $liquidationPrice);
     }
 
     public function getMaintenanceMarginLiquidationDistance(Position $position): float
