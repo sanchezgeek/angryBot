@@ -53,8 +53,8 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $total),
         ];
 
-        $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 76433.16);
-        $expectedFree = 363.7015;
+        $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 64711.64);
+        $expectedFree = 363.7036;
         yield sprintf('have %.3f on %s contract balance (with short opened)', $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [$main],
@@ -62,6 +62,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
         ];
 
+        $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 76433.16);
         $support = PositionFactory::long(Symbol::BTCUSDT, 60480.590, 0.284, 100, 0);
         $expectedFree = 307.0816;
         yield sprintf('have %.3f on %s contract balance (with hedge opened)', $available, $coin->value) => [
