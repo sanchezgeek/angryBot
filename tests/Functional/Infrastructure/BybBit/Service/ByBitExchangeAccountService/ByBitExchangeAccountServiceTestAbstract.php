@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitExchangeAccountService;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -33,6 +34,7 @@ abstract class ByBitExchangeAccountServiceTestAbstract extends KernelTestCase
             self::getContainer()->get(OrderCostCalculator::class),
             self::getContainer()->get(CalcPositionLiquidationPriceHandler::class),
             self::getContainer()->get(PositionServiceInterface::class),
+            self::getContainer()->get(ExchangeServiceInterface::class),
         );
     }
 }

@@ -97,12 +97,14 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
         ];
 
+        // @todo | cover case (based on positionBalance - im) for negative free for long without liquidation (below)
+
         # with almost equivalent hedge is opened
-        $support = PositionFactory::short(Symbol::BTCUSDT, 63251.150, 0.234, 100, 0);
-        $main = PositionFactory::long(Symbol::BTCUSDT, 60531.140, 0.235, 100, 100);
+        $support = PositionFactory::short(Symbol::BTCUSDT, 67864.380, 0.410, 100, 0);
+        $main = PositionFactory::long(Symbol::BTCUSDT, 63983.600, 0.426, 100, 0);
         $total = 190.6271;
-        $available = 0.2642;
-        $expectedFree = $available;
+        $available = 0;
+        $expectedFree = 0;
         yield sprintf('have / %s total and %s available / on %s contract balance (with almost equivalent hedge opened)', $total, $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [$main, $support],

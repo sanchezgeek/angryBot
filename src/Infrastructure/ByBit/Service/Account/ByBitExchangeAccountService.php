@@ -7,6 +7,7 @@ namespace App\Infrastructure\ByBit\Service\Account;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
@@ -31,7 +32,6 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 use function is_array;
-use function max;
 use function sprintf;
 use function uuid_create;
 
@@ -44,7 +44,8 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         private readonly LoggerInterface $appErrorLogger,
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly CalcPositionLiquidationPriceHandler $positionLiquidationCalculator,
-        private readonly PositionServiceInterface $positionService
+        private readonly PositionServiceInterface $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
     ) {
         $this->apiClient = $apiClient;
     }
@@ -191,6 +192,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                             try {
                                 $free = $this->calcFreeContractBalance($coin, $total, $available);
                             } catch (Throwable $e) {
+                                $this->appErrorLogger->critical($e->getMessage(), ['file' => __FILE__, 'line' => __LINE__]);
                                 OutputHelper::warning(sprintf('%s: "%s" when trying to calc free contract balance.', __FUNCTION__, $e->getMessage()));
                                 $free = $available;
                             }
@@ -244,7 +246,8 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $positionForCalc = $hedge ? $hedge->mainPosition : $positions[0];
         $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($positionForCalc);
         $availableFundsLiquidationDistance = $positionForCalc->liquidationDistance() - $maintenanceMarginLiquidationDistance;
-        $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $positionForCalc->getNotCoveredSize();
+        $notCoveredSize = $positionForCalc->getNotCoveredSize();
+        $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $notCoveredSize;
 
         if ($hedge?->isProfitableHedge()) {
             $free = $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice();
@@ -253,7 +256,26 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
              * @todo | need some normal solution
              */
             if ($free < 0 && $positionForCalc->isLong() && $positionForCalc->liquidationPrice <= 0.00) {
-                $free = max($free, $available);
+                $main = $hedge->mainPosition;
+                $support = $hedge->supportPosition;
+                $ticker = $this->exchangeService->ticker($positionForCalc->symbol);
+                $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
+                $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
+                if ($available === 0.0) {
+                    $free = ($main->positionBalance->value() - $main->initialMargin->value())
+                        + ($support->initialMargin->value() - $support->positionBalance->value());
+
+                    $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
+                    $free -= $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
+                    $free -= $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
+                } else {
+                    if ($isMainPositionInLoss) {
+                        $loss = $notCoveredSize * $priceDelta->delta();
+                        $free = $available + $loss;
+                    } else {
+                        $free = $available;
+                    }
+                }
             }
         } else {
             $free = $fundsAvailableForLiquidation;
@@ -266,32 +288,5 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         return $free;
-//        $ticker = $ticker ?: $this->exchangeService->ticker($positionForCalc->symbol);
-//        $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
-//        $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
-//        if ($contractBalance->availableBalance === 0.0) {
-//            $support = $hedge->supportPosition;
-//            $free = ($main->positionBalance->value() - $main->initialMargin->value())
-//                + ($support->initialMargin->value() - $support->positionBalance->value());
-//
-//            if ($isMainPositionInLoss) {
-//                $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
-//                $feeForCloseNotCovered = $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
-//                $feeForOpenNotCovered = $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
-//
-//                $free -= $feeForCloseNotCovered; // но comment сработал для ситуации, когда free всё таки больше 0 (sub#2  => delta   (real - calculated)   :   -0.300)
-//                $free -= $feeForOpenNotCovered;
-//            }
-//        } else {
-//            if ($isMainPositionInLoss) {
-//                $loss = $notCoveredSize * $priceDelta->delta();
-//                $free = $contractBalance->availableBalance + $loss;
-//            } else {
-//                $free = $contractBalance->availableBalance;
-//            }
-//        }
-//
-//        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $free));
-//        return new CoinAmount($contractBalance->assetCoin, $free);
     }
 }
