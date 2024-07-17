@@ -238,42 +238,30 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             return $total;
         }
 
-        if (!($hedge = $positions[0]->getHedge())) {
-            // @todo | check value is actual (without hedge)
-            $result = $total->sub($positions[0]->initialMargin)->value();
-        } else {
-            $main = $hedge->mainPosition;
-//            if ($main->isPositionInProfit($ticker->lastPrice)) $result = $contractBalance->availableBalance; else {...}
-            $totalLiquidationDistance = $main->liquidationDistance();
+        $positionForCalc = ($hedge = $positions[0]->getHedge()) ? $hedge->mainPosition : $positions[0];
+        $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($positionForCalc);
+        $availableFundsLiquidationDistance = $positionForCalc->liquidationDistance() - $maintenanceMarginLiquidationDistance;
+        $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $positionForCalc->getNotCoveredSize();
 
-            $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($main);
-            $availableFundsLiquidationDistance = $totalLiquidationDistance - $maintenanceMarginLiquidationDistance;
-            $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $main->getNotCoveredSize();
+        $result = $hedge?->isProfitableHedge()
+            ? $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice()
+            : $fundsAvailableForLiquidation
+        ;
 
-            $result = $hedge->isProfitableHedge()
-                ? $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice()
-                : $fundsAvailableForLiquidation
-            ;
-
-            // @todo | `$main->isLong() && $liquidationDistance >= $main->entryPrice)` case must be taken into account
-        }
-//        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
+        // @todo | `$positionForCalc->isLong() && $liquidationDistance >= $main->entryPrice)` case must be taken into account
         $freeContractBalance = new CoinAmount($coin, $result);
 
         # check is correct
-        $positionToReCalcLiquidation = $hedge ? $hedge->mainPosition : $positions[0];
-        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionToReCalcLiquidation, $freeContractBalance)->estimatedLiquidationPrice();
-        if (($positionToReCalcLiquidation->liquidationPrice - $liquidationRecalculated->value()) > 1) {
+        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, $freeContractBalance)->estimatedLiquidationPrice();
+        if (abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value()) > 1) {
             OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one.', __FUNCTION__));
         }
 
         return $freeContractBalance;
 
-        $ticker = $ticker ?: $this->exchangeService->ticker($positionToReCalcLiquidation->symbol);
+        $ticker = $ticker ?: $this->exchangeService->ticker($positionForCalc->symbol);
         $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
         $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
-
-
         if ($contractBalance->availableBalance === 0.0) {
             $support = $hedge->supportPosition;
             $result = ($main->positionBalance->value() - $main->initialMargin->value())
