@@ -31,6 +31,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 use function is_array;
+use function max;
 use function sprintf;
 use function uuid_create;
 
@@ -185,14 +186,16 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
                         } elseif ($accountType === AccountType::CONTRACT) {
                             $total = (float)$coinData['walletBalance'];
+                            $available = (float)$coinData['availableToWithdraw'];
+
                             try {
-                                $free = $this->calcFreeContractBalance(new CoinAmount($coin, $total));
+                                $free = $this->calcFreeContractBalance($coin, $total, $available);
                             } catch (Throwable $e) {
-                                OutputHelper::warning($e->getMessage());
-                                $free = 0;
+                                OutputHelper::warning(sprintf('%s: "%s" when trying to calc free contract balance.', __FUNCTION__, $e->getMessage()));
+                                $free = $available;
                             }
 
-                            $walletBalance = new WalletBalance($accountType, $coin, $total, (float)$coinData['availableToWithdraw'], $free->value());
+                            $walletBalance = new WalletBalance($accountType, $coin, $total, $available, (new CoinAmount($coin, $free))->value());
                         }
                     }
                 }
@@ -214,77 +217,81 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     /**
      * @todo tests
      */
-    private function calcFreeContractBalance(CoinAmount $total): CoinAmount
+    private function calcFreeContractBalance(Coin $coin, float $total, float $available): float
     {
-        $coin = $total->coin();
-
         // @todo | Temporary solution? (only if there is only BTCUSDT position is opened)
         $symbol = null;
         foreach (Symbol::cases() as $symbol) {
             if ($symbol->associatedCoin() === $coin) break;
         }
 
+        // @todo | because of now positionService only works with linear category
         try {
             $positions = $this->positionService->getPositions($symbol);
         } catch (InvalidArgumentException $e) {
-            if ($e->getMessage() === 'Unsupported symbol associated category') {
-                $positions = [];
-            } else {
-                throw $e;
-            }
+            if ($e->getMessage() === 'Unsupported symbol associated category') $positions = []; else throw $e;
         }
 
         if (!$positions) {
             return $total;
         }
 
-        $positionForCalc = ($hedge = $positions[0]->getHedge()) ? $hedge->mainPosition : $positions[0];
+        $hedge = $positions[0]->getHedge();
+        if ($hedge && $hedge->isEquivalentHedge()) {
+            return $available;
+        }
+
+        $positionForCalc = $hedge ? $hedge->mainPosition : $positions[0];
         $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($positionForCalc);
         $availableFundsLiquidationDistance = $positionForCalc->liquidationDistance() - $maintenanceMarginLiquidationDistance;
         $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $positionForCalc->getNotCoveredSize();
 
-        $result = $hedge?->isProfitableHedge()
-            ? $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice()
-            : $fundsAvailableForLiquidation
-        ;
-
-        // @todo | `$positionForCalc->isLong() && $liquidationDistance >= $main->entryPrice)` case must be taken into account
-        $freeContractBalance = new CoinAmount($coin, $result);
-
-        # check is correct
-        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, $freeContractBalance)->estimatedLiquidationPrice();
-        if (abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value()) > 1) {
-            OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one.', __FUNCTION__));
-        }
-
-        return $freeContractBalance;
-
-        $ticker = $ticker ?: $this->exchangeService->ticker($positionForCalc->symbol);
-        $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
-        $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
-        if ($contractBalance->availableBalance === 0.0) {
-            $support = $hedge->supportPosition;
-            $result = ($main->positionBalance->value() - $main->initialMargin->value())
-                + ($support->initialMargin->value() - $support->positionBalance->value());
-
-            if ($isMainPositionInLoss) {
-                $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
-                $feeForCloseNotCovered = $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
-                $feeForOpenNotCovered = $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
-
-                $result -= $feeForCloseNotCovered; // но comment сработал для ситуации, когда free всё таки больше 0 (sub#2  => delta   (real - calculated)   :   -0.300)
-                $result -= $feeForOpenNotCovered;
+        if ($hedge?->isProfitableHedge()) {
+            $free = $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice();
+            /**
+             * Case when this is almost equivalent hedge
+             * @todo | need some normal solution
+             */
+            if ($free < 0 && $positionForCalc->isLong()) {
+                $free = max($free, $available);
             }
         } else {
-            if ($isMainPositionInLoss) {
-                $loss = $notCoveredSize * $priceDelta->delta();
-                $result = $contractBalance->availableBalance + $loss;
-            } else {
-                $result = $contractBalance->availableBalance;
-            }
+            $free = $fundsAvailableForLiquidation;
         }
 
-        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $result));
-        return new CoinAmount($contractBalance->assetCoin, $result);
+        # check is correct
+        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
+        if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
+            OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
+        }
+
+        return $free;
+//        $ticker = $ticker ?: $this->exchangeService->ticker($positionForCalc->symbol);
+//        $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
+//        $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
+//        if ($contractBalance->availableBalance === 0.0) {
+//            $support = $hedge->supportPosition;
+//            $free = ($main->positionBalance->value() - $main->initialMargin->value())
+//                + ($support->initialMargin->value() - $support->positionBalance->value());
+//
+//            if ($isMainPositionInLoss) {
+//                $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
+//                $feeForCloseNotCovered = $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
+//                $feeForOpenNotCovered = $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
+//
+//                $free -= $feeForCloseNotCovered; // но comment сработал для ситуации, когда free всё таки больше 0 (sub#2  => delta   (real - calculated)   :   -0.300)
+//                $free -= $feeForOpenNotCovered;
+//            }
+//        } else {
+//            if ($isMainPositionInLoss) {
+//                $loss = $notCoveredSize * $priceDelta->delta();
+//                $free = $contractBalance->availableBalance + $loss;
+//            } else {
+//                $free = $contractBalance->availableBalance;
+//            }
+//        }
+//
+//        OutputHelper::print(sprintf('%s: %.5f', __FUNCTION__, $free));
+//        return new CoinAmount($contractBalance->assetCoin, $free);
     }
 }

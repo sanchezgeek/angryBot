@@ -6,6 +6,7 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
 
@@ -125,13 +126,18 @@ final readonly class Hedge
         return $this->mainPosition->entryPrice <= $this->supportPosition->entryPrice;
     }
 
+    public function isEquivalentHedge(): bool
+    {
+        return $this->mainPosition->size === $this->supportPosition->size;
+    }
+
     /**
      * @todo tests
      */
     public function getSupportProfitOnMainEntryPrice(): ?float
     {
         if ($this->isProfitableHedge()) {
-            return $this->supportPosition->size * $this->getPositionsDistance();
+            return $this->supportPosition->size * PriceHelper::round($this->getPositionsDistance());
         }
 
         return null;
@@ -187,21 +193,23 @@ final readonly class Hedge
 //     */
 //    public function info(): array
 //    {
+//        $main = $this->mainPosition;
+//        $support = $this->supportPosition;
+//
 //        return [
-//            'distance' => $this->getPositionsDistance(),
-//            'sizeDelta' => $this->mainPosition->getSizeForCalcLoss(),
-//            'mainRate' => $this->getMainRate(),
-//            'supportRate' => $this->getSupportRate(),
-//            'pnl' => [
-//                'absolute' => [
-//                    'mainToSupportEntry' => $this->getMainProfitOnSupportEntryPrice(),
-//                    'supportToMainEntry' => $this->getSupportProfitOnMainEntryPrice(),
-//                ],
-//                'percent' => [
-//                    'mainToSupportEntry' => $this->getMainPnlPercentOnSupportEntryPrice(),
-//                    'supportToMainEntry' => $this->getSupportPnlPercentOnMainEntryPrice(),
-//                ],
-//            ],
+//            'mainPosition   ' => sprintf('%s  | %.3f | %3.f | im = %3.f | b = %3.f', $main->side->title(), $main->size, $main->entryPrice, $main->initialMargin->value(), $main->positionBalance->value()),
+//            'supportPosition' => sprintf('%s | %.3f | %3.f | im = %3.f | b = %3.f', $support->side->title(), $support->size, $support->entryPrice, $support->initialMargin->value(), $support->positionBalance->value()),
+//            'distance' => sprintf('%.3f', $this->getPositionsDistance()),
+//            'sizeDelta' => sprintf('%.3f', $main->getNotCoveredSize()),
+//            'notCoveredPartProfit' => $main->getNotCoveredSize() * $this->getPositionsDistance(),
+//            'rate' => sprintf('main: %s | support: %s', $this->getMainRate(), $this->getSupportRate()),
+//            'pnl' => sprintf(
+//                'mainToSupportEntry: %.3f \ %s | supportToMainEntry: %.3f \ %s',
+//                $this->getMainProfitOnSupportEntryPrice(),
+//                $this->getMainPnlPercentOnSupportEntryPrice(),
+//                $this->getSupportProfitOnMainEntryPrice(),
+//                $this->getSupportPnlPercentOnMainEntryPrice()
+//            ),
 //        ];
 //    }
 }

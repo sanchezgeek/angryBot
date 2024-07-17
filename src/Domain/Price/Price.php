@@ -43,6 +43,9 @@ readonly final class Price
         return new self($value);
     }
 
+    /**
+     * @todo | move to service (must be based on traded symbol)
+     */
     public static function min(): self
     {
         return new self(self::MIN);

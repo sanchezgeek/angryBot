@@ -41,31 +41,58 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
 
     private function getContractWalletBalanceSuccessTestCases(): iterable
     {
-        # USDT
+        ### USDT
         $coin = Coin::USDT;
         $total = 600.9;
         $available = 105.1;
 
-        yield sprintf('have %.3f on %s contract balance (without positions opened)', $available, $coin->value) => [
+        # without positions opened
+        yield sprintf('have / %s total and %s available / on %s contract balance (without positions opened)', $total, $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [],
             '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $total),
         ];
 
+        # with only short is opened
         $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 64711.64);
         $expectedFree = 363.7036;
-        yield sprintf('have %.3f on %s contract balance (with short opened)', $available, $coin->value) => [
+        yield sprintf('have / %s total and %s available / on %s contract balance (with short opened)', $total, $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [$main],
             '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
             'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
         ];
 
+        # with hedge is opened
         $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 76433.16);
         $support = PositionFactory::long(Symbol::BTCUSDT, 60480.590, 0.284, 100, 0);
         $expectedFree = 307.0816;
-        yield sprintf('have %.3f on %s contract balance (with hedge opened)', $available, $coin->value) => [
+        yield sprintf('have / %s total and %s available / on %s contract balance (with hedge opened)', $total, $available, $coin->value) => [
+            '$coin' => $coin,
+            '$positions' => [$main, $support],
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
+            'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
+        ];
+
+        # with equivalent hedge is opened
+        $main = PositionFactory::short(Symbol::BTCUSDT, 63422.060, 0.374, 100, 0);
+        $support = PositionFactory::long(Symbol::BTCUSDT, 60480.590, 0.374, 100, 0);
+        $expectedFree = $available;
+        yield sprintf('have / %s total and %s available / on %s contract balance (with equivalent hedge opened)', $total, $available, $coin->value) => [
+            '$coin' => $coin,
+            '$positions' => [$main, $support],
+            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
+            'expectedSpotBalance' => new WalletBalance(AccountType::CONTRACT, $coin, $total, $available, $expectedFree),
+        ];
+
+        # with almost equivalent hedge is opened
+        $support = PositionFactory::short(Symbol::BTCUSDT, 63251.150, 0.234, 100, 0);
+        $main = PositionFactory::long(Symbol::BTCUSDT, 60531.140, 0.235, 100, 100);
+        $total = 190.6271;
+        $available = 0.2642;
+        $expectedFree = $available;
+        yield sprintf('have / %s total and %s available / on %s contract balance (with almost equivalent hedge opened)', $total, $available, $coin->value) => [
             '$coin' => $coin,
             '$positions' => [$main, $support],
             '$apiResponse' => AccountBalanceResponseBuilder::ok()->withContractBalance($coin, $total, $available)->build(),
