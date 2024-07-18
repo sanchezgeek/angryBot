@@ -258,9 +258,6 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             if ($free < 0 && $positionForCalc->isLong() && $positionForCalc->liquidationPrice <= 0.00) {
                 $main = $hedge->mainPosition;
                 $support = $hedge->supportPosition;
-                $ticker = $this->exchangeService->ticker($positionForCalc->symbol);
-                $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
-                $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
                 if ($available === 0.0) {
                     $free = ($main->positionBalance->value() - $main->initialMargin->value())
                         + ($support->initialMargin->value() - $support->positionBalance->value());
@@ -269,6 +266,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                     $free -= $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
                     $free -= $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
                 } else {
+                    $ticker = $this->exchangeService->ticker($positionForCalc->symbol);
+                    $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
+                    $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
+
                     if ($isMainPositionInLoss) {
                         $loss = $notCoveredSize * $priceDelta->delta();
                         $free = $available + $loss;
