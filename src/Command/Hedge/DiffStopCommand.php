@@ -42,7 +42,7 @@ class DiffStopCommand extends AbstractCommand
     {
         $symbol = $this->getSymbol();
         $coin = $symbol->associatedCoin();
-        $targetPrice = $this->paramFetcher->floatOption(self::TARGET_PRICE_OPTION);
+        $targetPrice = $this->paramFetcher->requiredFloatOption(self::TARGET_PRICE_OPTION);
         $positions = $this->positionService->getPositions($symbol);
 
         if (!($hedge = $positions[0]->getHedge())) {
