@@ -271,7 +271,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                     $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
 
                     if ($isMainPositionInLoss) {
-                        $loss = $notCoveredSize * $priceDelta->delta();
+                        $loss = $notCoveredSize * $priceDelta->absDelta();
                         $free = $available + $loss;
                     } else {
                         $free = $available;

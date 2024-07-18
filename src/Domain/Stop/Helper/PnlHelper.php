@@ -7,18 +7,24 @@ namespace App\Domain\Stop\Helper;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 
 /**
  * @see \App\Tests\Unit\Domain\Stop\Helper\PnlHelperTest
  */
 final class PnlHelper
 {
+    public static function convertAbsDeltaToPnlPercentRelativeToPrice(float $delta, float|Price $relativeToPrice): Percent
+    {
+        return new Percent($delta / Price::toFloat($relativeToPrice) * self::getPositionLeverage() * 100, false);
+    }
+
     public static function getPnlInPercents(Position $position, float $price): float
     {
         $sign = $position->isShort() ? -1 : +1;
         $delta = $price - $position->entryPrice;
 
-        return $sign * ($delta / $position->entryPrice) * self::getPositionLeverage($position) * 100;
+        return $sign * self::convertAbsDeltaToPnlPercentRelativeToPrice($delta, $position->entryPrice)->value();
     }
 
     public static function getPnlInUsdt(Position $position, Price|float $price, float $volume): float
@@ -49,7 +55,7 @@ final class PnlHelper
         );
     }
 
-    protected static function getPositionLeverage(Position $position): float
+    protected static function getPositionLeverage(?Position $position = null): float
     {
         return 100; // @todo | use $position->positionLeverage ??;
     }

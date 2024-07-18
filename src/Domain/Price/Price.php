@@ -24,6 +24,10 @@ readonly final class Price
 {
     private float $value;
 
+    /**
+     * @todo | Get precision on construct to further use. Maybe even external (with some getter)
+     *         While accurate value must be calculated somewhere else and passed here
+     */
     private function __construct(float $value)
     {
         if ($value < 0) {

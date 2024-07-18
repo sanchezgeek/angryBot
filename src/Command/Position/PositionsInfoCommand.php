@@ -12,6 +12,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Price\PriceMovement;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
@@ -77,11 +78,14 @@ class PositionsInfoCommand extends AbstractCommand
 
     public function printState(?Position $position, CalcPositionLiquidationPriceResult $result): void
     {
+        $estimatedLiquidationPrice = $result->estimatedLiquidationPrice();
+        $liquidationDiff = PriceMovement::fromToTarget($position->liquidationPrice, $estimatedLiquidationPrice);
+
         OutputHelper::print($position->getCaption());
         OutputHelper::positionStats('real      ', $position);
         OutputHelper::print(
             sprintf('calculated | LiquidationDistance = %.2f', $result->liquidationDistance()),
-            sprintf('                                                            real - calculated : %.3f', $position->liquidationDistance() - $result->liquidationDistance()),
+            sprintf('                                                            real - calculated : %.3f', $liquidationDiff->deltaForPositionLoss($position->side)),
         );
     }
 

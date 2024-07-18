@@ -195,7 +195,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         return max(
             self::CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION,
-            $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->delta() : 0,
+            $markPriceDifferenceWithIndexPrice->isLossFor($positionSide) ? $markPriceDifferenceWithIndexPrice->absDelta() : 0,
         );
     }
 
