@@ -12,6 +12,9 @@ final class VolumeHelper
     public const MIN_VOLUME = 0.001;
     private const DEFAULT_PRECISION = 3;
 
+    /**
+     * @todo | must not be static | must based on trading symbol
+     */
     public static function round(float $volume, int $precision = self::DEFAULT_PRECISION): float
     {
         $rounded = \round($volume, $precision);

@@ -51,6 +51,11 @@ final class Position implements Stringable
         return abs(FloatHelper::round($this->entryPrice - $this->liquidationPrice));
     }
 
+    public function liquidationPrice(): Price
+    {
+        return Price::toObj($this->liquidationPrice);
+    }
+
     /**
      * @todo | Builder
      */
@@ -103,9 +108,9 @@ final class Position implements Stringable
         return $position;
     }
 
-    public function setOppositePosition(Position $oppositePosition): void
+    public function setOppositePosition(Position $oppositePosition, bool $force = false): void
     {
-        if ($this->oppositePosition !== null) {
+        if (!$force && $this->oppositePosition !== null) {
             throw new LogicException('Opposite position already set.');
         }
 
@@ -143,7 +148,7 @@ final class Position implements Stringable
             );
         }
 
-        return $hedge->mainPosition->size - $hedge->supportPosition->size;
+        return VolumeHelper::round($hedge->mainPosition->size - $hedge->supportPosition->size);
     }
 
     public function getCaption(): string

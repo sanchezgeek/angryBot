@@ -286,4 +286,24 @@ final class PositionTest extends TestCase
             $position->withNewSize(0.11)
         );
     }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testLiquidationPrice(Side $side): void
+    {
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 50, 100);
+
+        self::assertEquals(Price::float(51000.001), $position->liquidationPrice());
+    }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testLiquidationDistance(Side $side): void
+    {
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 50, 100);
+
+        self::assertEquals(1000.001, $position->liquidationDistance());
+    }
 }
