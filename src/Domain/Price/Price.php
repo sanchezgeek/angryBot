@@ -7,6 +7,7 @@ namespace App\Domain\Price;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use RuntimeException;
 
@@ -21,18 +22,12 @@ use function sprintf;
  */
 readonly final class Price
 {
-    private const MIN = 0.01;
-
     private float $value;
 
     private function __construct(float $value)
     {
-        if ($value <= 0) {
-            throw new \DomainException('Price cannot be less or equals zero.');
-        }
-
-        if ($value < self::MIN) {
-            throw new \DomainException('Price cannot be less min available value.');
+        if ($value < 0) {
+            throw new \DomainException('Price cannot be less than zero.');
         }
 
         $this->value = $value;
@@ -44,16 +39,11 @@ readonly final class Price
     }
 
     /**
-     * @todo | move to service (must be based on traded symbol)
+     * @todo | must be based on trading symbol
      */
-    public static function min(): self
-    {
-        return new self(self::MIN);
-    }
-
     public function value(): float
     {
-        return round($this->value, 2);
+        return PriceHelper::round($this->value);
     }
 
     public function add(Price|float $addValue): self

@@ -30,7 +30,7 @@ final readonly class CalcPositionLiquidationPriceHandler
         $liquidationDistance = $freeBalanceLiquidationDistance + $this->getMaintenanceMarginLiquidationDistance($position);
 
         if ($position->isLong() && $liquidationDistance >= $position->entryPrice) {
-            return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::min());
+            return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float(0));
         }
 
         $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
@@ -61,12 +61,10 @@ final readonly class CalcPositionLiquidationPriceHandler
         ;
 
         if ($position->isLong() && $liquidationPrice < 0) {
-            $liquidationPrice = Price::min();
-        } else {
-            $liquidationPrice = Price::float($liquidationPrice);
+            $liquidationPrice = 0;
         }
 
-        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), $liquidationPrice);
+        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
     }
 
     public function getMaintenanceMarginLiquidationDistance(Position $position): float

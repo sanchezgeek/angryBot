@@ -58,10 +58,8 @@ final class PriceTest extends TestCase
     private function failCreateCases(): iterable
     {
         return [
-            [-1, 'Price cannot be less or equals zero.'],
-            [-0.009, 'Price cannot be less or equals zero.'],
-            [0, 'Price cannot be less or equals zero.'],
-            [0.001, 'Price cannot be less min available value.']
+            [-1, 'Price cannot be less than zero.'],
+            [-0.009, 'Price cannot be less than zero.'],
         ];
     }
 

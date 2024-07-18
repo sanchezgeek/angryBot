@@ -347,17 +347,17 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield '`from` must be ordersQnt must be >= 1' => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$forVolume' => '0.1',
-            '$from' => '0',
+            '$from' => '-1',
             '$to' => '28900', '$qnt' => 10,
-            'expectedMessage' => new LogicException('Price cannot be less or equals zero.'),
+            'expectedMessage' => new LogicException('Price cannot be less than zero.'),
         ];
 
         yield '`to` must be ordersQnt must be >= 1' => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$forVolume' => '0.1',
             '$from' => '29000',
-            '$to' => '0', '$qnt' => 10,
-            'expectedMessage' => new LogicException('Price cannot be less or equals zero.'),
+            '$to' => '-1', '$qnt' => 10,
+            'expectedMessage' => new LogicException('Price cannot be less than zero.'),
         ];
     }
 
