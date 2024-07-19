@@ -23,7 +23,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use function count;
 use function sprintf;
 
 #[AsCommand(name: 'p:info')]
@@ -78,13 +77,12 @@ class PositionsInfoCommand extends AbstractCommand
 
     public function printState(?Position $position, CalcPositionLiquidationPriceResult $result): void
     {
-        $estimatedLiquidationPrice = $result->estimatedLiquidationPrice();
-        $liquidationDiff = PriceMovement::fromToTarget($position->liquidationPrice, $estimatedLiquidationPrice);
+        $liquidationDiff = PriceMovement::fromToTarget($position->liquidationPrice, $result->estimatedLiquidationPrice());
 
         OutputHelper::print($position->getCaption());
         OutputHelper::positionStats('real      ', $position);
+        OutputHelper::positionStats('calculated', $result);
         OutputHelper::print(
-            sprintf('calculated | LiquidationDistance = %.2f', $result->liquidationDistance()),
             sprintf('                                                            real - calculated : %.3f', $liquidationDiff->deltaForPositionLoss($position->side)),
         );
     }

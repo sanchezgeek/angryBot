@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Helper;
 
+use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
 use App\Bot\Domain\Position;
 use App\Worker\AppContext;
 
@@ -14,9 +15,11 @@ use function var_dump;
 
 class OutputHelper
 {
-    public static function positionStats(string $desc, Position $position): void
+    public static function positionStats(string $desc, Position|CalcPositionLiquidationPriceResult $res): void
     {
-        $liquidationDistance = FloatHelper::round($position->entryPrice - $position->liquidationPrice);
+        $entryPrice = $res instanceof Position ? $res->entryPrice : $res->positionEntryPrice()->value();
+        $liquidationPrice = $res instanceof Position ? $res->liquidationPrice : $res->estimatedLiquidationPrice()->value();
+        $liquidationDistance = $res instanceof Position ? $res->liquidationDistance() : $res->liquidationDistance();
 
         OutputHelper::print(
             sprintf('%s | LiquidationDistance = %.2f', $desc, $liquidationDistance)
