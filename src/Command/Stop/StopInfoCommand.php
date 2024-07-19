@@ -2,14 +2,17 @@
 
 namespace App\Command\Stop;
 
-use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Application\UseCase\Trading\Sandbox\ExecutionSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\PriceMovement;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
 use App\Helper\Json;
@@ -24,10 +27,11 @@ use function array_combine;
 use function array_fill;
 use function array_filter;
 use function array_keys;
+use function array_map;
 use function array_merge;
 use function array_replace;
+use function array_reverse;
 use function count;
-use function end;
 use function implode;
 use function is_bool;
 use function sprintf;
@@ -39,10 +43,15 @@ class StopInfoCommand extends AbstractCommand
     use PositionAwareCommand;
 
     private const DEFAULT_PNL_STEP = 10;
+    private const PNL_STEP = 'pnlStep';
+    private const AGGREGATE_WITH = 'aggregateWith';
     private const SHOW_PNL_OPTION = 'showPnl';
     private const SHOW_SIZE_LEFT_OPTION = 'showSize';
     private const SHOW_POSITION_PNL = 'showPositionPnl';
     private const SHOW_TP = 'showTP';
+    private const SHOW_STATE_CHANGES = 'showState';
+    private const SHOW_CUMULATIVE_STATE_CHANGES = 'showCum';
+    private const DEBUG_OPTION = 'deb';
     private const IM_VALUE = 'imValue';
 
     private string $aggregateWith;
@@ -52,13 +61,16 @@ class StopInfoCommand extends AbstractCommand
     {
         $this
             ->configurePositionArgs()
-            ->addOption('pnlStep', '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
-            ->addOption('aggregateWith', null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
+            ->addOption(self::PNL_STEP, '-p', InputOption::VALUE_REQUIRED, 'Pnl step (%)', (string)self::DEFAULT_PNL_STEP)
+            ->addOption(self::AGGREGATE_WITH, null, InputOption::VALUE_REQUIRED, 'Additional stops aggregate callback', '')
             ->addOption(self::SHOW_SIZE_LEFT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short size left', false)
             ->addOption(self::SHOW_PNL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Short pnl', false)
             ->addOption(self::SHOW_POSITION_PNL, 'i', InputOption::VALUE_NEGATABLE, 'Current position pnl', false)
             ->addOption(self::SHOW_TP, '-t', InputOption::VALUE_NEGATABLE, 'Show TP orders', false)
             ->addOption(self::IM_VALUE, null, InputOption::VALUE_OPTIONAL, 'Position IM value to check')
+            ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
+            ->addOption(self::SHOW_STATE_CHANGES, null, InputOption::VALUE_NEGATABLE, 'Show state changes?')
+            ->addOption(self::SHOW_CUMULATIVE_STATE_CHANGES, null, InputOption::VALUE_NEGATABLE, 'Show cumulative state changes?')
         ;
     }
 
@@ -66,12 +78,16 @@ class StopInfoCommand extends AbstractCommand
     {
         parent::initialize($input, $output);
 
-        $this->aggregateWith = $this->paramFetcher->getStringOption('aggregateWith', false);
+        $this->aggregateWith = $this->paramFetcher->getStringOption(self::AGGREGATE_WITH, false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $isDebugEnabled = $this->isDebugEnabled();
+
+        $symbol = $this->getSymbol();
         $position = $this->getPosition();
+        $positionSide = $this->getPositionSide();
         $pnlStep = $this->paramFetcher->getIntOption('pnlStep');
         $showPnl = $this->paramFetcher->getBoolOption(self::SHOW_PNL_OPTION);
         $showSizeLeft = $this->paramFetcher->getBoolOption(self::SHOW_SIZE_LEFT_OPTION);
@@ -82,11 +98,13 @@ class StopInfoCommand extends AbstractCommand
             var_dump($position->initialMargin->value() > $imValue);die;
         }
 
-        if ($position->isSupportPosition()) {
+        if ($position->getHedge()?->isEquivalentHedge()) {
+            $this->io->note('hedge with equivalent size');
+        } elseif ($position->isSupportPosition()) {
             $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
             $showSizeLeft = true;
         } else {
-            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationPrice - $position->entryPrice));
+//            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationPrice - $position->entryPrice));
 //            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
         }
 
@@ -105,24 +123,16 @@ class StopInfoCommand extends AbstractCommand
         }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
 
-        $stopped = [];
-        if ($position->isShort()) {
-            foreach ($rangesCollection as $rangeStops) {
-                if (!$rangeStops->totalCount()) continue;
-                foreach ($stopped as $key => $item) {
-                    $stopped[$key] += $rangeStops->totalVolume();
-                }
-                $stopped[] = $rangeStops->totalVolume();
-            }
-        } else {
-            foreach ($rangesCollection as $rangeStops) {
-                if (!$rangeStops->totalCount()) continue;
-                $stopped[] = $rangeStops->totalVolume() + (count($stopped) > 0 ? end($stopped) : 0);
-            }
-        }
+        ##### sandbox #####
+        $executionSandbox = $this->executionSandboxFactory->make($symbol, $isDebugEnabled);
 
-        $key = $totalUsdPnL = $totalVolume = 0;
+        $totalUsdPnL = $totalVolume = 0;
+        $initialPositionState = $executionSandbox->getCurrentState()->getPosition($positionSide);
+        $previousSandboxState = clone $executionSandbox->getCurrentState();
+
+        $output = [];
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
+            /** @var StopsCollection $rangeStops */
             if (!$rangeStops->totalCount()) {
                 continue;
             }
@@ -137,18 +147,44 @@ class StopInfoCommand extends AbstractCommand
                 $args[] = new Pnl($usdPnL, $position->symbol->associatedCoin()->value);
             }
 
-            if ($showSizeLeft) {
-                $sizeLeft = $position->size - $stopped[$key];
+            $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
+            $executionSandbox->processOrders(...$rangeStops);
+            $currentSandboxState = $executionSandbox->getCurrentState();
+            $positionAfterRange = $currentSandboxState->getPosition($positionSide);
+
+            if ($showSizeLeft) { # size left
+                $sizeLeft = $positionAfterRange->size;
                 $format .= ' => %.3f'; $args[] = $sizeLeft;
             }
 
-            $this->io->text(\sprintf($format, ...$args));
-            $this->printAggregateInfo($rangeStops);
+            if ($this->isShowStateChangesEnabled()) {
+                $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $positionBeforeRange, $positionAfterRange);
+                if ($positionAfterRange->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) {
+                    $format .= ' | became support?';
+                }
+                if ($this->isShowCumulativeStateChangesEnabled()) {
+                    $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $initialPositionState, $positionAfterRange, true);
+                }
+            }
+
+            $output[] = sprintf($format, ...$args);
+            $aggInfo = $this->printAggregateInfo($rangeStops, $positionSide);
+            if ($aggInfo !== null) {
+                $output[] = $aggInfo;
+            }
 
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
 
-            $key++;
+            $previousSandboxState = clone $currentSandboxState;
+        }
+
+        if ($positionSide->isShort()) {
+            $output = array_reverse($output);
+        }
+
+        foreach ($output as $line) {
+            $this->io->text($line);
         }
 
         if ($showPnl) {
@@ -157,7 +193,7 @@ class StopInfoCommand extends AbstractCommand
 
         if ($showCurrentPositionPnl) {
             $this->io->text(
-                sprintf('unrealized position PNL: %.1f', $position->unrealizedPnl)
+                sprintf('unrealized position PNL: %.1f', $position->unrealizedPnl),
             );
         }
 
@@ -166,10 +202,35 @@ class StopInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    private function printAggregateInfo(StopsCollection $stops): void
+    /**
+     * @todo | case when Position is totally closed is not taken into account
+     */
+    public function appendNewPositionStateChanges(
+        string &$format,
+        array &$args,
+        Side $positionSide,
+        StopsCollection $rangeStops,
+        Position $positionBeforeRange,
+        Position $positionAfterRange,
+        bool $isCumInfo = false
+    ): void {
+        if (!$positionAfterRange->isSupportPosition()) { # new liquidation
+            $liquidationDiff = PriceMovement::fromToTarget($positionBeforeRange->liquidationPrice, $positionAfterRange->liquidationPrice);
+
+            if (!$isCumInfo) {
+                $format .= ' | liq.price: %s';
+                $args[] = $positionAfterRange->liquidationPrice;
+            }
+
+            $format .= ' | liq.diff: %s';
+            $args[] = $liquidationDiff->percentDeltaForPositionLoss($positionSide, $rangeStops->getAvgPrice())->setOutputDecimalsPrecision(8);
+        }
+    }
+
+    private function printAggregateInfo(StopsCollection $stops, Side $positionSide): ?string
     {
         if (!$this->aggregateWith) {
-            return;
+            return null;
         }
 
         $aggResult = [];
@@ -183,7 +244,7 @@ class StopInfoCommand extends AbstractCommand
         if ($this->aggOrder) {
             $aggResult = array_filter(
                 array_replace(array_combine($this->aggOrder, array_fill(0, count($this->aggOrder), null)), $aggResult),
-                static fn ($value) => $value !== null
+                static fn ($value) => $value !== null,
             );
         }
         $this->aggOrder = array_merge($this->aggOrder, array_keys($aggResult));
@@ -202,13 +263,34 @@ class StopInfoCommand extends AbstractCommand
             ]);
         }
 
-        $this->io->info(implode("\n", $aggInfo));
+        $aggInfo = array_map(static fn(string $info) => '      ' . $info, $aggInfo);
+
+        if ($positionSide->isShort()) {
+            return "\n" . implode("\n", $aggInfo);
+        } else {
+            return implode("\n", $aggInfo) . "\n";
+        }
+    }
+
+    private function isDebugEnabled(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::DEBUG_OPTION);
+    }
+
+    private function isShowStateChangesEnabled(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::SHOW_STATE_CHANGES);
+    }
+
+    private function isShowCumulativeStateChangesEnabled(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::SHOW_CUMULATIVE_STATE_CHANGES);
     }
 
     public function __construct(
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
-        CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
+        private readonly ExecutionSandboxFactory $executionSandboxFactory,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

@@ -2,8 +2,8 @@
 
 namespace App\Command\Sandbox;
 
-use App\Application\UseCase\OrderExecution\Sandbox\ExecutionSandbox;
-use App\Application\UseCase\OrderExecution\Sandbox\ExecutionSandboxFactory;
+use App\Application\UseCase\Trading\Sandbox\ExecutionSandbox;
+use App\Application\UseCase\Trading\Sandbox\ExecutionSandboxFactory;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
