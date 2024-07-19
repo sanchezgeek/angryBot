@@ -42,6 +42,11 @@ final class AppContext
         return $_ENV['APP_ENV'] === 'test';
     }
 
+    public static function accName(): ?string
+    {
+        return $_ENV['ACC_NAME'] ?? null;
+    }
+
     public static function setIsDebug(bool $isDebug): void
     {
         self::$debug = $isDebug;
