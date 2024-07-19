@@ -1,0 +1,14 @@
+#!/bin/bash
+
+DEBUG=""
+if [ ${1:-false} = "true" ]; then
+    DEBUG='--deb'
+fi
+
+instances=("./debug/statsAll/main.env" "./debug/statsAll/sub1.env" "./debug/statsAll/sub2.env" )
+for path in "${instances[@]}"; do
+  ARGS="$(./bin/get_api_envs $path)"
+  export $ARGS
+  ./bin/console balance:info
+  ./bin/console p:info $DEBUG
+done
