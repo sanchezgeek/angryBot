@@ -292,6 +292,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->buyOrderRepository->remove($order);
                 unset($order);
             }
+        } catch (BuyIsNotSafeException $e) {
+            OutputHelper::warning('Buy is not safe. Skip.');
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
