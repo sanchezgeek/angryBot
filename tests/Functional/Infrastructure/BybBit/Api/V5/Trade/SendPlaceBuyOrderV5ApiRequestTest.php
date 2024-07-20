@@ -29,7 +29,7 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
     {
         // Arrange
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
+        $mockRequestKey = $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
 
         $expectedResult = $this->okRequestResult(TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
@@ -41,7 +41,7 @@ final class SendPlaceBuyOrderV5ApiRequestTest extends ByBitV5ApiRequestTestAbstr
         self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
-        $requestCall = $this->httpClientStub->getRequestCalls()[0];
+        $requestCall = $this->httpClientStub->getRequestCalls()[$mockRequestKey];
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertSame(Request::METHOD_POST, $requestCall->method);
         self::assertNull($requestCall->params);

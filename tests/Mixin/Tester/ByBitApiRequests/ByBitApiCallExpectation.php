@@ -13,7 +13,8 @@ final class ByBitApiCallExpectation
         public readonly AbstractByBitApiRequest $expectedRequest,
         public readonly MockResponse $resultResponse,
         /** @internal  */
-        private bool $trackPositionCallToFurtherCheck = true
+        private bool $trackPositionCallToFurtherCheck = true,
+        public ?string $requestKey = null
     ) {
     }
 
@@ -25,5 +26,11 @@ final class ByBitApiCallExpectation
     public function setNoNeedToTrackRequestCallToFurtherCheck(): void
     {
         $this->trackPositionCallToFurtherCheck = false;
+    }
+
+    public function setRequestKey(string $requestKey): self
+    {
+        $this->requestKey = $requestKey;
+        return $this;
     }
 }

@@ -213,7 +213,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 if (!$position->isSupportPosition()) {
                     $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosed);
                     $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-                    $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
+                    $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), $transferToSpotAmount);
                 }
 
                 // reopen closed volume on further movement

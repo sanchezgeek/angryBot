@@ -35,7 +35,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     {
         // Arrange
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
+        $mockRequestKey = $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
         $expectedResult = $this->okRequestResult(PositionResponses::SAMPLE_POSITIONS_RESPONSE['result']);
         $expectedHeaders = $this->expectedPrivateHeaders($request);
@@ -47,7 +47,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
-        $requestCall = $this->httpClientStub->getRequestCalls()[0];
+        $requestCall = $this->httpClientStub->getRequestCalls()[$mockRequestKey];
         self::assertSame(Request::METHOD_GET, $request->method());
         self::assertSame(Request::METHOD_GET, $requestCall->method);
         self::assertSame($request->data(), $requestCall->params);
@@ -70,7 +70,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     {
         // Arrange
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
+        $mockRequestKey = $this->httpClientStub->matchPost($requestUrl, TradeResponses::placeOrderOK(), $request->data());
 
         $expectedResult = $this->okRequestResult(TradeResponses::SAMPLE_PLACE_ORDER_RESPONSE['result']);
         $expectedHeaders = $this->expectedPrivateHeaders($request);
@@ -82,7 +82,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
-        $requestCall = $this->httpClientStub->getRequestCalls()[0];
+        $requestCall = $this->httpClientStub->getRequestCalls()[$mockRequestKey];
         self::assertSame(Request::METHOD_POST, $request->method());
         self::assertSame(Request::METHOD_POST, $requestCall->method);
         self::assertNull($requestCall->params);

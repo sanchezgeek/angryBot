@@ -27,6 +27,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Worker\AppContext;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -107,7 +108,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, $amount);
     }
 
     /**
@@ -118,7 +119,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, $amount);
     }
 
     /**
@@ -129,7 +130,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromFundingToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, $amount);
     }
 
     /**
@@ -140,7 +141,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToFunding(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, $amount);
     }
 
     /**
@@ -151,16 +152,26 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     private function interTransfer(Coin $coin, AccountType $from, AccountType $to, float $amount): void
     {
-        $request = new CoinInterTransfer(new CoinAmount($coin, $amount), $from, $to, $transferId = uuid_create());
+        $amount = FloatHelper::round($amount, $coin->coinCostPrecision());
 
+        $request = self::interTransferFactory($coin, $from, $to, $amount, $transferId = uuid_create());
         $result = $this->sendRequest($request);
 
         $data = $result->data();
 
         $actualId = $data['transferId'];
-        if ($actualId !== $transferId) {
+        if ($request->transferId !== null && $actualId !== $transferId) {
             throw BadApiResponseException::common($request, sprintf('got another `transferId` (%s insteadof %s)', $actualId, $transferId), __METHOD__);
         }
+    }
+
+    private static function interTransferFactory(Coin $coin, AccountType $from, AccountType $to, float $amount, string $transferId): CoinInterTransfer
+    {
+        if (AppContext::isTest()) {
+            return CoinInterTransfer::test(new CoinAmount($coin, $amount), $from, $to);
+        }
+
+        return CoinInterTransfer::real(new CoinAmount($coin, $amount), $from, $to, $transferId);
     }
 
     /**

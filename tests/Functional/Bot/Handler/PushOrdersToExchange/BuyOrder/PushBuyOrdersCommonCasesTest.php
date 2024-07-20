@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -50,6 +51,10 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         self::truncateBuyOrders();
 
         $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
+
+        # @todo | for now to prevent MarketBuyHandler "buyIsSafe" checks
+        $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
+        $marketBuyHandler->setSafeLiquidationPriceDistance(100);
     }
 
     /**

@@ -12,14 +12,18 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Domain\Price\Price;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
+use Throwable;
 
-readonly class MarketBuyHandler
+use function sprintf;
+
+class MarketBuyHandler
 {
-    const SAFE_PRICE_DISTANCE = 3000;
+    const SAFE_PRICE_DISTANCE_DEFAULT = 3000;
 
     /**
      * @throws BuyIsNotSafeException
@@ -38,21 +42,32 @@ readonly class MarketBuyHandler
         return $this->orderService->marketBuy($dto->symbol, $dto->positionSide, $dto->volume);
     }
 
+    /**
+     * @internal For now only for tests
+     */
+    public function setSafeLiquidationPriceDistance(float $distance): void
+    {
+        $this->safePriceDistance = $distance;
+    }
+
     private function buyIsSafe(MarketBuyEntryDto $dto): bool
     {
-        $symbol = $dto->symbol;
-        $positionSide = $dto->positionSide;
+        try {
+            $symbol = $dto->symbol;
+            $positionSide = $dto->positionSide;
+            $ticker = $this->exchangeService->ticker($symbol);
+            $sandbox = $this->executionSandboxFactory->make($symbol);
+            $newState = $sandbox->processOrders(self::entryDtoToSandboxBuyOrder($dto, $ticker->lastPrice));
+            $newPositionState = $newState->getPosition($positionSide);
+            $newPositionLiquidation = $newPositionState->liquidationPrice();
 
-        $ticker = $this->exchangeService->ticker($symbol);
-        $sandbox = $this->executionSandboxFactory->make($symbol);
-        $newState = $sandbox->processOrders(self::entryDtoToSandboxBuyOrder($dto, $ticker->lastPrice));
-        $newPositionState = $newState->getPosition($positionSide);
-        $newPositionLiquidation = $newPositionState->liquidationPrice();
-
-        return $positionSide->isShort()
-            ? $newPositionLiquidation->sub(self::SAFE_PRICE_DISTANCE)->greaterThan($ticker->markPrice)
-            : $newPositionLiquidation->add(self::SAFE_PRICE_DISTANCE)->lessThan($ticker->markPrice)
-        ;
+            return $positionSide->isShort()
+                ? $newPositionLiquidation->sub($this->safePriceDistance)->greaterThan($ticker->markPrice)
+                : $newPositionLiquidation->add($this->safePriceDistance)->lessThan($ticker->markPrice);
+        } catch (Throwable $e) {
+            OutputHelper::warning(sprintf('%s: got "%s" exception while make `buyIsSafe` check', get_class($e), $e->getMessage()));
+            return true;
+        }
     }
 
     private static function entryDtoToSandboxBuyOrder(MarketBuyEntryDto $marketBuyDto, Price $price): SandboxBuyOrder
@@ -64,9 +79,10 @@ readonly class MarketBuyHandler
      * @param ByBitOrderService $orderService
      */
     public function __construct(
-        private OrderServiceInterface $orderService,
-        private ExecutionSandboxFactory $executionSandboxFactory,
-        private ExchangeServiceInterface $exchangeService,
+        private readonly OrderServiceInterface $orderService,
+        private readonly ExecutionSandboxFactory $executionSandboxFactory,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private float $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
     ) {
     }
 }

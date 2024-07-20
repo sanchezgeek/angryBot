@@ -15,12 +15,14 @@ use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\Account\AccountBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Coin\CoinInterTransferResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\TickersResponseBuilder;
@@ -30,6 +32,7 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 
 use function sprintf;
+use function uuid_create;
 
 trait ByBitV5ApiRequestsMocker
 {
@@ -43,6 +46,24 @@ trait ByBitV5ApiRequestsMocker
         $resultResponse = AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build();
 
         $this->matchGet($expectedRequest, $resultResponse, false);
+    }
+
+    protected function interTransferFromContractToSpotApiCallIsExpected(CoinAmount $coinAmount): void
+    {
+        $transferId = uuid_create();
+        $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::CONTRACT, AccountType::SPOT);
+        $resultResponse = CoinInterTransferResponseBuilder::ok($transferId)->build();
+
+        $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
+    }
+
+    protected function interTransferFromSpotToContractApiCallIsExpected(CoinAmount $coinAmount): void
+    {
+        $transferId = uuid_create();
+        $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::SPOT, AccountType::CONTRACT);
+        $resultResponse = CoinInterTransferResponseBuilder::ok($transferId)->build();
+
+        $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
     }
 
     protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
@@ -69,18 +90,18 @@ trait ByBitV5ApiRequestsMocker
         $this->havePosition($position->symbol, $position);
     }
 
-    protected  function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void
+    protected function expectsToMakeApiCalls(ByBitApiCallExpectation ...$expectations): void
     {
         foreach ($expectations as $expectation) {
             $method = $expectation->expectedRequest->method();
 
             if ($method === Request::METHOD_POST) {
-                $this->matchPost($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck());
+                $this->matchPost($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck(), $expectation->requestKey);
             } else {
                 $method !== Request::METHOD_GET && throw new RuntimeException(
                     sprintf('Unknown request type (`%s` verb)', $method)
                 );
-                $this->matchGet($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck());
+                $this->matchGet($expectation->expectedRequest, $expectation->resultResponse, $expectation->isNeedTrackRequestCallToFurtherCheck(), $expectation->requestKey);
             }
         }
     }
