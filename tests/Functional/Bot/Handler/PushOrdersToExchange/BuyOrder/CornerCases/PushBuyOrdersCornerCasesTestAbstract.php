@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -73,6 +74,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             $this->exchangeAccountServiceMock,
             self::getContainer()->get(ByBitMarketService::class),
             self::getContainer()->get(OrderServiceInterface::class),
+            self::getContainer()->get(MarketBuyHandler::class),
 
             $this->exchangeServiceMock,
             self::getContainer()->get(PositionServiceInterface::class),

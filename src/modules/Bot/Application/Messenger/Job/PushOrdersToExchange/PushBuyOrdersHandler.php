@@ -6,6 +6,9 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -29,6 +32,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\OutputHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
@@ -276,7 +280,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->orderService->marketBuy($position->symbol, $position->side, $order->getVolume());
+            $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order));
             $order->setExchangeOrderId($exchangeOrderId);
 //            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
@@ -543,6 +547,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MarketServiceInterface $marketService,
         private readonly OrderServiceInterface $orderService,
+
+        private readonly MarketBuyHandler $marketBuyHandler,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
