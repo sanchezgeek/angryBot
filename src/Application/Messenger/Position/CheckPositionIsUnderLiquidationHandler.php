@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Application\Messenger\Position;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -44,20 +43,22 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     # Transfer from spot
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
-    public const MIN_TRANSFER_AMOUNT = 20;
+    public const MIN_TRANSFER_AMOUNT = 50;
+    public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # To check stopped position volume
     public const CHECK_STOPS_ON_DISTANCE = 750;
-    public const CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION = 30;
+    public const CHECK_STOPS_CRITICAL_DELTA_WITH_LIQUIDATION = 20;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 60;
 
-    public const ACCEPTABLE_STOPPED_PART = 25;              private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
+    public const ACCEPTABLE_STOPPED_PART = 18;              private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
 
-    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 3.6;
+    public const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = self::CHECK_STOPS_ON_DISTANCE / 5.5;
     public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 150;
+    public const ADDITIONAL_STOP_TRIGGER_MID_DELTA = 30;
     public const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = 1;
 
-    const NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP = 5;
+    const NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP = 2.5;
     const MOVE_BACK_TO_SPOT_ENABLED = false;
 
     /**
@@ -71,6 +72,11 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         private StopServiceInterface $stopService,
         private StopRepositoryInterface $stopRepository,
     ) {
+    }
+
+    public function isTransferFromSpotBeforeCheckStopsEnabled(): bool
+    {
+        return self::TRANSFER_FROM_SPOT_ON_DISTANCE >= self::CHECK_STOPS_ON_DISTANCE;
     }
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
@@ -94,16 +100,23 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
         $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
 
+        $decreaseStopDistance = false;
         $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
         if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
-                if ($spotBalance->available() > 2) {
-                    $amount = $this->amountToTransferFromSpot($spotBalance, $position);
-                    $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amount);
+                $availableSpotBalance = $spotBalance->available();
+                if ($availableSpotBalance > 2) {
+                    $transferredAmount = $this->amountToTransferFromSpot($availableSpotBalance, $position);
+                    $this->exchangeAccountService->interTransferFromSpotToContract($coin, $transferredAmount);
 
-                    if (($newBalance = $spotBalance->available() - $amount) / self::MIN_TRANSFER_AMOUNT >= self::NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP) {
+                    if (($newBalance = $availableSpotBalance - $transferredAmount) / self::MIN_TRANSFER_AMOUNT >= self::NUMBER_OF_SPOT_BALANCE_TRANSFER_TRIES_BEFORE_STOP) {
                         return;
+                    }
+
+                    $amountRequiredForDecreaseStopDistance = self::MIN_TRANSFER_AMOUNT * (1 - self::TRANSFER_AMOUNT_MODIFIER - 0.05);
+                    if ($transferredAmount >= $amountRequiredForDecreaseStopDistance) {
+                        $decreaseStopDistance = true;
                     }
                 }
             } catch (Throwable $e) {var_dump($e->getMessage());}
@@ -130,11 +143,17 @@ final readonly class CheckPositionIsUnderLiquidationHandler
                 if ($priceDeltaToLiquidation <= self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN) {
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
-                    $stopPriceDelta = FloatHelper::modify(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, 0.15, 0.05);
+                    $stopPriceDistance = self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
+                    $triggerDelta = FloatHelper::modify(self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA, 0.1);
+                    if ($stopPriceDistance > 500) {
+                        $triggerDelta = self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
+                    } elseif ($decreaseStopDistance) {
+                        $triggerDelta = FloatHelper::modify(self::ADDITIONAL_STOP_TRIGGER_MID_DELTA, 0.1);
+                        $stopPriceDistance = $stopPriceDistance * 0.5;
+                    }
 
-                    $stopPrice = $position->isShort() ? $liquidation->sub($stopPriceDelta) : $liquidation->add($stopPriceDelta);
-                    $triggerDelta = $stopPriceDelta > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : FloatHelper::modify(self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA, 0.1);
-
+                    $stopPriceDistance = FloatHelper::modify($stopPriceDistance, 0.15, 0.05);
+                    $stopPrice = $position->isShort() ? $liquidation->sub($stopPriceDistance) : $liquidation->add($stopPriceDistance);
                     $this->stopService->create($positionSide, $stopPrice, $stopQty, $triggerDelta);
                 }
             }
@@ -199,12 +218,12 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         );
     }
 
-    private function amountToTransferFromSpot(WalletBalance $spotBalance, Position $position): float
+    private function amountToTransferFromSpot(float $availableSpotBalance, Position $position): float
     {
         // @todo | need calc $amount based on Position size (for bigger position DEFAULT_TRANSFER_AMOUNT will change liquidationPrice very little)
         return min(
-            FloatHelper::modify(self::MIN_TRANSFER_AMOUNT, 0.2),
-            PriceHelper::round($spotBalance->available() - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)
+            FloatHelper::modify(self::MIN_TRANSFER_AMOUNT, self::TRANSFER_AMOUNT_MODIFIER),
+            PriceHelper::round($availableSpotBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)
         );
     }
 }
