@@ -8,6 +8,7 @@ namespace App\Application\UseCase\Trading\Sandbox;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -64,6 +65,9 @@ class ExecutionSandbox
         return $this->currentExecStep;
     }
 
+    /**
+     * @throws SandboxInsufficientAvailableBalanceException
+     */
     private function makeBuy(SandboxBuyOrder $order): void
     {
         $positionSide = $order->positionSide;
@@ -82,7 +86,7 @@ class ExecutionSandbox
 
         $availableBalance = $currentState->getAvailableBalance();
         if ($availableBalance->value() < $cost) {
-            throw new RuntimeException(
+            throw new SandboxInsufficientAvailableBalanceException(
                 sprintf('Contract availableBalance balance (%s) less than order cost (%s)', $availableBalance, $cost),
             );
         }

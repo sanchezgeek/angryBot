@@ -52,22 +52,22 @@ class MarketBuyHandler
 
     private function buyIsSafe(MarketBuyEntryDto $dto): bool
     {
-        try {
-            $symbol = $dto->symbol;
-            $positionSide = $dto->positionSide;
-            $ticker = $this->exchangeService->ticker($symbol);
-            $sandbox = $this->executionSandboxFactory->make($symbol);
-            $newState = $sandbox->processOrders(self::entryDtoToSandboxBuyOrder($dto, $ticker->lastPrice));
-            $newPositionState = $newState->getPosition($positionSide);
-            $newPositionLiquidation = $newPositionState->liquidationPrice();
+        $positionSide = $dto->positionSide;
+        $symbol = $dto->symbol;
+        $ticker = $this->exchangeService->ticker($symbol);
+        $sandbox = $this->executionSandboxFactory->make($symbol);
 
-            return $positionSide->isShort()
-                ? $newPositionLiquidation->sub($this->safePriceDistance)->greaterThan($ticker->markPrice)
-                : $newPositionLiquidation->add($this->safePriceDistance)->lessThan($ticker->markPrice);
+        try {
+            $sandbox->processOrders(self::entryDtoToSandboxBuyOrder($dto, $ticker->lastPrice));
         } catch (Throwable $e) {
             OutputHelper::warning(sprintf('%s: got "%s" exception while make `buyIsSafe` check', get_class($e), $e->getMessage()));
-            return true;
         }
+
+        $liquidationPrice = $sandbox->getCurrentState()->getPosition($positionSide)->liquidationPrice();
+
+        return $positionSide->isShort()
+            ? $liquidationPrice->sub($this->safePriceDistance)->greaterThan($ticker->markPrice)
+            : $liquidationPrice->add($this->safePriceDistance)->lessThan($ticker->markPrice);
     }
 
     private static function entryDtoToSandboxBuyOrder(MarketBuyEntryDto $marketBuyDto, Price $price): SandboxBuyOrder
