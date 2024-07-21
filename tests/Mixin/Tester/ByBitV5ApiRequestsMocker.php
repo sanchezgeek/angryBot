@@ -122,8 +122,9 @@ trait ByBitV5ApiRequestsMocker
             }
 
             $result[] = new ByBitApiCallExpectation(
-                PlaceOrderRequest::marketBuy($symbol->associatedCategory(), $symbol, $buyOrder->getPositionSide(), $buyOrder->getVolume()),
-                PlaceOrderResponseBuilder::ok($exchangeOrderId)->build(),
+                expectedRequest: PlaceOrderRequest::marketBuy($symbol->associatedCategory(), $symbol, $buyOrder->getPositionSide(), $buyOrder->getVolume()),
+                resultResponse: PlaceOrderResponseBuilder::ok($exchangeOrderId)->build(),
+                requestKey: 'market-buy-for-buy-order-with-id-' . $buyOrder->getId()
             );
         }
 
