@@ -218,7 +218,7 @@ class StopInfoCommand extends AbstractCommand
             $liquidationDiff = PriceMovement::fromToTarget($positionBeforeRange->liquidationPrice, $positionAfterRange->liquidationPrice);
 
             if (!$isCumInfo) {
-                $format .= ' | liq.price: %s';
+                $format .= ' | liq.price: %.2f';
                 $args[] = $positionAfterRange->liquidationPrice;
             }
 
