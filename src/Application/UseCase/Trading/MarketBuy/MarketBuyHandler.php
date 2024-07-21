@@ -35,7 +35,7 @@ class MarketBuyHandler
      */
     public function handle(MarketBuyEntryDto $dto): string
     {
-        if (!$this->buyIsSafe($dto)) {
+        if (!$dto->force && !$this->buyIsSafe($dto)) {
             throw new BuyIsNotSafeException();
         }
 

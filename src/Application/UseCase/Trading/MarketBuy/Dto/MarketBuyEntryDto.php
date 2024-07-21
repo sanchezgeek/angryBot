@@ -10,12 +10,25 @@ use App\Domain\Position\ValueObject\Side;
 
 readonly class MarketBuyEntryDto
 {
-    public function __construct(public Symbol $symbol, public Side $positionSide, public float $volume)
-    {
+    public function __construct(
+        public Symbol $symbol,
+        public Side $positionSide,
+        public float $volume,
+        public bool $force = false
+    ) {
     }
 
     public static function fromBuyOrder(BuyOrder $buyOrder): self
     {
-        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume());
+        $force = false;
+        if ($buyOrder->isOppositeBuyOrderAfterStopLoss()) {
+            $force = true;
+        }
+
+        if ($buyOrder->isForceBuyOrder()) {
+            $force = true;
+        }
+
+        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume(), $force);
     }
 }
