@@ -2,8 +2,8 @@
 
 namespace App\Command\Sandbox;
 
-use App\Application\UseCase\Trading\Sandbox\ExecutionSandbox;
-use App\Application\UseCase\Trading\Sandbox\ExecutionSandboxFactory;
+use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
+use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -87,16 +87,11 @@ class SandboxTestCommand extends AbstractCommand
         $orders = $this->getOrders();
         $infoMsg = $this->getInfoMsg($position, $orders);
 
-        # create sandbox
-        $executionSandbox = $this->executionSandboxFactory->make($symbol, true);
+        $sandbox = $this->tradingSandboxFactory->byCurrentState($symbol, true);
 
-        # stats before SANDBOX EXEC
-        $this->printCurrentStats($executionSandbox, 'BEFORE make buy in sandbox');
-
-        $executionSandbox->processOrders(...$orders);
-
-        # stats after SANDBOX EXEC
-        $this->printCurrentStats($executionSandbox, 'AFTER make buy in sandbox');
+        $this->printCurrentStats($sandbox, 'BEFORE make buy in sandbox');
+        $sandbox->processOrders(...$orders);
+        $this->printCurrentStats($sandbox, 'AFTER make buy in sandbox');
 
         if (!$this->io->confirm($infoMsg)) {
             return Command::FAILURE;
@@ -111,17 +106,19 @@ class SandboxTestCommand extends AbstractCommand
         }
 
         # stats after REAL EXEC
-        $this->printCurrentStats($executionSandbox, 'AFTER real exec', true);
+        $this->printCurrentStats($sandbox, 'AFTER real exec', true);
 
         return Command::SUCCESS;
     }
 
-    private function printCurrentStats(ExecutionSandbox $sandbox, string $description, bool $printRealPositionStats = false): void
+    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false): void
     {
-        $freeBalance = $sandbox->getCurrentState()->getFreeBalance();
-        $availableBalance = $sandbox->getCurrentState()->getAvailableBalance();
+        $currentState = $sandbox->getCurrentState();
 
-        $mainPosition = $sandbox->getCurrentState()->getMainPosition();
+        $freeBalance = $currentState->getFreeBalance();
+        $availableBalance = $currentState->getAvailableBalance();
+
+        $mainPosition = $currentState->getMainPosition();
         if (!$mainPosition) {
             throw new RuntimeException(sprintf('%s: No positions found', $description));
         }
@@ -212,7 +209,7 @@ class SandboxTestCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly PositionsCache $positionsCache,
-        private readonly ExecutionSandboxFactory $executionSandboxFactory,
+        private readonly TradingSandboxFactory $tradingSandboxFactory,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {

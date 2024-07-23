@@ -12,14 +12,11 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailab
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
-use RuntimeException;
 
 use function sprintf;
 
@@ -28,27 +25,29 @@ use function sprintf;
  * @see https://www.bybit.com/tr-TR/help-center/article/How-to-use-Bybit-calculator
  * @see https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract
  */
-class ExecutionSandbox
+class TradingSandbox implements TradingSandboxInterface
 {
-    private ExecutionStep $currentExecStep;
-    private Symbol $symbol;
+    private SandboxState $currentState;
 
-    /**
-     * @param Position[] $positions
-     */
     public function __construct(
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
-        Ticker $ticker,
-        array $positions,
-        CoinAmount $currentFreeBalance,
+        private readonly Symbol $symbol,
         private readonly bool $isDebugEnabled = false,
-    ) {
-        $this->symbol = $ticker->symbol;
-        $this->currentExecStep = new ExecutionStep($ticker, $currentFreeBalance, ...$positions);
+    ) {}
+
+    public function setState(SandboxState $state): self
+    {
+        assert($this->symbol === $state->symbol);
+        $this->currentState = $state;
+
+        return $this;
     }
 
-    public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): ExecutionStep
+    /**
+     * @throws SandboxInsufficientAvailableBalanceException
+     */
+    public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): SandboxState
     {
         foreach ($orders as $order) {
             match (true) {
@@ -57,12 +56,12 @@ class ExecutionSandbox
             };
         }
 
-        return $this->currentExecStep;
+        return $this->currentState;
     }
 
-    public function getCurrentState(): ExecutionStep
+    public function getCurrentState(): SandboxState
     {
-        return $this->currentExecStep;
+        return $this->currentState;
     }
 
     /**
@@ -74,7 +73,7 @@ class ExecutionSandbox
         $volume = $order->volume;
         $price = $order->price;
 
-        $currentState = $this->currentExecStep;
+        $currentState = $this->currentState;
         $currentState->setLastPrice($price);
 
         // @todo | case when position is not opened yet
@@ -101,10 +100,10 @@ class ExecutionSandbox
         $volume = $stop->volume;
         $price = $stop->price;
 
-        $this->currentExecStep->setLastPrice($price);
+        $this->currentState->setLastPrice($price);
 
         // @todo | case when position volume is not enough
-        $position = $this->currentExecStep->getPosition($positionSide);
+        $position = $this->currentState->getPosition($positionSide);
 
         $this->notice(sprintf('__ --- make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
@@ -112,8 +111,8 @@ class ExecutionSandbox
 
         $expectedPnl = PnlHelper::getPnlInUsdt($position, $price, $volume);
 
-        $this->notice(sprintf('modify free balance with %s (expected PNL)', $expectedPnl)); $this->currentExecStep->modifyFreeBalance($expectedPnl);
-        $this->notice(sprintf('modify free balance with %s (order margin)', $margin)); $this->currentExecStep->modifyFreeBalance($margin);
+        $this->notice(sprintf('modify free balance with %s (expected PNL)', $expectedPnl)); $this->currentState->modifyFreeBalance($expectedPnl);
+        $this->notice(sprintf('modify free balance with %s (order margin)', $margin)); $this->currentState->modifyFreeBalance($margin);
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
@@ -190,7 +189,7 @@ class ExecutionSandbox
             // ...
         }
 
-        $currentFree = $this->currentExecStep->getFreeBalance();
+        $currentFree = $this->currentState->getFreeBalance();
 
         if ($tmpPosition->isSupportPosition()) {
             $estimatedLiquidationPrice = 0;
@@ -204,14 +203,14 @@ class ExecutionSandbox
             $mainPosition->setOppositePosition($tmpPosition, true);
 
             $estimatedMainPositionLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($mainPosition, $currentFree)->estimatedLiquidationPrice()->value();
-            $this->currentExecStep->setPosition(
+            $this->currentState->setPosition(
                 $mainPosition->withNewLiquidation($estimatedMainPositionLiquidationPrice),
             );
 
             $tmpPosition->setOppositePosition($mainPosition, true);
         }
 
-        $this->currentExecStep->setPosition(
+        $this->currentState->setPosition(
             $tmpPosition->withNewLiquidation($estimatedLiquidationPrice),
         );
     }

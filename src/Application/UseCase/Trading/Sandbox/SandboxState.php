@@ -20,28 +20,28 @@ use function max;
 use function reset;
 use function sprintf;
 
-class ExecutionStep
+class SandboxState
 {
     /** @var Position[] */
     private array $positions;
-    private Symbol $symbol;
+    public readonly Symbol $symbol;
     private Price $lastPrice;
 
-    private CoinAmount $freeBalanceBeforeStep;
-    private CoinAmount $availableBalanceBeforeStep;
+    private CoinAmount $freeBalanceBefore;
+    private CoinAmount $availableBalanceBefore;
     private CoinAmount $freeBalance;
 
-    public function __construct(Ticker $ticker, CoinAmount $freeBalanceBeforeStep, Position ...$positions)
+    public function __construct(Ticker $ticker, CoinAmount $currentFreeBalance, Position ...$positions)
     {
         $this->setLastPrice($ticker->lastPrice);
         $this->symbol = $ticker->symbol;
-        $this->freeBalance = $this->freeBalanceBeforeStep = $freeBalanceBeforeStep;
+        $this->freeBalance = $this->freeBalanceBefore = $currentFreeBalance;
 
         foreach ($positions as $position) {
             $this->setPosition($position);
         }
 
-        $this->availableBalanceBeforeStep = $this->getAvailableBalance();
+        $this->availableBalanceBefore = $this->getAvailableBalance();
     }
 
     public function getPosition(Side $side): ?Position
@@ -123,16 +123,16 @@ class ExecutionStep
     /**
      * @todo check diff with real
      */
-    public function getFreeBalanceBeforeStep(): CoinAmount
+    public function getFreeBalanceBefore(): CoinAmount
     {
-        return $this->freeBalanceBeforeStep;
+        return $this->freeBalanceBefore;
     }
 
     /**
      * @todo check diff with real
      */
-    public function getAvailableBalanceBeforeStep(): CoinAmount
+    public function getAvailableBalanceBefore(): CoinAmount
     {
-        return $this->availableBalanceBeforeStep;
+        return $this->availableBalanceBefore;
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Tester;
 
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
@@ -107,7 +108,7 @@ trait ByBitV5ApiRequestsMocker
     }
 
     /**
-     * @param BuyOrder[] $buyOrders
+     * @param BuyOrder[]|MarketBuyEntryDto[] $buyOrders
      *
      * @return ByBitApiCallExpectation[]
      */
@@ -115,16 +116,16 @@ trait ByBitV5ApiRequestsMocker
     {
         $result = [];
         foreach ($buyOrders as $buyOrder) {
-            $exchangeOrderId = uuid_create();
+            $buyOrder = $buyOrder instanceof MarketBuyEntryDto ? $buyOrder : MarketBuyEntryDto::fromBuyOrder($buyOrder);
 
+            $exchangeOrderId = uuid_create();
             if ($exchangeOrderIdsCollector !== null) {
                 $exchangeOrderIdsCollector[] = $exchangeOrderId;
             }
 
             $result[] = new ByBitApiCallExpectation(
-                expectedRequest: PlaceOrderRequest::marketBuy($symbol->associatedCategory(), $symbol, $buyOrder->getPositionSide(), $buyOrder->getVolume()),
-                resultResponse: PlaceOrderResponseBuilder::ok($exchangeOrderId)->build(),
-                requestKey: 'market-buy-for-buy-order-with-id-' . $buyOrder->getId()
+                PlaceOrderRequest::marketBuy($symbol->associatedCategory(), $symbol, $buyOrder->positionSide, $buyOrder->volume),
+                PlaceOrderResponseBuilder::ok($exchangeOrderId)->build(),
             );
         }
 

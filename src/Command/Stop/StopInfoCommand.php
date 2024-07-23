@@ -2,7 +2,7 @@
 
 namespace App\Command\Stop;
 
-use App\Application\UseCase\Trading\Sandbox\ExecutionSandboxFactory;
+use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
@@ -123,12 +123,11 @@ class StopInfoCommand extends AbstractCommand
         }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
 
-        ##### sandbox #####
-        $executionSandbox = $this->executionSandboxFactory->make($symbol, $isDebugEnabled);
+        $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($symbol, $isDebugEnabled);
 
         $totalUsdPnL = $totalVolume = 0;
-        $initialPositionState = $executionSandbox->getCurrentState()->getPosition($positionSide);
-        $previousSandboxState = clone $executionSandbox->getCurrentState();
+        $initialPositionState = $tradingSandbox->getCurrentState()->getPosition($positionSide);
+        $previousSandboxState = clone $tradingSandbox->getCurrentState();
 
         $output = [];
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
@@ -148,8 +147,7 @@ class StopInfoCommand extends AbstractCommand
             }
 
             $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
-            $executionSandbox->processOrders(...$rangeStops);
-            $currentSandboxState = $executionSandbox->getCurrentState();
+            $currentSandboxState = $tradingSandbox->processOrders(...$rangeStops);
             $positionAfterRange = $currentSandboxState->getPosition($positionSide);
 
             if ($showSizeLeft) { # size left
@@ -290,7 +288,7 @@ class StopInfoCommand extends AbstractCommand
     public function __construct(
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
-        private readonly ExecutionSandboxFactory $executionSandboxFactory,
+        private readonly TradingSandboxFactory $tradingSandboxFactory,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

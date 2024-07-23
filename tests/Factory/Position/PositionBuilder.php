@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Factory\Position;
+
+use App\Bot\Domain\Position;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
+use LogicException;
+
+use function sprintf;
+
+class PositionBuilder
+{
+    private const DEFAULT_ENTRY = 29000;
+    private const DEFAULT_SYMBOL = Symbol::BTCUSDT;
+    private const DEFAULT_SIZE = 0.5;
+    private const DEFAULT_LEVERAGE = 100;
+
+    private Side $side;
+    private Symbol $symbol = self::DEFAULT_SYMBOL;
+    private float $entry = self::DEFAULT_ENTRY;
+    private ?float $liquidation = null;
+    private float $size = self::DEFAULT_SIZE;
+    private int $leverage = self::DEFAULT_LEVERAGE;
+    private ?float $unrealizedPnl = null;
+
+    public function __construct(Side $side)
+    {
+        $this->side = $side;
+    }
+
+    public static function bySide(Side $side): self
+    {
+        return new self($side);
+    }
+
+    public static function short(): self
+    {
+        return new self(Side::Sell);
+    }
+
+    public static function long(): self
+    {
+        return new self(Side::Buy);
+    }
+
+    public function withEntry(float|Price $entry): self
+    {
+        $builder = clone $this;
+        $builder->entry = Price::toFloat($entry);
+
+        return $builder;
+    }
+
+    public function withLiquidation(float|Price $liquidation): self
+    {
+        $builder = clone $this;
+        $builder->liquidation = Price::toFloat($liquidation);
+
+        return $builder;
+    }
+
+    public function build(): Position
+    {
+        $side = $this->side;
+        $entry = $this->entry;
+
+        $positionValue = $entry * $this->size;
+        $positionBalance = $initialMargin = $positionValue / $this->leverage;
+
+        $liquidation = $this->liquidation ?? ($side->isShort() ? $entry + 99999 : 0);
+
+        if (
+            ($side->isShort() && $liquidation < $entry)
+            || ($side->isLong() && $liquidation > $entry)
+        ) {
+            throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
+        }
+
+        return new Position(
+            $side,
+            $this->symbol,
+            $entry,
+            $this->size,
+            $positionValue,
+            $liquidation,
+            $initialMargin,
+            $positionBalance,
+            $this->leverage,
+            $this->unrealizedPnl,
+        );
+    }
+}
