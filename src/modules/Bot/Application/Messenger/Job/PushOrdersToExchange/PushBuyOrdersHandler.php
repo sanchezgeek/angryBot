@@ -80,12 +80,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
-        if ($position->getHedge()?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
+        $hedge = $position->getHedge();
+
+        if ($hedge?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
             return true;
         }
 
-        if ($buyOrder && $buyOrder->getSuccessSpotTransfersCount() > 1) {
+        $isSupportPositionForceBuyAfterSl = $hedge?->isSupportPosition($position) && $buyOrder?->isForceBuyOrder() && $buyOrder?->isOppositeBuyOrderAfterStopLoss();
+
+        $maxTransfersCount = $isSupportPositionForceBuyAfterSl ? 3 : 1;
+        if ($buyOrder?->getSuccessSpotTransfersCount() > $maxTransfersCount) {
             return false;
+        }
+
+        if ($isSupportPositionForceBuyAfterSl) {
+            return true;
         }
 
         if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
@@ -293,7 +302,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 unset($order);
             }
         } catch (BuyIsNotSafeException $e) {
-            OutputHelper::warning('Buy is not safe. Skip.');
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
