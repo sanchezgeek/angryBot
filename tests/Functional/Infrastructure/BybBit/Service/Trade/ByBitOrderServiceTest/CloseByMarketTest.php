@@ -10,6 +10,7 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Functional\Infrastructure\BybBit\Service\ApiErrorTestCaseData;
 use App\Tests\Functional\Infrastructure\BybBit\Service\ApiTestCaseData;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -36,10 +37,11 @@ final class CloseByMarketTest extends ByBitOrderServiceTestAbstract
      */
     public function testCanCloseByMarket(array $data): void
     {
-        $position = self::makePosition($data['symbol'], $data['positionSide']);
+        $category = $data['category']; $symbol = $data['symbol']; $positionSide = $data['positionSide'];
+        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->build();
 
         $this->matchPost(
-            PlaceOrderRequest::marketClose($data['category'], $data['symbol'], $data['positionSide'], $orderQty = 0.01),
+            PlaceOrderRequest::marketClose($category, $symbol, $positionSide, $orderQty = 0.01),
             PlaceOrderResponseBuilder::ok($placedExchangeOrderId = uuid_create())->build()
         );
 
@@ -68,7 +70,7 @@ final class CloseByMarketTest extends ByBitOrderServiceTestAbstract
     {
         // Arrange
         $category = $data['category']; $symbol = $data['symbol']; $positionSide = $data['positionSide'];
-        $position = self::makePosition($symbol, $positionSide);
+        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->build();
 
         $expectedRequest = PlaceOrderRequest::marketClose($category, $symbol, $positionSide, $orderQty = 0.01);
         $this->matchPost($expectedRequest, $data['apiResponse']);

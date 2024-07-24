@@ -204,14 +204,14 @@ class TradingSandbox implements TradingSandboxInterface
 
             $estimatedMainPositionLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($mainPosition, $currentFree)->estimatedLiquidationPrice()->value();
             $this->currentState->setPosition(
-                $mainPosition->withNewLiquidation($estimatedMainPositionLiquidationPrice),
+                $mainPosition->cloneWithNewLiquidation($estimatedMainPositionLiquidationPrice),
             );
 
             $tmpPosition->setOppositePosition($mainPosition, true);
         }
 
         $this->currentState->setPosition(
-            $tmpPosition->withNewLiquidation($estimatedLiquidationPrice),
+            $tmpPosition->cloneWithNewLiquidation($estimatedLiquidationPrice),
         );
     }
 

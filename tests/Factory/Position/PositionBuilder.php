@@ -47,6 +47,14 @@ class PositionBuilder
         return new self(Side::Buy);
     }
 
+    public function withSymbol(Symbol $symbol): self
+    {
+        $builder = clone $this;
+        $builder->symbol = $symbol;
+
+        return $builder;
+    }
+
     public function withEntry(float|Price $entry): self
     {
         $builder = clone $this;
@@ -55,10 +63,30 @@ class PositionBuilder
         return $builder;
     }
 
+    public function withSize(float $size): self
+    {
+        $builder = clone $this;
+        $builder->size = $size;
+
+        return $builder;
+    }
+
     public function withLiquidation(float|Price $liquidation): self
     {
         $builder = clone $this;
         $builder->liquidation = Price::toFloat($liquidation);
+
+        return $builder;
+    }
+
+    public function withLiquidationDistance(float $distance = 1000): self
+    {
+        if ($this->liquidation !== null) {
+            throw new LogicException(sprintf('Liquidation is already set to %s.', $this->liquidation));
+        }
+
+        $builder = clone $this;
+        $builder->liquidation = $this->side->isShort() ? $this->entry + $distance : $this->entry - $distance;
 
         return $builder;
     }

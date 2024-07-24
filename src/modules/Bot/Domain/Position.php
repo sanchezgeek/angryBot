@@ -59,7 +59,7 @@ final class Position implements Stringable
     /**
      * @todo | Builder
      */
-    public function withNewSize(float $newSize): self
+    public function cloneWithNewSize(float $newSize): self
     {
         $entryPrice = $this->entryPrice;
         $newValue = $entryPrice * $newSize; // linear
@@ -87,7 +87,7 @@ final class Position implements Stringable
     /**
      * @todo | Builder
      */
-    public function withNewLiquidation(float $liquidationPrice): self
+    public function cloneWithNewLiquidation(float $liquidationPrice): self
     {
         $position = new Position(
             $this->side,

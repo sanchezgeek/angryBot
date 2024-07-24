@@ -283,7 +283,7 @@ final class PositionTest extends TestCase
 
         self::assertEquals(
             new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, 51000, 55, 55, 100),
-            $position->withNewSize(0.11)
+            $position->cloneWithNewSize(0.11)
         );
     }
 

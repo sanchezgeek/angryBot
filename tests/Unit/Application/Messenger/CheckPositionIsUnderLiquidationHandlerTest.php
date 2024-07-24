@@ -16,12 +16,15 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
+
+use function sprintf;
 
 /**
  * @group liquidation
@@ -30,6 +33,8 @@ use PHPUnit\Framework\TestCase;
  */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
+    use PositionSideAwareTest;
+
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
@@ -65,14 +70,11 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         );
     }
 
-    public function testDoNothingWhenPositionIsNotUnderLiquidation(): void
+    /**
+     * @dataProvider doNothingWhenPositionIsNotUnderLiquidationTestCases
+     */
+    public function testDoNothingWhenPositionIsNotUnderLiquidation(Ticker $ticker, Position $position): void
     {
-        $markPrice = 35000;
-        $liquidationPrice = $markPrice + self::TRANSFER_FROM_SPOT_ON_DISTANCE + 1;
-
-        $position = new Position(Side::Sell, Symbol::BTCUSDT, 34000, 0.5, 20000, $liquidationPrice, 200, 200, 100);
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
-
         $this->havePositions($position);
         $this->haveTicker($ticker);
 
@@ -82,6 +84,23 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         // Act
         ($this->handler)(new CheckPositionIsUnderLiquidation($position->symbol));
+    }
+
+    public function doNothingWhenPositionIsNotUnderLiquidationTestCases(): iterable
+    {
+        $distance = self::TRANSFER_FROM_SPOT_ON_DISTANCE + 1;
+        $markPrice = 35000;
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
+
+        yield 'SHORT' => [
+            '$ticker' => $ticker,
+            '$position' => PositionBuilder::short()->withEntry(34000)->withLiquidation($markPrice + $distance)->build(),
+        ];
+
+        yield 'LONG' => [
+            '$ticker' => $ticker,
+            '$position' => PositionBuilder::long()->withEntry(36000)->withLiquidation($markPrice - $distance)->build(),
+        ];
     }
 
     /**
@@ -95,7 +114,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $liquidationPrice = $position->liquidationPrice;
 
         $markPrice = $position->isShort() ? $liquidationPrice - self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN : $liquidationPrice + self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
-        $ticker = TickerFactory::create($position->symbol, $position->isShort() ? $markPrice - 10 : $markPrice + 10, $markPrice);
+        $ticker = TickerFactory::withEqualPrices($position->symbol, $markPrice);
 
         $this->havePositions($position);
         $this->haveTicker($ticker);
@@ -132,27 +151,27 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
-        $side = Side::Sell;
-        $position = new Position($side, $symbol, 34000, 0.5, 20000, 35000, 200, 200, 100);
+        foreach ($this->positionSides() as $side) {
+            $position = PositionBuilder::bySide($side)->withEntry(34000)->withLiquidationDistance(1500)->build();
 
-        yield 'spot is empty' => [
-            'position' => $position,
-            'spotAvailableBalance' => 0.2,
-            'expectedTransferAmount' => null,
-        ];
+            yield sprintf('[%s] spot is empty', $position) => [
+                'position' => $position,
+                'spotAvailableBalance' => 0.2,
+                'expectedTransferAmount' => null,
+            ];
 
-        yield 'spotBalance is more than default min value => transfer min default value' => [
-            'position' => $position,
-            'spotAvailableBalance' => self::DEFAULT_TRANSFER_AMOUNT + 2,
-            'expectedTransferAmount' => self::DEFAULT_TRANSFER_AMOUNT,
-        ];
+            yield sprintf('[%s] spotBalance is more than default min value => transfer min default value', $position) => [
+                'position' => $position,
+                'spotAvailableBalance' => self::DEFAULT_TRANSFER_AMOUNT + 2,
+                'expectedTransferAmount' => self::DEFAULT_TRANSFER_AMOUNT,
+            ];
 
-        yield 'spotBalance is less than default min value => transfer all available' => [
-            'position' => $position,
-            'spotAvailableBalance' => $spotBalance = self::DEFAULT_TRANSFER_AMOUNT - 2,
-            'expectedTransferAmount' => PriceHelper::round($spotBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE),
-        ];
+            yield sprintf('[%s] spotBalance is less than default min value => transfer all available', $position) => [
+                'position' => $position,
+                'spotAvailableBalance' => $spotBalance = self::DEFAULT_TRANSFER_AMOUNT - 2,
+                'expectedTransferAmount' => PriceHelper::round($spotBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE),
+            ];
+        }
     }
 
     private function havePositions(Position ...$positions): void

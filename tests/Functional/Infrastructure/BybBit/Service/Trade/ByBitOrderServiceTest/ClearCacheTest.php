@@ -10,6 +10,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\DataProvider\TestCaseAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -44,7 +45,8 @@ final class ClearCacheTest extends KernelTestCase
         $initialPositionSize = 1.2;
         $orderQty = 0.01;
         $expectedSizeAfterMarketClose = 1.19;
-        $position = self::makePosition($symbol, $positionSide, 35000, $initialPositionSize);
+
+        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->withSize($initialPositionSize)->build();
 
         # warmup cache and check position size
         $this->assertActualPositionSize($position, $initialPositionSize);
@@ -70,7 +72,7 @@ final class ClearCacheTest extends KernelTestCase
         $initialPositionSize = 1.2;
         $orderQty = 0.01;
         $expectedSizeAfterMarketBuy = 1.21;
-        $position = self::makePosition($symbol, $positionSide, $initialPositionSize);
+        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->withSize($initialPositionSize)->build();
 
         # warmup cache and check position size
         $this->assertActualPositionSize($position, $initialPositionSize);
@@ -89,13 +91,17 @@ final class ClearCacheTest extends KernelTestCase
 
     private function assertActualPositionSize(Position $position, float $expectedPositionSize): void
     {
+        $symbol = $position->symbol;
+        $side = $position->side;
+
         # update "Position API data"
-        $this->havePosition($position->symbol, self::makePosition($position->symbol, $position->side, $position->entryPrice, $expectedPositionSize));
+        $position = $position->cloneWithNewSize($expectedPositionSize);
+        $this->havePosition($symbol, $position);
 
         /** @var ByBitLinearPositionCacheDecoratedService $cachedPositionDataProvider */
         $cachedPositionDataProvider = self::getContainer()->get(ByBitLinearPositionCacheDecoratedService::class);
 
         # Expecting that $this->positionService will make new API call to get new position data
-        self::assertEquals($expectedPositionSize, $cachedPositionDataProvider->getPosition($position->symbol, $position->side)->size);
+        self::assertEquals($expectedPositionSize, $cachedPositionDataProvider->getPosition($symbol, $side)->size);
     }
 }
