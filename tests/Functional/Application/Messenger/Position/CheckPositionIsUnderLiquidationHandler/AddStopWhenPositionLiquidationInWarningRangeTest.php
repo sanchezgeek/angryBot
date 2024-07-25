@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Application\Messenger\CheckPositionIsUnderLiquidationHandler;
+namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;

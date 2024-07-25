@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -19,7 +20,6 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
@@ -30,7 +30,6 @@ use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Throwable;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
@@ -81,7 +80,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
             $td = $this->getStopTriggerDelta($stop);
             $stopPrice = $stop->getPrice();
 
-            if (($currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice)) || (abs($stopPrice - $currentPrice->value()) <= $td)) {
+            $currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice);
+            $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $td;
+            if ($currentPriceOverStop || $stopMustBePushedByTriggerDelta) {
                 $callback = null;
                 if ($stop->isCloseByMarketContextSet()) {
                     $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
@@ -109,25 +110,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             }
         }
 
-        if ($stopsClosedByMarket) {
-            $loss = 0;
-            foreach ($stopsClosedByMarket as $order) {
-                $expectedLoss = PnlHelper::getPnlInUsdt($position, $order->getPrice(), $order->getVolume());
-                if ($expectedLoss < 0) {
-                    $loss += -$expectedLoss;
-                }
-            }
-
-            if (
-                $loss > 0
-                // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses from SPOT | + if some setting is set?
-                && !$position->isSupportPosition()
-            ) {
-                try {
-                    $this->exchangeAccountService->interTransferFromSpotToContract($position->symbol->associatedCoin(), FloatHelper::round($loss, 3));
-                } catch (Throwable) {}
-            }
-        }
+        $stopsClosedByMarket && $this->processOrdersClosedByMarket($position, $stopsClosedByMarket);
     }
 
     private function pushStopToExchange(Ticker $ticker, Stop $stop, callable $pushStopCallback): void
@@ -165,13 +148,29 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $this->repository->findActive(
             side: $side,
             nearTicker: $this->exchangeService->ticker($symbol),
-            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC')
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC'),
         );
+    }
+
+    /**
+     * @param ExchangeOrder[] $stopsClosedByMarket
+     */
+    private function processOrdersClosedByMarket(Position $position, array $stopsClosedByMarket): void
+    {
+        $loss = 0;
+        foreach ($stopsClosedByMarket as $order) {
+            if (($expectedPnl = PnlHelper::getPnlInUsdt($position, $order->getPrice(), $order->getVolume())) < 0) {
+                $loss += -$expectedPnl;
+            }
+        }
+
+        if ($loss > 0) {
+            $this->messageBus->dispatch(CoverLossesAfterCloseByMarketConsumerDto::forPosition($position, $loss));
+        }
     }
 
     public function __construct(
         private readonly StopRepository $repository,
-        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly OrderServiceInterface $orderService,
 
         private readonly MessageBusInterface $messageBus,

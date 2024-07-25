@@ -26,6 +26,7 @@ class PositionBuilder
     private float $size = self::DEFAULT_SIZE;
     private int $leverage = self::DEFAULT_LEVERAGE;
     private ?float $unrealizedPnl = null;
+    private ?Position $oppositePosition = null;
 
     public function __construct(Side $side)
     {
@@ -91,6 +92,18 @@ class PositionBuilder
         return $builder;
     }
 
+    public function withOppositePosition(Position $oppositePosition): self
+    {
+        if ($oppositePosition->side === $this->side) {
+            throw new LogicException(sprintf('Cannot set opposite position to %s: positions on the same side', $oppositePosition->side->name));
+        }
+
+        $builder = clone $this;
+        $builder->oppositePosition = $oppositePosition;
+
+        return $builder;
+    }
+
     public function build(): Position
     {
         $side = $this->side;
@@ -108,7 +121,7 @@ class PositionBuilder
             throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
         }
 
-        return new Position(
+        $position = new Position(
             $side,
             $this->symbol,
             $entry,
@@ -120,5 +133,11 @@ class PositionBuilder
             $this->leverage,
             $this->unrealizedPnl,
         );
+
+        if ($this->oppositePosition) {
+            $position->setOppositePosition($this->oppositePosition);
+        }
+
+        return $position;
     }
 }
