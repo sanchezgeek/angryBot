@@ -4,6 +4,8 @@ namespace App\Command\Buy;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Command\AbstractCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -12,12 +14,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'buy:single')]
-class CreateBuyCommand extends Command
+class CreateBuyCommand extends AbstractCommand
 {
+    use PositionAwareCommand;
+
     protected function configure(): void
     {
         $this
-            ->addArgument('position_side', InputArgument::REQUIRED, 'Position side (sell|buy)')
+            ->configurePositionArgs()
             ->addArgument('trigger_delta', InputArgument::REQUIRED, 'Trigger delta')
             ->addArgument('volume', InputArgument::REQUIRED, 'Buy volume')
             ->addArgument('price', InputArgument::REQUIRED, 'Trigger price')
@@ -29,7 +33,7 @@ class CreateBuyCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $side = $input->getArgument('position_side');
+            $side = $this->getPositionSide();
             $volume = $input->getArgument('volume');
             $price = $input->getArgument('price');
 

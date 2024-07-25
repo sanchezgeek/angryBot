@@ -215,10 +215,10 @@ class StopInfoCommand extends AbstractCommand
         if (!$positionAfterRange->isSupportPosition()) { # new liquidation
             $liquidationDiff = PriceMovement::fromToTarget($positionBeforeRange->liquidationPrice, $positionAfterRange->liquidationPrice);
 
-            if (!$isCumInfo) {
-                $format .= ' | liq.price: %.2f';
-                $args[] = $positionAfterRange->liquidationPrice;
-            }
+//            if (!$isCumInfo) {
+//                $format .= ' | liq.price: %.2f';
+//                $args[] = $positionAfterRange->liquidationPrice;
+//            }
 
             $format .= ' | liq.diff: %s';
             $args[] = $liquidationDiff->percentDeltaForPositionLoss($positionSide, $rangeStops->getAvgPrice())->setOutputDecimalsPrecision(8);
