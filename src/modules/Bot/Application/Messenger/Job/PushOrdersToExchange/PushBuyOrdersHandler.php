@@ -505,7 +505,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return true;
             }
 
-            $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+            $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
             $totalPositionLeverage = $this->totalPositionLeverage($position, $ticker);
 
@@ -513,10 +513,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
                 // @todo | by now only for linear
                 if ($totalPositionLeverage >= $leverage) {
-                    if ($position->isPositionInLoss($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
+                    if ($position->isPositionInLoss($currentPrice) && $distanceWithLiquidation > $minLiqDistance) {
                         break;
                     }
-                    if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
+                    if ($position->isPositionInProfit($currentPrice) && $distanceWithLiquidation < $minLiqDistance) {
                         return true;
                     }
                     if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {

@@ -14,6 +14,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -49,7 +50,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
     private const SYMBOL = Symbol::BTCUSDT;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
-    private const LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
+    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
 
     protected function setUp(): void
     {
@@ -91,7 +92,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29030, 29030);
-        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA + 1);
+        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1);
         $triggerBy = TriggerBy::IndexPrice;
         /** @var Stop[] $stops */
         $stops = [
@@ -137,7 +139,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create(self::SYMBOL, 29010, 29030, 29010);
-        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 99, $ticker->markPrice->value() + self::LIQUIDATION_WARNING_DELTA);
+        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        $position = PositionFactory::short(self::SYMBOL, 29000, 1, 99, $ticker->markPrice->value() + $liquidationWarningDistance);
         $triggerBy = TriggerBy::MarkPrice;
         $stops = [
             1 => StopBuilder::short(1, 29035, 0.4)->withTD(5)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)

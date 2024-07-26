@@ -38,8 +38,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class PushStopsHandler extends AbstractOrdersPusher
 {
     // @todo | need to review (based on other values through handling)
-    public const LIQUIDATION_WARNING_DELTA = 50;
-    public const LIQUIDATION_CRITICAL_DELTA = 35;
+    public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
+    public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
 
     // @todo | need to review (based on other values through handling)
     public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
@@ -59,13 +59,15 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
         $stops = $this->findStops($side, $symbol);
         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
-        $deltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+        $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
-        if ($deltaToLiquidation <= self::LIQUIDATION_WARNING_DELTA) {
+        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        if ($distanceWithLiquidation <= $liquidationWarningDistance) {
             $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
         } else {
             $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
         }
+        $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $currentPrice);
 
         foreach ($stops as $stop) {
             ### TP
@@ -92,7 +94,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                         return $orderId;
                     };
                 } elseif ($currentPriceOverStop) {
-                    if ($deltaToLiquidation <= self::LIQUIDATION_CRITICAL_DELTA) {
+                    if ($distanceWithLiquidation <= $liquidationCriticalDistance) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
                         $newPrice = $side->isShort() ? $currentPrice->value() + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $currentPrice->value() - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;

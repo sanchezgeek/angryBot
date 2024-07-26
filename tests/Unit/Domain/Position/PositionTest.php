@@ -209,10 +209,10 @@ final class PositionTest extends TestCase
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
 
         $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
-        self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
+        self::assertEquals(550, $position->priceDistanceWithLiquidation($ticker));
 
         $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,31450);
-        self::assertEquals(450, $position->priceDeltaToLiquidation($ticker));
+        self::assertEquals(450, $position->priceDistanceWithLiquidation($ticker));
     }
 
     public function testFailGetDeltaToLiquidation(): void
@@ -223,7 +223,7 @@ final class PositionTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
 
-        $position->priceDeltaToLiquidation($ticker);
+        $position->priceDistanceWithLiquidation($ticker);
     }
 
     /**

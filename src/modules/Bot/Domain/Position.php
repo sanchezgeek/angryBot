@@ -196,13 +196,13 @@ final class Position implements Stringable
         return $this->side->isLong();
     }
 
-    public function priceDeltaToLiquidation(Ticker $ticker): float
+    public function priceDistanceWithLiquidation(Ticker $ticker): float
     {
         if ($this->symbol !== $ticker->symbol) {
             throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name, $this->symbol->name));
         }
 
-        return abs($this->liquidationPrice - $ticker->markPrice->value());
+        return $this->liquidationPrice()->deltaWith($ticker->markPrice);
     }
 
     public function __toString(): string

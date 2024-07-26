@@ -6,6 +6,7 @@ namespace App\Domain\Price;
 
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 
@@ -34,7 +35,7 @@ readonly class PriceMovement
 
     public function absDelta(): float
     {
-        return abs($this->fromPrice->value() - $this->toTargetPrice->value());
+        return PriceHelper::round(abs($this->fromPrice->value() - $this->toTargetPrice->value()));
     }
 
     public function deltaForPositionProfit(Side $positionSide): float
@@ -55,7 +56,7 @@ readonly class PriceMovement
         $price ??= $this->fromPrice;
 
         $delta = $this->deltaForPositionProfit($relativeToPositionSide);
-        return PnlHelper::convertAbsDeltaToPnlPercentRelativeToPrice($delta, $price);
+        return PnlHelper::convertAbsDeltaToPnlPercentOnPrice($delta, $price);
     }
 
     /**
@@ -66,7 +67,7 @@ readonly class PriceMovement
         $price ??= $this->fromPrice;
 
         $delta = $this->deltaForPositionLoss($relativeToPositionSide);
-        return PnlHelper::convertAbsDeltaToPnlPercentRelativeToPrice($delta, $price);
+        return PnlHelper::convertAbsDeltaToPnlPercentOnPrice($delta, $price);
     }
 
     public function isLossFor(Side $positionSide): bool

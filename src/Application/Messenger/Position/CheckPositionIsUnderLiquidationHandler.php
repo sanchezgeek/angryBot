@@ -97,12 +97,12 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         $liquidation = Price::float($position->liquidationPrice);
-        $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+        $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
         $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
 
         $decreaseStopDistance = false;
         $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
-        if ($priceDeltaToLiquidation <= $transferFromSpotOnDistance) {
+        if ($distanceWithLiquidation <= $transferFromSpotOnDistance) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
                 $availableSpotBalance = $spotBalance->available();
@@ -123,7 +123,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         $checkStopsOnDistance = FloatHelper::modify(self::CHECK_STOPS_ON_DISTANCE, 0.1);
-        if ($priceDeltaToLiquidation <= $checkStopsOnDistance) {
+        if ($distanceWithLiquidation <= $checkStopsOnDistance) {
             $volumeMustBeStopped = $position->size;
 
             // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
@@ -140,7 +140,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             if ($volumePartDelta > 0) {
                 $stopQty = VolumeHelper::round((new Percent($volumePartDelta))->of($position->size));
 
-                if ($priceDeltaToLiquidation <= self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN) {
+                if ($distanceWithLiquidation <= self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN) {
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
                     $stopPriceDistance = self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
@@ -159,7 +159,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             }
         } elseif (
             self::MOVE_BACK_TO_SPOT_ENABLED && (
-                $priceDeltaToLiquidation > 2000
+                $distanceWithLiquidation > 2000
                 || ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
             )
             && ($contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin))
