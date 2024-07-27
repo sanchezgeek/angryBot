@@ -28,6 +28,7 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
+use Exception;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -94,11 +95,11 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     }
 
     /**
-     * @dataProvider closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider
+     * @dataProvider closeByMarketWhenExceptionWasThrewTestDataProvider
      *
      * @todo | Maybe move to \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsTest::pushStopsTestCases ?
      */
-    public function testCloseByMarketWhenApiReturnedBadRequestError(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
+    public function testCloseByMarketWhenAddConditionalStopMethodCallThrewSomeException(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
     {
         $this->haveTicker($ticker);
         $this->havePosition($position);
@@ -109,7 +110,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->method('addConditionalStop')
             ->with($position, $stop->getPrice(), $stop->getVolume(), $expectedTriggerBy)
             ->willThrowException(
-                new TickerOverConditionalOrderTriggerPrice('Already over trigger price')
+                new Exception('some error')
             );
 
         $this->orderServiceMock
@@ -127,7 +128,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         );
     }
 
-    public function closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider(): iterable
+    public function closeByMarketWhenExceptionWasThrewTestDataProvider(): iterable
     {
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);

@@ -30,6 +30,7 @@ use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Throwable;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
@@ -105,7 +106,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
                     try {
                         return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
-                    } catch (TickerOverConditionalOrderTriggerPrice $e) {
+                    } catch (Throwable $e) {
                         return $orderService->closeByMarket($position, $stop->getVolume());
                     }
                 });
