@@ -5,26 +5,53 @@ declare(strict_types=1);
 namespace App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 readonly class CoverLossesAfterCloseByMarketConsumer
 {
+    public const LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
+
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
-        $loss = $dto->loss;
+        $loss = $dto->loss->value();
         $closedPosition = $dto->closedPosition;
 
-        // @todo | check `contractBalance.total` >= `positions.totalIM` instead? To not cover existed losses from SPOT | + if some setting is set?
+        $closedPosition = $this->positionService->getPosition($closedPosition->symbol, $closedPosition->side); # refresh
+
+        /**
+         * Don't make transfer if it's about support losses. In this case transfer will be done on demand.
+         * @see PushBuyOrdersHandler::canUseSpot (...$isSupportPositionForceBuyAfterSl...)
+         */
         if ($closedPosition->isSupportPosition()) {
             return;
         }
 
-        $this->exchangeAccountService->interTransferFromSpotToContract($closedPosition->symbol->associatedCoin(), $loss->value());
+        $coin = $closedPosition->symbol->associatedCoin();
+        $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
+
+        $availableSpotBalance = $spotBalance->available();
+        if ($availableSpotBalance < $loss) {
+            return;
+        }
+        $freeContractBalance = $contractBalance->free();
+
+        /** Skip if available SPOT balance is insufficient for fulfill CONTRACT (=> transfer have no sense) */
+        if ($freeContractBalance < 0 && $availableSpotBalance < -$freeContractBalance) {
+            # but only if position liquidation not in "warning" range
+            if ($closedPosition->liquidationDistance() >= self::LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER) {
+                return;
+            }
+        }
+
+        $this->exchangeAccountService->interTransferFromSpotToContract($coin, $loss);
     }
 
     public function __construct(
-        private ExchangeAccountServiceInterface $exchangeAccountService
+        private ExchangeAccountServiceInterface $exchangeAccountService,
+        private PositionServiceInterface $positionService,
     ) {
     }
 }

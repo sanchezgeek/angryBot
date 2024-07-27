@@ -32,6 +32,7 @@ use LogicException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 
+use function array_merge;
 use function sprintf;
 use function uuid_create;
 
@@ -49,7 +50,7 @@ trait ByBitV5ApiRequestsMocker
         $this->matchGet($expectedRequest, $resultResponse, false);
     }
 
-    protected function interTransferFromContractToSpotApiCallIsExpected(CoinAmount $coinAmount): void
+    protected function expectsInterTransferFromContractToSpot(CoinAmount $coinAmount): void
     {
         $transferId = uuid_create();
         $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::CONTRACT, AccountType::SPOT);
@@ -58,7 +59,7 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
     }
 
-    protected function interTransferFromSpotToContractApiCallIsExpected(CoinAmount $coinAmount): void
+    protected function expectsInterTransferFromSpotToContract(CoinAmount $coinAmount): void
     {
         $transferId = uuid_create();
         $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::SPOT, AccountType::CONTRACT);
@@ -192,8 +193,15 @@ trait ByBitV5ApiRequestsMocker
 
     protected function havePosition(Symbol $symbol, Position ...$positions): void
     {
-        $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
+        $oppositePositions = [];
+        foreach ($positions as $position) {
+            if ($position->oppositePosition) {
+                $oppositePositions[] = $position->oppositePosition;
+            }
+        }
+        $positions = array_merge($positions, $oppositePositions);
 
+        $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
         $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
 
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);

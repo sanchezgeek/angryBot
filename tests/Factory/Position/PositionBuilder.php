@@ -48,6 +48,11 @@ class PositionBuilder
         return new self(Side::Buy);
     }
 
+    public static function oppositeFor(Position $position): self
+    {
+        return new self($position->side->getOpposite());
+    }
+
     public function withSymbol(Symbol $symbol): self
     {
         $builder = clone $this;

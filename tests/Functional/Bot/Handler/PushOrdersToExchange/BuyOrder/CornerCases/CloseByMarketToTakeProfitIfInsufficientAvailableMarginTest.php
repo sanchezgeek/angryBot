@@ -68,7 +68,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
                 new ExchangeOrder($symbol, $buyOrder->getVolume(), $ticker->lastPrice), $position->leverage, $buyOrder->getPositionSide()
             );
             $buyCost = $buyCost->value() * self::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
-            $this->interTransferFromSpotToContractApiCallIsExpected(new CoinAmount($symbol->associatedCoin(), $buyCost));
+            $this->expectsInterTransferFromSpotToContract(new CoinAmount($symbol->associatedCoin(), $buyCost));
         }
 
         // Act
@@ -123,7 +123,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         // Assert
         $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $expectedCloseOrderVolume);
         $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-        $this->interTransferFromContractToSpotApiCallIsExpected(new CoinAmount($coin, $transferToSpotAmount));
+        $this->expectsInterTransferFromContractToSpot(new CoinAmount($coin, $transferToSpotAmount));
 
         // Act
         ($this->handler)(new PushBuyOrders($symbol, $side));
