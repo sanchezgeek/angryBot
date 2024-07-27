@@ -59,6 +59,32 @@ final class AbstractFloatTest extends TestCase
         $initialFloatValue->sub($subtractValue);
     }
 
+    public function testAddReturnsNotSameObject(): void
+    {
+        $initialValue = 0.000015;
+        $initialFloatValue = $this->getMockForAbstractClass(AbstractFloat::class, [$initialValue]);
+
+        // Act
+        $result = $initialFloatValue->add(0);
+
+        // Assert
+        self::assertNotSame($initialFloatValue, $result);
+        self::assertEquals($initialValue, $result->value());
+    }
+
+    public function testSubtractReturnsNotSameObject(): void
+    {
+        $initialValue = 0.000015;
+        $initialFloatValue = $this->getMockForAbstractClass(AbstractFloat::class, [$initialValue]);
+
+        // Act
+        $result = $initialFloatValue->sub(0);
+
+        // Assert
+        self::assertNotSame($initialFloatValue, $result);
+        self::assertEquals($initialValue, $result->value());
+    }
+
     public function testCanAddScalarFloat(): void
     {
         $initialValue = 0.000015;

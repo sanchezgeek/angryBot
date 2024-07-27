@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Application\Messenger;
+namespace App\Tests\Unit\Application\Messenger\Position;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
@@ -16,7 +16,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -24,6 +24,7 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
 
+use function min;
 use function sprintf;
 
 /**
@@ -38,7 +39,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
-    private const DEFAULT_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MIN_TRANSFER_AMOUNT;
+    private const MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
     private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
     private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
 
@@ -50,6 +51,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     private StopRepositoryInterface $stopRepository;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
+
+    private const DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
 
     protected function setUp(): void
     {
@@ -67,6 +70,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->orderService,
             $this->stopService,
             $this->stopRepository,
+            self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }
 
@@ -127,7 +131,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         if ($spotAvailableBalance > 2) {
             $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
-                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance)
+                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance),
             );
         }
 
@@ -152,7 +156,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
     {
         foreach ($this->positionSides() as $side) {
-            $position = PositionBuilder::bySide($side)->withEntry(34000)->withLiquidationDistance(1500)->build();
+            $position = PositionBuilder::bySide($side)->withSize(0.1)->withEntry(34000)->withLiquidationDistance(1500)->build();
+            $expectedAmountToTransferFromSpot = self::getExpectedAmountToTransferFromSpot($position);
 
             yield sprintf('[%s] spot is empty', $position) => [
                 'position' => $position,
@@ -162,16 +167,31 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
             yield sprintf('[%s] spotBalance is more than default min value => transfer min default value', $position) => [
                 'position' => $position,
-                'spotAvailableBalance' => self::DEFAULT_TRANSFER_AMOUNT + 2,
-                'expectedTransferAmount' => self::DEFAULT_TRANSFER_AMOUNT,
+                'spotAvailableBalance' => $expectedAmountToTransferFromSpot->add(2)->value(),
+                'expectedTransferAmount' => $expectedAmountToTransferFromSpot->value(),
             ];
 
+            $spotBalance = $expectedAmountToTransferFromSpot->sub(2.22);
             yield sprintf('[%s] spotBalance is less than default min value => transfer all available', $position) => [
                 'position' => $position,
-                'spotAvailableBalance' => $spotBalance = self::DEFAULT_TRANSFER_AMOUNT - 2,
-                'expectedTransferAmount' => PriceHelper::round($spotBalance - self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE),
+                'spotAvailableBalance' => $spotBalance->value(),
+                'expectedTransferAmount' => $spotBalance->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value(),
+            ];
+
+            $position = PositionBuilder::bySide($side)->withSize(0.3)->withEntry(34000)->withLiquidationDistance(1500)->build();
+            yield sprintf('[%s] position size too big => transfer amount must be cut down to MAX_TRANSFER_AMOUNT', $position) => [
+                'position' => $position,
+                'spotAvailableBalance' => self::MAX_TRANSFER_AMOUNT + 2,
+                'expectedTransferAmount' => self::MAX_TRANSFER_AMOUNT,
             ];
         }
+    }
+
+    private static function getExpectedAmountToTransferFromSpot(Position $position): CoinAmount
+    {
+        $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), 60);
+
+        return (new CoinAmount($position->symbol->associatedCoin(), $amount));
     }
 
     private function havePositions(Position ...$positions): void
