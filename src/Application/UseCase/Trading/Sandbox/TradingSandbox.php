@@ -13,6 +13,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -157,16 +158,16 @@ class TradingSandbox implements TradingSandboxInterface
 
         $entryPrice = $current->entryPrice;
         // todo | when result position size = 0 (position closed)
-        $newVolume = $current->size - $orderDto->getVolume();
-        $newValue = $entryPrice * $newVolume; // @todo | only linear?
+        $newSize = $current->size - $orderDto->getVolume();
+        $newValue = $entryPrice * $newSize; // @todo | only linear?
 
-        $newInitialMargin = $current->initialMargin->sub($orderInitialMargin)->value();
+        $newInitialMargin = (new CoinAmount($current->symbol->associatedCoin(), $newSize * $entryPrice / $current->leverage->value()))->value();
 
         $tmpPosition = new Position(
             $current->side,
             $current->symbol,
             $entryPrice,
-            $newVolume,
+            $newSize,
             $newValue,
             $current->liquidationPrice,
             $newInitialMargin,

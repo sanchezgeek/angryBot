@@ -10,7 +10,7 @@ use App\Domain\Position\ValueObject\Side;
 
 readonly class SandboxStopOrder
 {
-    private function __construct(public Symbol $symbol, public Side $positionSide, public float $price, public float $volume)
+    public function __construct(public Symbol $symbol, public Side $positionSide, public float $price, public float $volume)
     {
     }
 

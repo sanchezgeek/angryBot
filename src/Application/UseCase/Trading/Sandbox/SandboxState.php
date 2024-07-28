@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\Sandbox;
 
-use App\Bot\Application\Service\Hedge\Hedge;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -17,7 +17,6 @@ use function array_values;
 use function assert;
 use function count;
 use function max;
-use function reset;
 use function sprintf;
 
 class SandboxState
@@ -46,9 +45,7 @@ class SandboxState
 
     public function getPosition(Side $side): ?Position
     {
-        $position = $this->positions[$side->value] ?? null;
-
-        if (!$position) {
+        if (!($position = $this->positions[$side->value] ?? null)) {
             return null;
         }
 
@@ -61,6 +58,8 @@ class SandboxState
 
     /**
      * For check liquidation, for example
+     *
+     * @throws SandboxHedgeIsEquivalentException
      */
     public function getMainPosition(): ?Position
     {
@@ -71,7 +70,13 @@ class SandboxState
         $position = array_values($this->positions)[0];
         $position = $this->getPosition($position->side);
 
-        return $position->getHedge()?->mainPosition ?? $position;
+        $hedge = $position->getHedge();
+
+        if ($hedge?->isEquivalentHedge()) {
+            throw new SandboxHedgeIsEquivalentException();
+        }
+
+        return $hedge?->mainPosition ?? $position;
     }
 
     public function setPosition(Position $position): self
@@ -100,15 +105,10 @@ class SandboxState
     {
         $lastPrice = $this->lastPrice;
 
-        if (count($this->positions) > 1) {
-            $hedge = Hedge::create(...array_values($this->positions));
-            if ($hedge->isEquivalentHedge()) {
-                return $this->freeBalance;
-            }
-
-            $positionForCalcLoss = $hedge->mainPosition;
-        } else {
-            $positionForCalcLoss = reset($this->positions);
+        try {
+            $positionForCalcLoss = $this->getMainPosition();
+        } catch (SandboxHedgeIsEquivalentException $e) {
+            return $this->freeBalance;
         }
 
         if ($positionForCalcLoss->isPositionInLoss($lastPrice)) {

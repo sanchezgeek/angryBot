@@ -2,8 +2,9 @@
 
 namespace App\Command\Sandbox;
 
-use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
+use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -118,9 +119,10 @@ class SandboxTestCommand extends AbstractCommand
         $freeBalance = $currentState->getFreeBalance();
         $availableBalance = $currentState->getAvailableBalance();
 
-        $mainPosition = $currentState->getMainPosition();
-        if (!$mainPosition) {
-            throw new RuntimeException(sprintf('%s: No positions found', $description));
+        try {
+            $mainPosition = $currentState->getMainPosition();
+        } catch (SandboxHedgeIsEquivalentException $e) {
+            throw new RuntimeException(sprintf('%s: No main position found', $description));
         }
 
         $realPosition = $this->positionService->getPosition($this->getSymbol(), $mainPosition->side);
