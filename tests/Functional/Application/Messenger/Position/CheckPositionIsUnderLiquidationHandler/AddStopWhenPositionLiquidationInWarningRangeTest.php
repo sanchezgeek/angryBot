@@ -105,7 +105,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $delayedStopsPercent = 4; $pushedStopsPercent = 7;
         $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
 
-        $short = PositionBuilder::short()->withEntry($markPrice)->withSize(0.5)->withLiquidation($liquidationPrice)->build();
+        $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->build();
         yield sprintf(
             '[BTCUSDT SHORT] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
@@ -117,8 +117,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'expectedAdditionalStops' => [self::delayedStop($short, $needToCoverPercent, $additionalStopPrice)->setTriggerDelta($additionalStopTriggerDelta)]
         ];
 
-        $long = PositionBuilder::long()->withEntry($markPrice - 10000)->withSize(0.11)->build();
-        $short = PositionBuilder::short()->withEntry($markPrice)->withSize(0.5)->withLiquidation($liquidationPrice)->withOppositePosition($long)->build();
+        $long = PositionBuilder::long()->entry($markPrice - 10000)->size(0.11)->build();
+        $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($long)->build();
         yield sprintf(
             '[BTCUSDT SHORT %.3f vs BTCUSDT LONG %.3f] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $short->size, $long->size, $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
@@ -136,7 +136,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $delayedStopsPercent = 6; $pushedStopsPercent = 4;
         $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
 
-        $long = PositionBuilder::long()->withEntry($markPrice)->withSize(0.2)->withLiquidation($liquidationPrice)->build();
+        $long = PositionBuilder::long()->entry($markPrice)->size(0.2)->liq($liquidationPrice)->build();
         yield sprintf(
             '[BTCUSDT LONG] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
@@ -148,8 +148,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'expectedAdditionalStops' => [self::delayedStop($long, $needToCoverPercent, $additionalStopPrice)->setTriggerDelta($additionalStopTriggerDelta)]
         ];
 
-        $short = PositionBuilder::short()->withEntry($markPrice + 10000)->withSize(0.11)->build();
-        $long = PositionBuilder::long()->withEntry($markPrice)->withSize(0.5)->withLiquidation($liquidationPrice)->withOppositePosition($short)->build();
+        $short = PositionBuilder::short()->entry($markPrice + 10000)->size(0.11)->build();
+        $long = PositionBuilder::long()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($short)->build();
         yield sprintf(
             '[BTCUSDT LONG %.3f vs BTCUSDT SHORT %.3f] liquidationPrice (=%.2f) in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
             $long->size, $short->size, $liquidationPrice, $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent

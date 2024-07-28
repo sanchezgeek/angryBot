@@ -38,7 +38,7 @@ final class CloseByMarketTest extends ByBitOrderServiceTestAbstract
     public function testCanCloseByMarket(array $data): void
     {
         $category = $data['category']; $symbol = $data['symbol']; $positionSide = $data['positionSide'];
-        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->build();
+        $position = PositionBuilder::bySide($positionSide)->symbol($symbol)->build();
 
         $this->matchPost(
             PlaceOrderRequest::marketClose($category, $symbol, $positionSide, $orderQty = 0.01),
@@ -70,7 +70,7 @@ final class CloseByMarketTest extends ByBitOrderServiceTestAbstract
     {
         // Arrange
         $category = $data['category']; $symbol = $data['symbol']; $positionSide = $data['positionSide'];
-        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->build();
+        $position = PositionBuilder::bySide($positionSide)->symbol($symbol)->build();
 
         $expectedRequest = PlaceOrderRequest::marketClose($category, $symbol, $positionSide, $orderQty = 0.01);
         $this->matchPost($expectedRequest, $data['apiResponse']);

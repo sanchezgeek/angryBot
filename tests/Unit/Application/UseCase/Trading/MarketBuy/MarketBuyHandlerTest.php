@@ -187,7 +187,7 @@ class MarketBuyHandlerTest extends KernelTestCase
     {
         $liquidation = $side->isShort() ? $ticker->lastPrice->add(self::SAFE_PRICE_DISTANCE) : $ticker->lastPrice->sub(self::SAFE_PRICE_DISTANCE);
 
-        return PositionBuilder::bySide($side)->withEntry($ticker->lastPrice)->withLiquidation($liquidation->value())->build();
+        return PositionBuilder::bySide($side)->entry($ticker->lastPrice)->liq($liquidation->value())->build();
     }
 
     private static function positionWithStateNOTSafeForMakeBuy(Ticker $ticker, Side $side): Position
@@ -195,7 +195,7 @@ class MarketBuyHandlerTest extends KernelTestCase
         $notSafeDistance = self::SAFE_PRICE_DISTANCE - 1;
         $liquidation = $side->isShort() ? $ticker->lastPrice->add($notSafeDistance) : $ticker->lastPrice->sub($notSafeDistance);
 
-        return PositionBuilder::bySide($side)->withEntry($ticker->lastPrice)->withLiquidation($liquidation->value())->build();
+        return PositionBuilder::bySide($side)->entry($ticker->lastPrice)->liq($liquidation->value())->build();
     }
 
     private function mockSandboxMakeBuyCall(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, $stateAfterExec): void

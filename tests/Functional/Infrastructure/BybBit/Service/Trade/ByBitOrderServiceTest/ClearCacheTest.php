@@ -46,7 +46,7 @@ final class ClearCacheTest extends KernelTestCase
         $orderQty = 0.01;
         $expectedSizeAfterMarketClose = 1.19;
 
-        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->withSize($initialPositionSize)->build();
+        $position = PositionBuilder::bySide($positionSide)->symbol($symbol)->size($initialPositionSize)->build();
 
         # warmup cache and check position size
         $this->assertActualPositionSize($position, $initialPositionSize);
@@ -72,7 +72,7 @@ final class ClearCacheTest extends KernelTestCase
         $initialPositionSize = 1.2;
         $orderQty = 0.01;
         $expectedSizeAfterMarketBuy = 1.21;
-        $position = PositionBuilder::bySide($positionSide)->withSymbol($symbol)->withSize($initialPositionSize)->build();
+        $position = PositionBuilder::bySide($positionSide)->symbol($symbol)->size($initialPositionSize)->build();
 
         # warmup cache and check position size
         $this->assertActualPositionSize($position, $initialPositionSize);

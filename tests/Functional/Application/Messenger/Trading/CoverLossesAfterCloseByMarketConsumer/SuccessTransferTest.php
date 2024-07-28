@@ -84,8 +84,8 @@ class SuccessTransferTest extends KernelTestCase
         $warningDistance = CoverLossesAfterCloseByMarketConsumer::LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER - 1;
 
         return [
-            [PositionBuilder::short()->withLiquidationDistance($warningDistance)->build()],
-            [PositionBuilder::long()->withLiquidationDistance($warningDistance)->build()],
+            [PositionBuilder::short()->liqDistance($warningDistance)->build()],
+            [PositionBuilder::long()->liqDistance($warningDistance)->build()],
         ];
     }
 }

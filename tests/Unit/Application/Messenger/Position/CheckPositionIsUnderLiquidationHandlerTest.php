@@ -98,12 +98,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         yield 'SHORT' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::short()->withEntry(34000)->withLiquidation($markPrice + $distance)->build(),
+            '$position' => PositionBuilder::short()->entry(34000)->liq($markPrice + $distance)->build(),
         ];
 
         yield 'LONG' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::long()->withEntry(36000)->withLiquidation($markPrice - $distance)->build(),
+            '$position' => PositionBuilder::long()->entry(36000)->liq($markPrice - $distance)->build(),
         ];
     }
 
@@ -156,7 +156,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
     {
         foreach ($this->positionSides() as $side) {
-            $position = PositionBuilder::bySide($side)->withSize(0.1)->withEntry(34000)->withLiquidationDistance(1500)->build();
+            $position = PositionBuilder::bySide($side)->size(0.1)->entry(34000)->liqDistance(1500)->build();
             $expectedAmountToTransferFromSpot = self::getExpectedAmountToTransferFromSpot($position);
 
             yield sprintf('[%s] spot is empty', $position) => [
@@ -178,7 +178,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
                 'expectedTransferAmount' => $spotBalance->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value(),
             ];
 
-            $position = PositionBuilder::bySide($side)->withSize(0.3)->withEntry(34000)->withLiquidationDistance(1500)->build();
+            $position = PositionBuilder::bySide($side)->size(0.3)->entry(34000)->liqDistance(1500)->build();
             yield sprintf('[%s] position size too big => transfer amount must be cut down to MAX_TRANSFER_AMOUNT', $position) => [
                 'position' => $position,
                 'spotAvailableBalance' => self::MAX_TRANSFER_AMOUNT + 2,

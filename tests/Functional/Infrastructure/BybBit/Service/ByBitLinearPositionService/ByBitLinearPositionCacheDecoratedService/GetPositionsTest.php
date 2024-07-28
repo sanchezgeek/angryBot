@@ -56,8 +56,8 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
     public function testCallInnerServiceWhenCachedValueInvalidated(Symbol $symbol, array $innerServiceResult): void
     {
         $oldPositions = [
-            PositionBuilder::short()->withEntry(15000)->withSize(1.1)->build(),
-            PositionBuilder::long()->withEntry(10000)->withSize(1.1)->build(),
+            PositionBuilder::short()->entry(15000)->size(1.1)->build(),
+            PositionBuilder::long()->entry(10000)->size(1.1)->build(),
         ];
 
         $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
@@ -81,8 +81,8 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        $position = PositionBuilder::bySide($side)->withEntry(60000)->withSize(1.1)->build();
-        $oppositePosition = PositionBuilder::bySide($side->getOpposite())->withEntry(33000)->withSize(0.7)->build();
+        $position = PositionBuilder::bySide($side)->entry(60000)->size(1.1)->build();
+        $oppositePosition = PositionBuilder::bySide($side->getOpposite())->entry(33000)->size(0.7)->build();
 
         yield 'have position' => [$symbol, [$position]];
         yield 'have both positions' => [$symbol, [$position, $oppositePosition]];

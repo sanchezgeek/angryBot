@@ -33,7 +33,7 @@ class SkipTransferTest extends KernelTestCase
     {
         $loss = 10.101;
         $closedPosition->setOppositePosition(
-            PositionBuilder::oppositeFor($closedPosition)->withSize($closedPosition->size + 0.001)->build()
+            PositionBuilder::oppositeFor($closedPosition)->size($closedPosition->size + 0.001)->build()
         );
 
         $this->havePosition($symbol = $closedPosition->symbol, $closedPosition);

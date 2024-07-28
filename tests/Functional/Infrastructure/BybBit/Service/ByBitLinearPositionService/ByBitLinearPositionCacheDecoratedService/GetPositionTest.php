@@ -69,7 +69,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         ?Position $position,
         array $innerServiceResult
     ): void {
-        $oldCachedPosition = PositionBuilder::bySide($side)->withEntry(15000)->withSize(0.1)->build();
+        $oldCachedPosition = PositionBuilder::bySide($side)->entry(15000)->size(0.1)->build();
 
         $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
         $item->set([$oldCachedPosition]);
@@ -93,8 +93,8 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        $position = PositionBuilder::bySide($side)->withEntry(62000)->withSize(1.3)->build();
-        $oppositePosition = PositionBuilder::bySide($side->getOpposite())->withEntry(31000)->withSize(0.9)->build();
+        $position = PositionBuilder::bySide($side)->entry(62000)->size(1.3)->build();
+        $oppositePosition = PositionBuilder::bySide($side->getOpposite())->entry(31000)->size(0.9)->build();
 
         yield 'have position' => [$symbol, $side, $position, [$position]];
         yield 'have both positions' => [$symbol, $side, $position, [$position, $oppositePosition]];

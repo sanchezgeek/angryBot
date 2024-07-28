@@ -6,6 +6,7 @@ namespace App\Tests\Factory\Position;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use LogicException;
@@ -53,7 +54,7 @@ class PositionBuilder
         return new self($position->side->getOpposite());
     }
 
-    public function withSymbol(Symbol $symbol): self
+    public function symbol(Symbol $symbol): self
     {
         $builder = clone $this;
         $builder->symbol = $symbol;
@@ -61,7 +62,7 @@ class PositionBuilder
         return $builder;
     }
 
-    public function withEntry(float|Price $entry): self
+    public function entry(float|Price $entry): self
     {
         $builder = clone $this;
         $builder->entry = Price::toFloat($entry);
@@ -69,7 +70,7 @@ class PositionBuilder
         return $builder;
     }
 
-    public function withSize(float $size): self
+    public function size(float $size): self
     {
         $builder = clone $this;
         $builder->size = $size;
@@ -77,7 +78,7 @@ class PositionBuilder
         return $builder;
     }
 
-    public function withLiquidation(float|Price $liquidation): self
+    public function liq(float|Price $liquidation): self
     {
         $builder = clone $this;
         $builder->liquidation = Price::toFloat($liquidation);
@@ -85,7 +86,7 @@ class PositionBuilder
         return $builder;
     }
 
-    public function withLiquidationDistance(float $distance = 1000): self
+    public function liqDistance(float $distance = 1000): self
     {
         if ($this->liquidation !== null) {
             throw new LogicException(sprintf('Liquidation is already set to %s.', $this->liquidation));
@@ -97,7 +98,7 @@ class PositionBuilder
         return $builder;
     }
 
-    public function withOppositePosition(Position $oppositePosition): self
+    public function opposite(Position $oppositePosition): self
     {
         if ($oppositePosition->side === $this->side) {
             throw new LogicException(sprintf('Cannot set opposite position to %s: positions on the same side', $oppositePosition->side->name));
@@ -115,7 +116,7 @@ class PositionBuilder
         $entry = $this->entry;
 
         $positionValue = $entry * $this->size;
-        $positionBalance = $initialMargin = $positionValue / $this->leverage;
+        $positionBalance = $initialMargin = new CoinAmount($this->symbol->associatedCoin(), $positionValue / $this->leverage);
 
         $liquidation = $this->liquidation ?? ($side->isShort() ? $entry + 99999 : 0);
 
@@ -133,8 +134,8 @@ class PositionBuilder
             $this->size,
             $positionValue,
             $liquidation,
-            $initialMargin,
-            $positionBalance,
+            $initialMargin->value(),
+            $positionBalance->value(),
             $this->leverage,
             $this->unrealizedPnl,
         );
