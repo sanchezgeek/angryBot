@@ -16,6 +16,7 @@ use LogicException;
 use RuntimeException;
 use Stringable;
 
+use function assert;
 use function sprintf;
 
 /**
@@ -111,12 +112,9 @@ final class Position implements Stringable
 
     public function setOppositePosition(Position $oppositePosition, bool $force = false): void
     {
-        if ($this->hedge !== false) {
-            throw new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.');
-        }
-
-        if (!$force && $this->oppositePosition !== null) {
-            throw new LogicException('Opposite position already set.');
+        if (!$force) {
+            assert($this->oppositePosition === null, new LogicException('Opposite position already set.'));
+            assert($this->hedge === false, new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.'));
         }
 
         if ($this->side === $oppositePosition->side) {
@@ -124,6 +122,10 @@ final class Position implements Stringable
         }
 
         $this->oppositePosition = $oppositePosition;
+
+        if ($this->hedge !== false) {
+            $this->hedge = false;
+        }
     }
 
     public function getHedge(): ?Hedge
