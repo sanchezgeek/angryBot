@@ -28,6 +28,7 @@ final class Position implements Stringable
     public readonly CoinAmount $positionBalance;
 
     public ?Position $oppositePosition = null;
+    private Hedge|null|false $hedge = false;
 
     public function __construct(
         public readonly Side $side,
@@ -110,6 +111,10 @@ final class Position implements Stringable
 
     public function setOppositePosition(Position $oppositePosition, bool $force = false): void
     {
+        if ($this->hedge !== false) {
+            throw new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.');
+        }
+
         if (!$force && $this->oppositePosition !== null) {
             throw new LogicException('Opposite position already set.');
         }
@@ -123,7 +128,16 @@ final class Position implements Stringable
 
     public function getHedge(): ?Hedge
     {
-        return $this->oppositePosition === null ? null : Hedge::create($this, $this->oppositePosition);
+        if ($this->hedge !== false) {
+            return $this->hedge;
+        }
+
+        $this->hedge = $this->oppositePosition !== null
+            ? Hedge::create($this, $this->oppositePosition)
+            : null
+        ;
+
+        return $this->hedge;
     }
 
     public function isSupportPosition(): bool
