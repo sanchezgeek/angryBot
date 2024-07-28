@@ -119,6 +119,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         $checkStopsOnDistance = FloatHelper::modify(self::CHECK_STOPS_ON_DISTANCE, 0.1);
         if ($distanceWithLiquidation <= $checkStopsOnDistance) {
+            $notCoveredSize = $position->getNotCoveredSize();
             $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
             // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
             if ($position->getHedge()?->getSupportRate()->value() > 25) {
@@ -126,10 +127,10 @@ final readonly class CheckPositionIsUnderLiquidationHandler
             }
 
             $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker);
-            $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $position->getNotCoveredSize()) * 100; // @todo | maybe need update position before calc
+            $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $notCoveredSize) * 100; // @todo | maybe need update position before calc
             $volumePartDelta = $acceptableStoppedPartBeforeLiquidation - $stoppedPositionPart;
             if ($volumePartDelta > 0) {
-                $stopQty = VolumeHelper::round((new Percent($volumePartDelta))->of($position->size));
+                $stopQty = VolumeHelper::round((new Percent($volumePartDelta))->of($notCoveredSize));
 
                 if ($distanceWithLiquidation <= self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN) {
                     $this->orderService->closeByMarket($position, $stopQty);
