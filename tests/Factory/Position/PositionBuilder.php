@@ -141,6 +141,7 @@ class PositionBuilder
 
         if ($this->oppositePosition) {
             $position->setOppositePosition($this->oppositePosition);
+            $this->oppositePosition->setOppositePosition($position);
         }
 
         return $position;

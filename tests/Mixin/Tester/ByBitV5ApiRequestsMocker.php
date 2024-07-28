@@ -33,6 +33,7 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 
 use function array_merge;
+use function spl_object_hash;
 use function sprintf;
 use function uuid_create;
 
@@ -191,17 +192,21 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);
     }
 
-    protected function havePosition(Symbol $symbol, Position ...$positions): void
+    protected function havePosition(Symbol $symbol, Position ...$pre): void
     {
+        $positions = [];
+        foreach ($pre as $position) {
+            $positions[spl_object_hash($position)] = $position;
+        }
+
         $oppositePositions = [];
         foreach ($positions as $position) {
             if ($position->oppositePosition) {
-                $oppositePositions[] = $position->oppositePosition;
+                $oppositePositions[spl_object_hash($position->oppositePosition)] = $position->oppositePosition;
             }
         }
-        $positions = array_merge($positions, $oppositePositions);
 
-        $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...$positions);
+        $byBitApiCallExpectation = self::positionsApiCallExpectation($symbol, ...array_merge($positions, $oppositePositions));
         $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
 
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);
