@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Hedge;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Domain\Position\Helper\PositionClone;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
@@ -68,7 +69,7 @@ class DiffStopCommand extends AbstractCommand
             ($mainPosition->isShort() && $liquidationPrice < $targetPrice)
             || ($mainPosition->isLong() && $liquidationPrice > $targetPrice)
         ) {
-            $position = $position->cloneWithNewSize($position->size - 0.001);
+            $position = PositionClone::of($position)->withSize($position->size - 0.001)->create();
             $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->free);
 
             $liquidationPrice = $liquidationCalcResult->estimatedLiquidationPrice()->value();

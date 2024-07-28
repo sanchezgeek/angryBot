@@ -58,58 +58,6 @@ final class Position implements Stringable
         return Price::toObj($this->liquidationPrice);
     }
 
-    /**
-     * @todo | Builder
-     */
-    public function cloneWithNewSize(float $newSize): self
-    {
-        $entryPrice = $this->entryPrice;
-        $newValue = $entryPrice * $newSize; // linear
-        $newIM = $newValue / $this->leverage->value();
-
-        $position = new Position(
-            $this->side,
-            $this->symbol,
-            $entryPrice,
-            $newSize,
-            $newValue,
-            $this->liquidationPrice,
-            $newIM,
-            $newIM,
-            $this->leverage->value(),
-        );
-
-        if ($this->oppositePosition) {
-            $position->setOppositePosition($this->oppositePosition);
-        }
-
-        return $position;
-    }
-
-    /**
-     * @todo | Builder
-     */
-    public function cloneWithNewLiquidation(float $liquidationPrice): self
-    {
-        $position = new Position(
-            $this->side,
-            $this->symbol,
-            $this->entryPrice,
-            $this->size,
-            $this->value,
-            $liquidationPrice,
-            $this->initialMargin->value(),
-            $this->positionBalance->value(),
-            $this->leverage->value(),
-        );
-
-        if ($this->oppositePosition) {
-            $position->setOppositePosition($this->oppositePosition);
-        }
-
-        return $position;
-    }
-
     public function setOppositePosition(Position $oppositePosition, bool $force = false): void
     {
         if (!$force) {
@@ -224,5 +172,11 @@ final class Position implements Stringable
     public function __toString(): string
     {
         return $this->getCaption();
+    }
+
+    public function __clone(): void
+    {
+        $this->hedge = false;
+        $this->oppositePosition = null;
     }
 }

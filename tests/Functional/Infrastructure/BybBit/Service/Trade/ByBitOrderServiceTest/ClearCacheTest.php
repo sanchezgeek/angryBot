@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest;
 
+use App\Domain\Position\Helper\PositionClone;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -95,7 +96,7 @@ final class ClearCacheTest extends KernelTestCase
         $side = $position->side;
 
         # update "Position API data"
-        $position = $position->cloneWithNewSize($expectedPositionSize);
+        $position = PositionClone::of($position)->withSize($expectedPositionSize)->create();
         $this->havePosition($symbol, $position);
 
         /** @var ByBitLinearPositionCacheDecoratedService $cachedPositionDataProvider */

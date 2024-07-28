@@ -13,9 +13,9 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 
@@ -122,65 +122,23 @@ class TradingSandbox implements TradingSandboxInterface
 
     private function modifyPositionsWithBuy(Position $current, ExchangeOrder $orderDto): void
     {
-        $orderInitialMargin = $this->orderCostCalculator->orderMargin($orderDto, $current->leverage);
-
         $valueSum = $current->size * $current->entryPrice;
         $volumeSum = $current->size;
+
         $valueSum += $orderDto->getVolume() * $orderDto->getPrice()->value();
         $volumeSum += $orderDto->getVolume();
 
-        $newEntryPrice = $valueSum / $volumeSum;
-        $newValue = $newEntryPrice * $volumeSum; // @todo | only linear?
+        $position = PositionClone::of($current)->withEntry($valueSum / $volumeSum)->withSize($volumeSum)->create();
 
-        $newInitialMargin = $current->initialMargin->add($orderInitialMargin)->value();
-        $tmpPosition = new Position(
-            $current->side,
-            $current->symbol,
-            $newEntryPrice,
-            $volumeSum,
-            $newValue,
-            $current->liquidationPrice,
-            $newInitialMargin,
-            $newInitialMargin,
-            $current->leverage->value(),
-        );
-
-        if ($current->oppositePosition) {
-            $tmpPosition->setOppositePosition($current->oppositePosition);
-        }
-
-        $this->reCalcPositionsLiquidationAfterModify($tmpPosition);
+        $this->reCalcPositionsLiquidationAfterModify($position);
     }
 
     private function modifyPositionsWithStop(Position $current, ExchangeOrder $orderDto): void
     {
-        $orderInitialMargin = $this->orderCostCalculator->orderMargin($orderDto, $current->leverage);
-
-        $entryPrice = $current->entryPrice;
         // todo | when result position size = 0 (position closed)
-        $newSize = $current->size - $orderDto->getVolume();
-        $newValue = $entryPrice * $newSize; // @todo | only linear?
+        $position = PositionClone::of($current)->withSize($current->size - $orderDto->getVolume())->create();
 
-        $newInitialMargin = (new CoinAmount($current->symbol->associatedCoin(), $newSize * $entryPrice / $current->leverage->value()))->value();
-
-        $tmpPosition = new Position(
-            $current->side,
-            $current->symbol,
-            $entryPrice,
-            $newSize,
-            $newValue,
-            $current->liquidationPrice,
-            $newInitialMargin,
-            $newInitialMargin,
-            $current->leverage->value(),
-        );
-
-        if ($current->oppositePosition) {
-            $tmpPosition->setOppositePosition($current->oppositePosition);
-        }
-
-        // todo | when result position size = 0 (position closed)
-        $this->reCalcPositionsLiquidationAfterModify($tmpPosition);
+        $this->reCalcPositionsLiquidationAfterModify($position);
     }
 
     private function reCalcPositionsLiquidationAfterModify(?Position $tmpPosition): void
@@ -198,21 +156,21 @@ class TradingSandbox implements TradingSandboxInterface
             $estimatedLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($tmpPosition, $currentFree)->estimatedLiquidationPrice()->value();
         }
 
+        # recalculate main position liquidation
         if ($tmpPosition->isSupportPosition()) {
-            // recalc main position liquidation
             $mainPosition = $tmpPosition->oppositePosition;
             $mainPosition->setOppositePosition($tmpPosition, true);
 
             $estimatedMainPositionLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($mainPosition, $currentFree)->estimatedLiquidationPrice()->value();
             $this->currentState->setPosition(
-                $mainPosition->cloneWithNewLiquidation($estimatedMainPositionLiquidationPrice),
+                PositionClone::of($mainPosition)->withLiquidation($estimatedMainPositionLiquidationPrice)->create(),
             );
 
             $tmpPosition->setOppositePosition($mainPosition, true);
         }
 
         $this->currentState->setPosition(
-            $tmpPosition->cloneWithNewLiquidation($estimatedLiquidationPrice),
+            PositionClone::of($tmpPosition)->withLiquidation($estimatedLiquidationPrice)->create(),
         );
     }
 

@@ -277,19 +277,6 @@ final class PositionTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testCloneWithNewSize(Side $side): void
-    {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000, 50, 50, 100);
-
-        self::assertEquals(
-            new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, 51000, 55, 55, 100),
-            $position->cloneWithNewSize(0.11)
-        );
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
     public function testLiquidationPrice(Side $side): void
     {
         $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 50, 100);
