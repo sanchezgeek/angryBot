@@ -46,7 +46,17 @@ class SandboxState
 
     public function getPosition(Side $side): ?Position
     {
-        return $this->positions[$side->value] ?? null;
+        $position = $this->positions[$side->value] ?? null;
+
+        if (!$position) {
+            return null;
+        }
+
+        if (($opposite = $this->positions[$side->getOpposite()->value] ?? null)) {
+            $position->setOppositePosition($opposite, true);
+        }
+
+        return $position;
     }
 
     /**
@@ -59,6 +69,7 @@ class SandboxState
         }
 
         $position = array_values($this->positions)[0];
+        $position = $this->getPosition($position->side);
 
         return $position->getHedge()?->mainPosition ?? $position;
     }
