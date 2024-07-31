@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
@@ -15,6 +16,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
@@ -32,7 +34,7 @@ class TradingSandbox implements TradingSandboxInterface
 
     public function __construct(
         private readonly OrderCostCalculator $orderCostCalculator,
-        private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
+        private readonly CalcPositionLiquidationPriceHandler $liquidationCalculator,
         private readonly Symbol $symbol,
         private readonly bool $isDebugEnabled = false,
     ) {}
@@ -92,7 +94,7 @@ class TradingSandbox implements TradingSandboxInterface
         }
 
         $this->notice(sprintf('modify free balance with %s (order cost)', -$cost)); $currentState->modifyFreeBalance(-$cost);
-        $this->modifyPositionsWithBuy($position, $orderDto);
+        $this->modifyPositionWithBuy($position, $orderDto);
     }
 
     private function makeStop(SandboxStopOrder $stop): void
@@ -117,10 +119,10 @@ class TradingSandbox implements TradingSandboxInterface
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
-        $this->modifyPositionsWithStop($position, $orderDto);
+        $this->modifyPositionWithStop($position, $orderDto);
     }
 
-    private function modifyPositionsWithBuy(Position $current, ExchangeOrder $orderDto): void
+    private function modifyPositionWithBuy(Position $current, ExchangeOrder $orderDto): void
     {
         $valueSum = $current->size * $current->entryPrice;
         $volumeSum = $current->size;
@@ -130,48 +132,41 @@ class TradingSandbox implements TradingSandboxInterface
 
         $position = PositionClone::of($current)->withEntry($valueSum / $volumeSum)->withSize($volumeSum)->create();
 
-        $this->reCalcPositionsLiquidationAfterModify($position);
+        $this->actualizePositions($position);
     }
 
-    private function modifyPositionsWithStop(Position $current, ExchangeOrder $orderDto): void
+    private function modifyPositionWithStop(Position $current, ExchangeOrder $orderDto): void
     {
-        // todo | when result position size = 0 (position closed)
-        $position = PositionClone::of($current)->withSize($current->size - $orderDto->getVolume())->create();
-
-        $this->reCalcPositionsLiquidationAfterModify($position);
-    }
-
-    private function reCalcPositionsLiquidationAfterModify(?Position $tmpPosition): void
-    {
-        if (!$tmpPosition) {
-            // todo | when result position size = 0 (position closed)
-            // ...
+        try {
+            $position = PositionClone::of($current)->withSize($current->size - $orderDto->getVolume())->create();
+        } catch (SizeCannotBeLessOrEqualsZeroException) {
+            $position = new ClosedPosition($current->side, $current->symbol);
         }
 
+        $this->actualizePositions($position);
+    }
+
+    private function actualizePositions(Position|ClosedPosition $modifiedPosition): void
+    {
         $currentFree = $this->currentState->getFreeBalance();
 
-        if ($tmpPosition->isSupportPosition()) {
-            $estimatedLiquidationPrice = 0;
+        if ($modifiedPosition instanceof Position) {
+            $liquidation = $modifiedPosition->isSupportPosition() ? 0 : $this->liquidationCalculator->handle($modifiedPosition, $currentFree)->estimatedLiquidationPrice()->value();
+            $this->currentState->setPosition(PositionClone::of($modifiedPosition)->withLiquidation($liquidation)->create());
         } else {
-            $estimatedLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($tmpPosition, $currentFree)->estimatedLiquidationPrice()->value();
+            $this->currentState->setPosition($modifiedPosition);
         }
 
-        # recalculate main position liquidation
-        if ($tmpPosition->isSupportPosition()) {
-            $mainPosition = $tmpPosition->oppositePosition;
-            $mainPosition->setOppositePosition($tmpPosition, true);
+        # get opposite after set state of modified position === get it ACTUAL (to further `isMainPosition` check)
+        $opposite = $this->currentState->getPosition($modifiedPosition->side->getOpposite());
 
-            $estimatedMainPositionLiquidationPrice = $this->calcPositionLiquidationPriceHandler->handle($mainPosition, $currentFree)->estimatedLiquidationPrice()->value();
+        # recalculate opposite liquidation if needed
+        if ($opposite->isMainPosition() || !$opposite->getHedge()) {
+            $estimatedLiquidation = $this->liquidationCalculator->handle($opposite, $currentFree)->estimatedLiquidationPrice()->value();
             $this->currentState->setPosition(
-                PositionClone::of($mainPosition)->withLiquidation($estimatedMainPositionLiquidationPrice)->create(),
+                PositionClone::of($opposite)->withLiquidation($estimatedLiquidation)->create(),
             );
-
-            $tmpPosition->setOppositePosition($mainPosition, true);
         }
-
-        $this->currentState->setPosition(
-            PositionClone::of($tmpPosition)->withLiquidation($estimatedLiquidationPrice)->create(),
-        );
     }
 
     private function prepareBuyOrderDto(SandboxBuyOrder|BuyOrder $order): SandboxBuyOrder

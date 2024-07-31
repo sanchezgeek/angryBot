@@ -7,9 +7,11 @@ namespace App\Tests\Unit\Domain\Position;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -24,6 +26,18 @@ use function sprintf;
 final class PositionTest extends TestCase
 {
     use PositionSideAwareTest;
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testFailCreateWithInvalidSize(Side $side): void
+    {
+        $size = 0;
+
+        self::expectExceptionObject(new SizeCannotBeLessOrEqualsZeroException($size));
+
+        PositionBuilder::bySide($side)->size($size)->build();
+    }
 
     public function testShortPosition(): void
     {

@@ -30,9 +30,9 @@ class SandboxStateTest extends TestCase
         $state = new SandboxState($ticker, $free, $long, $short);
 
         // Assert
-        self::assertEquals($free, $state->getFreeBalance());
-        self::assertEquals($expectedAvailable, $state->getAvailableBalance());
         self::assertEquals($short, $state->getPosition(Side::Sell));
         self::assertEquals($long, $state->getPosition(Side::Buy));
+        self::assertEquals($free, $state->getFreeBalance());
+        self::assertEquals($expectedAvailable, $state->getAvailableBalance());
     }
 }

@@ -6,18 +6,28 @@ namespace App\Domain\Position\Helper;
 
 use App\Bot\Domain\Position;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use LogicException;
 
 use function sprintf;
 
 class PositionClone
 {
+    private Position $initialPosition;
+
     private ?float $liquidation = null;
     private ?float $entry = null;
     private ?float $size = null;
 
-    private function __construct(private readonly Position $initialPosition)
+    private ?Position $oppositePosition = null;
+
+    private function __construct(Position $initialPosition)
     {
+        $this->initialPosition = $initialPosition;
+
+        if ($initialPosition->oppositePosition) {
+            $this->oppositePosition = $initialPosition->oppositePosition;
+        }
     }
 
     public static function of(Position $position): self
@@ -25,6 +35,9 @@ class PositionClone
         return new self($position);
     }
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     */
     public function create(): Position
     {
         $initial = $this->initialPosition;
@@ -56,12 +69,23 @@ class PositionClone
 //            $initial->unrealizedPnl,
         );
 
-        if ($initial->oppositePosition) {
-            $clone->setOppositePosition($oppositeClone = clone $initial->oppositePosition);
-            $oppositeClone->setOppositePosition($clone);
+        if ($this->oppositePosition) {
+            $clone->setOppositePosition($this->oppositePosition);
         }
 
         return $clone;
+    }
+
+    public function clearOpposite(): self
+    {
+        $this->oppositePosition = null;
+        return $this;
+    }
+
+    public function withOpposite(?Position $oppositePosition): self
+    {
+        $this->oppositePosition = $oppositePosition !== null ? $oppositePosition : null;
+        return $this;
     }
 
     public function withLiquidation(float $liquidation): self

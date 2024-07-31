@@ -7,6 +7,7 @@ namespace App\Tests\Factory\Position;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use LogicException;
@@ -110,6 +111,9 @@ class PositionBuilder
         return $builder;
     }
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     */
     public function build(): Position
     {
         $side = $this->side;
@@ -139,6 +143,8 @@ class PositionBuilder
 
         if ($this->oppositePosition) {
             $position->setOppositePosition($this->oppositePosition);
+
+            # make testcases more handy
             $this->oppositePosition->setOppositePosition($position);
         }
 

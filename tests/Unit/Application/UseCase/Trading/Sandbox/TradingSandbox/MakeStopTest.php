@@ -6,15 +6,12 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder as PB;
 use App\Tests\Factory\TickerFactory;
-
-use function array_map;
 
 class MakeStopTest extends AbstractTestOfTradingSandbox
 {
@@ -35,9 +32,7 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         // Assert
         self::assertEquals($expectedFree, $newState->getFreeBalance()->value());
         self::assertEquals($expectedAvailable, $newState->getAvailableBalance()->value());
-
-        $actualPositions = array_map(fn(Side $side) => $newState->getPosition($side), array_map(static fn(Position $p) => $p->side, $positionsAfterMakeStop));
-        self::assertEquals($positionsAfterMakeStop, $actualPositions);
+        self::assertSandboxPositionsIsEqualsTo($positionsAfterMakeStop, $newState);
     }
 
     public function stopTestDataProvider(): iterable

@@ -7,11 +7,15 @@ namespace App\Bot\Domain;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Assertion\PositionSizeAssertion;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
+use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
+use Exception;
 use LogicException;
 use RuntimeException;
 use Stringable;
@@ -31,6 +35,9 @@ final class Position implements Stringable
     public ?Position $oppositePosition = null;
     private Hedge|null|false $hedge = false;
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     */
     public function __construct(
         public readonly Side $side,
         public readonly Symbol $symbol,
@@ -43,6 +50,8 @@ final class Position implements Stringable
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
+        PositionSizeAssertion::assert($this->size);
+
         $this->leverage = new Leverage($leverage);
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
         $this->positionBalance = new CoinAmount($this->symbol->associatedCoin(), $positionBalance);
@@ -58,22 +67,16 @@ final class Position implements Stringable
         return Price::toObj($this->liquidationPrice);
     }
 
-    public function setOppositePosition(Position $oppositePosition, bool $force = false): void
+    public function setOppositePosition(Position $oppositePosition): void
     {
-        if (!$force) {
-            assert($this->oppositePosition === null, new LogicException('Opposite position already set.'));
-            assert($this->hedge === false, new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.'));
-        }
+        assert($this->oppositePosition === null, new LogicException('Opposite position already set.'));
+        assert($this->hedge === false, new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.'));
 
         if ($this->side === $oppositePosition->side) {
             throw new LogicException('Provided position is on the same side.');
         }
 
         $this->oppositePosition = $oppositePosition;
-
-        if ($this->hedge !== false) {
-            $this->hedge = false;
-        }
     }
 
     public function getHedge(): ?Hedge
@@ -82,12 +85,17 @@ final class Position implements Stringable
             return $this->hedge;
         }
 
-        $this->hedge = $this->oppositePosition !== null
-            ? Hedge::create($this, $this->oppositePosition)
-            : null
-        ;
+        $this->initializeHedge();
 
         return $this->hedge;
+    }
+
+    /**
+     * @internal || in tests (e.g. for correct check when check positions equality)
+     */
+    public function initializeHedge(): void
+    {
+        $this->hedge = $this->oppositePosition !== null ? Hedge::create($this, $this->oppositePosition) : null;
     }
 
     public function isSupportPosition(): bool
@@ -174,9 +182,11 @@ final class Position implements Stringable
         return $this->getCaption();
     }
 
+    /**
+     * @throws Exception
+     */
     public function __clone(): void
     {
-        $this->hedge = false;
-        $this->oppositePosition = null;
+        throw new Exception(sprintf('%s: clone denied. Use %s instead.', __METHOD__, PositionClone::class));
     }
 }

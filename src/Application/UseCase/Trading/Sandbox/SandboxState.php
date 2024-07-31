@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\Sandbox;
 
+use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use InvalidArgumentException;
@@ -26,34 +28,22 @@ class SandboxState
     public readonly Symbol $symbol;
     private Price $lastPrice;
 
-    private CoinAmount $freeBalanceBefore;
-    private CoinAmount $availableBalanceBefore;
     private CoinAmount $freeBalance;
 
     public function __construct(Ticker $ticker, CoinAmount $currentFreeBalance, Position ...$positions)
     {
         $this->setLastPrice($ticker->lastPrice);
         $this->symbol = $ticker->symbol;
-        $this->freeBalance = $this->freeBalanceBefore = $currentFreeBalance;
+        $this->freeBalance = $currentFreeBalance;
 
         foreach ($positions as $position) {
             $this->setPosition($position);
         }
-
-        $this->availableBalanceBefore = $this->getAvailableBalance();
     }
 
     public function getPosition(Side $side): ?Position
     {
-        if (!($position = $this->positions[$side->value] ?? null)) {
-            return null;
-        }
-
-        if (($opposite = $this->positions[$side->getOpposite()->value] ?? null)) {
-            $position->setOppositePosition($opposite, true);
-        }
-
-        return $position;
+        return $this->positions[$side->value] ?? null;
     }
 
     /**
@@ -67,9 +57,7 @@ class SandboxState
             return null;
         }
 
-        $position = array_values($this->positions)[0];
-        $position = $this->getPosition($position->side);
-
+        $position = $this->getPosition(array_values($this->positions)[0]->side);
         $hedge = $position->getHedge();
 
         if ($hedge?->isEquivalentHedge()) {
@@ -79,13 +67,30 @@ class SandboxState
         return $hedge?->mainPosition ?? $position;
     }
 
-    public function setPosition(Position $position): self
+    public function setPosition(Position|ClosedPosition $input): self
     {
-        assert($this->symbol === $position->symbol, new InvalidArgumentException(
-            sprintf('%s: incorrect usage (positions with "%s" symbol expected, but %s provided)', __METHOD__, $this->symbol->value, $position->symbol->value)
+        assert($this->symbol === $input->symbol, new InvalidArgumentException(
+            sprintf('%s: incorrect usage (positions with "%s" symbol expected, but %s provided)', __METHOD__, $this->symbol->value, $input->symbol->value)
         ));
+        $positionSide = $input->side;
+        $oppositeSide = $positionSide->getOpposite();
 
-        $this->positions[$position->side->value] = $position;
+        $position = $input instanceof ClosedPosition ? null : PositionClone::of($input)->clearOpposite()->create();
+
+        # if position on other side exists, do cross-set
+        if ($opposite = $this->getPosition($oppositeSide)) {
+            $oppositeClone = PositionClone::of($opposite)->withOpposite($position)->create();
+            $position && $position->setOppositePosition($oppositeClone);
+            $this->positions[$oppositeSide->value] = $oppositeClone;
+        }
+
+        // @todo | set unrealizedPnl?
+
+        if ($position) {
+            $this->positions[$positionSide->value] = $position;
+        } else {
+            unset($this->positions[$positionSide->value]);
+        }
 
         return $this;
     }
@@ -129,21 +134,5 @@ class SandboxState
     {
         $this->lastPrice = Price::toObj($price);
         return $this;
-    }
-
-    /**
-     * @todo check diff with real
-     */
-    public function getFreeBalanceBefore(): CoinAmount
-    {
-        return $this->freeBalanceBefore;
-    }
-
-    /**
-     * @todo check diff with real
-     */
-    public function getAvailableBalanceBefore(): CoinAmount
-    {
-        return $this->availableBalanceBefore;
     }
 }
