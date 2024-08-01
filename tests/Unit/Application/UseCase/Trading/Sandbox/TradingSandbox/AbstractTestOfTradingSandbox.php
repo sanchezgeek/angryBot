@@ -41,4 +41,17 @@ class AbstractTestOfTradingSandbox extends TestCase
 
         self::assertEquals($expectedPositions, $actualPositions);
     }
+
+    protected static function assertSandboxStateEqualsToExpected(SandboxState $expectedState, SandboxState $state): void
+    {
+        foreach ($state->getPositions() as $position) {
+            $position->initializeHedge();
+        }
+
+        foreach ($expectedState->getPositions() as $position) {
+            $position->initializeHedge();
+        }
+
+        self::assertEquals($expectedState, $state);
+    }
 }

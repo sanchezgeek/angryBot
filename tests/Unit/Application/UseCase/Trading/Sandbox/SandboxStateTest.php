@@ -12,6 +12,9 @@ use App\Tests\Factory\Position\PositionBuilder as PB;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @group sandbox
+ */
 class SandboxStateTest extends TestCase
 {
     public function testCreate(): void

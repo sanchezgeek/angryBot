@@ -41,6 +41,14 @@ class SandboxState
         }
     }
 
+    /**
+     * @return Position[]
+     */
+    public function getPositions(): array
+    {
+        return $this->positions;
+    }
+
     public function getPosition(Side $side): ?Position
     {
         return $this->positions[$side->value] ?? null;
