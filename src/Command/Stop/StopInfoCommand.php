@@ -83,8 +83,6 @@ class StopInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $isDebugEnabled = $this->isDebugEnabled();
-
         $symbol = $this->getSymbol();
         $position = $this->getPosition();
         $positionSide = $this->getPositionSide();
@@ -123,7 +121,7 @@ class StopInfoCommand extends AbstractCommand
         }
         $rangesCollection = new PositionStopRangesCollection($position, $stops, $pnlStep);
 
-        $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($symbol, $isDebugEnabled);
+        $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($symbol);
 
         $totalUsdPnL = $totalVolume = 0;
         $initialPositionState = $tradingSandbox->getCurrentState()->getPosition($positionSide);
@@ -151,8 +149,11 @@ class StopInfoCommand extends AbstractCommand
             $positionAfterRange = $currentSandboxState->getPosition($positionSide);
 
             if ($showSizeLeft) { # size left
-                $sizeLeft = $positionAfterRange->size;
-                $format .= ' => %.3f'; $args[] = $sizeLeft;
+                if ($positionAfterRange) {
+                    $sizeLeft = $positionAfterRange->size; $format .= ' => %.3f';$args[] = $sizeLeft;
+                } else {
+                    $format .= ' => position not found => position closed?';
+                }
             }
 
             if ($this->isShowStateChangesEnabled()) {

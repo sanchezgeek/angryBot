@@ -105,10 +105,20 @@ class TradingSandbox implements TradingSandboxInterface
 
         $this->currentState->setLastPrice($price);
 
+        $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
+
         // @todo | case when position volume is not enough
         $position = $this->currentState->getPosition($positionSide);
+        if (!$position) {
+            $this->notice(sprintf('%s %s position closed. Cannot make stop. Skip', $this->symbol->name, $positionSide->title()));
+            return;
+        }
 
-        $this->notice(sprintf('__ --- make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
+        if ($position->size < $volume) {
+            $this->notice(sprintf('%s position size less than provided volume (%s). Use position rest size (%s) as order volume.', $position->getCaption(), $volume, $position->size));
+            $volume = $position->size;
+        }
+
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
         $margin = $this->orderCostCalculator->orderMargin($orderDto, $position->leverage);
 
@@ -119,7 +129,7 @@ class TradingSandbox implements TradingSandboxInterface
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
-        $this->modifyPositionWithStop($position, $orderDto);
+        $this->modifyPositionWithStop($position, $volume);
     }
 
     private function modifyPositionWithBuy(Position $current, ExchangeOrder $orderDto): void
@@ -135,11 +145,12 @@ class TradingSandbox implements TradingSandboxInterface
         $this->actualizePositions($position);
     }
 
-    private function modifyPositionWithStop(Position $current, ExchangeOrder $orderDto): void
+    private function modifyPositionWithStop(Position $current, float $volume): void
     {
         try {
-            $position = PositionClone::of($current)->withSize($current->size - $orderDto->getVolume())->create();
+            $position = PositionClone::of($current)->withSize($current->size - $volume)->create();
         } catch (SizeCannotBeLessOrEqualsZeroException) {
+            $this->notice(sprintf('!!!! %s position closed !!!!', $current->getCaption()));
             $position = new ClosedPosition($current->side, $current->symbol);
         }
 
