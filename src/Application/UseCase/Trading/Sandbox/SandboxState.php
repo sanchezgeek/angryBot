@@ -75,11 +75,11 @@ class SandboxState
         $positionSide = $input->side;
         $oppositeSide = $positionSide->getOpposite();
 
-        $position = $input instanceof ClosedPosition ? null : PositionClone::of($input)->clearOpposite()->create();
+        $position = $input instanceof ClosedPosition ? null : PositionClone::clean($input)->create();
 
         # if position on other side exists, do cross-set
         if ($opposite = $this->getPosition($oppositeSide)) {
-            $oppositeClone = PositionClone::of($opposite)->withOpposite($position)->create();
+            $oppositeClone = PositionClone::clean($opposite)->withOpposite($position)->create();
             $position && $position->setOppositePosition($oppositeClone);
             $this->positions[$oppositeSide->value] = $oppositeClone;
         }

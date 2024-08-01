@@ -13,26 +13,27 @@ use function sprintf;
 
 class PositionClone
 {
-    private Position $initialPosition;
-
     private ?float $liquidation = null;
     private ?float $entry = null;
     private ?float $size = null;
 
-    private ?Position $oppositePosition = null;
-
-    private function __construct(Position $initialPosition)
-    {
-        $this->initialPosition = $initialPosition;
-
-        if ($initialPosition->oppositePosition) {
-            $this->oppositePosition = $initialPosition->oppositePosition;
-        }
+    private function __construct(
+        private readonly Position $initialPosition,
+        private ?Position $oppositePosition,
+    ) {
     }
 
-    public static function of(Position $position): self
+    public static function full(Position $position): self
     {
-        return new self($position);
+        return new self($position, $position->oppositePosition);
+    }
+
+    /**
+     * (without opposite)
+     */
+    public static function clean(Position $position): self
+    {
+        return new self($position, null);
     }
 
     /**
@@ -74,12 +75,6 @@ class PositionClone
         }
 
         return $clone;
-    }
-
-    public function clearOpposite(): self
-    {
-        $this->oppositePosition = null;
-        return $this;
     }
 
     public function withOpposite(?Position $oppositePosition): self

@@ -96,7 +96,7 @@ final class ClearCacheTest extends KernelTestCase
         $side = $position->side;
 
         # update "Position API data"
-        $position = PositionClone::of($position)->withSize($expectedPositionSize)->create();
+        $position = PositionClone::full($position)->withSize($expectedPositionSize)->create();
         $this->havePosition($symbol, $position);
 
         /** @var ByBitLinearPositionCacheDecoratedService $cachedPositionDataProvider */

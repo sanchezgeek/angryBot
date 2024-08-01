@@ -110,7 +110,7 @@ class TradingSandbox implements TradingSandboxInterface
         // @todo | case when position volume is not enough
         $position = $this->currentState->getPosition($positionSide);
         if (!$position) {
-            $this->notice(sprintf('%s %s position closed. Cannot make stop. Skip', $this->symbol->name, $positionSide->title()));
+            $this->notice(sprintf('%s %s position not found. Position closed? Cannot make stop. Skip', $this->symbol->name, $positionSide->title()));
             return;
         }
 
@@ -140,7 +140,7 @@ class TradingSandbox implements TradingSandboxInterface
         $valueSum += $orderDto->getVolume() * $orderDto->getPrice()->value();
         $volumeSum += $orderDto->getVolume();
 
-        $position = PositionClone::of($current)->withEntry($valueSum / $volumeSum)->withSize($volumeSum)->create();
+        $position = PositionClone::full($current)->withEntry($valueSum / $volumeSum)->withSize($volumeSum)->create();
 
         $this->actualizePositions($position);
     }
@@ -148,7 +148,7 @@ class TradingSandbox implements TradingSandboxInterface
     private function modifyPositionWithStop(Position $current, float $volume): void
     {
         try {
-            $position = PositionClone::of($current)->withSize($current->size - $volume)->create();
+            $position = PositionClone::full($current)->withSize($current->size - $volume)->create();
         } catch (SizeCannotBeLessOrEqualsZeroException) {
             $this->notice(sprintf('!!!! %s position closed !!!!', $current->getCaption()));
             $position = new ClosedPosition($current->side, $current->symbol);
@@ -163,7 +163,7 @@ class TradingSandbox implements TradingSandboxInterface
 
         if ($modifiedPosition instanceof Position) {
             $liquidation = $modifiedPosition->isSupportPosition() ? 0 : $this->liquidationCalculator->handle($modifiedPosition, $currentFree)->estimatedLiquidationPrice()->value();
-            $this->currentState->setPosition(PositionClone::of($modifiedPosition)->withLiquidation($liquidation)->create());
+            $this->currentState->setPosition(PositionClone::full($modifiedPosition)->withLiquidation($liquidation)->create());
         } else {
             $this->currentState->setPosition($modifiedPosition);
         }
@@ -175,7 +175,7 @@ class TradingSandbox implements TradingSandboxInterface
         if ($opposite->isMainPosition() || !$opposite->getHedge()) {
             $estimatedLiquidation = $this->liquidationCalculator->handle($opposite, $currentFree)->estimatedLiquidationPrice()->value();
             $this->currentState->setPosition(
-                PositionClone::of($opposite)->withLiquidation($estimatedLiquidation)->create(),
+                PositionClone::full($opposite)->withLiquidation($estimatedLiquidation)->create(),
             );
         }
     }

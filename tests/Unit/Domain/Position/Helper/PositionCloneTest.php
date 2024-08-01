@@ -24,7 +24,7 @@ class PositionCloneTest extends TestCase
         $position = PositionBuilder::bySide($side)->entry(50000)->size(0.1)->liqDistance($liquidationDistance)->build();
 
         // Act
-        $result = PositionClone::of($position)->withSize(0.11)->create();
+        $result = PositionClone::full($position)->withSize(0.11)->create();
 
         // Assert
         $expectedPosition = new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, $side->isLong() ? $position->entryPrice - $liquidationDistance : $position->entryPrice + $liquidationDistance, 55, 55, 100);
