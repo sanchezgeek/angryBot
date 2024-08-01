@@ -42,7 +42,7 @@ class TradingSandbox implements TradingSandboxInterface
     public function setState(SandboxState $state): self
     {
         assert($this->symbol === $state->symbol);
-        $this->currentState = $state;
+        $this->currentState = clone $state;
 
         return $this;
     }
