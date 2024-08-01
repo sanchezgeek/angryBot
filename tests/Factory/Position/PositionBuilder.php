@@ -124,9 +124,9 @@ class PositionBuilder
 
         $liquidation = $this->liquidation ?? ($side->isShort() ? $entry + 99999 : 0);
 
-        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
-            throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
-        }
+//        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
+//            throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
+//        }
 
         $position = new Position(
             $side,
