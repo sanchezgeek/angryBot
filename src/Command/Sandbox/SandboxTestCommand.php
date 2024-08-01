@@ -13,15 +13,18 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Worker\AppContext;
+use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -82,11 +85,16 @@ class SandboxTestCommand extends AbstractCommand
 
         AppContext::setIsDebug($this->isDebugEnabled());
 
-        $position = $this->getPosition();
+        try {
+            $position = $this->getPosition();
+        } catch (Exception $e) {
+            $this->io->note($e->getMessage());
+        }
+        $positionSide = $this->getPositionSide();
         $symbol = $this->getSymbol();
 
         $orders = $this->getOrders();
-        $infoMsg = $this->getInfoMsg($position, $orders);
+        $infoMsg = $this->getInfoMsg($this->getSymbol(), $positionSide, $orders);
 
         $sandbox = $this->tradingSandboxFactory->byCurrentState($symbol, true);
 
@@ -192,14 +200,14 @@ class SandboxTestCommand extends AbstractCommand
         return $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
     }
 
-    private function getInfoMsg(Position $position, array $orders): string
+    private function getInfoMsg(Symbol $symbol, Side $positionSide, array $orders): string
     {
         $ordersPart = [];
         foreach ($orders as $order) {
             $ordersPart[] = ($order instanceof BuyOrder ? '->buy' : '->close') . ' ' . $order->getVolume();
         }
 
-        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $position->getCaption());
+        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->name, $positionSide->title());
     }
 
     /**
