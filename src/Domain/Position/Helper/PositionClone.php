@@ -89,6 +89,12 @@ class PositionClone
         return $this;
     }
 
+    public function withoutLiquidation(): self
+    {
+        $this->liquidation = 0;
+        return $this;
+    }
+
     public function withEntry(float $entry): self
     {
         $this->entry = $entry;

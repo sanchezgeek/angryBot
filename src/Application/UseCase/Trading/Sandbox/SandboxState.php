@@ -24,7 +24,7 @@ use function sprintf;
 class SandboxState
 {
     /** @var Position[] */
-    private array $positions;
+    private array $positions = [];
     public readonly Symbol $symbol;
     private Price $lastPrice;
 
@@ -37,7 +37,7 @@ class SandboxState
         $this->freeBalance = $currentFreeBalance;
 
         foreach ($positions as $position) {
-            $this->setPosition($position);
+            $this->setPositionAndActualizeOpposite($position);
         }
     }
 
@@ -75,7 +75,12 @@ class SandboxState
         return $hedge?->mainPosition ?? $position;
     }
 
-    public function setPosition(Position|ClosedPosition $input): self
+    /**
+     * @todo | Move back to TradingSandbox
+     *   reason: this method also must actualize liquidation with: 1) free balance, 2) opposite
+     *           @see \App\Tests\Unit\Application\UseCase\Trading\Sandbox\SandboxStateTest::testSetClosedPosition
+     */
+    public function setPositionAndActualizeOpposite(Position|ClosedPosition $input): void
     {
         assert($this->symbol === $input->symbol, new InvalidArgumentException(
             sprintf('%s: incorrect usage (positions with "%s" symbol expected, but %s provided)', __METHOD__, $this->symbol->value, $input->symbol->value)
@@ -99,8 +104,6 @@ class SandboxState
         } else {
             unset($this->positions[$positionSide->value]);
         }
-
-        return $this;
     }
 
     public function modifyFreeBalance(CoinAmount|float $amount): self
@@ -124,7 +127,8 @@ class SandboxState
             return $this->freeBalance;
         }
 
-        if ($positionForCalcLoss->isPositionInLoss($lastPrice)) {
+        // + test: all free must be available
+        if ($positionForCalcLoss?->isPositionInLoss($lastPrice)) {
             $priceDelta = $lastPrice->differenceWith($positionForCalcLoss->entryPrice);
             $loss = $positionForCalcLoss->getNotCoveredSize() * $priceDelta->absDelta();
 

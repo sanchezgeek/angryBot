@@ -152,7 +152,7 @@ class TradingSandbox implements TradingSandboxInterface
     private function modifyPositionWithStop(Position $current, float $volume): void
     {
         try {
-            $position = PositionClone::full($current)->withSize($current->size - $volume)->create();
+            $position = PositionClone::clean($current)->withSize($current->size - $volume)->create();
         } catch (SizeCannotBeLessOrEqualsZeroException) {
             $this->notice(sprintf('!!!! %s position closed !!!!', $current->getCaption()));
             $position = new ClosedPosition($current->side, $current->symbol);
@@ -163,25 +163,23 @@ class TradingSandbox implements TradingSandboxInterface
 
     private function actualizePositions(Position|ClosedPosition $modifiedPosition): void
     {
-        $currentFree = $this->currentState->getFreeBalance();
-
-        if ($modifiedPosition instanceof Position) {
-            $liquidation = $modifiedPosition->isSupportPosition() ? 0 : $this->liquidationCalculator->handle($modifiedPosition, $currentFree)->estimatedLiquidationPrice()->value();
-            $this->currentState->setPosition(PositionClone::full($modifiedPosition)->withLiquidation($liquidation)->create());
-        } else {
-            $this->currentState->setPosition($modifiedPosition);
+        $this->currentState->setPositionAndActualizeOpposite($modifiedPosition);
+        $withActualOpposite = $this->currentState->getPosition($modifiedPosition->side);
+        if ($withActualOpposite instanceof Position) {
+            $this->actualizePositionLiquidation($withActualOpposite);
         }
 
-        # get opposite after set state of modified position === get it ACTUAL (to further `isMainPosition` check)
-        $opposite = $this->currentState->getPosition($modifiedPosition->side->getOpposite());
-
-        # recalculate opposite liquidation if needed
-        if ($opposite && ($opposite->isMainPosition() || !$opposite->getHedge())) {
-            $estimatedLiquidation = $this->liquidationCalculator->handle($opposite, $currentFree)->estimatedLiquidationPrice()->value();
-            $this->currentState->setPosition(
-                PositionClone::full($opposite)->withLiquidation($estimatedLiquidation)->create(),
-            );
+        if ($opposite = $this->currentState->getPosition($modifiedPosition->side->getOpposite())) {
+            $this->actualizePositionLiquidation($opposite);
         }
+    }
+
+    private function actualizePositionLiquidation(Position $position): void
+    {
+        $liquidation = $position->isSupportPosition() ? 0 : $this->liquidationCalculator->handle($position, $this->currentState->getFreeBalance())->estimatedLiquidationPrice()->value();
+
+        $actualizedWithCalculatedLiquidation = PositionClone::clean($position)->withLiquidation($liquidation)->create();
+        $this->currentState->setPositionAndActualizeOpposite($actualizedWithCalculatedLiquidation);
     }
 
     /**
