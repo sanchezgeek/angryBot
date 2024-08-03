@@ -266,7 +266,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
              * Case when this is almost equivalent hedge
              * @todo | need some normal solution
              */
-            if ($free < 0 && $positionForCalc->isLong() && $positionForCalc->liquidationPrice <= 0.00) {
+            if ($free < 0 && $positionForCalc->liquidationPrice <= 0.00) {
                 $main = $hedge->mainPosition;
                 $support = $hedge->supportPosition;
                 if ($available === 0.0) {
@@ -294,9 +294,11 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         # check is correct
-        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
-        if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
-            OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
+        if (!($positionForCalc->isShort() && !$positionForCalc->liquidationPrice)) { # but skip if this is short without liquidation
+            $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
+            if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
+                OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
+            }
         }
 
         return $free;
