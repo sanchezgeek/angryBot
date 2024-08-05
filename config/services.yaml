@@ -29,6 +29,9 @@ services:
     App\Bot\:
         resource: '../src/modules/Bot'
 
+    App\Alarm\:
+        resource: '../src/modules/Alarm'
+
 ### schedule
     App\Messenger\SchedulerTransport\TransportFactory:
         tags: [ 'messenger.transport_factory' ]

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
+use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
@@ -91,6 +92,9 @@ final class SchedulerFactory
 
             # orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT5S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
+
+            #alarm
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT3S', Async::message(new CheckAlarm(Symbol::BTCUSDT))),
         ];
     }
 

@@ -33,6 +33,9 @@ framework:
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async
 
+            # alarm
+            App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
+
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
