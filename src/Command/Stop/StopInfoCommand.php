@@ -96,14 +96,12 @@ class StopInfoCommand extends AbstractCommand
             var_dump($position->initialMargin->value() > $imValue);die;
         }
 
-        if ($position->getHedge()?->isEquivalentHedge()) {
-            $this->io->note('hedge with equivalent size');
-        } elseif ($position->isSupportPosition()) {
-            $this->io->note(sprintf('%s (hedge support) size: %.3f', $position->getCaption(), $position->size));
+        $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
+        $this->io->note(sprintf('%s entry: %.2f', $position->getCaption(), $position->entryPrice));
+        if ($position->isSupportPosition()) {
             $showSizeLeft = true;
         } else {
-//            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationPrice - $position->entryPrice));
-//            $this->io->note(sprintf('%s size: %.3f', $position->getCaption(), $position->size));
+            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationDistance()));
         }
 
         $stops = $this->stopRepository->findActive(

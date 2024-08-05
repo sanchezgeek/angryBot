@@ -125,7 +125,13 @@ final class Position implements Stringable
 
     public function getCaption(): string
     {
-        return $this->symbol->value . ' ' . $this->side->title();
+        $info = match (true) {
+            $this->getHedge()?->isEquivalentHedge() => ' (eqv.hedge)',
+            $this->isSupportPosition() => ' (support)',
+            $this->isMainPosition() => ' (main)',
+            default => ''
+        };
+        return sprintf('%s %s%s', $this->symbol->value, $this->side->title(), $info);
     }
 
     /**
