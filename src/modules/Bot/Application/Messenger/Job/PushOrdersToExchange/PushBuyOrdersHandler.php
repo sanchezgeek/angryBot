@@ -63,7 +63,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     public const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 55.5;
+    # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 200;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
@@ -78,26 +79,48 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
+    /**
+     * @todo It must be separated service receiving some context of spot usage to make decision.
+     * E.g. "transfer for make buy"
+     * Or at least it must be some dto with set of parameters
+     *
+     * @todo Main check must be: "after this transfer ... will spot balance be greater than sufficient for avoiding liquidation (CheckPositionIsUnderLiquidationHandler)"
+     * => estimated to transfer amount also must be provided for this check
+     * it's the SECOND[2] big reason for separate this functionality (most probably it should be used not only here)
+     */
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
         $hedge = $position->getHedge();
 
+        # Force true if it's main position and position now in loss ?
+        # @todo | This condition is questionable. Probably it was some corner case "in the moment", but it's not described here.
+        # Questionable because anyway it must be USE_SPOT_IF_BALANCE_GREATER_THAN check
         if ($hedge?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
             return true;
         }
 
-        $isSupportPositionForceBuyAfterSl = $hedge?->isSupportPosition($position) && $buyOrder?->isForceBuyOrder() && $buyOrder?->isOppositeBuyOrderAfterStopLoss();
-
-        $maxTransfersCount = $isSupportPositionForceBuyAfterSl ? 3 : 1;
-        if ($buyOrder?->getSuccessSpotTransfersCount() > $maxTransfersCount) {
+        # Check count of already done transfers
+        $isSupportPositionForceBuyOrderAfterSl = $hedge?->isSupportPosition($position) && $buyOrder?->isOppositeBuyOrderAfterStopLoss();
+        $maxTransfersCount = $isSupportPositionForceBuyOrderAfterSl ? 3 : 1;
+        if ($buyOrder?->getSuccessSpotTransfersCount() >= $maxTransfersCount) {
             return false;
         }
 
-        if ($isSupportPositionForceBuyAfterSl) {
+        # Force true if it's support BuyOrder after SL
+        if ($isSupportPositionForceBuyOrderAfterSl) {
             return true;
         }
 
-        if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
+        # Restrict transfer in case of available SPOT balance less than min required for avoid liquidation
+        # @todo | Check must be performed on amount remaining after transfer instead of current balance (see [2])
+        if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN) {
+            return true;
+        }
+
+        # Skip check if "total position leverage" less than some leverage
+        # @todo | what value must be used?
+        # @todo | may be replace this check with "buyIsSafe" check (but this check probably already not passed and this scenario won't happen at all)
+        if ($this->totalPositionLeverage($position, $ticker) < 60) {
             return true;
         }
 
