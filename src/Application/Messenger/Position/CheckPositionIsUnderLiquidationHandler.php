@@ -66,22 +66,6 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private PositionServiceInterface $selectedPositionService;
 
-    /**
-     * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
-     */
-    public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $cachedPositionService,
-        private readonly PositionServiceInterface $positionService,
-        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
-        private readonly OrderServiceInterface $orderService,
-        private readonly StopServiceInterface $stopService,
-        private readonly StopRepositoryInterface $stopRepository,
-        private readonly ?int $distanceForCalcTransferAmount = null,
-    ) {
-        $this->selectedPositionService = $this->cachedPositionService;
-    }
-
     public function isTransferFromSpotBeforeCheckStopsEnabled(): bool
     {
         return self::TRANSFER_FROM_SPOT_ON_DISTANCE >= self::CHECK_STOPS_ON_DISTANCE;
@@ -248,5 +232,21 @@ final class CheckPositionIsUnderLiquidationHandler
         } else {
             $this->selectedPositionService = $this->positionService;
         }
+    }
+
+    /**
+     * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
+     */
+    public function __construct(
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $cachedPositionService,
+        private readonly PositionServiceInterface $positionService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly OrderServiceInterface $orderService,
+        private readonly StopServiceInterface $stopService,
+        private readonly StopRepositoryInterface $stopRepository,
+        private readonly ?int $distanceForCalcTransferAmount = null,
+    ) {
+        $this->selectedPositionService = $this->cachedPositionService;
     }
 }
