@@ -66,6 +66,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
             $this->positionService,
+            $this->positionService,
             $this->exchangeAccountService,
             $this->orderService,
             $this->stopService,

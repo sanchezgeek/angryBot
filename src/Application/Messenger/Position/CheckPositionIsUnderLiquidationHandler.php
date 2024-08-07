@@ -19,6 +19,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
@@ -40,7 +41,7 @@ use function random_int;
  * @see \App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandlerTest
  */
 #[AsMessageHandler]
-final readonly class CheckPositionIsUnderLiquidationHandler
+final class CheckPositionIsUnderLiquidationHandler
 {
     # Transfer from spot
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = self::CHECK_STOPS_ON_DISTANCE;
@@ -63,18 +64,22 @@ final readonly class CheckPositionIsUnderLiquidationHandler
     const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
     const MOVE_BACK_TO_SPOT_ENABLED = false;
 
+    private PositionServiceInterface $selectedPositionService;
+
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
      */
     public function __construct(
-        private ExchangeServiceInterface $exchangeService,
-        private PositionServiceInterface $positionService,
-        private ExchangeAccountServiceInterface $exchangeAccountService,
-        private OrderServiceInterface $orderService,
-        private StopServiceInterface $stopService,
-        private StopRepositoryInterface $stopRepository,
-        private ?int $distanceForCalcTransferAmount = null,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $cachedPositionService,
+        private readonly PositionServiceInterface $positionService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly OrderServiceInterface $orderService,
+        private readonly StopServiceInterface $stopService,
+        private readonly StopRepositoryInterface $stopRepository,
+        private readonly ?int $distanceForCalcTransferAmount = null,
     ) {
+        $this->selectedPositionService = $this->cachedPositionService;
     }
 
     public function isTransferFromSpotBeforeCheckStopsEnabled(): bool
@@ -93,6 +98,8 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
         $ticker = $this->exchangeService->ticker($symbol);
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+
+        $this->switchPositionService($ticker, $distanceWithLiquidation);
 
         $decreaseStopDistance = false;
         $transferFromSpotOnDistance = FloatHelper::modify(self::TRANSFER_FROM_SPOT_ON_DISTANCE, 0.1);
@@ -220,7 +227,7 @@ final readonly class CheckPositionIsUnderLiquidationHandler
 
     private function getPosition(Symbol $symbol): ?Position
     {
-        if (!($positions = $this->positionService->getPositions($symbol))) {
+        if (!($positions = $this->selectedPositionService->getPositions($symbol))) {
             return null;
         }
 
@@ -230,5 +237,16 @@ final readonly class CheckPositionIsUnderLiquidationHandler
         }
 
         return $position;
+    }
+
+    private function switchPositionService(Ticker $currentTicker, float $distanceWithLiquidation): void
+    {
+        $safeDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(228.229, $currentTicker->markPrice);
+
+        if ($distanceWithLiquidation > $safeDistance) {
+            $this->selectedPositionService = $this->cachedPositionService;
+        } else {
+            $this->selectedPositionService = $this->positionService;
+        }
     }
 }

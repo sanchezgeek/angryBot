@@ -13,7 +13,8 @@ services:
     App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler:
         arguments:
             $exchangeService: '@App\Bot\Application\Service\Exchange\ExchangeServiceInterface'
-            $positionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface' # use stub instead of service (@see services.yaml)
+            $cachedPositionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface'
+            $positionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface'
             $exchangeAccountService: '@App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface'
             $orderService: '@App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface'
             $stopService: '@App\Bot\Application\Service\Orders\StopServiceInterface'
