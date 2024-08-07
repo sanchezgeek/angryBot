@@ -70,6 +70,7 @@ class EditStopsCommand extends AbstractCommand
             ->addOption(self::MOVE_PART_OPTION, null, InputOption::VALUE_REQUIRED, 'Range volume part (%)')
             ->addOption(self::EDIT_CALLBACK_OPTION, null, InputOption::VALUE_REQUIRED, 'Edit Stop entity callback')
             ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
+            ->addOption('all', null, InputOption::VALUE_NEGATABLE, 'To select all stops')
         ;
     }
 
@@ -78,11 +79,16 @@ class EditStopsCommand extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $all = $this->paramFetcher->getBoolOption('all');
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
 
-        if (!$priceRange && !$filterCallbacksOption) {
-            throw new InvalidArgumentException(sprintf('One of `priceRange` or `%s` options must be specified.', self::FILTER_CALLBACKS_OPTION));
+        if (!$priceRange && !$filterCallbacksOption && !$all) {
+            throw new InvalidArgumentException(sprintf('One of `priceRange`| `%s` | `all` options must be specified.', self::FILTER_CALLBACKS_OPTION));
+        }
+
+        if ($all && $priceRange) {
+            throw new InvalidArgumentException('`all` and `priceRange` cannot be both selected.');
         }
 
         $action = $this->getAction();
