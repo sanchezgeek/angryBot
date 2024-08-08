@@ -26,7 +26,7 @@ final class AppContext
     public static function runningWorker(): RunningWorker
     {
         if (self::$workerAlias === null) {
-            self::$workerAlias = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']);
+            self::$workerAlias = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']) ?? RunningWorker::DEFAULT;
         }
 
         return self::$workerAlias;
