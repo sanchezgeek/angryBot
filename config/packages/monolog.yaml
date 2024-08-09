@@ -19,7 +19,7 @@ when@dev:
             main:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
-                level: warning
+                level: debug
                 channels: ["!event", "!app_error", "!connection_error"]
             # uncomment to get logging in your browser
             # you may have to allow bigger header sizes in your Web server configuration
