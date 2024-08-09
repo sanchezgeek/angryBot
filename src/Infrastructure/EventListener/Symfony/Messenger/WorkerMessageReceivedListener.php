@@ -11,6 +11,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent;
 
 #[AsEventListener]
+// кст где то в листенерах также можно хранить (вычислять?) время последней обработки конкретных сообщений
 final readonly class WorkerMessageReceivedListener
 {
     public function __construct(
@@ -31,10 +32,11 @@ final readonly class WorkerMessageReceivedListener
 
             $dispatchedAt = $message->getDispatchedDateTime();
             $receivedAt = $this->clock->now();
-            var_dump($delta = ((float)$receivedAt->format('U.u')) - ((float)$dispatchedAt->format('U.u')));
 
             $this->logger->debug(sprintf('%s created at: %s', $messageClass, $dispatchedAt->format('H:i:s.u')));
             $this->logger->debug(sprintf('%s handled at: %s', $messageClass, $receivedAt->format('H:i:s.u')));
+
+            $delta = (float)$receivedAt->format('U.u') - (float)$dispatchedAt->format('U.u');
             $this->logger->debug(sprintf('% ' . strlen($messageClass . ' handled at') . 's: %s', 'delta', $delta));
         }
     }
