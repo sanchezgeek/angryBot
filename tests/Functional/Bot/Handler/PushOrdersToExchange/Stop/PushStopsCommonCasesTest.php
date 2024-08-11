@@ -335,6 +335,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $distance = $side->isLong() ? CreateOppositeBuyOrdersListener::LONG_OPPOSITE_PRICE_DISTANCE : CreateOppositeBuyOrdersListener::SHORT_OPPOSITE_PRICE_DISTANCE;
         $priceModifier = $side->isLong() ? $distance : -$distance;
+        $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
 
         if ($stopVolume >= 0.006) {
             $orders = [
@@ -350,7 +351,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             $order->setOnlyAfterExchangeOrderExecutedContext($pushedStopExchangeOrderId);
             $order->setIsOppositeBuyOrderAfterStopLossContext();
             $order->setIsForceBuyOrderContext();
-            $order->setStopDistanceContext($distance);
+            $order->setStopDistanceContext($oppositeSlPriceDistanceOnCreatedBuyOrders);
         }
 
         return $orders;
