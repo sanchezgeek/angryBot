@@ -78,7 +78,7 @@ final class WorkerExceptionEventListener
         ]);
     }
 
-    private const CONN_ERR_PENDING_INTERVAL = 5;
+    private const CONN_ERR_PENDING_INTERVAL = 3;
     private const CONN_ERR_RESET_INTERVAL = 35;
 
     private ?int $connErrorRecievedAt = null;
