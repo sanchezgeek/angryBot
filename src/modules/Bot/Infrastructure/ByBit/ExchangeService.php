@@ -75,6 +75,18 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         return $ticker;
     }
 
+    /**
+     * @internal
+     *
+     * Do not do any checks. Just get from exchange and update cache for 2 seconds.
+     *
+     * @see SchedulerFactory::createScheduler() -> "Warmup ticker data"
+     */
+    public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): void
+    {
+        $this->updateTicker($symbol, $ttl);
+    }
+
     private function getTicker(Symbol $symbol): Ticker
     {
         $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);

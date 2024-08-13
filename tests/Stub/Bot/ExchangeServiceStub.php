@@ -21,7 +21,7 @@ final class ExchangeServiceStub implements ExchangeServiceInterface, TickersCach
         throw new NotImplementedException(sprintf('%s::ticker not supported', ExchangeServiceInterface::class));
     }
 
-    public function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
+    public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): Ticker
     {
         throw new NotImplementedException(sprintf('%s::updateTicker not supported', ExchangeServiceInterface::class));
     }
