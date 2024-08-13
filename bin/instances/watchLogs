@@ -32,10 +32,10 @@ done
 
 for path in "${instances[@]}"
   do
-    cmd="sudo make -C ${path} ${ACTION} > ${LOG_PATH} &"
+    cmd="make -C ${path} ${ACTION} > ${LOG_PATH} &"
     $(eval "${cmd}")
   done
 
-tail -f ${LOG_PATH} | while read line ; do aplay ${BIN_DIR}/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done
+tail -f ${LOG_PATH} | while read line ; do afplay -t 0.3 ${BIN_DIR}/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done
 
 

@@ -16,7 +16,7 @@ done
 
 for path in "${instances[@]}"
   do
-    cmd="sudo make -C ${path} restart"
+    cmd="make -C ${path} restart"
     echo -e "${cmd}\n  =>"
     out=$(eval "${cmd}")
     echo -e "    ${out}\n"
