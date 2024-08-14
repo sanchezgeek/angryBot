@@ -32,12 +32,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     /**
      * @param ByBitLinearExchangeService $exchangeService
+     * @param ?CacheInterface $externalCache
      */
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
         private CacheInterface $localCache,
-        private CacheInterface $externalCache,
+        private mixed $externalCache = null # mixed - to not autowire in test env (@see services_test.yaml)
     ) {
     }
 
@@ -52,10 +53,12 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      */
     public function ticker(Symbol $symbol): Ticker
     {
-        $itemFromExternal = $this->getTickerCacheItemFromExternalCache($symbol);
-        if ($itemFromExternal->isHit()) {
-            $cachedTickerDto = $itemFromExternal->get(); /** @var CachedTickerDto $cachedTickerDto */
-            return $cachedTickerDto->ticker;
+        if ($this->externalCache) {
+            $itemFromExternal = $this->getTickerCacheItemFromExternalCache($symbol);
+            if ($itemFromExternal->isHit()) {
+                $cachedTickerDto = $itemFromExternal->get(); /** @var CachedTickerDto $cachedTickerDto */
+                return $cachedTickerDto->ticker;
+            }
         }
 
         $item = $this->localCache->getItem($this->tickerCacheKey($symbol));
@@ -85,16 +88,18 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
         $this->localCache->save($item);
 
-        $itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol);
-        /** @var CachedTickerDto $itemFromExternalCacheValue */
-        if (
-            !$itemFromExternalCache->isHit() || (
-                ($itemFromExternalCacheValue = $itemFromExternalCache->get())
-                && $itemFromExternalCacheValue->updatedByAccName === self::thisAccName()
-            )
-        ) {
-            $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('5 seconds'));
-            $this->externalCache->save($item);
+        if ($this->externalCache) {
+            $itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol);
+            /** @var CachedTickerDto $itemFromExternalCacheValue */
+            if (
+                !$itemFromExternalCache->isHit() || (
+                    ($itemFromExternalCacheValue = $itemFromExternalCache->get())
+                    && $itemFromExternalCacheValue->updatedByAccName === self::thisAccName()
+                )
+            ) {
+                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('5 seconds'));
+                $this->externalCache->save($item);
+            }
         }
 
         $this->events->dispatch(new TickerUpdated($ticker));
@@ -128,9 +133,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private function getTickerCacheItemFromExternalCache(Symbol $symbol): CacheItem
     {
-        $cacheKey = $this->tickerCacheKey($symbol);
-
-        return $this->externalCache->getItem($cacheKey);
+        return $this->externalCache->getItem($this->tickerCacheKey($symbol));
     }
 
     private static function thisAccName(): string

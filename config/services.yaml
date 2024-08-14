@@ -7,7 +7,7 @@ parameters:
     account_uids: '%env(ACCOUNTS_UIDS)%'
     env_bybit_api_key: '%env(BYBIT_API_KEY)%'
     env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
-    shared_cache.path: '%kernel.project_dir%/var/shared_cache'
+    shared_cache.path: '%kernel.project_dir%/var/shared_cache/%env(APP_ENV)%'
 
 services:
     # default configuration for services in *this* file
@@ -62,6 +62,14 @@ services:
     App\Infrastructure\Cache\TickersCache:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
+    App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory: ~
+    tickers.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        factory: [ '@App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory', 'create' ]
+        arguments:
+            $namespace: 'tickers'
+            $path: '%shared_cache.path%'
+
 #    Symfony\Contracts\Cache\CacheInterface:
 #        class: Symfony\Component\Cache\Adapter\ApcuAdapter
 
@@ -107,13 +115,3 @@ services:
     #            class: App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
     #            arguments:
     #                $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
-
-    App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory:
-        class: App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory
-
-    tickers.cache:
-        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
-        factory: ['@App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory', 'create']
-        arguments:
-            $namespace: 'tickers'
-            $path: '%shared_cache.path%'

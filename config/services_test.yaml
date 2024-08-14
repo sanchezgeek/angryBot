@@ -1,6 +1,7 @@
 services:
     _defaults:
         public: true
+        autowire: true
 
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub
@@ -27,3 +28,9 @@ services:
     Psr\Log\LoggerInterface:
         public: true
         class: App\Tests\PHPUnit\TestLogger
+
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        arguments:
+            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+            # without $externalCache

@@ -31,7 +31,8 @@ abstract class ByBitLinearExchangeCacheDecoratedServiceTestAbstract extends Kern
         $this->service = new ByBitLinearExchangeCacheDecoratedService(
             $this->innerService,
             $this->eventDispatcherMock,
-            $this->cache
+            $this->cache,
+            $this->cache,
         );
     }
 
