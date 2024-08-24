@@ -41,6 +41,10 @@ final class SchedulerFactory
         'long.sl'   => self::VERY_FAST, 'long.buy'  => self::FAST,
     ];
 
+    private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
+//    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
+//    private const TICKERS_CACHE = ['interval' => 'PT10S', 'delay' => 3300];
+
     public static function createScheduler(ClockInterface $clock): Scheduler
     {
         $runningWorker = AppContext::runningWorker();
@@ -78,9 +82,9 @@ final class SchedulerFactory
 
         return [
             PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
+//            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
             PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
-            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
+//            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), Async::message(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # position
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', Async::message(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
@@ -91,7 +95,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', Async::message(new TransferFundingFees(Symbol::BTCUSDT))),
 
             # orders
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT6S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT12S', Async::message(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
 
             # alarm
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT3S', Async::message(new CheckAlarm(Symbol::BTCUSDT))),
@@ -102,12 +106,18 @@ final class SchedulerFactory
     {
         $start = new DateTimeImmutable('2023-09-25T00:00:01.11Z');
         $ttl = '2 seconds';
-        $interval = 'PT3S';
+        $interval = self::TICKERS_CACHE['interval'];
 
+        // можно какой-то воркер, который будет проверять, что не больше какого-то промежутка
         if (($procNum = AppContext::procNum()) > 0) {
-            $start = $start->add(self::interval(sprintf('%d milliseconds', $procNum * 900)));
+            $start = $start->add(self::interval(sprintf('%d milliseconds', $procNum * self::TICKERS_CACHE['delay'])));
         } // else {// $ttl = '6 seconds'; $interval = 'PT5S';}
 
+        /**
+         * @todo хотел ещё добавить по порогу на inf
+         *       \Symfony\Component\Messenger\Worker::handleMessage
+         *       -> shouldHandle
+         */
         return [
             /**
              * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
