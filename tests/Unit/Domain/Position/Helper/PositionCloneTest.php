@@ -30,4 +30,9 @@ class PositionCloneTest extends TestCase
         $expectedPosition = new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, $side->isLong() ? $position->entryPrice - $liquidationDistance : $position->entryPrice + $liquidationDistance, 55, 55, 100);
         self::assertEquals($expectedPosition, $result);
     }
+
+    public function testDummy(): void
+    {
+        self::markTestSkipped('test different cases');
+    }
 }

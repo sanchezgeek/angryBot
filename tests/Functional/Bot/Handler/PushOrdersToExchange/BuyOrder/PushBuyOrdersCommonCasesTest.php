@@ -30,6 +30,9 @@ use function uuid_create;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
+ *
+ * @todo | string "@ MarketBuyHandler: got "Call to a member function isMainPosition on null" exception while make `buyIsSafe` check"
+ * * x3
  */
 final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 {
