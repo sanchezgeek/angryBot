@@ -31,7 +31,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     private const ASSET_CATEGORY = AssetCategory::linear;
 
     /** @todo | inject into service? */
-    private const POSITION_TTL = '6 seconds';
+    private const POSITION_TTL = '12 seconds';
 
     /**
      * @param ByBitLinearPositionService $positionService
