@@ -18,7 +18,7 @@ abstract class AbstractExchangeAccountService implements ExchangeAccountServiceI
         $balance = $this->balanceHotCache[$coin->value] ?? (
             $this->balanceHotCache[$coin->value] = new CachedValue(
                 function () use ($coin) {
-                    $spotBalance = $this->getSpotWalletBalance($coin);
+                    $spotBalance = $this->getSpotWalletBalance($coin, true);
                     $contractBalance = $this->getContractWalletBalance($coin);
 
                     return $spotBalance->total() + $contractBalance->total();

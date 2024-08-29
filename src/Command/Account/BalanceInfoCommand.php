@@ -5,6 +5,8 @@ namespace App\Command\Account;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Worker\TradingAccountType;
+use App\Worker\AppContext;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -62,12 +64,13 @@ class BalanceInfoCommand extends AbstractCommand
         }
 
         try {
-            $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+            if (!AppContext::accType()->isUTA()) {
+                $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+                $this->io->note(sprintf('spot: %s', $spotWalletBalance));
+            }
             $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-//             var_dump($spotWalletBalance->availableBalance, $contractWalletBalance->availableBalance);die;
-
-            $this->io->note(sprintf('spot: %s', $spotWalletBalance));
             $this->io->note(sprintf('contract: %s', $contractWalletBalance));
+//             var_dump($spotWalletBalance->availableBalance, $contractWalletBalance->availableBalance);die;
         } catch (Exception $e) {
             if (!str_contains($e->getMessage(), 'coin data not found')) {
                 throw $e;

@@ -57,8 +57,23 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      */
-    public function getSpotWalletBalance(Coin $coin): WalletBalance
+    public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance
     {
+        if (AppContext::accType()->isUTA()) {
+            if (!$suppressUTAWarning) {
+                $context = [];
+                foreach (debug_backtrace() as $back) {
+                    if (($function = $back['function']) === '__invoke') {
+                        $class = explode('\\', $back['class']); $context[] = end($class); break;
+                    }
+                    $context[] = $function;
+                }
+                OutputHelper::warning(sprintf('SPOT wallet unavailable (%s)', implode(' -> ', array_reverse($context))));
+            }
+
+            return new WalletBalance(AccountType::SPOT, $coin, 0, 0);
+        }
+
         return $this->getWalletBalance(AccountType::SPOT, $coin);
     }
 
@@ -70,7 +85,9 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getContractWalletBalance(Coin $coin): WalletBalance
     {
-        return $this->getWalletBalance(AccountType::CONTRACT, $coin);
+        $accountType = AppContext::accType()->isUTA() ? AccountType::UNIFIED : AccountType::CONTRACT;
+
+        return $this->getWalletBalance($accountType, $coin);
     }
 
     public function universalTransfer(
@@ -196,7 +213,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                     if ($coinData['coin'] === $coin->value) {
                         if ($accountType === AccountType::SPOT) {
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
-                        } elseif ($accountType === AccountType::CONTRACT) {
+                        } elseif (in_array($accountType, [AccountType::CONTRACT, AccountType::UNIFIED], true)) {
                             $total = (float)$coinData['walletBalance'];
                             $available = (float)$coinData['availableToWithdraw'];
 

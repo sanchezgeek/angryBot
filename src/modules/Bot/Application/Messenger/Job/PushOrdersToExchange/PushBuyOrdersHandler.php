@@ -43,6 +43,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDeco
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Worker\TradingAccountType;
 use App\Worker\AppContext;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
@@ -73,6 +74,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const FIX_MAIN_POSITION_ENABLED = false;
     public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
 
+    /** "Reserved" - e.g. for avoiding liquidation */
     private const RESERVED_BALANCE = 0;
     public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
 
@@ -90,6 +92,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
+        if ($spotBalance->available() === 0.00) {
+            return false;
+        }
+
         $hedge = $position->getHedge();
 
         # Force true if it's main position and position now in loss ?
@@ -481,7 +487,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     {
         $totalBalance = $this->exchangeAccountService->getCachedTotalBalance($position->symbol);
 
-        if ($ticker->isIndexAlreadyOverBuyOrder($position->side, $position->entryPrice)) {
+        /**
+         * @todo | use same check when make decision about transfer from spot or not
+         * @see PushBuyOrdersHandler::canUseSpot
+         */
+        if ($position->isPositionInProfit($ticker->indexPrice)) {
             $totalBalance -= self::RESERVED_BALANCE;
         }
 
@@ -522,6 +532,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): bool
     {
+//        if (AppContext::accType()->isUTA()) {
+//            return false;
+//        }
+
         if ($position) {
             $hedge = $position->getHedge();
             if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {

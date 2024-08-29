@@ -6,6 +6,7 @@ namespace App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Worker\AppContext;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -15,6 +16,11 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
+        # On UTA trading account there is no other wallets to transfer coins from
+        if (AppContext::accType()->isUTA()) {
+            return;
+        }
+
         $loss = $dto->loss->value();
         $closedPosition = $dto->closedPosition;
 

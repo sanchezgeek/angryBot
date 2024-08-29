@@ -8,7 +8,7 @@ use App\Domain\Coin\Coin;
 
 interface ExchangeAccountServiceInterface
 {
-    public function getSpotWalletBalance(Coin $coin): WalletBalance;
+    public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance;
 
     public function getContractWalletBalance(Coin $coin): WalletBalance;
 
