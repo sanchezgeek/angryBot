@@ -58,6 +58,7 @@ RUN apk add --no-cache --virtual .pgsql-deps postgresql-dev; \
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY --link docker/php/conf.d/app.ini $PHP_INI_DIR/conf.d/
 COPY --link docker/php/conf.d/app.prod.ini $PHP_INI_DIR/conf.d/
+COPY --link docker/php/modules/ioncube_loader_lin_8.2.so /usr/local/lib/php/modules/
 
 COPY --link docker/php/php-fpm.d/zz-docker.conf /usr/local/etc/php-fpm.d/zz-docker.conf
 RUN mkdir -p /var/run/php
@@ -92,13 +93,13 @@ COPY --link  . ./
 RUN rm -Rf docker/
 
 RUN set -eux; \
-	mkdir -p var/cache var/log; \
-    if [ -f composer.json ]; then \
-		composer dump-autoload --classmap-authoritative --no-dev; \
-		composer dump-env prod; \
-		composer run-script --no-dev post-install-cmd; \
-		chmod +x bin/console; sync; \
-    fi
+	mkdir -p var/cache var/log;
+#    if [ -f composer.json ]; then \
+#		composer dump-autoload --classmap-authoritative --no-dev; \
+#		composer dump-env prod; \
+#		composer run-script --no-dev post-install-cmd; \
+#		chmod +x bin/console; sync; \
+#    fi
 
 # xdebug
 ENV XDEBUG_MODE=off

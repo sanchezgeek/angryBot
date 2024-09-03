@@ -1,0 +1,10 @@
+после build обнаружилась проблема по PeriodicalJob.php
+    => нужно либо решить проблему как-то автоматизировать замену
+
+cdi && cp sources/bot_ion_sources/src/Messenger/SchedulerTransport/PeriodicalJob.php executable/ionbot/src/Messenger/SchedulerTransport
+cp .env.local.testnet executable/ionbot/.env.build
+
+
+
+
+
