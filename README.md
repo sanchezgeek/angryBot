@@ -100,3 +100,12 @@ make sf c="queues:check"
 ./bin/watchLogs conn_err   # watch connection errors with alarm sound notification
 ./bin/watchLogs err        # watch app errors with alarm sound notification
 ```
+
+
+### Testing
+```shell
+make sf c='doctrine:database:create --env="test"' && make sf c='d:m:m --env="test"' # to create test db
+```
+```shell
+make test # to run tests
+```
