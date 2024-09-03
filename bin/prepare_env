@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 PWD=$(pwd)
 export ENV_LOCAL_DIST_FILE=$PWD/.env.local.dist

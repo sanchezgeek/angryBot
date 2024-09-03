@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+make prepare_files
+make build ENV_BUILD_FILEPATH=${1:-.env.build}
+make start
+make composer "c=install"
+make sf c="d:m:m -n"
+make refresh
+make restart

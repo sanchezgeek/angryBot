@@ -26,10 +26,13 @@ help: ## Outputs this help screen
 ## —— Docker 🐳 ————————————————————————————————————————————————————————————
 build: ## Builds the Docker images
 	@ bash -c "read -p 'Go get_build_args? ' -n 1 -r"
+	@ bash -c 'printf "\n"'
 	@ bash -c ' \
+		set -e && \
 		export ARGS="$$(./bin/get_build_args $$ENV_BUILD_FILEPATH)" && \
-		read -p "Go build? " -n 1 -r && \
-		docker compose build $$ARGS'
+		if [[ ! "$${ARGS}" =~ BYBIT_API_KEY=.*BYBIT_API_SECRET=.* ]]; then echo " -- Error: provided file contains invalid secrets definition (right format: BYBIT_API_KEY=...<newline>BYBIT_API_SECRET=...)"; exit 1; fi; \
+		read -p "Go build? " -n 1 -r && printf "\n" && \
+		docker compose --env-file=.env.local build $$ARGS'
 
 rebuild: ## Rebuilds the Docker images
 	@$(DOCKER_COMP) build --pull --no-cache
