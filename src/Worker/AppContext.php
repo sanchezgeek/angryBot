@@ -13,6 +13,7 @@ final class AppContext
     private static ?string $uniq = null;
     private static bool $debug = false;
     private static ?RunningWorker $workerAlias = null;
+    private static ?TradingAccountType $accType = null;
 
     public static function workerHash(): string
     {
@@ -26,7 +27,7 @@ final class AppContext
     public static function runningWorker(): RunningWorker
     {
         if (self::$workerAlias === null) {
-            self::$workerAlias = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']);
+            self::$workerAlias = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']) ?? RunningWorker::DEFAULT;
         }
 
         return self::$workerAlias;
@@ -45,6 +46,18 @@ final class AppContext
     public static function accName(): ?string
     {
         return $_ENV['ACC_NAME'] ?? null;
+    }
+
+    /**
+     * @todo | UTA | Temporarily solution | Or not? =)
+     */
+    public static function accType(): TradingAccountType
+    {
+        if (self::$accType === null) {
+            self::$accType = TradingAccountType::tryFrom($_ENV['ACCOUNT_TYPE']) ?? TradingAccountType::CLASSIC;
+        }
+
+        return self::$accType;
     }
 
     public static function setIsDebug(bool $isDebug): void

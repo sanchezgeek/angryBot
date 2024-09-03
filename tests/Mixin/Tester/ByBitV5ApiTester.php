@@ -22,8 +22,15 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function array_diff;
+use function array_keys;
 use function assert;
 use function count;
+use function end;
+use function explode;
+use function get_class;
+use function implode;
+use function is_string;
 use function sprintf;
 
 trait ByBitV5ApiTester
@@ -70,23 +77,29 @@ trait ByBitV5ApiTester
         return $apiHost . $request->url();
     }
 
-    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true): void
+    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, string $key = null): void
     {
+        $currentNumber = count($this->expectedApiRequestsAfterTest);
+        $key ??= sprintf('%d_%s-GET-%s', $currentNumber, uuid_create(), self::shortClassName($expectedRequest));
+
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-        $this->getHttClientStub()->matchGet($requestUrl, $expectedRequest->data(), $resultResponse, $needTrackRequestCallToFurtherCheck);
+        $key = $this->getHttClientStub()->matchGet($requestUrl, $expectedRequest->data(), $resultResponse, $needTrackRequestCallToFurtherCheck, $key);
 
         if ($needTrackRequestCallToFurtherCheck) {
-            $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+            $this->expectedApiRequestsAfterTest[$key] = $expectedRequest;
         }
     }
 
-    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true): void
+    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, string $key = null): void
     {
+        $currentNumber = count($this->expectedApiRequestsAfterTest);
+        $key ??= sprintf('%d_%s-POST-%s', $currentNumber, uuid_create(), self::shortClassName($expectedRequest));
+
         $requestUrl = $this->getFullRequestUrl($expectedRequest);
-        $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data(), $needTrackRequestCallToFurtherCheck);
+        $key = $this->getHttClientStub()->matchPost($requestUrl, $resultResponse, $expectedRequest->data(), $needTrackRequestCallToFurtherCheck, $key);
 
         if ($needTrackRequestCallToFurtherCheck) {
-            $this->expectedApiRequestsAfterTest[] = $expectedRequest;
+            $this->expectedApiRequestsAfterTest[$key] = $expectedRequest;
         }
     }
 
@@ -96,7 +109,14 @@ trait ByBitV5ApiTester
     protected function assertResultHttpClientCalls(): void
     {
         $actualRequestCalls = $this->getHttClientStub()->getRequestCalls();
-        self::assertCount(count($this->expectedApiRequestsAfterTest), $actualRequestCalls);
+
+        $actualRequestsKeys = array_keys($actualRequestCalls);
+        $expectedApiRequestsKeys = array_keys($this->expectedApiRequestsAfterTest);
+        $diff = array_diff($expectedApiRequestsKeys, $actualRequestsKeys);
+        self::assertEmpty($diff, sprintf('Missed api calls: %s', implode(', ', $diff)));
+
+        # also check order
+        self::assertEquals($expectedApiRequestsKeys, $actualRequestsKeys, sprintf('Expected api calls order: %s', implode(', ', $expectedApiRequestsKeys)));
 
         foreach ($this->expectedApiRequestsAfterTest as $key => $expectedRequest) {
             $actualRequestCall = $actualRequestCalls[$key];
@@ -151,5 +171,12 @@ trait ByBitV5ApiTester
             ApiErrorTestCaseData::knownApiError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit', new ApiRateLimitReached($msg)),
             ApiErrorTestCaseData::unknownApiError($requestUrl),
         ];
+    }
+
+    private static function shortClassName(string|object $class): string
+    {
+        $class = is_string($class) ? $class : get_class($class);
+        $class = explode('\\', $class);
+        return end($class);
     }
 }

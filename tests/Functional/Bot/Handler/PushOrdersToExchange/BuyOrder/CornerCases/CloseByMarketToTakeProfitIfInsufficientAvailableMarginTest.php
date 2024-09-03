@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases;
 
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
-use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\VolumeHelper;
-use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -30,6 +30,19 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
     private const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
     private const REOPEN_DISTANCE = 100;
     private const SPOT_TRANSFER_ON_BUY_MULTIPLIER = PushBuyOrdersHandler::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
+
+    private OrderCostCalculator $orderCostCalculator;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
+
+        # @todo | for now to prevent MarketBuyHandler "buyIsSafe" checks
+        $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
+        $marketBuyHandler->setSafeLiquidationPriceDistance(500);
+    }
 
     /**
      * @dataProvider doNotCloseByMarketCasesProvider
@@ -50,13 +63,12 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $this->expectsToMakeApiCalls(...self::cannotAffordBuyApiCallExpectations($symbol, [$buyOrder]));
 
         // Assert
-        $this->exchangeAccountServiceMock->shouldReceive('interTransferFromContractToSpot')->never();
         if ($availableSpotBalance > 0) {
             $buyCost = $this->orderCostCalculator->totalBuyCost(
                 new ExchangeOrder($symbol, $buyOrder->getVolume(), $ticker->lastPrice), $position->leverage, $buyOrder->getPositionSide()
             );
             $buyCost = $buyCost->value() * self::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
-            $this->exchangeAccountServiceMock->shouldReceive('interTransferFromSpotToContract')->once()->with($symbol->associatedCoin(), $buyCost);
+            $this->expectsInterTransferFromSpotToContract(new CoinAmount($symbol->associatedCoin(), $buyCost));
         }
 
         // Act
@@ -96,6 +108,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
     public function testCloseByMarket(Position $position, Ticker $ticker, BuyOrder $buyOrder, float $expectedCloseOrderVolume): void
     {
         $symbol = $position->symbol;
+        $coin = $symbol->associatedCoin();
         $side = $position->side;
 
         $this->haveTicker($ticker);
@@ -110,13 +123,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         // Assert
         $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $expectedCloseOrderVolume);
         $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-        $this->exchangeAccountServiceMock
-            ->shouldReceive('interTransferFromContractToSpot')
-            ->once()
-            ->with(
-                $symbol->associatedCoin(),
-                PriceHelper::round($transferToSpotAmount, 3),
-            );
+        $this->expectsInterTransferFromContractToSpot(new CoinAmount($coin, $transferToSpotAmount));
 
         // Act
         ($this->handler)(new PushBuyOrders($symbol, $side));

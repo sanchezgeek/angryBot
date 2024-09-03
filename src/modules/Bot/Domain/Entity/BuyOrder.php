@@ -9,6 +9,7 @@ use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
@@ -73,6 +74,14 @@ class BuyOrder implements HasEvents
     public function getId(): int
     {
         return $this->id;
+    }
+
+    /**
+     * @todo | new column
+     */
+    public function getSymbol(): Symbol
+    {
+        return Symbol::BTCUSDT;
     }
 
     public function getPositionSide(): Side

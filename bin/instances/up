@@ -15,7 +15,7 @@ done
 
 for path in "${instances[@]}"
   do
-    cmd="sudo make -C ${path} up"
+    cmd="make -C ${path} up"
     echo -e "${cmd}\n  =>"
     out=$(eval "${cmd}")
     echo -e "    ${out}\n"

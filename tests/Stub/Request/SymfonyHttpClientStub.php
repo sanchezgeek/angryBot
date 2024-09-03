@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 use function addcslashes;
+use function array_keys;
+use function array_merge;
 use function array_unshift;
 use function explode;
 use function http_build_query;
@@ -22,6 +24,8 @@ use function json_encode;
 use function parse_str;
 use function preg_match;
 use function str_contains;
+use function uuid_create;
+use function var_dump;
 
 /**
  * @see \App\Tests\Unit\Stub\SymfonyHttpClientStubTest
@@ -54,7 +58,7 @@ class SymfonyHttpClientStub extends MockHttpClient
     private function handler(): Closure
     {
         return function (string $method, string $url, array $options) {
-            foreach ($this->matchers as $matcher) {
+            foreach ($this->matchers as $key => $matcher) {
                 if (($result = $matcher($method, $url, $options)) !== null) {
                     break;
                 }
@@ -67,7 +71,7 @@ class SymfonyHttpClientStub extends MockHttpClient
                 [$response, $registerRequestCall] = $result;
 
                 if ($registerRequestCall) {
-                    $this->registerCall($method, $url, $options);
+                    $this->registerCall($key, $method, $url, $options);
                 }
 
                 return $response;
@@ -79,33 +83,47 @@ class SymfonyHttpClientStub extends MockHttpClient
 
     /**
      * @param array<string, string> $params
+     *
+     * @return string Registered request `key`
      */
-    public function matchGet(string $url, array $params, ResponseInterface $response, bool $registerRequestCall = true): self
+    public function matchGet(string $url, array $params, ResponseInterface $response, bool $registerRequestCall = true, string $key = null): string
     {
+        $key ??= uuid_create() . '-GET-api-call';
+
         $url = $params ? $url . '?' . http_build_query($params) : $url;
         $urlRegexp = addcslashes($url, '?+.*');
 
         // @todo | headers
-        return $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response, [], $registerRequestCall);
+        $this->matchMethodAndUrl(Request::METHOD_GET, $urlRegexp, $response, [], $registerRequestCall, $key);
+
+        return $key;
     }
 
-    public function matchPost(string $url, ResponseInterface $response, array $requestBody, bool $registerRequestCall = true): self
+    /**
+     * @return string Registered request description
+     */
+    public function matchPost(string $url, ResponseInterface $response, array $requestBody, bool $registerRequestCall = true, string $key = null): string
     {
+        $key ??= uuid_create() . '-POST-api-call';
+
         // @todo | headers
-        return $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response, ['body' => json_encode($requestBody)], $registerRequestCall);
+        $this->matchMethodAndUrl(Request::METHOD_POST, $url, $response, ['body' => json_encode($requestBody)], $registerRequestCall, $key);
+
+        return $key;
     }
 
-    public function matchMethodAndUrl(
+    private function matchMethodAndUrl(
         string $methodRegExp,
         string $urlRegexp,
         ResponseInterface $response,
         array $requestOptions,
-        bool $needRegisterRequestCall
-    ): self {
+        bool $needRegisterRequestCall,
+        string $key
+    ): void {
         $methodRegExp = $this->ensureRegexp($methodRegExp);
         $urlRegexp = $this->ensureRegexp($urlRegexp);
 
-        $matcher = static function ($method, $url, $options) use ($methodRegExp, $urlRegexp, $requestOptions) {
+        $matcher = static function ($method, $url, $options) use ($methodRegExp, $urlRegexp, $requestOptions, $key) {
             if (!(preg_match($methodRegExp, $method) && preg_match($urlRegexp, $url))) {
                 return false;
             }
@@ -117,25 +135,23 @@ class SymfonyHttpClientStub extends MockHttpClient
             return true;
         };
 
-        return $this->match($matcher, $response, $needRegisterRequestCall);
+        $this->match($matcher, $response, $needRegisterRequestCall, $key);
     }
 
     /**
      * @param callable $matcher fn(string $method, string $url, array $options): bool
      */
-    public function match(callable $matcher, ResponseInterface $response, bool $registerRequestCall): self
+    private function match(callable $matcher, ResponseInterface $response, bool $registerRequestCall, string $key): void
     {
         $matcher = static fn($method, $url, $options) => $matcher($method, $url, $options) ? [$response, $registerRequestCall] : null;
 
-        array_unshift($this->matchers, $matcher);
-
-        return $this;
+        $this->matchers = array_merge([$key => $matcher], $this->matchers);
     }
 
     /**
      * @param array<string, mixed> $options
      */
-    private function registerCall(string $method, string $url, array $options): void
+    private function registerCall(string $key, string $method, string $url, array $options): void
     {
         $urlParts = parse_url($url);
 
@@ -166,7 +182,7 @@ class SymfonyHttpClientStub extends MockHttpClient
 
         $url = $urlParts['scheme'] . '://' . $urlParts['host'] . $urlParts['path'];
 
-        $this->requestCalls[] = new RequestCall($method, $url, $params, $body, $headers);
+        $this->requestCalls[$key] = new RequestCall($method, $url, $params, $body, $headers);
     }
 
     private function ensureRegexp(string $regexp): string

@@ -14,6 +14,9 @@ use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+/**
+ * @todo | tests + refactoring
+ */
 #[AsMessageHandler]
 final class FixupOrdersDoublingHandler
 {

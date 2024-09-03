@@ -1,0 +1,53 @@
+(1) Buy / canUseSpot: 53930e5
+_________________________
+
+(2)
+обратить внимание на заметку, где про то, что для support позиции findOrdersMearTicker должен работать по-другому
+ + наверное это должно быть актуально и для главной позиции (иначе может проскользнуть. там было на testnet)
+        критерии:
+             1) только для BO after SL?
+                 Наверное в любом случае должен быть `Notification`, описанный ниже
+
+    варианты реализации:
+        1) рефакторинг
+           риски: что-то сломать (хотя тесты...)
+        2) не трогать существующиую логику
+           вместо этого добавить отдельный воркер, который будет искать такие кейсы и заниматься ими
+           риски: какой-то ордер могут взять оба воркера   =>  double buy
+                  как разрулить?
+                     только какой-то доп-логикой (например, та же связь с `Notification` - уже повод для лгавного воркера не брать такой ордер в обработку)
+    нюансы
+       сама проверка необходимости исполнения может произойти уже тогда, когда цена ушла слишком далеко
+            причины:  a) бот не работал
+                      б) были conn_err
+                      в) smth else
+            сценарий (можно на основе этого сделать testCase):
+                1) Some of reason took place
+                2) There is some distance between Ticker and BO.price
+                3) Check
+                4) Decision
+                    a) buy in moment (if distance is less some value or if `result position entry/liq/...` after buy satisfy some conditions)
+                    b) create some new entity for needs of NOTIFY TRADER that such situation is happened
+
+    NOTIFY TRADER - it must be common mechanism intended paying him attention to some abnormal / exceptional situations
+    NOTIFY TRADER - it must be a common mechanism for communicate with it in such situations (where decision couldn't be made by bot independently)
+       notice: there is no lifetime of some notification, BUT
+          to the moment of reaction conditions might be changed
+          to the moment of reaction conditions may be different from ones that were at that past moment
+__________________________
+(3) можно всё таки подумать над dynamic delay
+(4) На sub2 неплохо получилось с 75$ в том плане, что можно придумать flow по открытию support
+    1) support.siz должен быть достаточен для обеспечения некоторой приемлемой цены ликвидации главной позиции
+    2) leverage должен быть таким, чтобы в итоге при SL support-позиции и её дальнейшем усреднении убытки были компенсированы итоговым supportProfitOnMainEntry
+  Это актуально именно для support, т.к. по ней не будет ликвидации
+  Но можно сделать и без support. Только тут нужны будут более жёсткие ограничения (т.к. есть ликвидация)
+  Это главное отличие с тем, что происходило раньше - усреднение в сторону убытков
+
+
+  не все conn_errors попадают в alarm
+     из-за pending
+        возможно надо будет накинуть группировку по запросу (именно по object [они м.б. разными])
+            типа "как минимум один из трёх должен пройти"
+                либо это должно быть в обработчиках: если три раза сваливается - пишет в лог
+     + ещё момент: этот pending не шарится между воркерами
+        а надо бы

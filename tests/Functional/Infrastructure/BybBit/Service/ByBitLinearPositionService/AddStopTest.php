@@ -16,6 +16,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBitV5Api\ErrorResponseFactory;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
@@ -45,8 +46,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         ?string $expectedExchangeOrderId
     ): void {
         // Arrange
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
-        $ticker = TickerFactory::create($symbol, 29050);
+        $position = PositionBuilder::bySide($positionSide)->build();
 
         $this->matchPost(PlaceOrderRequest::stopConditionalOrder(
             $category,
@@ -90,8 +90,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         Throwable $expectedException
     ): void {
         // Arrange
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
-        $ticker = TickerFactory::create($symbol, 29050);
+        $position = PositionBuilder::bySide($positionSide)->build();
 
         $this->matchPost(PlaceOrderRequest::stopConditionalOrder(
             $category,

@@ -22,6 +22,7 @@ final class WorkerExceptionEventListener
     private const CONNECTION_ERR_MESSAGES = [
         'timestamp or recv_window param',
         'Server Timeout',
+        'Idle timeout reached',
 //        'Timestamp for this request is outside of the recvWindow',
     ];
 
@@ -52,17 +53,17 @@ final class WorkerExceptionEventListener
     private function logError(\Throwable $error): void
     {
         # connection errors
-        foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
-            if (str_contains($error->getMessage(), $expectedMessage)) {
-                $this->logConnectionError($error);
-                return;
-            }
+        $exception = $error;
+        while (($previous = $exception->getPrevious()) && ($previous instanceof TransportExceptionInterface)) {
+            $exception = $previous;
+        }
+        if ($exception instanceof TransportExceptionInterface) {
+            $this->logConnectionError($exception);
+            return;
         }
 
-        $exception = $error;
-        while ($exception->getPrevious()) {
-            $exception = $exception->getPrevious();
-            if ($exception instanceof TransportExceptionInterface) {
+        foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
+            if (str_contains($error->getMessage(), $expectedMessage)) {
                 $this->logConnectionError($error);
                 return;
             }
@@ -77,7 +78,7 @@ final class WorkerExceptionEventListener
         ]);
     }
 
-    private const CONN_ERR_PENDING_INTERVAL = 5;
+    private const CONN_ERR_PENDING_INTERVAL = 3;
     private const CONN_ERR_RESET_INTERVAL = 35;
 
     private ?int $connErrorRecievedAt = null;

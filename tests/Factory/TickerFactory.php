@@ -19,4 +19,9 @@ final class TickerFactory
 
         return new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
     }
+
+    public static function withEqualPrices(Symbol $symbol, float $price): Ticker
+    {
+        return new Ticker($symbol, Price::float($price), Price::float($price), Price::float($price));
+    }
 }

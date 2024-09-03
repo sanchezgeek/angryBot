@@ -9,6 +9,7 @@ use JsonSerializable;
 use Stringable;
 
 use function round;
+use function sprintf;
 
 final class CoinAmount extends AbstractFloat implements JsonSerializable, Stringable
 {
@@ -36,6 +37,9 @@ final class CoinAmount extends AbstractFloat implements JsonSerializable, String
 
     public function __toString(): string
     {
-        return (string)$this->value();
+        $precision = $this->coin->coinCostPrecision();
+        $outputDecimals = $precision + 6;
+
+        return sprintf('% ' . $outputDecimals . '.' . $precision . 'f', $this->value());
     }
 }

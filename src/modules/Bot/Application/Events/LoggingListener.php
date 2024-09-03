@@ -6,6 +6,7 @@ namespace App\Bot\Application\Events;
 
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
+use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
 use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
 use App\Worker\AppContext;
@@ -37,6 +38,7 @@ final class LoggingListener implements EventSubscriberInterface
     {
         return [
             TickerUpdated::class => '__invoke',
+            TickerUpdateSkipped::class => '__invoke',
             PositionUpdated::class => '__invoke'
 //            BuyOrderPushedToExchange::class => '__invoke',,
 //            ActiveCondStopMovedBack::class => '__invoke',

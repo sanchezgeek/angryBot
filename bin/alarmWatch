@@ -3,4 +3,4 @@
 # check the sound :)
 afplay -t 0.3 $(pwd)/data/alarm.wav -d1
 
-sudo make ${1} | while read line ; do afplay -t 0.3 $(pwd)/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done
+make ${1} | while read line ; do afplay -t 0.3 $(pwd)/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done

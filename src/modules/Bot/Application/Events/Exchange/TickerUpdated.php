@@ -6,6 +6,7 @@ namespace App\Bot\Application\Events\Exchange;
 
 use App\Bot\Application\Events\LoggableEvent;
 use App\Bot\Domain\Ticker;
+use App\Worker\AppContext;
 
 final class TickerUpdated extends LoggableEvent
 {
@@ -13,8 +14,11 @@ final class TickerUpdated extends LoggableEvent
     {
     }
 
-    public function getLog(): string
+    public function getLog(): ?string
     {
+        if (AppContext::isTest()) {
+            return null;
+        }
         return \sprintf('%s: %.2f', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
     }
 }

@@ -21,6 +21,7 @@ final class CreateOppositeBuyOrdersListener
      */
     public const SHORT_OPPOSITE_PRICE_DISTANCE = 300;
     public const LONG_OPPOSITE_PRICE_DISTANCE = 400;
+    public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
     public function __construct(private readonly CreateBuyOrderHandler $createBuyOrderHandler) {}
 
@@ -41,7 +42,7 @@ final class CreateOppositeBuyOrdersListener
         $context = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
             BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
-            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance, 0.1),
+            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1),
             BuyOrder::FORCE_BUY_CONTEXT => true,
         ];
 

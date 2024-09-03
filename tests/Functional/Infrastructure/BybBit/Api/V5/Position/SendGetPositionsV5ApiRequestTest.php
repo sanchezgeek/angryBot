@@ -21,7 +21,7 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
         // Arrange
         $request = new GetPositionsRequest(AssetCategory::linear, Symbol::BTCUSDT);
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
+        $mockRequestKey = $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 
         $expectedResult = $this->okRequestResult(PositionResponses::SAMPLE_POSITIONS_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPrivateHeaders($request);
@@ -33,7 +33,7 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
         self::assertEquals($expectedResult, $result);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
-        $requestCall = $this->httpClientStub->getRequestCalls()[0];
+        $requestCall = $this->httpClientStub->getRequestCalls()[$mockRequestKey];
         self::assertSame(Request::METHOD_GET, $request->method());
         self::assertSame(Request::METHOD_GET, $requestCall->method);
         self::assertSame($request->data(), $requestCall->params);

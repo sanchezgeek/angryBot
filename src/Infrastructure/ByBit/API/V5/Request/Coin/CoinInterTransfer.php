@@ -45,21 +45,36 @@ final readonly class CoinInterTransfer extends AbstractByBitApiRequest
         ];
     }
 
-    public function __construct(
+    /**
+     * @param string|null $transferId Because of apiV5 requires `transferId` option, use NULL for check in tests
+     */
+    private function __construct(
         CoinAmount $coinAmount,
         private AccountType $fromAccountType,
         private AccountType $toAccountType,
-        private string      $transferId,
+        public ?string $transferId = null,
     ) {
         $this->coin = $coinAmount->coin();
         $this->amount = $coinAmount->value();
 
-        assert($this->transferId, new InvalidArgumentException(
-            sprintf('%s: $transferId must be non-empty string (`%s` provided)', __CLASS__, $this->transferId)
-        ));
+        if ($this->transferId !== null) {
+            assert($this->transferId, new InvalidArgumentException(
+                sprintf('%s: $transferId must be non-empty string (`%s` provided)', __CLASS__, $this->transferId)
+            ));
+        }
 
         assert($this->amount > 0, new InvalidArgumentException(
             sprintf('%s: $amount must be greater than zero (`%f` provided)', __CLASS__, $this->amount)
         ));
+    }
+
+    public static function real(CoinAmount $coinAmount, AccountType $fromAccountType, AccountType $toAccountType, string $transferId): self
+    {
+        return new self($coinAmount, $fromAccountType, $toAccountType, $transferId);
+    }
+
+    public static function test(CoinAmount $coinAmount, AccountType $fromAccountType, AccountType $toAccountType): self
+    {
+        return new self($coinAmount, $fromAccountType, $toAccountType);
     }
 }

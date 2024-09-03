@@ -6,6 +6,9 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -29,6 +32,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\OutputHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
@@ -39,6 +43,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDeco
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Worker\TradingAccountType;
 use App\Worker\AppContext;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
@@ -59,7 +64,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
     public const STOP_ORDER_TRIGGER_DELTA = 37;
 
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 55.5;
+    # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
+    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
     public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 200;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
@@ -68,23 +74,59 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     public const FIX_MAIN_POSITION_ENABLED = false;
     public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
 
+    /** "Reserved" - e.g. for avoiding liquidation */
     private const RESERVED_BALANCE = 0;
     public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
 
+    /**
+     * @todo It must be separated service receiving some context of spot usage to make decision.
+     * E.g. "transfer for make buy"
+     * Or at least it must be some dto with set of parameters
+     *
+     * @todo Main check must be: "after this transfer ... will spot balance be greater than sufficient for avoiding liquidation (CheckPositionIsUnderLiquidationHandler)"
+     * => estimated to transfer amount also must be provided for this check
+     * it's the SECOND[2] big reason for separate this functionality (most probably it should be used not only here)
+     */
     private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
-        if ($position->getHedge()?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
-            return true;
-        }
-
-        if ($buyOrder && $buyOrder->getSuccessSpotTransfersCount() > 1) {
+        if ($spotBalance->available() === 0.00) {
             return false;
         }
 
-        if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN || $this->totalPositionLeverage($position, $ticker) < 60) {
+        $hedge = $position->getHedge();
+
+        # Force true if it's main position and position now in loss ?
+        # @todo | This condition is questionable. Probably it was some corner case "in the moment", but it's not described here.
+        # Questionable because anyway it must be USE_SPOT_IF_BALANCE_GREATER_THAN check
+        if ($hedge?->isMainPosition($position) && $position->isPositionInLoss($ticker->indexPrice)) {
+            return true;
+        }
+
+        # Check count of already done transfers
+        $isSupportPositionForceBuyOrderAfterSl = $hedge?->isSupportPosition($position) && $buyOrder?->isOppositeBuyOrderAfterStopLoss();
+        $maxTransfersCount = $isSupportPositionForceBuyOrderAfterSl ? 3 : 1;
+        if ($buyOrder?->getSuccessSpotTransfersCount() >= $maxTransfersCount) {
+            return false;
+        }
+
+        # Force true if it's support BuyOrder after SL
+        if ($isSupportPositionForceBuyOrderAfterSl) {
+            return true;
+        }
+
+        # Restrict transfer in case of available SPOT balance less than min required for avoid liquidation
+        # @todo | Check must be performed on amount remaining after transfer instead of current balance (see [2])
+        if ($spotBalance->available() > self::USE_SPOT_IF_BALANCE_GREATER_THAN) {
+            return true;
+        }
+
+        # Skip check if "total position leverage" less than some leverage
+        # @todo | what value must be used?
+        # @todo | may be replace this check with "buyIsSafe" check (but this check probably already not passed and this scenario won't happen at all)
+        if ($this->totalPositionLeverage($position, $ticker) < 60) {
             return true;
         }
 
@@ -209,7 +251,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 if (!$position->isSupportPosition()) {
                     $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosed);
                     $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-                    $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), PriceHelper::round($transferToSpotAmount, 3));
+                    $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), $transferToSpotAmount);
                 }
 
                 // reopen closed volume on further movement
@@ -276,7 +318,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->orderService->marketBuy($position->symbol, $position->side, $order->getVolume());
+            $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order));
             $order->setExchangeOrderId($exchangeOrderId);
 //            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
@@ -288,6 +330,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->buyOrderRepository->remove($order);
                 unset($order);
             }
+        } catch (BuyIsNotSafeException $e) {
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -444,7 +487,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     {
         $totalBalance = $this->exchangeAccountService->getCachedTotalBalance($position->symbol);
 
-        if ($ticker->isIndexAlreadyOverBuyOrder($position->side, $position->entryPrice)) {
+        /**
+         * @todo | use same check when make decision about transfer from spot or not
+         * @see PushBuyOrdersHandler::canUseSpot
+         */
+        if ($position->isPositionInProfit($ticker->indexPrice)) {
             $totalBalance -= self::RESERVED_BALANCE;
         }
 
@@ -485,13 +532,17 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): bool
     {
+//        if (AppContext::accType()->isUTA()) {
+//            return false;
+//        }
+
         if ($position) {
             $hedge = $position->getHedge();
             if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
                 return true;
             }
 
-            $priceDeltaToLiquidation = $position->priceDeltaToLiquidation($ticker);
+            $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
             $totalPositionLeverage = $this->totalPositionLeverage($position, $ticker);
 
@@ -499,10 +550,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
                 // @todo | by now only for linear
                 if ($totalPositionLeverage >= $leverage) {
-                    if ($position->isPositionInLoss($currentPrice) && $priceDeltaToLiquidation > $minLiqDistance) {
+                    if ($position->isPositionInLoss($currentPrice) && $distanceWithLiquidation > $minLiqDistance) {
                         break;
                     }
-                    if ($position->isPositionInProfit($currentPrice) && $priceDeltaToLiquidation < $minLiqDistance) {
+                    if ($position->isPositionInProfit($currentPrice) && $distanceWithLiquidation < $minLiqDistance) {
                         return true;
                     }
                     if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {
@@ -543,6 +594,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly MarketServiceInterface $marketService,
         private readonly OrderServiceInterface $orderService,
+
+        private readonly MarketBuyHandler $marketBuyHandler,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,

@@ -43,7 +43,7 @@ use function sprintf;
  */
 final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
 {
-    public const BAPI_RECOMMENDED_RECV_WINDOW = '12000';
+    public const BAPI_RECOMMENDED_RECV_WINDOW = '10000';
     private const BAPI_SIGN_TYPE = '2';
 
     public function __construct(
@@ -165,6 +165,8 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
                 'X-BAPI-RECV-WINDOW' => self::BAPI_RECOMMENDED_RECV_WINDOW,
             ]);
         }
+
+        $options['timeout'] = self::BAPI_RECOMMENDED_RECV_WINDOW / 1000;
 
         return $options;
     }

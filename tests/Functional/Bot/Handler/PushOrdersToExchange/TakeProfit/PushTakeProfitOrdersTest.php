@@ -52,7 +52,6 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
     protected OrderServiceInterface|MockObject $orderServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
-    protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
     protected LoggerInterface $loggerMock;
     protected ClockInterface $clockMock;
 
@@ -67,14 +66,12 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
 
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
-        $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
 
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
-            $this->exchangeAccountServiceMock,
             $this->orderServiceMock,
             $this->messageBus,
             $this->exchangeServiceMock,

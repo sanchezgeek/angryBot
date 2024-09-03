@@ -22,7 +22,7 @@ use function substr;
  */
 final class Percent extends AbstractFloat implements Stringable, JsonSerializable
 {
-    public function __construct(float $value, bool $strict = true)
+    public function __construct(float $value, bool $strict = true, private ?int $outputDecimalsPrecision = null)
     {
         if ($strict && ($value <= 0 || $value > 100)) {
             throw new DomainException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $value));
@@ -72,11 +72,22 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
     public function __toString(): string
     {
+        if ($this->outputDecimalsPrecision) {
+            return sprintf('% ' . $this->outputDecimalsPrecision . '.3f%%', $this->value());
+        }
+
         return sprintf('%.3f%%', $this->value());
     }
 
     public function jsonSerialize(): string
     {
         return (string)$this;
+    }
+
+    public function setOutputDecimalsPrecision(int $outputDecimalsPrecision): self
+    {
+        $this->outputDecimalsPrecision = $outputDecimalsPrecision;
+
+        return $this;
     }
 }

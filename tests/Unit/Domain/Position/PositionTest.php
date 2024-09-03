@@ -7,9 +7,11 @@ namespace App\Tests\Unit\Domain\Position;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -24,6 +26,18 @@ use function sprintf;
 final class PositionTest extends TestCase
 {
     use PositionSideAwareTest;
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testFailCreateWithInvalidSize(Side $side): void
+    {
+        $size = 0;
+
+        self::expectExceptionObject(new SizeCannotBeLessOrEqualsZeroException($size));
+
+        PositionBuilder::bySide($side)->size($size)->build();
+    }
 
     public function testShortPosition(): void
     {
@@ -209,10 +223,10 @@ final class PositionTest extends TestCase
         $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
 
         $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
-        self::assertEquals(550, $position->priceDeltaToLiquidation($ticker));
+        self::assertEquals(550, $position->priceDistanceWithLiquidation($ticker));
 
         $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,31450);
-        self::assertEquals(450, $position->priceDeltaToLiquidation($ticker));
+        self::assertEquals(450, $position->priceDistanceWithLiquidation($ticker));
     }
 
     public function testFailGetDeltaToLiquidation(): void
@@ -223,7 +237,7 @@ final class PositionTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
 
-        $position->priceDeltaToLiquidation($ticker);
+        $position->priceDistanceWithLiquidation($ticker);
     }
 
     /**
@@ -272,19 +286,6 @@ final class PositionTest extends TestCase
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => true];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => false];
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testCloneWithNewSize(Side $side): void
-    {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000, 50, 50, 100);
-
-        self::assertEquals(
-            new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, 51000, 55, 55, 100),
-            $position->withNewSize(0.11)
-        );
     }
 
     /**

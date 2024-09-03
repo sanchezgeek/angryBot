@@ -34,17 +34,4 @@ trait PositionSideAwareTest
             yield $side->title() => $callback($side);
         }
     }
-
-    private static function makePosition(
-        Symbol $symbol,
-        Side $side,
-        float $entryPrice = 30000,
-        float $size = 1.1,
-        float $positionValue = 33000,
-        float $liquidationPrice = 31000,
-        float $margin = 330,
-        int $leverage = 100,
-    ): Position {
-        return new Position($side, $symbol, $entryPrice, $size, $positionValue, $liquidationPrice, $margin, $margin, $leverage);
-    }
 }

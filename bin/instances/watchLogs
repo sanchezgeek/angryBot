@@ -9,7 +9,7 @@ if [[ -z "${BOT_LOGS_DIR}" ]]; then
 else
   LOGS_DIR="${BOT_LOGS_DIR}"
 fi
-LOG_PATH="${LOGS_DIR}/${ACTION}.$(cat /proc/sys/kernel/random/uuid).log"
+LOG_PATH="${LOGS_DIR}/${ACTION}.$(/usr/bin/uuidgen).log"
 
 read -p "Remove old? " -n 1 -r
 echo    # (optional) move to a new line
@@ -32,7 +32,7 @@ done
 
 for path in "${instances[@]}"
   do
-    cmd="sudo make -C ${path} ${ACTION} > ${LOG_PATH} &"
+    cmd="make -C ${path} ${ACTION} > ${LOG_PATH} &"
     $(eval "${cmd}")
   done
 

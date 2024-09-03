@@ -1,6 +1,7 @@
 services:
     _defaults:
         public: true
+        autowire: true
 
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub
@@ -13,7 +14,8 @@ services:
     App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler:
         arguments:
             $exchangeService: '@App\Bot\Application\Service\Exchange\ExchangeServiceInterface'
-            $positionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface' # use stub instead of service (@see services.yaml)
+            $cachedPositionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface'
+            $positionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface'
             $exchangeAccountService: '@App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface'
             $orderService: '@App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface'
             $stopService: '@App\Bot\Application\Service\Orders\StopServiceInterface'
@@ -26,3 +28,9 @@ services:
     Psr\Log\LoggerInterface:
         public: true
         class: App\Tests\PHPUnit\TestLogger
+
+    App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        arguments:
+            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+            # without $externalCache

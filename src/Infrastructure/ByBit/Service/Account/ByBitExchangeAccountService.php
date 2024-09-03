@@ -27,6 +27,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Worker\AppContext;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -56,8 +57,23 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      */
-    public function getSpotWalletBalance(Coin $coin): WalletBalance
+    public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance
     {
+        if (AppContext::accType()->isUTA()) {
+            if (!$suppressUTAWarning) {
+                $context = [];
+                foreach (debug_backtrace() as $back) {
+                    if (($function = $back['function']) === '__invoke') {
+                        $class = explode('\\', $back['class']); $context[] = end($class); break;
+                    }
+                    $context[] = $function;
+                }
+                OutputHelper::warning(sprintf('SPOT wallet unavailable (%s)', implode(' -> ', array_reverse($context))));
+            }
+
+            return new WalletBalance(AccountType::SPOT, $coin, 0, 0);
+        }
+
         return $this->getWalletBalance(AccountType::SPOT, $coin);
     }
 
@@ -69,7 +85,9 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getContractWalletBalance(Coin $coin): WalletBalance
     {
-        return $this->getWalletBalance(AccountType::CONTRACT, $coin);
+        $accountType = AppContext::accType()->isUTA() ? AccountType::UNIFIED : AccountType::CONTRACT;
+
+        return $this->getWalletBalance($accountType, $coin);
     }
 
     public function universalTransfer(
@@ -107,7 +125,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, $amount);
     }
 
     /**
@@ -118,7 +136,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, $amount);
     }
 
     /**
@@ -129,7 +147,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromFundingToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, $amount);
     }
 
     /**
@@ -140,7 +158,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToFunding(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, FloatHelper::round($amount, 8));
+        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, $amount);
     }
 
     /**
@@ -151,16 +169,26 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     private function interTransfer(Coin $coin, AccountType $from, AccountType $to, float $amount): void
     {
-        $request = new CoinInterTransfer(new CoinAmount($coin, $amount), $from, $to, $transferId = uuid_create());
+        $amount = FloatHelper::round($amount, $coin->coinCostPrecision());
 
+        $request = self::interTransferFactory($coin, $from, $to, $amount, $transferId = uuid_create());
         $result = $this->sendRequest($request);
 
         $data = $result->data();
 
         $actualId = $data['transferId'];
-        if ($actualId !== $transferId) {
+        if ($request->transferId !== null && $actualId !== $transferId) {
             throw BadApiResponseException::common($request, sprintf('got another `transferId` (%s insteadof %s)', $actualId, $transferId), __METHOD__);
         }
+    }
+
+    private static function interTransferFactory(Coin $coin, AccountType $from, AccountType $to, float $amount, string $transferId): CoinInterTransfer
+    {
+        if (AppContext::isTest()) {
+            return CoinInterTransfer::test(new CoinAmount($coin, $amount), $from, $to);
+        }
+
+        return CoinInterTransfer::real(new CoinAmount($coin, $amount), $from, $to, $transferId);
     }
 
     /**
@@ -185,7 +213,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                     if ($coinData['coin'] === $coin->value) {
                         if ($accountType === AccountType::SPOT) {
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
-                        } elseif ($accountType === AccountType::CONTRACT) {
+                        } elseif (in_array($accountType, [AccountType::CONTRACT, AccountType::UNIFIED], true)) {
                             $total = (float)$coinData['walletBalance'];
                             $available = (float)$coinData['availableToWithdraw'];
 
@@ -255,7 +283,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
              * Case when this is almost equivalent hedge
              * @todo | need some normal solution
              */
-            if ($free < 0 && $positionForCalc->isLong() && $positionForCalc->liquidationPrice <= 0.00) {
+            if ($free < 0 && $positionForCalc->liquidationPrice <= 0.00) {
                 $main = $hedge->mainPosition;
                 $support = $hedge->supportPosition;
                 if ($available === 0.0) {
@@ -283,9 +311,11 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         # check is correct
-        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
-        if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
-            OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
+        if (!($positionForCalc->isShort() && !$positionForCalc->liquidationPrice)) { # but skip if this is short without liquidation
+            $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
+            if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
+                OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
+            }
         }
 
         return $free;

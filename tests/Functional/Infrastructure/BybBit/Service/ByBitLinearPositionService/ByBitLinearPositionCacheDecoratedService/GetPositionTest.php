@@ -9,6 +9,8 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
+use App\Tests\Factory\Position\PositionBuilder;
+
 use function usleep;
 
 /**
@@ -67,7 +69,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         ?Position $position,
         array $innerServiceResult
     ): void {
-        $oldCachedPosition = new Position($side, $symbol, 29000, 1.1, 30900, 31000, 330, 330, 100);
+        $oldCachedPosition = PositionBuilder::bySide($side)->entry(15000)->size(0.1)->build();
 
         $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
         $item->set([$oldCachedPosition]);
@@ -91,8 +93,8 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
 
-        $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
-        $oppositePosition = new Position($side->getOpposite(), $symbol, 33000, 0.5, 16500, 100500, 150, 150, 100);
+        $position = PositionBuilder::bySide($side)->entry(62000)->size(1.3)->build();
+        $oppositePosition = PositionBuilder::bySide($side->getOpposite())->entry(31000)->size(0.9)->build();
 
         yield 'have position' => [$symbol, $side, $position, [$position]];
         yield 'have both positions' => [$symbol, $side, $position, [$position, $oppositePosition]];

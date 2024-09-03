@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position;
 
+use App\Application\Messenger\TimeStampedAsyncMessageTrait;
 use App\Bot\Domain\ValueObject\Symbol;
 
 /**
  * @codeCoverageIgnore
  */
-final readonly class CheckPositionIsUnderLiquidation
+final class CheckPositionIsUnderLiquidation
 {
-    public function __construct(public Symbol $symbol) {}
+    use TimeStampedAsyncMessageTrait;
+
+    public function __construct(public readonly Symbol $symbol) {}
 }

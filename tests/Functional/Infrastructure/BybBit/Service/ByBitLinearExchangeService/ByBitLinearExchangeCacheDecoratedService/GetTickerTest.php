@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
+use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Infrastructure\ByBit\Service\CacheDecorated\Dto\CachedTickerDto;
 use App\Tests\Factory\TickerFactory;
 
 use function usleep;
@@ -37,7 +39,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::create($symbol, 29990, 30000);
         $item = $this->cache->getItem($this->getTickerCacheKey($symbol));
-        $item->set($ticker);
+        $item->set(self::cachedTickerItemValue($ticker));
         $this->cache->save($item);
 
         $this->innerService->expects(self::never())->method('ticker');
@@ -58,7 +60,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
         $ticker = TickerFactory::create($symbol,  30990, 31000);
 
         $item = $this->cache->getItem($this->getTickerCacheKey($symbol));
-        $item->set($oldCachedTicker);
+        $item->set(self::cachedTickerItemValue($oldCachedTicker));
         $item->expiresAfter(\DateInterval::createFromDateString('200 milliseconds'));
         $this->cache->save($item);
 
@@ -73,5 +75,10 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
         // Assert
         self::assertNotEquals($oldCachedTicker, $ticker);
         self::assertSame($ticker, $res);
+    }
+
+    private static function cachedTickerItemValue(Ticker $ticker): CachedTickerDto
+    {
+        return new CachedTickerDto($ticker, 'test');
     }
 }

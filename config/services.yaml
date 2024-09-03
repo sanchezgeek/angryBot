@@ -7,6 +7,7 @@ parameters:
     account_uids: '%env(ACCOUNTS_UIDS)%'
     env_bybit_api_key: '%env(BYBIT_API_KEY)%'
     env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
+    shared_cache.path: '%kernel.project_dir%/var/shared_cache/%env(APP_ENV)%'
 
 services:
     # default configuration for services in *this* file
@@ -29,6 +30,9 @@ services:
     App\Bot\:
         resource: '../src/modules/Bot'
 
+    App\Alarm\:
+        resource: '../src/modules/Alarm'
+
 ### schedule
     App\Messenger\SchedulerTransport\TransportFactory:
         tags: [ 'messenger.transport_factory' ]
@@ -47,6 +51,7 @@ services:
         class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
         arguments:
             $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+            $externalCache: '@tickers.cache'
 
     App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
         class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
@@ -56,6 +61,14 @@ services:
 ### cache
     App\Infrastructure\Cache\TickersCache:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+
+    App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory: ~
+    tickers.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        factory: [ '@App\Infrastructure\Symfony\Cache\SharedFilesystemCacheFactory', 'create' ]
+        arguments:
+            $namespace: 'tickers'
+            $path: '%shared_cache.path%'
 
 #    Symfony\Contracts\Cache\CacheInterface:
 #        class: Symfony\Component\Cache\Adapter\ApcuAdapter
@@ -95,3 +108,10 @@ services:
         class: App\Command\Position\OpenCommand
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+### consumers
+    # for now "...ByBitLinearPositionService' # without cache" commented because CoverLossesAfterCloseByMarketConsumerDto published after ByBitOrderService::closeByMarket (and => after positions cache was already cleared after close)
+    #        App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer:
+    #            class: App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
+    #            arguments:
+    #                $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

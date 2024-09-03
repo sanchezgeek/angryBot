@@ -117,7 +117,7 @@ readonly final class Price
 
     public function deltaWith(Price|float $otherPrice): float
     {
-        return round(abs($this->value() - self::toFloat($otherPrice)), 2);
+        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)));
     }
 
     public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self

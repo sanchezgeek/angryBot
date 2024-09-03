@@ -13,6 +13,7 @@ use LogicException;
 
 use function array_filter;
 use function array_map;
+use function array_sum;
 use function array_values;
 use function sprintf;
 
@@ -69,16 +70,23 @@ final class StopsCollection implements IteratorAggregate
 
     public function getMinPrice(): float
     {
-        $prices = array_map(static fn(Stop $stop) => $stop->getPrice(), $this->items);
+        $prices = $this->getItemsPrices();
 
         return min($prices);
     }
 
     public function getMaxPrice(): float
     {
-        $prices = array_map(static fn(Stop $stop) => $stop->getPrice(), $this->items);
+        $prices = $this->getItemsPrices();
 
         return max($prices);
+    }
+
+    public function getAvgPrice(): float
+    {
+        $prices = $this->getItemsPrices();
+
+        return array_sum($prices) / count($prices);
     }
 
     public function totalCount(): int
@@ -128,5 +136,10 @@ final class StopsCollection implements IteratorAggregate
         }
 
         return $stops;
+    }
+
+    private function getItemsPrices(): array
+    {
+        return array_map(static fn(Stop $stop) => $stop->getPrice(), $this->items);
     }
 }

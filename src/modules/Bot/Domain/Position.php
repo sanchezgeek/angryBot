@@ -7,15 +7,20 @@ namespace App\Bot\Domain;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Assertion\PositionSizeAssertion;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
+use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
+use Exception;
 use LogicException;
 use RuntimeException;
 use Stringable;
 
+use function assert;
 use function sprintf;
 
 /**
@@ -28,7 +33,11 @@ final class Position implements Stringable
     public readonly CoinAmount $positionBalance;
 
     public ?Position $oppositePosition = null;
+    private Hedge|null|false $hedge = false;
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     */
     public function __construct(
         public readonly Side $side,
         public readonly Symbol $symbol,
@@ -41,6 +50,8 @@ final class Position implements Stringable
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
+        PositionSizeAssertion::assert($this->size);
+
         $this->leverage = new Leverage($leverage);
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
         $this->positionBalance = new CoinAmount($this->symbol->associatedCoin(), $positionBalance);
@@ -56,63 +67,10 @@ final class Position implements Stringable
         return Price::toObj($this->liquidationPrice);
     }
 
-    /**
-     * @todo | Builder
-     */
-    public function withNewSize(float $newSize): self
+    public function setOppositePosition(Position $oppositePosition): void
     {
-        $entryPrice = $this->entryPrice;
-        $newValue = $entryPrice * $newSize; // linear
-        $newIM = $newValue / $this->leverage->value();
-
-        $position = new Position(
-            $this->side,
-            $this->symbol,
-            $entryPrice,
-            $newSize,
-            $newValue,
-            $this->liquidationPrice,
-            $newIM,
-            $newIM,
-            $this->leverage->value(),
-        );
-
-        if ($this->oppositePosition) {
-            $position->setOppositePosition($this->oppositePosition);
-        }
-
-        return $position;
-    }
-
-    /**
-     * @todo | Builder
-     */
-    public function withNewLiquidation(float $liquidationPrice): self
-    {
-        $position = new Position(
-            $this->side,
-            $this->symbol,
-            $this->entryPrice,
-            $this->size,
-            $this->value,
-            $liquidationPrice,
-            $this->initialMargin->value(),
-            $this->positionBalance->value(),
-            $this->leverage->value(),
-        );
-
-        if ($this->oppositePosition) {
-            $position->setOppositePosition($this->oppositePosition);
-        }
-
-        return $position;
-    }
-
-    public function setOppositePosition(Position $oppositePosition, bool $force = false): void
-    {
-        if (!$force && $this->oppositePosition !== null) {
-            throw new LogicException('Opposite position already set.');
-        }
+        assert($this->oppositePosition === null, new LogicException('Opposite position already set.'));
+        assert($this->hedge === false, new LogicException('Hedge already initialized => `oppositePosition` cannot be changed.'));
 
         if ($this->side === $oppositePosition->side) {
             throw new LogicException('Provided position is on the same side.');
@@ -123,7 +81,21 @@ final class Position implements Stringable
 
     public function getHedge(): ?Hedge
     {
-        return $this->oppositePosition === null ? null : Hedge::create($this, $this->oppositePosition);
+        if ($this->hedge !== false) {
+            return $this->hedge;
+        }
+
+        $this->initializeHedge();
+
+        return $this->hedge;
+    }
+
+    /**
+     * @internal || in tests (e.g. for correct check when check positions equality)
+     */
+    public function initializeHedge(): void
+    {
+        $this->hedge = $this->oppositePosition !== null ? Hedge::create($this, $this->oppositePosition) : null;
     }
 
     public function isSupportPosition(): bool
@@ -153,7 +125,13 @@ final class Position implements Stringable
 
     public function getCaption(): string
     {
-        return $this->symbol->value . ' ' . $this->side->title();
+        $info = match (true) {
+            $this->getHedge()?->isEquivalentHedge() => ' (eqv.hedge)',
+            $this->isSupportPosition() => ' (support)',
+            $this->isMainPosition() => ' (main)',
+            default => ''
+        };
+        return sprintf('%s %s%s', $this->symbol->value, $this->side->title(), $info);
     }
 
     /**
@@ -196,17 +174,25 @@ final class Position implements Stringable
         return $this->side->isLong();
     }
 
-    public function priceDeltaToLiquidation(Ticker $ticker): float
+    public function priceDistanceWithLiquidation(Ticker $ticker): float
     {
         if ($this->symbol !== $ticker->symbol) {
             throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name, $this->symbol->name));
         }
 
-        return abs($this->liquidationPrice - $ticker->markPrice->value());
+        return $this->liquidationPrice()->deltaWith($ticker->markPrice);
     }
 
     public function __toString(): string
     {
         return $this->getCaption();
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function __clone(): void
+    {
+        throw new Exception(sprintf('%s: clone denied. Use %s instead.', __METHOD__, PositionClone::class));
     }
 }

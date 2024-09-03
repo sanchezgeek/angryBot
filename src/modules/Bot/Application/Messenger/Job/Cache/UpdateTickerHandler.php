@@ -16,6 +16,6 @@ final readonly class UpdateTickerHandler
 
     public function __invoke(UpdateTicker $command): void
     {
-        $this->tickersCache->updateTicker($command->symbol, $command->ttl);
+        $this->tickersCache->checkExternalTickerCacheOrUpdate($command->symbol, $command->ttl);
     }
 }

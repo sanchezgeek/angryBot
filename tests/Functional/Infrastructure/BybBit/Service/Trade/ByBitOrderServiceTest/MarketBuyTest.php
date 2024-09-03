@@ -54,7 +54,6 @@ final class MarketBuyTest extends ByBitOrderServiceTestAbstract
 
     private function marketBuySuccessTestCases(): iterable
     {
-
         return $this->testCasesIterator(
             $this->positionSideIterator(static function (Side $side) {
                 return ApiTestCaseData::linearBtcUsdt()->with(['positionSide' => $side]);

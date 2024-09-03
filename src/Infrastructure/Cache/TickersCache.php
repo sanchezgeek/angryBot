@@ -7,5 +7,5 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 interface TickersCache
 {
-    public function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker;
+    public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): void;
 }

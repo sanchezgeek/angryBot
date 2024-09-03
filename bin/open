@@ -1,6 +1,6 @@
 #!/bin/bash
 
-UNDO_LOG="$(pwd)/data/open-undo.$(cat /proc/sys/kernel/random/uuid).undo"
+UNDO_LOG="$(pwd)/data/open-undo.$(/usr/bin/uuidgen).undo"
 
 SIDE=${1:-sell}
 INITIAL_VOLUME=${2:-"6%"}

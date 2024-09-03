@@ -81,6 +81,14 @@ class Stop implements HasEvents
         return $this->id;
     }
 
+    /**
+     * @todo | new column
+     */
+    public function getSymbol(): Symbol
+    {
+        return Symbol::BTCUSDT;
+    }
+
     public function getPrice(): float
     {
         return $this->price;

@@ -2,6 +2,7 @@ doctrine:
     dbal:
         connections:
             default:
+                driver: 'pdo_pgsql'
                 url: '%env(resolve:DATABASE_URL)%'
                 logging: false
                 profiling: false

@@ -20,6 +20,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -27,6 +28,7 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
+use Exception;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -49,8 +51,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
-    private const POSITION_LIQUIDATION_WARNING_DELTA = PushStopsHandler::LIQUIDATION_WARNING_DELTA;
-    private const POSITION_LIQUIDATION_CRITICAL_DELTA = PushStopsHandler::LIQUIDATION_CRITICAL_DELTA;
+    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
+    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
@@ -61,7 +63,6 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     protected OrderServiceInterface|MockObject $orderServiceMock;
     protected PositionServiceInterface|MockObject $positionServiceMock;
     protected ExchangeServiceInterface|MockObject $exchangeServiceMock;
-    protected ExchangeAccountServiceInterface|MockObject $exchangeAccountServiceMock;
     protected LoggerInterface $loggerMock;
     protected ClockInterface $clockMock;
 
@@ -76,14 +77,12 @@ final class PushStopsCornerCasesTest extends KernelTestCase
 
         $this->orderServiceMock = $this->createMock(OrderServiceInterface::class);
         $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
-        $this->exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $this->positionServiceMock = $this->createMock(PositionServiceInterface::class);
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
 
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
-            $this->exchangeAccountServiceMock,
             $this->orderServiceMock,
             $this->messageBus,
             $this->exchangeServiceMock,
@@ -96,11 +95,11 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     }
 
     /**
-     * @dataProvider closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider
+     * @dataProvider closeByMarketWhenExceptionWasThrewTestDataProvider
      *
      * @todo | Maybe move to \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsTest::pushStopsTestCases ?
      */
-    public function testCloseByMarketWhenApiReturnedBadRequestError(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
+    public function testCloseByMarketWhenAddConditionalStopMethodCallThrewSomeException(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
     {
         $this->haveTicker($ticker);
         $this->havePosition($position);
@@ -111,7 +110,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->method('addConditionalStop')
             ->with($position, $stop->getPrice(), $stop->getVolume(), $expectedTriggerBy)
             ->willThrowException(
-                new TickerOverConditionalOrderTriggerPrice('Already over trigger price')
+                new Exception('some error')
             );
 
         $this->orderServiceMock
@@ -129,18 +128,21 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         );
     }
 
-    public function closeByMarketWhenApiReturnedBadRequestErrorTestDataProvider(): iterable
+    public function closeByMarketWhenExceptionWasThrewTestDataProvider(): iterable
     {
+        $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
+        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+
         yield '[BTCUSDT SHORT] liquidation not in critical range' => [
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
-            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_WARNING_DELTA + 1),
+            'ticker' => $ticker,
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1),
             'stop' => StopBuilder::short(5, 29051, 0.011)->withTD(10)->build(),
             'expectedTriggerBy' => TriggerBy::IndexPrice,
         ];
 
         yield '[BTCUSDT SHORT] liquidation in critical range' => [
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
-            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_WARNING_DELTA),
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance),
             'stop' => StopBuilder::short(5, 29061, 0.011)->withTD(10)->build(),
             'expectedTriggerBy' => TriggerBy::MarkPrice,
         ];
@@ -175,9 +177,12 @@ final class PushStopsCornerCasesTest extends KernelTestCase
 
     public function closeByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRangeTestDataProvider(): iterable
     {
+        $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
+        $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+
         yield 'BTCUSDT SHORT' => [
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
-            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + self::POSITION_LIQUIDATION_CRITICAL_DELTA),
+            'ticker' => $ticker,
+            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationCriticalDistance),
             'stop' => StopBuilder::short(5, 29060, 0.011)->withTD(10)->build(),
         ];
     }

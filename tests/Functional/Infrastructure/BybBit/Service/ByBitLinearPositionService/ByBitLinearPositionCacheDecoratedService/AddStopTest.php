@@ -9,6 +9,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 
 use function uuid_create;
@@ -23,7 +24,7 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
         // Arrange
         $symbol = Symbol::BTCUSDT;
         $side = Side::Sell;
-        $position = new Position($side, $symbol, 30000, 1.1, 33000, 31000, 330, 330, 100);
+        $position = PositionBuilder::bySide($side)->build();
         $volume = 0.1;
         $price = 30000;
 

@@ -12,6 +12,8 @@ interface OrderServiceInterface
      * @return string `orderId` received from the exchange in case of success
      *
      * @throws CannotAffordOrderCostException
+     *
+     * @todo | replace calls with handler
      */
     public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string;
 

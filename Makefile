@@ -97,6 +97,9 @@ crit: ## Get dev CRITICAL
 warn: ## Get dev WARNING
 	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log -n1 | grep WARN
 
+deb: ## Get dev DEBUG
+	@$(PHP_CONT) tail -f /srv/app/var/log/dev.log -n1 | grep DEBUG
+
 err: ## Get app errors (@see WorkerExceptionEventListener::logError)
 	@$(PHP_CONT) tail -f -n1 /srv/app/var/log/app_errors.log
 

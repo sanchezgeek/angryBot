@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
+use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -14,10 +15,13 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\CacheDecorated\Dto\CachedTickerDto;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\TickersCache;
+use App\Worker\AppContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Cache\CacheItem;
 use Symfony\Contracts\Cache\CacheInterface;
 
 final readonly class ByBitLinearExchangeCacheDecoratedService implements ExchangeServiceInterface, TickersCache
@@ -28,11 +32,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     /**
      * @param ByBitLinearExchangeService $exchangeService
+     * @param ?CacheInterface $externalCache
      */
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
-        private CacheInterface $cache,
+        private CacheInterface $localCache,
+        private mixed $externalCache = null # mixed - to not autowire in test env (@see services_test.yaml)
     ) {
     }
 
@@ -47,12 +53,19 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      */
     public function ticker(Symbol $symbol): Ticker
     {
-        $item = $this->cache->getItem(
-            $this->tickerCacheKey($symbol)
-        );
+        if ($this->externalCache) {
+            $itemFromExternal = $this->getTickerCacheItemFromExternalCache($symbol);
+            if ($itemFromExternal->isHit()) {
+                $cachedTickerDto = $itemFromExternal->get(); /** @var CachedTickerDto $cachedTickerDto */
+                return $cachedTickerDto->ticker;
+            }
+        }
+
+        $item = $this->localCache->getItem($this->tickerCacheKey($symbol));
 
         if ($item->isHit()) {
-            return $item->get();
+            $cachedTickerDto = $item->get(); /** @var CachedTickerDto $cachedTickerDto */
+            return $cachedTickerDto->ticker;
         }
 
         return $this->updateTicker($symbol, \DateInterval::createFromDateString(self::DEFAULT_TICKER_TTL));
@@ -65,19 +78,67 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
+    private function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
     {
         $key = $this->tickerCacheKey($symbol);
 
         $ticker = $this->exchangeService->ticker($symbol);
+        $itemValue = new CachedTickerDto($ticker, self::thisAccName());
+        $item = $this->localCache->getItem($key)->set($itemValue)->expiresAfter($ttl);
 
-        $item = $this->cache->getItem($key)->set($ticker)->expiresAfter($ttl);
+        $this->localCache->save($item);
 
-        $this->cache->save($item);
+        if ($this->externalCache) {
+            $itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol);
+            /** @var CachedTickerDto $itemFromExternalCacheValue */
+            if (
+                !$itemFromExternalCache->isHit() || (
+                    ($itemFromExternalCacheValue = $itemFromExternalCache->get())
+                    && $itemFromExternalCacheValue->updatedByAccName === self::thisAccName()
+                )
+            ) {
+                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('5 seconds'));
+                $this->externalCache->save($item);
+            }
+        }
 
         $this->events->dispatch(new TickerUpdated($ticker));
 
         return $ticker;
+    }
+
+    /**
+     * @throws TickerNotFoundException
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): void
+    {
+        $itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol);
+        /** @var CachedTickerDto $itemFromExternalCacheValue */
+        if (
+            $itemFromExternalCache->isHit() &&
+            ($itemFromExternalCacheValue = $itemFromExternalCache->get())
+            && $itemFromExternalCacheValue->updatedByAccName !== self::thisAccName()
+        ) {
+            // update ticker if previous cache was created by this instance
+            $this->events->dispatch(new TickerUpdateSkipped($itemFromExternalCacheValue));
+            return;
+        }
+
+        $this->updateTicker($symbol, $ttl);
+    }
+
+    private function getTickerCacheItemFromExternalCache(Symbol $symbol): CacheItem
+    {
+        return $this->externalCache->getItem($this->tickerCacheKey($symbol));
+    }
+
+    private static function thisAccName(): string
+    {
+        return AppContext::accName() ?? 'none';
     }
 
     /**

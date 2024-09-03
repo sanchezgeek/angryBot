@@ -21,7 +21,7 @@ final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         // Arrange
         $request = new GetTickersRequest(AssetCategory::linear, Symbol::BTCUSDT);
         $requestUrl = $this->getFullRequestUrl($request);
-        $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
+        $mockRequestKey = $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 
         $expectedResult = $this->okRequestResult(MarketResponses::SAMPLE_TICKERS_RESPONSE['result']);
         $expectedPrivateHeaders = $this->expectedPublicHeaders($request);
@@ -33,7 +33,7 @@ final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
         self::assertEquals($expectedResult, $actualResult);
         self::assertCount(1, $this->httpClientStub->getRequestCalls());
 
-        $requestCall = $this->httpClientStub->getRequestCalls()[0];
+        $requestCall = $this->httpClientStub->getRequestCalls()[$mockRequestKey];
         self::assertSame(Request::METHOD_GET, $request->method());
         self::assertSame(Request::METHOD_GET, $requestCall->method);
         self::assertSame($request->data(), $requestCall->params);
