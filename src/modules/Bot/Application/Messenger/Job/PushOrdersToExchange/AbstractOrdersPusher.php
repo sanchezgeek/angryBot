@@ -74,7 +74,12 @@ abstract class AbstractOrdersPusher
         $this->print(sprintf('! %s', $message));
 
         if ($withLog) {
-            $this->critical($message);
+            $this->critical($message, [
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
+                'previous' => $exception->getPrevious(),
+            ]);
         }
     }
 

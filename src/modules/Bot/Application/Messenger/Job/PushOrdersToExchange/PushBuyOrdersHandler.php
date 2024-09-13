@@ -292,7 +292,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             # support BuyOrder => grab profit from MainPosition
             if (self::FIX_MAIN_POSITION_ENABLED && ($hedge = $position->getHedge())?->isSupportPosition($position)
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
-                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 152.228
+                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 152.228 # main position at least must not be in loss
                 && (
                     $lastBuy->isForceBuyOrder()
                     || !$this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
@@ -331,6 +331,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 unset($order);
             }
         } catch (BuyIsNotSafeException $e) {
+            OutputHelper::warning(sprintf('Skip buy %s|%s on %s (buy is not safe).', $order->getVolume(), $order->getPrice(), $position));
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -569,19 +570,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @param CreateBuyOrderHandler $createBuyOrderHandler
-     * @param HedgeService $hedgeService
-     * @param BuyOrderRepository $buyOrderRepository
-     * @param StopRepository $stopRepository
-     * @param StopService $stopService
-     * @param OrderCostCalculator $orderCostCalculator
      * @param ByBitExchangeAccountService $exchangeAccountService
      * @param ByBitMarketService $marketService
      * @param ByBitOrderService $orderService
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
      * @param ByBitLinearPositionCacheDecoratedService $positionService
-     * @param ClockInterface $clock
-     * @param LoggerInterface $logger
      */
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
@@ -600,8 +593,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         ClockInterface $clock,
-        LoggerInterface $logger,
+        LoggerInterface $appErrorLogger,
     ) {
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }

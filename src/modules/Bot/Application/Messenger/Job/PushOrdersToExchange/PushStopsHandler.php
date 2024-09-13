@@ -179,9 +179,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly MessageBusInterface $messageBus,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
-        LoggerInterface $logger,
+        LoggerInterface $appErrorLogger,
         ClockInterface $clock,
     ) {
-        parent::__construct($exchangeService, $positionService, $clock, $logger);
+        parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }
