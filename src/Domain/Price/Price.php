@@ -37,6 +37,9 @@ readonly final class Price
         $this->value = $value;
     }
 
+    /**
+     * @todo | CS | rename to `fromFloat`?
+     */
     public static function float(float $value): self
     {
         return new self($value);

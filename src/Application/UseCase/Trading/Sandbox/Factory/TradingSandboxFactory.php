@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox\Factory;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
-use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Helper;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
+use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Worker\AppContext;
 
@@ -71,5 +73,24 @@ class OutputHelper
         if ($withLineBreak) {
             echo PHP_EOL;
         }
+    }
+
+    public static function ordersDebug(array $orders): void
+    {
+        var_dump(array_map(static fn(Stop|BuyOrder $order) => $order->getPrice(), $orders));
+    }
+
+    public static function shortClassName(string $className): string
+    {
+        $methodName = null;
+        if (str_contains($className, '::')) {
+            $parts = explode('::', $className);
+            $className = $parts[0];
+            $methodName = $parts[1];
+        }
+
+        $class = explode('\\', $className);
+
+        return end($class) . ($methodName ? '::' . $methodName : '');
     }
 }

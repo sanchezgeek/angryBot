@@ -2,6 +2,7 @@
 
 namespace App\Command\Stop;
 
+use App\Application\UseCase\Trading\Sandbox\Exception\PositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -102,6 +103,7 @@ class StopInfoCommand extends AbstractCommand
             $showSizeLeft = true;
         } else {
             $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationDistance()));
+            $this->io->note(sprintf('%s l: %.2f', $position->getCaption(), $position->liquidationPrice));
         }
 
         $stops = $this->stopRepository->findActive(
@@ -143,7 +145,11 @@ class StopInfoCommand extends AbstractCommand
             }
 
             $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
-            $currentSandboxState = $tradingSandbox->processOrders(...$rangeStops);
+            try {
+                $currentSandboxState = $tradingSandbox->processOrders(...$rangeStops);
+            } catch (PositionLiquidatedBeforeOrderPriceException $e) {
+                $output[] = sprintf('position liquidation at %s', $e->position->liquidationPrice);
+            }
             $positionAfterRange = $currentSandboxState->getPosition($positionSide);
 
             if ($showSizeLeft) { # size left

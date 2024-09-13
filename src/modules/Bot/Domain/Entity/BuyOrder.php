@@ -15,7 +15,9 @@ use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use App\Helper\FloatHelper;
+use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
+use DomainException;
 
 /**
  * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest
@@ -24,6 +26,8 @@ use Doctrine\ORM\Mapping as ORM;
 class BuyOrder implements HasEvents
 {
     use HasWithoutOppositeContext;
+
+    public const MIN_VOLUME = 0.001;
 
     public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
@@ -99,9 +103,33 @@ class BuyOrder implements HasEvents
         $this->price = $price;
     }
 
+    public function addPrice(float $value): self
+    {
+        $this->price += $value;
+        return $this;
+    }
+
     public function getVolume(): float
     {
         return $this->volume;
+    }
+
+    /**
+     * @throws DomainException
+     */
+    public function subVolume(float $value): self
+    {
+        $restVolume = $this->volume - $value;
+
+        if (!($restVolume >= self::MIN_VOLUME)) {
+            throw new DomainException(
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+            );
+        }
+
+        $this->volume = VolumeHelper::round($restVolume);
+
+        return $this;
     }
 
     public function getContext(string $name = null): mixed
@@ -194,5 +222,16 @@ class BuyOrder implements HasEvents
     public function getHedgeSupportFixationsCount(): int
     {
         return $this->context[self::SUPPORT_FIXATIONS_COUNT_CONTEXT] ?? 0;
+    }
+
+    public function info(): array
+    {
+        return [
+            'symbol' => $this->getSymbol(),
+            'side' => $this->positionSide,
+            'price' => $this->price,
+            'volume' => $this->volume,
+            'context' => $this->context,
+        ];
     }
 }

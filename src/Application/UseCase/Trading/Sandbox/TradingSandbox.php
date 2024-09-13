@@ -6,9 +6,11 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Application\UseCase\Trading\Sandbox\Assertion\PositionLiquidationIsAfterOrderPriceAssertion;
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
+use App\Application\UseCase\Trading\Sandbox\Exception\PositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -50,9 +52,6 @@ class TradingSandbox implements TradingSandboxInterface
         return $this;
     }
 
-    /**
-     * @throws SandboxInsufficientAvailableBalanceException
-     */
     public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): SandboxState
     {
         foreach ($orders as $order) {
@@ -65,6 +64,18 @@ class TradingSandbox implements TradingSandboxInterface
         return $this->currentState;
     }
 
+    /**
+     * @throws PositionLiquidatedBeforeOrderPriceException
+     */
+    private function checkPositionBeforeExecuteOrder(Side $positionSide, SandboxBuyOrder|SandboxStopOrder $order): void
+    {
+        $position = $this->currentState->getPosition($positionSide);
+
+        if ($position && !$position->isSupportPosition()) {
+            PositionLiquidationIsAfterOrderPriceAssertion::create($position, $order)->check();
+        }
+    }
+
     public function getCurrentState(): SandboxState
     {
         return $this->currentState;
@@ -72,10 +83,13 @@ class TradingSandbox implements TradingSandboxInterface
 
     /**
      * @throws SandboxInsufficientAvailableBalanceException
+     * @throws PositionLiquidatedBeforeOrderPriceException
      */
     private function makeBuy(SandboxBuyOrder $order): void
     {
         $positionSide = $order->positionSide;
+        $this->checkPositionBeforeExecuteOrder($positionSide, $order);
+
         $volume = $order->volume;
         $price = $order->price;
 
@@ -86,20 +100,23 @@ class TradingSandbox implements TradingSandboxInterface
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
         $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $this->getLeverage($positionSide), $positionSide)->value();
 
-        $availableBalance = $currentState->getAvailableBalance();
-        if ($availableBalance->value() < $cost) {
-            throw new SandboxInsufficientAvailableBalanceException(
-                sprintf('Contract availableBalance balance (%s) less than order cost (%s)', $availableBalance, $cost),
-            );
+        $availableBalance = $currentState->getAvailableBalance()->value();
+        if ($availableBalance < $cost) {
+            throw SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('balance.avail [%s] less than order.cost [%s]', $availableBalance, $cost));
         }
 
         $this->notice(sprintf('modify free balance with %s (order cost)', -$cost)); $currentState->modifyFreeBalance(-$cost);
         $this->modifyPositionWithBuy($positionSide, $orderDto);
     }
 
+    /**
+     * @throws PositionLiquidatedBeforeOrderPriceException
+     */
     private function makeStop(SandboxStopOrder $stop): void
     {
         $positionSide = $stop->positionSide;
+        $this->checkPositionBeforeExecuteOrder($positionSide, $stop);
+
         $volume = $stop->volume;
         $price = $stop->price;
 
@@ -107,9 +124,9 @@ class TradingSandbox implements TradingSandboxInterface
 
         $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
 
-        // @todo | case when position volume is not enough
         $position = $this->currentState->getPosition($positionSide);
         if (!$position) {
+            // @todo | sandbox | exception?
             $this->notice(sprintf('%s %s position not found. Position closed? Cannot make stop. Skip', $this->symbol->name, $positionSide->title()));
             return;
         }

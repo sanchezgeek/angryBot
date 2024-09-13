@@ -10,6 +10,11 @@ final readonly class Pnl implements \Stringable
     {
     }
 
+    public function getValue(): float
+    {
+        return $this->value;
+    }
+
     public function format(): string
     {
         $sign = $this->value > 0 ? '+' : '-';

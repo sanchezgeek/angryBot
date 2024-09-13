@@ -242,4 +242,16 @@ class Stop implements HasEvents
             $data['context']
         );
     }
+
+    public function info(): array
+    {
+        return [
+            'symbol' => $this->getSymbol(),
+            'side' => $this->positionSide,
+            'price' => $this->price,
+            'volume' => $this->volume,
+            'triggerDelta' => $this->triggerDelta,
+            'context' => $this->context,
+        ];
+    }
 }

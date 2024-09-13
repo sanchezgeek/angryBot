@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Command\Messenger;
+namespace App\Command\Check;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -11,7 +11,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function sprintf;
 
-#[AsCommand(name: 'messenger:check')]
+#[AsCommand(name: 'c:queues')]
 class CheckMessagesCommand extends Command
 {
     protected function execute(InputInterface $input, OutputInterface $output): int
