@@ -54,6 +54,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
     use PositionAwareCommand;
 
     private const SHOW_STATE_CHANGES = 'showState';
+    private const SHOW_REASON = 'showReason';
     private const SHOW_CUMULATIVE_STATE_CHANGES = 'showCum';
 
     private const ORDER_ROW_DEF = 'order-row';
@@ -76,7 +77,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
     {
         parent::initialize($input, $output);
 
+        //
         $this->position = $this->getPosition();
+
         $symbol = $this->getSymbol();
         $this->priceFormatter = new PriceFormatter($symbol);
         $this->pnlFormatter = PnlFormatter::bySymbol($symbol)->setPrecision(2)->setShowCurrency(false);
@@ -117,6 +120,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         usort($ordersAfterPositionLoss,   $positionSide->isLong() ? static fn ($a, $b) => $b->getPrice() <=> $a->getPrice() : static fn ($a, $b) => $a->getPrice() <=> $b->getPrice());
         usort($ordersAfterPositionProfit, $positionSide->isLong() ? static fn ($a, $b) => $a->getPrice() <=> $b->getPrice() : static fn ($a, $b) => $b->getPrice() <=> $a->getPrice());
 
+        //
         $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($this->getSymbol());
         $initialSandboxState = clone $tradingSandbox->getCurrentState();
 
@@ -126,7 +130,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
         # toProfit
         $rowsAfterPositionProfit = $this->processOrdersFromInitialPositionState($tradingSandbox, $ordersAfterPositionProfit);
         $stopsAfterPositionProfit = new StopsCollection(...array_filter($ordersAfterPositionProfit, static fn($order) => $order instanceof Stop));
+        //
         $totalPositionProfit = $stopsAfterPositionProfit->totalUsdPnL($position);
+
         $rowsAfterPositionProfit = array_merge($rowsAfterPositionProfit, [
             self::infoRow(new TableSeparator()),
             self::infoRow([TH::cell(content: 'total PROFIT:', col: 8, align: 'right'), new Pnl($totalPositionProfit)]),
@@ -249,6 +255,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $comments = [];
             if ($order->isForceBuyOrder())                  $comments[] = '!force buy!';
             if ($order->isOppositeBuyOrderAfterStopLoss())  $comments[] = 'opposite BuyOrder after SL';
+            if (!$order->isWithOppositeOrder())             $comments[] = 'without Stop';
 
             if ($comments) {
                 $commentCellContent[] = implode(', ', $comments);
@@ -263,13 +270,27 @@ class OrdersTotalInfoCommand extends AbstractCommand
                     PositionLiquidationIsAfterOrderPriceAssertion::create($positionBeforeExec, $order)->check();
                 }
                 $this->marketBuyCheckService->doChecks($marketBuyEntryDto, $this->createTicker($orderPrice), $sandbox->getCurrentState(), $positionBeforeExec);
+
+                // @todo handle case when position became support position from main
+
+                $oppositeSide = $this->getPositionSide()->getOpposite();
+                if ($positionBeforeExec->isSupportPosition()) {
+                    $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
+                }
+
                 $positionAfterExec = $sandbox->processOrders($order)->getPosition($this->getPositionSide());
+                if ($positionBeforeExec->isSupportPosition()) {
+                    $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
+                }
+
                 $result = array_merge($commonCells, ['', ' =>', $positionAfterExec->size, $this->priceFormatter->format($positionAfterExec->entryPrice)]);
 
                 $liquidationCellContent = '';
-                if (!$this->position->isSupportPosition()) {
+                if ($this->position->isSupportPosition()) {
+                    $liquidationCellContent .= sprintf(' %s [to %s liq.distance] => %s', $this->getLiquidationPriceDiffWithPrev($oppositePositionBeforeExec, $oppositePositionAfterExec), $oppositeSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice));
+                } else {
                     $liquidationCellContent = $this->priceFormatter->format($positionAfterExec->liquidationPrice);
-//            if ($this->isShowStateChangesEnabled()) ...
+//                  if ($this->isShowStateChangesEnabled()) ...
                     $liquidationCellContent .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBeforeExec, $positionAfterExec));
                 }
 
@@ -290,13 +311,17 @@ class OrdersTotalInfoCommand extends AbstractCommand
             }
 
             if ($commentCellContent) {
-                $result[] = implode(PHP_EOL, $commentCellContent);
+                $result[] = implode(' | ', $commentCellContent);
             } else {
                 $result[] = '';
             }
 
             if (isset($positionAfterExec) && $this->isShowCumulativeStateChangesEnabled()) {
-                $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
+                if (!$positionAfterExec->isSupportPosition()) {
+                    $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
+                } else {
+                    $result[] = sprintf('total % 7.2f added to %s liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position->oppositePosition, $oppositePositionAfterExec), $oppositePositionBeforeExec->getCaption());
+                }
             }
 
 
@@ -304,18 +329,6 @@ class OrdersTotalInfoCommand extends AbstractCommand
         }
 
         return $rows;
-    }
-
-    private bool $isPositionLiquidationPrinted = false;
-
-    private function printPositionLiquidationRow(Position $position, array &$rows): void
-    {
-        if (!$this->isPositionLiquidationPrinted) {
-            $rows[] = self::infoRow(new TableSeparator());
-            $rows[] = self::infoRow([TH::cell($this->priceFormatter->format($position->liquidationPrice), 2, align: 'right', fontColor: 'bright-red'), TH::cell(content: 'position liquidation', col: 6, fontColor: 'bright-red', align: 'center')]);
-            $rows[] = self::infoRow(new TableSeparator());
-            $this->isPositionLiquidationPrinted = true;
-        }
     }
 
     /**
@@ -331,6 +344,11 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $commonCells = array_map(static fn(string $content) => self::stopOrderCell($content), [sprintf('s.%d', $order->getId()), $orderPrice, sprintf('- %s', $order->getVolume())]);
 
             $positionBeforeExec = $sandbox->getCurrentState()->getPosition($this->getPositionSide());
+            // case when position initially is not support
+            $oppositeSide = $this->getPositionSide()->getOpposite();
+            if ($positionBeforeExec->isSupportPosition()) {
+                $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
+            }
             try {
                 $newState = $sandbox->processOrders($order);
             } catch (PositionLiquidatedBeforeOrderPriceException) {
@@ -343,11 +361,16 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $commonCells[] = $this->pnlFormatter->format($order->getPnlUsd($this->position));
 
             $positionAfterExec = $newState->getPosition($this->getPositionSide());
+            if ($positionBeforeExec->isSupportPosition()) {
+                $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
+            }
+
             if (!$positionAfterExec && $positionBeforeExec) {
                 $result = array_merge($commonCells, [' =>', TH::cell(content: 'position closed', col: 3, align: 'center')]);
                 $rows[] = self::infoRow(new TableSeparator());
                 $rows[] = self::orderRow($orderPrice, $result);
                 $rows[] = self::infoRow(new TableSeparator());
+                // liq.distance added to opposite
                 continue;
             } elseif (!$positionBeforeExec && !$positionAfterExec) {
                 $result = array_merge($commonCells, [TH::cell(content: '', col: 5)]);
@@ -359,7 +382,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $result = array_merge($commonCells, [' =>', $positionAfterExec->size, $this->priceFormatter->format($positionAfterExec->entryPrice)]);
 
             $liquidationCellContent = '';
-            if (!$this->position->isSupportPosition()) {
+            if ($this->position->isSupportPosition()) {
+                $liquidationCellContent .= sprintf(' %s [to %s liq.distance] => %s', $this->getLiquidationPriceDiffWithPrev($oppositePositionBeforeExec, $oppositePositionAfterExec), $oppositeSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice));
+            } else {
                 $liquidationCellContent = $this->priceFormatter->format($positionAfterExec->liquidationPrice);
 //            if ($this->isShowStateChangesEnabled()) {
                 $liquidationCellContent .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBeforeExec, $positionAfterExec));
@@ -367,6 +392,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
 //                if ($resultPosition->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) $format .= ' | became support?';
 //            }
             }
+
 
             $result[] = $liquidationCellContent;
 
@@ -379,6 +405,10 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $comments[] = 'Conditional order';
             }
 
+            if (!$order->isWithOppositeOrder()) {
+                $comments[] = 'without opposite BO';
+            }
+
             // opposite
 
             if ($comments) {
@@ -387,8 +417,13 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $result[] = '';
             }
 
+
             if ($this->isShowCumulativeStateChangesEnabled()) {
-                $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
+                if (!$positionAfterExec->isSupportPosition()) {
+                    $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
+                } else {
+                    $result[] = sprintf('total % 7.2f added to %s liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position->oppositePosition, $oppositePositionAfterExec), $oppositePositionBeforeExec->getCaption());
+                }
             }
 
             $rows[] = self::orderRow($orderPrice, $result);
@@ -425,7 +460,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private function getLiquidationPriceDiffWithPrev(Position $positionBefore, Position $positionAfter): string
     {
         $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice, $positionAfter->liquidationPrice);
-        $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($this->getPositionSide());
+        $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($positionBefore->side);
         if ($liquidationPriceDiffWithPrev > 0) {
             $liquidationPriceDiffWithPrev = '+' . $this->priceFormatter->format($liquidationPriceDiffWithPrev);
         }
@@ -440,6 +475,11 @@ class OrdersTotalInfoCommand extends AbstractCommand
         return new Ticker($this->getSymbol(), $price, $price, $price);
     }
 
+    private function isShowReasonEnabled(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::SHOW_STATE_CHANGES);
+    }
+
     private function isShowStateChangesEnabled(): bool
     {
         return $this->paramFetcher->getBoolOption(self::SHOW_STATE_CHANGES);
@@ -448,6 +488,18 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private function isShowCumulativeStateChangesEnabled(): bool
     {
         return $this->paramFetcher->getBoolOption(self::SHOW_CUMULATIVE_STATE_CHANGES);
+    }
+
+    private bool $isPositionLiquidationPrinted = false;
+
+    private function printPositionLiquidationRow(Position $position, array &$rows): void
+    {
+        if (!$this->isPositionLiquidationPrinted) {
+            $rows[] = self::infoRow(new TableSeparator());
+            $rows[] = self::infoRow([TH::cell($this->priceFormatter->format($position->liquidationPrice), 2, align: 'right', fontColor: 'bright-red'), TH::cell(content: 'position liquidation', col: 6, fontColor: 'bright-red', align: 'center')]);
+            $rows[] = self::infoRow(new TableSeparator());
+            $this->isPositionLiquidationPrinted = true;
+        }
     }
 
     public function __construct(
