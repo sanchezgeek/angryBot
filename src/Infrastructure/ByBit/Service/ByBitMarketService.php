@@ -45,7 +45,7 @@ final class ByBitMarketService implements MarketServiceInterface
         }
 
         if (!$fundingRate) {
-            throw new RuntimeException(sprintf('Cannot find fundingRate for "%s (%s)"', $symbol->name, $symbol->associatedCategory()));
+            throw new RuntimeException(sprintf('Cannot find fundingRate for "%s (%s)"', $symbol->name, $symbol->associatedCategory()->name));
         }
 
         return $fundingRate;
