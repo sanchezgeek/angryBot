@@ -28,6 +28,7 @@ use App\Domain\Price\Helper\PriceFormatter;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Stop\StopsCollection;
+use Error;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
@@ -36,6 +37,8 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use Throwable;
 
 use function array_filter;
 use function array_map;
@@ -150,7 +153,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
         $stopsAfterPositionLoss = new StopsCollection(...array_filter($ordersAfterPositionLoss, static fn($order) => $order instanceof Stop));
         $totalPositionLoss = $stopsAfterPositionLoss->totalUsdPnL($position);
-        $lastRow = end($rowsAfterPositionLoss)['content'];
+        $lastRow = end($rowsAfterPositionLoss)['content'] ?? null;
         $rowsAfterPositionLoss = array_merge($rowsAfterPositionLoss,
             !$lastRow instanceof TableSeparator ? [self::infoRow(new TableSeparator())] : [],
             [self::infoRow([TH::cell(content: 'total LOSS:', col: 8, align: 'right'), new Pnl($totalPositionLoss)])]
@@ -177,6 +180,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
         } else {
             $rows = array_merge($rowsAfterPositionProfit, $middleRows, $rowsAfterPositionLoss);
         }
+
+        $rows[count($rows) - 1] = array_merge($rows[count($rows) - 1], ['atPrice' => 0]);
 
         $rows = array_merge($rows, [self::infoRow(new TableSeparator()), self::infoRow([TH::cell(content: 'total PNL:', col: 8, align:'right'), new Pnl($totalPositionLoss + $totalPositionProfit)])]);
 
@@ -262,14 +267,19 @@ class OrdersTotalInfoCommand extends AbstractCommand
             }
 
             $marketBuyEntryDto = MarketBuyEntryDto::fromBuyOrder($order);
-            $positionBeforeExec = $sandbox->getCurrentState()->getPosition($this->getPositionSide());
+            $previousSandboxState = $sandbox->getCurrentState();
+            $positionBeforeExec = $previousSandboxState->getPosition($this->getPositionSide());
 
             try {
                 $result = [];
-                if (!$this->position->isSupportPosition()) {
+                if (!$positionBeforeExec->isSupportPosition()) {
                     PositionLiquidationIsAfterOrderPriceAssertion::create($positionBeforeExec, $order)->check();
+                    /**
+                     * @todo | check even for support (e.g. PushBuyOrdersHandler will skip order if support size is already enough for support main position)
+                     * @see \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler::isNeedIgnoreBuy
+                     */
+                    $this->marketBuyCheckService->doChecks($marketBuyEntryDto, $this->createTicker($orderPrice), $sandbox->getCurrentState(), $positionBeforeExec);
                 }
-                $this->marketBuyCheckService->doChecks($marketBuyEntryDto, $this->createTicker($orderPrice), $sandbox->getCurrentState(), $positionBeforeExec);
 
                 // @todo handle case when position became support position from main
 
@@ -278,7 +288,10 @@ class OrdersTotalInfoCommand extends AbstractCommand
                     $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
                 }
 
-                $positionAfterExec = $sandbox->processOrders($order)->getPosition($this->getPositionSide());
+                $sandboxStateAfterExec = $sandbox->processOrders($order);
+//                $currentMainPosition = $sandboxStateAfterExec->getMainPosition();
+
+                $positionAfterExec = $sandboxStateAfterExec->getPosition($this->getPositionSide());
                 if ($positionBeforeExec->isSupportPosition()) {
                     $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
                 }
@@ -286,11 +299,16 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $result = array_merge($commonCells, ['', ' =>', $positionAfterExec->size, $this->priceFormatter->format($positionAfterExec->entryPrice)]);
 
                 $liquidationCellContent = '';
-                if ($this->position->isSupportPosition()) {
+                if ($positionAfterExec->isSupportPosition()) {
                     $liquidationCellContent .= sprintf(' %s [to %s liq.distance] => %s', $this->getLiquidationPriceDiffWithPrev($oppositePositionBeforeExec, $oppositePositionAfterExec), $oppositeSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice));
                 } else {
                     $liquidationCellContent = $this->priceFormatter->format($positionAfterExec->liquidationPrice);
 //                  if ($this->isShowStateChangesEnabled()) ...
+
+                    if ($positionAfterExec) {
+
+                    }
+
                     $liquidationCellContent .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBeforeExec, $positionAfterExec));
                 }
 
@@ -346,7 +364,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $positionBeforeExec = $sandbox->getCurrentState()->getPosition($this->getPositionSide());
             // case when position initially is not support
             $oppositeSide = $this->getPositionSide()->getOpposite();
-            if ($positionBeforeExec->isSupportPosition()) {
+            if ($positionBeforeExec?->isSupportPosition()) {
                 $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
             }
             try {
@@ -361,7 +379,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $commonCells[] = $this->pnlFormatter->format($order->getPnlUsd($this->position));
 
             $positionAfterExec = $newState->getPosition($this->getPositionSide());
-            if ($positionBeforeExec->isSupportPosition()) {
+            if ($positionBeforeExec?->isSupportPosition()) {
                 $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
             }
 

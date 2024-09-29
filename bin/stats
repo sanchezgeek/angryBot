@@ -26,4 +26,4 @@ echo "----  SHORT info -----"
 ./bin/console sl:info sell ${SHOW_PNL} -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
 
 echo "----  LONG info  -----"
-./bin/console sl:info buy ${SHOW_PNL} -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}"
+./bin/console sl:info buy ${SHOW_PNL} -p"${PNL_STEP}" --aggregateWith="${AGG_WITH}" --showState --showSize --showCum
