@@ -3,12 +3,11 @@
 namespace App\Command\Orders;
 
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
-use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
-use App\Application\UseCase\Trading\Sandbox\Assertion\PositionLiquidationIsAfterOrderPriceAssertion;
-use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
-use App\Application\UseCase\Trading\Sandbox\Exception\PositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
+use App\Application\UseCase\Trading\Sandbox\Output\ExecStepResultDefaultTableRowBuilder;
+use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -18,61 +17,67 @@ use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
-use App\Command\Helper\ConsoleTableHelper as TH;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Orders\OrdersInfoTable\Dto\InitialStateRow;
+use App\Command\Orders\OrdersInfoTable\Dto\OrdersInfoTableRowAtPriceInterface;
+use App\Command\Orders\OrdersInfoTable\Dto\SandboxExecStepRow;
+use App\Command\Orders\OrdersInfoTable\Dto\SummaryRow;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Pnl\Helper\PnlFormatter;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
 use App\Domain\Price\Price;
-use App\Domain\Price\PriceMovement;
-use App\Domain\Stop\StopsCollection;
-use Error;
+use App\Output\Table\Dto\Cell;
+use App\Output\Table\Dto\DataRow;
+use App\Output\Table\Dto\Style\CellStyle;
+use App\Output\Table\Dto\Style\Enum\CellAlign;
+use App\Output\Table\Dto\Style\Enum\Color;
+use App\Output\Table\Dto\Style\RowStyle;
+use App\Output\Table\Formatter\ConsoleTableBuilder;
+use Psr\Log\NullLogger;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableCell;
-use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use Throwable;
-
-use function array_filter;
-use function array_map;
 use function array_merge;
 use function array_reverse;
 use function count;
-use function implode;
 use function sprintf;
 
 /**
- * @todo if position not opened yet
+ * @todo
+ *   what if there is no position?
+ *   $this->io->info(sprintf('volume stopped: %.2f%%', ($totalStopsVolume / $position->size) * 100));
+ *   handle case when position became support position from main
  */
-#[AsCommand(name: 'o:total')]
+#[AsCommand(name: 'o:t')]
 class OrdersTotalInfoCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
-    private const SHOW_STATE_CHANGES = 'showState';
-    private const SHOW_REASON = 'showReason';
-    private const SHOW_CUMULATIVE_STATE_CHANGES = 'showCum';
+    private const TABLE_STYLE_OPTION = 'style';
+//    private const DEFAULT_TABLE_STYLE = 'box';
+    private const DEFAULT_TABLE_STYLE = 'default';
 
-    private const ORDER_ROW_DEF = 'order-row';
-    private const INFO_ROW_DEF = 'info-row';
+    private const DIVIDE_TO_GROUPS = 'divide';
 
-    private Position $position;
     private PriceFormatter $priceFormatter;
     private PnlFormatter $pnlFormatter;
+
+    private SandboxState $initialSandboxState;
+    private ?float $totalPnl = null;
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
-            ->addOption(self::SHOW_STATE_CHANGES, null, InputOption::VALUE_NEGATABLE, 'Show state changes?')
-            ->addOption(self::SHOW_CUMULATIVE_STATE_CHANGES, null, InputOption::VALUE_NEGATABLE, 'Show cumulative state changes?')
+            ->addOption(self::TABLE_STYLE_OPTION, null, InputOption::VALUE_REQUIRED, 'Table style', self::DEFAULT_TABLE_STYLE)
+            ->addOption(self::DIVIDE_TO_GROUPS, null, InputOption::VALUE_NEGATABLE, 'Divide orders to groups?')
         ;
     }
 
@@ -80,26 +85,34 @@ class OrdersTotalInfoCommand extends AbstractCommand
     {
         parent::initialize($input, $output);
 
-        //
-        $this->position = $this->getPosition();
-
         $symbol = $this->getSymbol();
         $this->priceFormatter = new PriceFormatter($symbol);
         $this->pnlFormatter = PnlFormatter::bySymbol($symbol)->setPrecision(2)->setShowCurrency(false);
     }
 
+    private function createSandbox(): TradingSandbox
+    {
+        /** @var TradingSandbox $tradingSandbox */
+        $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($this->getSymbol());
+        $tradingSandbox->setErrorsHandlingType(SandboxErrorsHandlingType::CollectAndContinue);
+
+        $positionServiceStub = new class implements PositionServiceInterface
+        {
+            public function getPosition(Symbol $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+        };
+
+        $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger());
+
+        $tradingSandbox->setMarketBuyCheckService($marketBuyCheckService);
+
+        return $tradingSandbox;
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // @todo
-        // for both sides
-        // what if there is no position?
-        // $format .= ' => position not found => position closed?';
-        // $totalStopsVolume += $rangeStops->totalVolume();
-        // $args = [$rangeDesc, $rangeStops->totalCount(), $rangeStops->volumePart($position->size)];
-        // $this->io->info(sprintf('volume stopped: %.2f%%', ($totalStopsVolume / $position->size) * 100));
-
         $ticker = $this->exchangeService->ticker($this->getSymbol());
-        $position = $this->getPosition();
         $positionSide = $this->getPositionSide();
 
         $stops = $this->stopRepository->findActive($positionSide);
@@ -111,10 +124,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
         /** @var Stop[]|BuyOrder[] $orders */
         $orders = array_merge($stops, $buyOrders);
 
-        /** @var array{toProfit: Stop[]|BuyOrder[], toLoss: Stop[]|BuyOrder[]} $parts */
-        $parts = ['toProfit' => [], 'toLoss' => []];
-        $ordersAfterPositionLoss = $parts['toLoss'];
-        $ordersAfterPositionProfit = $parts['toProfit'];
+        $ordersAfterPositionLoss = [];
+        $ordersAfterPositionProfit = [];
 
         foreach ($orders as $order) {
             Price::float($order->getPrice())->differenceWith($ticker->indexPrice)->isLossFor($positionSide) ? $ordersAfterPositionLoss[] = $order : $ordersAfterPositionProfit[] = $order;
@@ -123,402 +134,135 @@ class OrdersTotalInfoCommand extends AbstractCommand
         usort($ordersAfterPositionLoss,   $positionSide->isLong() ? static fn ($a, $b) => $b->getPrice() <=> $a->getPrice() : static fn ($a, $b) => $a->getPrice() <=> $b->getPrice());
         usort($ordersAfterPositionProfit, $positionSide->isLong() ? static fn ($a, $b) => $a->getPrice() <=> $b->getPrice() : static fn ($a, $b) => $b->getPrice() <=> $a->getPrice());
 
-        //
-        $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($this->getSymbol());
-        $initialSandboxState = clone $tradingSandbox->getCurrentState();
+        $sandbox = $this->createSandbox();
+        $this->initialSandboxState = $sandbox->getCurrentState();
 
-        $table = new Table($output);
-        $table->setHeaders(['id', 'price', 'volume', sprintf('PNL (%s)', $this->pnlFormatter->getCurrency()), '', 'pos.size', 'pos.entry', 'pos.liquidation', 'comment']);
-
-        # toProfit
-        $rowsAfterPositionProfit = $this->processOrdersFromInitialPositionState($tradingSandbox, $ordersAfterPositionProfit);
-        $stopsAfterPositionProfit = new StopsCollection(...array_filter($ordersAfterPositionProfit, static fn($order) => $order instanceof Stop));
-        //
-        $totalPositionProfit = $stopsAfterPositionProfit->totalUsdPnL($position);
-
-        $rowsAfterPositionProfit = array_merge($rowsAfterPositionProfit, [
-            self::infoRow(new TableSeparator()),
-            self::infoRow([TH::cell(content: 'total PROFIT:', col: 8, align: 'right'), new Pnl($totalPositionProfit)]),
-        ]);
-
+        $rowsAfterPositionProfit = $this->processOrdersFromInitialPositionState($sandbox, $ordersAfterPositionProfit);
         if ($positionSide->isLong()) {
-            $rowsAfterPositionProfit = array_reverse($rowsAfterPositionProfit);
+            $rowsAfterPositionProfit = array_reverse($rowsAfterPositionProfit, true);
         }
 
         # set initial state before go other direction
-        $tradingSandbox->setState($initialSandboxState);
-
-        # toLoss
-        $rowsAfterPositionLoss = $this->processOrdersFromInitialPositionState($tradingSandbox, $ordersAfterPositionLoss);
-
-        $stopsAfterPositionLoss = new StopsCollection(...array_filter($ordersAfterPositionLoss, static fn($order) => $order instanceof Stop));
-        $totalPositionLoss = $stopsAfterPositionLoss->totalUsdPnL($position);
-        $lastRow = end($rowsAfterPositionLoss)['content'] ?? null;
-        $rowsAfterPositionLoss = array_merge($rowsAfterPositionLoss,
-            !$lastRow instanceof TableSeparator ? [self::infoRow(new TableSeparator())] : [],
-            [self::infoRow([TH::cell(content: 'total LOSS:', col: 8, align: 'right'), new Pnl($totalPositionLoss)])]
-        );
+        $sandbox->setState($this->initialSandboxState);
+        $rowsAfterPositionLoss = $this->processOrdersFromInitialPositionState($sandbox, $ordersAfterPositionLoss);
         if ($positionSide->isShort()) {
-            $rowsAfterPositionLoss = array_reverse($rowsAfterPositionLoss);
+            $rowsAfterPositionLoss = array_reverse($rowsAfterPositionLoss, true);
         }
 
-        $middleRows = [
-            self::infoRow(new TableSeparator()),
-            self::infoRow([
-                TH::cell(sprintf('%s ticker: %s', $ticker->symbol->value, $ticker->indexPrice->value()), 4, [], 'yellow'),
-                'pos:',
-                TH::cell(content: $position->size, fontColor: 'yellow'),
-                TH::cell(content: $position->entryPrice, fontColor: 'yellow'),
-                !$position->isSupportPosition() ? TH::cell(content: $position->liquidationPrice, fontColor: 'yellow') : '',
-                !$position->isSupportPosition() ? sprintf('liquidationDistance: %s with position entry, %s with ticker', $position->liquidationDistance(), $position->priceDistanceWithLiquidation($ticker)) : '',
-            ], $ticker->indexPrice->value()),
-            self::infoRow(new TableSeparator()),
-        ];
+        $middleRows = [new InitialStateRow($ticker, $this->initialSandboxState)];
+        $rows = $positionSide->isShort()
+            ? array_merge($rowsAfterPositionLoss, $middleRows, $rowsAfterPositionProfit)
+            : array_merge($rowsAfterPositionProfit, $middleRows, $rowsAfterPositionLoss);
 
-        if ($positionSide->isShort()) {
-            $rows = array_merge($rowsAfterPositionLoss, $middleRows, $rowsAfterPositionProfit);
-        } else {
-            $rows = array_merge($rowsAfterPositionProfit, $middleRows, $rowsAfterPositionLoss);
+        if ($this->totalPnl !== null) {
+            $rows[] = new SummaryRow('total PNL:', new Pnl($this->totalPnl));
         }
 
-        $rows[count($rows) - 1] = array_merge($rows[count($rows) - 1], ['atPrice' => 0]);
-
-        $rows = array_merge($rows, [self::infoRow(new TableSeparator()), self::infoRow([TH::cell(content: 'total PNL:', col: 8, align:'right'), new Pnl($totalPositionLoss + $totalPositionProfit)])]);
-
-        $resultRows = [];
-        $isPositionLocationPrinted = false;
-        foreach ($rows as $row) {
-            if (!$isPositionLocationPrinted && isset($row['atPrice'])) {
-                if ($this->position->entryPrice > $row['atPrice']) {
-                    if (!end($resultRows) instanceof TableSeparator) {
-                        $resultRows[] = new TableSeparator();
-                    }
-                    $resultRows[] = [TH::cell(content: $this->position->entryPrice, col:2, fontColor: 'yellow', align: 'right'), TH::cell(content: '(position located here)', col:6, fontColor: 'yellow')];
-                    $resultRows[] = new TableSeparator();
-                    $isPositionLocationPrinted = true;
-                }
-            }
-
-            $resultRows[] = $row['content'];
-        }
-
-        $table->addRows($resultRows)->render();
+        $this->print($rows);
 
         return Command::SUCCESS;
     }
 
+    /**
+     * @param Stop[]|BuyOrder[] $orders
+     */
     private function processOrdersFromInitialPositionState(TradingSandbox $sandbox, array $orders): array
     {
-        $groups = [];
-
-        $key = -1;
-        foreach ($orders as $order) {
-            $lastType = $groups ? $groups[count($groups) - 1]['type'] : null;
-            $class = get_class($order);
-            $orderType = match ($class) {
-                BuyOrder::class => OrderType::Add,
-                Stop::class => OrderType::Stop,
-            };
-
-            if ($orderType !== $lastType) {
-                $key++;
-                $groups[$key] ??= ['type' => $orderType, 'items' => []];
-            }
-
-            $groups[$key]['items'][] = $order;
-        }
-
-
-        $rows = [];
-        foreach ($groups as /*$rangeDesc => */ $group) {
-            $groupType = $group['type'];
-
-            match ($groupType) {
-                OrderType::Add => $rows = array_merge($rows, $this->processBuyOrdersGroup($sandbox, $group['items'])),
-                OrderType::Stop => $rows = array_merge($rows, $this->processStopOrdersGroup($sandbox, $group['items'])),
-            };
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @param BuyOrder[] $orders
-     */
-    private function processBuyOrdersGroup(TradingSandbox $sandbox, array $orders): array
-    {
+        $pnl = 0;
         $rows = [];
         foreach ($orders as $order) {
-            $positionAfterExec = null;
+            $stepResult = $sandbox->processOrders($order);
 
-            $orderPrice = $order->getPrice();
-            $commonCells = [sprintf('b.%d', $order->getId()), $orderPrice, sprintf('+ %s', $order->getVolume())];
-
-            $result = null;
-            $commentCellContent = [];
-
-            $comments = [];
-            if ($order->isForceBuyOrder())                  $comments[] = '!force buy!';
-            if ($order->isOppositeBuyOrderAfterStopLoss())  $comments[] = 'opposite BuyOrder after SL';
-            if (!$order->isWithOppositeOrder())             $comments[] = 'without Stop';
-
-            if ($comments) {
-                $commentCellContent[] = implode(', ', $comments);
-            }
-
-            $marketBuyEntryDto = MarketBuyEntryDto::fromBuyOrder($order);
-            $previousSandboxState = $sandbox->getCurrentState();
-            $positionBeforeExec = $previousSandboxState->getPosition($this->getPositionSide());
-
-            try {
-                $result = [];
-                if (!$positionBeforeExec->isSupportPosition()) {
-                    PositionLiquidationIsAfterOrderPriceAssertion::create($positionBeforeExec, $order)->check();
-                    /**
-                     * @todo | check even for support (e.g. PushBuyOrdersHandler will skip order if support size is already enough for support main position)
-                     * @see \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler::isNeedIgnoreBuy
-                     */
-                    $this->marketBuyCheckService->doChecks($marketBuyEntryDto, $this->createTicker($orderPrice), $sandbox->getCurrentState(), $positionBeforeExec);
-                }
-
-                // @todo handle case when position became support position from main
-
-                $oppositeSide = $this->getPositionSide()->getOpposite();
-                if ($positionBeforeExec->isSupportPosition()) {
-                    $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
-                }
-
-                $sandboxStateAfterExec = $sandbox->processOrders($order);
-//                $currentMainPosition = $sandboxStateAfterExec->getMainPosition();
-
-                $positionAfterExec = $sandboxStateAfterExec->getPosition($this->getPositionSide());
-                if ($positionBeforeExec->isSupportPosition()) {
-                    $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
-                }
-
-                $result = array_merge($commonCells, ['', ' =>', $positionAfterExec->size, $this->priceFormatter->format($positionAfterExec->entryPrice)]);
-
-                $liquidationCellContent = '';
-                if ($positionAfterExec->isSupportPosition()) {
-                    $liquidationCellContent .= sprintf(' %s [to %s liq.distance] => %s', $this->getLiquidationPriceDiffWithPrev($oppositePositionBeforeExec, $oppositePositionAfterExec), $oppositeSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice));
-                } else {
-                    $liquidationCellContent = $this->priceFormatter->format($positionAfterExec->liquidationPrice);
-//                  if ($this->isShowStateChangesEnabled()) ...
-
-                    if ($positionAfterExec) {
-
+            if (!$this->isPositionLiquidationPrinted) {
+                foreach ($stepResult->getItems() as $item) {
+                    if ($item->failReason?->exception instanceof SandboxPositionLiquidatedBeforeOrderPriceException) {
+                        $this->isPositionLiquidationPrinted = true;
+                        $liquidatedAt = $this->priceFormatter->format($item->inputState->getPosition($this->getPositionSide())->liquidationPrice);
+                        $rows[] = DataRow::separated(
+                            [Cell::colspan(2, $liquidatedAt)->setAlign(CellAlign::RIGHT), Cell::restColumnsMerged('position liquidation')->setAlign(CellAlign::CENTER)]
+                        )->addStyle(new RowStyle(fontColor: Color::RED));
                     }
-
-                    $liquidationCellContent .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBeforeExec, $positionAfterExec));
-                }
-
-                $result[] = $liquidationCellContent;
-                $result[2] = self::buyOrderCell($result[2]);
-            } catch (SandboxInsufficientAvailableBalanceException $e) {
-                $commentCellContent[] = sprintf('cannot buy (%s)', $e->getMessage());
-            } catch (BuyIsNotSafeException $e) {
-                $commentCellContent[] = sprintf('won\'t be executed (%s)', $e->getMessage());
-            } catch (PositionLiquidatedBeforeOrderPriceException) {
-                $this->printPositionLiquidationRow($positionBeforeExec, $rows);
-                $rows[] = self::orderRow($orderPrice, array_merge($commonCells, [TH::cell('', 5)]));
-                continue;
-            }
-
-            if (!$result) {
-                $result = array_merge($commonCells, ['', '', '', '', '']); # in case of error
-            }
-
-            if ($commentCellContent) {
-                $result[] = implode(' | ', $commentCellContent);
-            } else {
-                $result[] = '';
-            }
-
-            if (isset($positionAfterExec) && $this->isShowCumulativeStateChangesEnabled()) {
-                if (!$positionAfterExec->isSupportPosition()) {
-                    $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
-                } else {
-                    $result[] = sprintf('total % 7.2f added to %s liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position->oppositePosition, $oppositePositionAfterExec), $oppositePositionBeforeExec->getCaption());
                 }
             }
 
+            $rows[] = new SandboxExecStepRow($stepResult);
 
-            $rows[] = self::orderRow($orderPrice, $result);
+            if ($stepResult->getTotalPnl()) {
+                $pnl += $stepResult->getTotalPnl();
+            }
+        }
+
+        if ($pnl) {
+            $rows[] = new SummaryRow('PNL:', new Pnl($pnl));
+            $this->totalPnl += $pnl;
         }
 
         return $rows;
     }
 
-    /**
-     * @param Stop[] $orders
-     */
-    private function processStopOrdersGroup(TradingSandbox $sandbox, array $orders): array
+    private function print(array $rows): void
     {
-        $rows = [];
-        foreach ($orders as $order) {
-            $orderPrice = $order->getPrice();
+        $initialPosition = $this->initialSandboxState->getPosition($this->getPositionSide());
+        $isPositionLocationPrinted = false;
 
-            # ID, price, volume
-            $commonCells = array_map(static fn(string $content) => self::stopOrderCell($content), [sprintf('s.%d', $order->getId()), $orderPrice, sprintf('- %s', $order->getVolume())]);
+        $sandboxExecutionResultRowBuilder = new ExecStepResultDefaultTableRowBuilder($this->getPositionSide(), $this->pnlFormatter, $this->priceFormatter);
 
-            $positionBeforeExec = $sandbox->getCurrentState()->getPosition($this->getPositionSide());
-            // case when position initially is not support
-            $oppositeSide = $this->getPositionSide()->getOpposite();
-            if ($positionBeforeExec?->isSupportPosition()) {
-                $oppositePositionBeforeExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
-            }
-            try {
-                $newState = $sandbox->processOrders($order);
-            } catch (PositionLiquidatedBeforeOrderPriceException) {
-                $this->printPositionLiquidationRow($positionBeforeExec, $rows);
-                $result = array_merge($commonCells, [TH::cell('', 5)]);
-                $rows[] = self::orderRow($orderPrice, $result);
-                continue;
-            }
+        $headers = [
+            'id' => 'id',
+            'price' => 'price',
+            'volume' => 'volume',
+            'pnl' => sprintf('PNL (%s)',$this->pnlFormatter->getCurrency()),
+            'wrapperBetweenOldAndNewState' => '',
+            'pos.size' => 'pos.size',
+            'pos.entry' => 'pos.entry',
+            'pos.liquidation' => 'pos.liquidation',
+        ];
+        $columnsCount = count($headers);
+        $tableRows = [];
+        $tableRows[] = DataRow::empty();
 
-            $commonCells[] = $this->pnlFormatter->format($order->getPnlUsd($this->position));
-
-            $positionAfterExec = $newState->getPosition($this->getPositionSide());
-            if ($positionBeforeExec?->isSupportPosition()) {
-                $oppositePositionAfterExec = $sandbox->getCurrentState()->getPosition($oppositeSide);
-            }
-
-            if (!$positionAfterExec && $positionBeforeExec) {
-                $result = array_merge($commonCells, [' =>', TH::cell(content: 'position closed', col: 3, align: 'center')]);
-                $rows[] = self::infoRow(new TableSeparator());
-                $rows[] = self::orderRow($orderPrice, $result);
-                $rows[] = self::infoRow(new TableSeparator());
-                // liq.distance added to opposite
-                continue;
-            } elseif (!$positionBeforeExec && !$positionAfterExec) {
-                $result = array_merge($commonCells, [TH::cell(content: '', col: 5)]);
-                $rows[] = self::orderRow($orderPrice, $result);
-                continue;
-            }
-
-
-            $result = array_merge($commonCells, [' =>', $positionAfterExec->size, $this->priceFormatter->format($positionAfterExec->entryPrice)]);
-
-            $liquidationCellContent = '';
-            if ($this->position->isSupportPosition()) {
-                $liquidationCellContent .= sprintf(' %s [to %s liq.distance] => %s', $this->getLiquidationPriceDiffWithPrev($oppositePositionBeforeExec, $oppositePositionAfterExec), $oppositeSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice));
-            } else {
-                $liquidationCellContent = $this->priceFormatter->format($positionAfterExec->liquidationPrice);
-//            if ($this->isShowStateChangesEnabled()) {
-                $liquidationCellContent .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBeforeExec, $positionAfterExec));
-//                $liquidationDiff->deltaForPositionLoss($this->getPositionSide(), $rangeStops->getAvgPrice())->setOutputDecimalsPrecision(8);
-//                if ($resultPosition->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) $format .= ' | became support?';
-//            }
-            }
-
-
-            $result[] = $liquidationCellContent;
-
-            $comments = [];
-            if ($order->isTakeProfitOrder()) {
-                $comments[] = 'TakeProfit order';
-            } elseif ($order->isCloseByMarketContextSet()) {
-                $comments[] = '!by market!';
-            } else {
-                $comments[] = 'Conditional order';
-            }
-
-            if (!$order->isWithOppositeOrder()) {
-                $comments[] = 'without opposite BO';
-            }
-
-            // opposite
-
-            if ($comments) {
-                $result[] = implode(' | ', $comments);
-            } else {
-                $result[] = '';
-            }
-
-
-            if ($this->isShowCumulativeStateChangesEnabled()) {
-                if (!$positionAfterExec->isSupportPosition()) {
-                    $result[] = sprintf('total % 7.2f added to initial liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position, $positionAfterExec));
-                } else {
-                    $result[] = sprintf('total % 7.2f added to %s liq.distance', $this->getLiquidationPriceDiffWithPrev($this->position->oppositePosition, $oppositePositionAfterExec), $oppositePositionBeforeExec->getCaption());
+        foreach ($rows as $row) {
+            if (!$isPositionLocationPrinted && $row instanceof OrdersInfoTableRowAtPriceInterface) {
+                if ($initialPosition->entryPrice()->greaterThan($row->getRowUpperPrice())) {
+                    $isPositionLocationPrinted = true;
+                    $tableRows[] = DataRow::separated([Cell::colspan(2, $initialPosition->entryPrice), Cell::restColumnsMerged('(position located here)')])
+                        ->addStyle(RowStyle::yellowFont());
                 }
             }
 
-            $rows[] = self::orderRow($orderPrice, $result);
+            if ($row instanceof SummaryRow) {
+                $row = DataRow::separated([new Cell($row->caption, new CellStyle(colspan: $columnsCount - 1, align: CellAlign::RIGHT)), new Cell($row->content)]);
+            } elseif ($row instanceof SandboxExecStepRow) {
+                $row = $sandboxExecutionResultRowBuilder->build($row->stepResult);
+            } elseif ($row instanceof InitialStateRow) {
+                $ticker = $row->ticker;
+                $position = $row->initialSandboxState->getPosition($this->getPositionSide());
+                $cells = array_merge([
+                    Cell::colspan(4, sprintf('%s ticker: %s  %s  %s', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
+                    Cell::resetToDefaults('pos:'),
+                    # probably some default table behaviour instead of $columnsCount - $tickerColspan
+                ], !$position ? [Cell::restColumnsMerged('No position found')] : [
+                    $position->size, $position->entryPrice, !$position->isSupportPosition() ? $position->liquidationPrice : '',
+                    Cell::resetToDefaults(
+                        !$position->isSupportPosition() ? sprintf('liquidationDistance: %s with position entry, %s with ticker', $position->liquidationDistance(), $position->priceDistanceWithLiquidation($ticker)) : '',
+                    )
+                ]);
+
+                $row = DataRow::separated($cells)->addStyle(RowStyle::yellowFont());
+            }
+
+            $tableRows[] = $row;
         }
 
-        return $rows;
-    }
-
-    private static function buyOrderCell(string $content): TableCell
-    {
-        return TH::cell(content: $content, fontColor: 'green');
-    }
-
-    private static function stopOrderCell(string $content): TableCell
-    {
-        return TH::cell(content: $content, backgroundColor: 'bright-red');
-    }
-
-    private static function infoRow(mixed $content, float $atPrice = null): array
-    {
-        $row = ['def' => self::INFO_ROW_DEF, 'content' => $content];
-        if ($atPrice !== null) {
-            $row['atPrice'] = $atPrice;
-        }
-
-        return $row;
-    }
-
-    private static function orderRow(float $atPrice, mixed $content): array
-    {
-        return ['def' => self::ORDER_ROW_DEF, 'content' => $content, 'atPrice' => $atPrice];
-    }
-
-    private function getLiquidationPriceDiffWithPrev(Position $positionBefore, Position $positionAfter): string
-    {
-        $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice, $positionAfter->liquidationPrice);
-        $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($positionBefore->side);
-        if ($liquidationPriceDiffWithPrev > 0) {
-            $liquidationPriceDiffWithPrev = '+' . $this->priceFormatter->format($liquidationPriceDiffWithPrev);
-        }
-
-        return $liquidationPriceDiffWithPrev;
-    }
-
-    private function createTicker(float|Price $price): Ticker
-    {
-        $price = Price::toObj($price);
-
-        return new Ticker($this->getSymbol(), $price, $price, $price);
-    }
-
-    private function isShowReasonEnabled(): bool
-    {
-        return $this->paramFetcher->getBoolOption(self::SHOW_STATE_CHANGES);
-    }
-
-    private function isShowStateChangesEnabled(): bool
-    {
-        return $this->paramFetcher->getBoolOption(self::SHOW_STATE_CHANGES);
-    }
-
-    private function isShowCumulativeStateChangesEnabled(): bool
-    {
-        return $this->paramFetcher->getBoolOption(self::SHOW_CUMULATIVE_STATE_CHANGES);
+        ConsoleTableBuilder::withOutput($this->output)
+            ->withHeader($headers)
+            ->withRows(...$tableRows)
+            ->build()
+            ->setStyle($this->paramFetcher->getStringOption(self::TABLE_STYLE_OPTION))
+            ->render();
     }
 
     private bool $isPositionLiquidationPrinted = false;
-
-    private function printPositionLiquidationRow(Position $position, array &$rows): void
-    {
-        if (!$this->isPositionLiquidationPrinted) {
-            $rows[] = self::infoRow(new TableSeparator());
-            $rows[] = self::infoRow([TH::cell($this->priceFormatter->format($position->liquidationPrice), 2, align: 'right', fontColor: 'bright-red'), TH::cell(content: 'position liquidation', col: 6, fontColor: 'bright-red', align: 'center')]);
-            $rows[] = self::infoRow(new TableSeparator());
-            $this->isPositionLiquidationPrinted = true;
-        }
-    }
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
@@ -526,7 +270,6 @@ class OrdersTotalInfoCommand extends AbstractCommand
         private readonly BuyOrderRepository       $buyOrderRepository,
         PositionServiceInterface                  $positionService,
         private readonly TradingSandboxFactory    $tradingSandboxFactory,
-        private readonly MarketBuyCheckService    $marketBuyCheckService,
         string                                    $name = null,
     ) {
         $this->withPositionService($positionService);

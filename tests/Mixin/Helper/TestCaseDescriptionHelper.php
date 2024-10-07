@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Helper;
 
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Domain\Position;
 

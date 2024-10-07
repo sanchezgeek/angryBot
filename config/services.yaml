@@ -33,6 +33,9 @@ services:
     App\Alarm\:
         resource: '../src/modules/Alarm'
 
+    App\Output\:
+        resource: '../src/modules/Output'
+
 ### schedule
     App\Messenger\SchedulerTransport\TransportFactory:
         tags: [ 'messenger.transport_factory' ]

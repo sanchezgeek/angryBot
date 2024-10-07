@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\Sandbox;
 
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxStopOrder;
-use App\Application\UseCase\Trading\Sandbox\Exception\PositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 
 interface TradingSandboxInterface
 {
     /**
-     * @return SandboxState New state after orders exec
-     *
      * @throws SandboxInsufficientAvailableBalanceException
-     * @throws PositionLiquidatedBeforeOrderPriceException
+     * @throws SandboxPositionLiquidatedBeforeOrderPriceException
+     * @throws SandboxPositionNotFoundException
      */
-    public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): SandboxState;
+    public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): ExecutionStepResult;
 
     public function getCurrentState(): SandboxState;
 

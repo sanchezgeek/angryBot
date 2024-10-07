@@ -2,7 +2,8 @@
 
 namespace App\Command\Stop;
 
-use App\Application\UseCase\Trading\Sandbox\Exception\PositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -124,10 +125,11 @@ class StopInfoCommand extends AbstractCommand
         $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($symbol);
 
         $totalUsdPnL = $totalVolume = 0;
-        $initialPositionState = $tradingSandbox->getCurrentState()->getPosition($positionSide);
-        $previousSandboxState = clone $tradingSandbox->getCurrentState();
+        $initialState = $tradingSandbox->getCurrentState();
+        $initialPositionState = $initialState->getPosition($positionSide);
 
         $output = [];
+        $previousSandboxState = $initialState;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
             /** @var StopsCollection $rangeStops */
             if (!$rangeStops->totalCount()) {
@@ -145,12 +147,16 @@ class StopInfoCommand extends AbstractCommand
             }
 
             $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
+            $positionLiquidated = false;
             try {
-                $currentSandboxState = $tradingSandbox->processOrders(...$rangeStops);
-            } catch (PositionLiquidatedBeforeOrderPriceException $e) {
-                $output[] = sprintf('position liquidation at %s', $e->position->liquidationPrice);
+                $tradingSandbox->processOrders(...$rangeStops);
+                $newSandboxState = $tradingSandbox->getCurrentState();
+            } catch (SandboxPositionLiquidatedBeforeOrderPriceException $e) {
+                $positionLiquidated = true;
+            } catch (SandboxPositionNotFoundException $e) {
             }
-            $positionAfterRange = $currentSandboxState->getPosition($positionSide);
+
+            $positionAfterRange = $newSandboxState?->getPosition($positionSide);
 
             if ($showSizeLeft) { # size left
                 if ($positionAfterRange) {
@@ -170,6 +176,10 @@ class StopInfoCommand extends AbstractCommand
                 }
             }
 
+            if ($positionLiquidated) {
+                $format .= sprintf(' | but position liquidation at %s', $positionBeforeRange->liquidationPrice);
+            }
+
             $output[] = sprintf($format, ...$args);
             $aggInfo = $this->printAggregateInfo($rangeStops, $positionSide);
             if ($aggInfo !== null) {
@@ -179,7 +189,7 @@ class StopInfoCommand extends AbstractCommand
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
 
-            $previousSandboxState = clone $currentSandboxState;
+            $previousSandboxState = $newSandboxState;
         }
 
         if ($positionSide->isShort()) {

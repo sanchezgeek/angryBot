@@ -11,6 +11,8 @@ use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use RuntimeException;
 
+use Stringable;
+
 use function abs;
 use function round;
 use function sprintf;
@@ -20,7 +22,7 @@ use function sprintf;
  *
  * @todo | ctrl-f: round(..., 2) | Need to pass precision in __construct on creation (in order to using not only in BTCUSDT context)
  */
-readonly final class Price
+readonly final class Price implements Stringable
 {
     private float $value;
 
@@ -140,5 +142,10 @@ readonly final class Price
     public static function toObj(self|float $value): self
     {
         return $value instanceof self ? $value : self::float($value);
+    }
+
+    public function __toString(): string
+    {
+        return (string)$this->value();
     }
 }

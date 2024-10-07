@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\UseCase\Trading\Sandbox\Dto;
+namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -15,18 +15,23 @@ use function sprintf;
 
 readonly class SandboxBuyOrder implements Stringable
 {
-    public function __construct(public Symbol $symbol, public Side $positionSide, public float $price, public float $volume)
-    {
+    public function __construct(
+        public Symbol $symbol,
+        public Side $positionSide,
+        public float $price,
+        public float $volume,
+        public ?BuyOrder $sourceOrder = null
+    ) {
     }
 
     public static function fromBuyOrder(BuyOrder $buyOrder): self
     {
-        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getPrice(), $buyOrder->getVolume());
+        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getPrice(), $buyOrder->getVolume(), $buyOrder);
     }
 
     public static function fromMarketBuyEntryDto(MarketBuyEntryDto $marketBuyDto, Price $price): SandboxBuyOrder
     {
-        return new SandboxBuyOrder($marketBuyDto->symbol, $marketBuyDto->positionSide, Price::toFloat($price), $marketBuyDto->volume);
+        return new self($marketBuyDto->symbol, $marketBuyDto->positionSide, Price::toFloat($price), $marketBuyDto->volume);
     }
 
     public function desc(): string

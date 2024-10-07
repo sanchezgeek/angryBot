@@ -15,10 +15,12 @@ abstract class AbstractCommand extends Command
     use ConsoleInputAwareCommand;
 
     protected SymfonyStyle $io;
+    protected OutputInterface $output;
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
         $this->withInput($input);
+        $this->output = $output;
         $this->io = new SymfonyStyle($input, $output);
     }
 }

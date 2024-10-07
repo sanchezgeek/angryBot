@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\UseCase\Trading\Sandbox\Dto;
+namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -13,13 +13,21 @@ use function sprintf;
 
 readonly class SandboxStopOrder implements Stringable
 {
-    public function __construct(public Symbol $symbol, public Side $positionSide, public float $price, public float $volume)
-    {
+    /**
+     * MB private?
+     */
+    public function __construct(
+        public Symbol $symbol,
+        public Side $positionSide,
+        public float $price,
+        public float $volume,
+        public ?Stop $sourceOrder = null
+    ) {
     }
 
     public static function fromStop(Stop $stop): self
     {
-        return new self($stop->getSymbol(), $stop->getPositionSide(), $stop->getPrice(), $stop->getVolume());
+        return new self($stop->getSymbol(), $stop->getPositionSide(), $stop->getPrice(), $stop->getVolume(), $stop);
     }
 
     public function desc(): string

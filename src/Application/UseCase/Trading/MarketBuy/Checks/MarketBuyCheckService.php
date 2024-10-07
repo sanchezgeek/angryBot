@@ -7,7 +7,7 @@ namespace App\Application\UseCase\Trading\MarketBuy\Checks;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
@@ -43,11 +43,13 @@ readonly class MarketBuyCheckService
             $sandbox = $this->sandboxFactory->empty($symbol)->setState($currentState);
         }
 
+        // creating dto based on MARKET, because source BuyOrder.price might be not actual at this moment
         $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($order, $withTicker->lastPrice);
 
         try {
-            $newState = $sandbox->processOrders($sandboxOrder);
-            $liquidationPrice = $newState->getPosition($positionSide)->liquidationPrice();
+            $sandbox->processOrders($sandboxOrder);
+            $newState = $sandbox->getCurrentState();
+            $positionToCheckLiquidation = $newState->getPosition($positionSide);
         } catch (\Throwable $e) {
             $this->appErrorLogger->critical($e->getMessage(), [
                 'file' => $e->getFile(),
@@ -61,10 +63,15 @@ readonly class MarketBuyCheckService
 
             # use current position liquidation
             $currentPositionState ??= $this->positionService->getPosition($symbol, $positionSide);
-            $liquidationPrice = $currentPositionState->liquidationPrice();
-
+            $positionToCheckLiquidation = $currentPositionState;
             // а вообще можно ли делать такой fallback?
         }
+
+        if ($positionToCheckLiquidation->isSupportPosition()) {
+            return;
+        }
+
+        $liquidationPrice = $positionToCheckLiquidation->liquidationPrice();
 
         $isLiquidationOnSafeDistance = $positionSide->isShort()
             ? $liquidationPrice->sub($safePriceDistance)->greaterOrEquals($withTicker->markPrice)

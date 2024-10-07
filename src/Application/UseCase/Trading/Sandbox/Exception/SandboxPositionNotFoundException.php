@@ -6,7 +6,7 @@ namespace App\Application\UseCase\Trading\Sandbox\Exception;
 
 use Exception;
 
-class SandboxHedgeIsEquivalentException extends AbstractSandboxExecutionFlowException
+final class SandboxPositionNotFoundException extends AbstractSandboxExecutionFlowException
 {
 
 }

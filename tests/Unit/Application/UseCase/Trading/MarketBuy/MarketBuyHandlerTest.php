@@ -9,12 +9,11 @@ use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -226,7 +225,7 @@ class MarketBuyHandlerTest extends KernelTestCase
     private function mockSandboxWillBeCalledAndReturnNewStateAfterExec(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $stateAfterExec): void
     {
         $sandboxMock = $this->createMock(TradingSandboxInterface::class);
-        $sandboxMock->expects(self::once())->method('processOrders')->with(SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice))->willReturn($stateAfterExec);
+        $sandboxMock->expects(self::once())->method('processOrders')->with(SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice));
         $sandboxMock->method('getCurrentState')->willReturn($stateAfterExec);
 
         $this->executionSandboxFactory->expects(self::once())->method('byCurrentState')->with($buyEntryDto->symbol)->willReturn($sandboxMock);
