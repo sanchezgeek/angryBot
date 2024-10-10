@@ -130,6 +130,7 @@ class StopInfoCommand extends AbstractCommand
 
         $output = [];
         $previousSandboxState = $initialState;
+        $positionLiquidationRowPrinted = false;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
             /** @var StopsCollection $rangeStops */
             if (!$rangeStops->totalCount()) {
@@ -148,17 +149,20 @@ class StopInfoCommand extends AbstractCommand
 
             $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
             $positionLiquidated = false;
+            $newSandboxState = null;
             try {
                 $tradingSandbox->processOrders(...$rangeStops);
                 $newSandboxState = $tradingSandbox->getCurrentState();
             } catch (SandboxPositionLiquidatedBeforeOrderPriceException $e) {
                 $positionLiquidated = true;
+                (!$positionLiquidationRowPrinted) && $output[] = sprintf('position liquidated at %s', $positionBeforeRange->liquidationPrice);
+                $positionLiquidationRowPrinted = true;
             } catch (SandboxPositionNotFoundException $e) {
             }
 
             $positionAfterRange = $newSandboxState?->getPosition($positionSide);
 
-            if ($showSizeLeft) { # size left
+            if ($showSizeLeft && !$positionLiquidated) {
                 if ($positionAfterRange) {
                     $sizeLeft = $positionAfterRange->size; $format .= ' => %.3f';$args[] = $sizeLeft;
                 } else {
@@ -167,17 +171,15 @@ class StopInfoCommand extends AbstractCommand
             }
 
             if ($this->isShowStateChangesEnabled()) {
-                $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $positionBeforeRange, $positionAfterRange);
-                if ($positionAfterRange->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) {
+                if ($positionAfterRange) {
+                    $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $positionBeforeRange, $positionAfterRange);
+                }
+                if ($positionAfterRange?->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) {
                     $format .= ' | became support?';
                 }
-                if ($this->isShowCumulativeStateChangesEnabled()) {
+                if ($positionAfterRange && $this->isShowCumulativeStateChangesEnabled()) {
                     $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $initialPositionState, $positionAfterRange, true);
                 }
-            }
-
-            if ($positionLiquidated) {
-                $format .= sprintf(' | but position liquidation at %s', $positionBeforeRange->liquidationPrice);
             }
 
             $output[] = sprintf($format, ...$args);
@@ -189,7 +191,7 @@ class StopInfoCommand extends AbstractCommand
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
 
-            $previousSandboxState = $newSandboxState;
+            $previousSandboxState = $newSandboxState ?? $previousSandboxState;
         }
 
         if ($positionSide->isShort()) {
