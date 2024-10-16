@@ -9,14 +9,16 @@ use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
-use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
+use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
 use Psr\Log\LoggerInterface;
 
+/**
+ * @todo | Add interface to mock checks in MarketBuyHandlerTest
+ */
 readonly class MarketBuyCheckService
 {
     const SAFE_PRICE_DISTANCE_DEFAULT = MarketBuyHandler::SAFE_PRICE_DISTANCE_DEFAULT;
@@ -25,26 +27,26 @@ readonly class MarketBuyCheckService
      * @throws BuyIsNotSafeException
      */
     public function doChecks(
-        MarketBuyEntryDto                    $order,
-        Ticker                               $withTicker,
-        SandboxState|TradingSandboxInterface $sandbox,
-        Position                             $currentPositionState = null,
-        float                                $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
+        MarketBuyEntryDto     $order,
+        Ticker                $ticker,
+        SandboxStateInterface $currentState,
+        Position              $currentPositionState = null,
+        float                 $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
     ): void {
         if ($order->force) {
             return;
         }
 
-        $positionSide = $order->positionSide;
         $symbol = $order->symbol;
+        $markPrice = $ticker->markPrice;
+        $lastPrice = $ticker->lastPrice;
+        $positionSide = $order->positionSide;
 
-        if ($sandbox instanceof SandboxState) {
-            $currentState = $sandbox;
-            $sandbox = $this->sandboxFactory->empty($symbol)->setState($currentState);
-        }
+        $sandbox = $this->sandboxFactory->empty($symbol);
+        $sandbox->setState($currentState);
 
         // creating dto based on MARKET, because source BuyOrder.price might be not actual at this moment
-        $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($order, $withTicker->lastPrice);
+        $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($order, $lastPrice);
 
         try {
             $sandbox->processOrders($sandboxOrder);
@@ -74,11 +76,11 @@ readonly class MarketBuyCheckService
         $liquidationPrice = $positionToCheckLiquidation->liquidationPrice();
 
         $isLiquidationOnSafeDistance = $positionSide->isShort()
-            ? $liquidationPrice->sub($safePriceDistance)->greaterOrEquals($withTicker->markPrice)
-            : $liquidationPrice->add($safePriceDistance)->lessOrEquals($withTicker->markPrice);
+            ? $liquidationPrice->sub($safePriceDistance)->greaterOrEquals($markPrice)
+            : $liquidationPrice->add($safePriceDistance)->lessOrEquals($markPrice);
 
         if (!$isLiquidationOnSafeDistance) {
-            throw BuyIsNotSafeException::liquidationTooNear($liquidationPrice->deltaWith($withTicker->markPrice), $safePriceDistance);
+            throw BuyIsNotSafeException::liquidationTooNear($liquidationPrice->deltaWith($markPrice), $safePriceDistance);
         }
     }
 

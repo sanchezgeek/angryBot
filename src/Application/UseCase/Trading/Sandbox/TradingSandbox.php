@@ -49,7 +49,7 @@ use function sprintf;
  */
 class TradingSandbox implements TradingSandboxInterface
 {
-    private SandboxState $currentState;
+    private SandboxStateInterface $currentState;
     private bool $considerBuyCostAsLoss = false;
     private SandboxErrorsHandlingType $errorsHandlingType = SandboxErrorsHandlingType::ThrowException;
 
@@ -61,7 +61,7 @@ class TradingSandbox implements TradingSandboxInterface
     ) {
     }
 
-    public function getCurrentState(): SandboxState
+    public function getCurrentState(): SandboxStateInterface
     {
         return (clone $this->currentState);
     }
@@ -78,12 +78,11 @@ class TradingSandbox implements TradingSandboxInterface
         $this->marketBuyCheckService = $marketBuyCheckService;
     }
 
-    public function setState(SandboxState $state): self
+    public function setState(SandboxStateInterface $state): void
     {
-        assert($this->symbol === $state->symbol);
-        $this->currentState = clone $state;
+        assert($this->symbol === $state->getSymbol());
 
-        return $this;
+        $this->currentState = clone $state;
     }
 
     public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): ExecutionStepResult

@@ -16,6 +16,10 @@ use PHPUnit\Framework\TestCase;
 
 use function array_map;
 
+/**
+ * @todo | sandbox | Add tests Sandbox for SandboxErrorsHandlingType::CollectAndContinue
+ * @see \App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType::CollectAndContinue
+ */
 class AbstractTestOfTradingSandbox extends TestCase
 {
     protected const SYMBOL = Symbol::BTCUSDT;

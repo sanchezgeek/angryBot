@@ -22,7 +22,7 @@ interface TradingSandboxInterface
      */
     public function processOrders(SandboxBuyOrder|BuyOrder|SandboxStopOrder|Stop ...$orders): ExecutionStepResult;
 
-    public function getCurrentState(): SandboxState;
+    public function getCurrentState(): SandboxStateInterface;
 
-    public function setState(SandboxState $state): self;
+    public function setState(SandboxStateInterface $state): void;
 }

@@ -25,6 +25,11 @@ class TestLogger extends AbstractLogger
     /** @var mixed[] */
     public array $records = [];
 
+    public function getRecordsByLevel(string $level): array
+    {
+        return array_filter($this->records, static fn(array $item) => $item['level'] === $level);
+    }
+
     /**
      * @param mixed[] $context
      */

@@ -7,7 +7,7 @@ namespace App\Application\UseCase\Trading\MarketBuy;
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
-use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
+use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -53,13 +53,24 @@ class MarketBuyHandler
         }
 
         $symbol = $dto->symbol;
-        $sandbox = $this->sandboxFactory->byCurrentState($symbol);
         $ticker = $this->exchangeService->ticker($symbol);
+        $currentState = $this->sandboxStateFactory->byCurrentTradingAccountState($symbol);
 
+        /**
+         * @todo | Need mechanism to disable some checks (or another way: just add required; mb some factory with huma readable options; and may it could ne some decorated chain)
+         *   E.g. in case of SandboxInsufficientAvailableBalanceException further calculated liquidationPrice check will be terminated
+         *   So sandbox inner checks must be divided in some categories:
+         *
+         * At least it may be two categories:
+         *  1) expected
+         *  2) unexpected
+         *
+         * And logging of unexpected
+         */
         $this->marketBuyCheckService->doChecks(
             order: $dto,
             withTicker: $ticker,
-            sandbox: $sandbox,
+            currentState: $currentState,
             safePriceDistance: $this->safePriceDistance,
         );
     }
@@ -68,11 +79,11 @@ class MarketBuyHandler
      * @param ByBitOrderService $orderService
      */
     public function __construct(
-        private readonly MarketBuyCheckService $marketBuyCheckService,
-        private readonly OrderServiceInterface $orderService,
-        private readonly TradingSandboxFactoryInterface $sandboxFactory,
-        private readonly ExchangeServiceInterface $exchangeService,
-        private float $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
+        private readonly MarketBuyCheckService        $marketBuyCheckService,
+        private readonly OrderServiceInterface        $orderService,
+        private readonly ExchangeServiceInterface     $exchangeService,
+        private readonly SandboxStateFactoryInterface $sandboxStateFactory,
+        private float                                 $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
     ) {
     }
 }
