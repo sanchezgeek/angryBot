@@ -69,7 +69,7 @@ class MarketBuyHandler
          */
         $this->marketBuyCheckService->doChecks(
             order: $dto,
-            withTicker: $ticker,
+            ticker: $ticker,
             currentState: $currentState,
             safePriceDistance: $this->safePriceDistance,
         );
