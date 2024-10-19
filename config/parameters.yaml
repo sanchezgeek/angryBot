@@ -1,0 +1,8 @@
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+
+parameters:
+    account_uids: '%env(ACCOUNTS_UIDS)%'
+    env_bybit_api_key: '%env(BYBIT_API_KEY)%'
+    env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
+    shared_cache.path: '%kernel.project_dir%/var/shared_cache/%env(APP_ENV)%'

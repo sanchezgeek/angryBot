@@ -16,6 +16,7 @@ use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Position\ValueObject\Side;
 use App\Messenger\Async;
 use App\Worker\AppContext;
@@ -99,6 +100,9 @@ final class SchedulerFactory
 
             # alarm
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT3S', Async::message(new CheckAlarm(Symbol::BTCUSDT))),
+
+            # connection
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', Async::message(new CheckConnection())),
         ];
     }
 

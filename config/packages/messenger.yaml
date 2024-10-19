@@ -36,6 +36,9 @@ framework:
             # alarm
             App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
 
+            # connection
+            App\Connection\Application\Messenger\Job\CheckConnection: async_high
+
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 

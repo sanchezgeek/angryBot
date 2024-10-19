@@ -1,0 +1,17 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Settings\:
+        resource: '../../../'
+
+    App\Settings\Application\Service\AppSettingsProvider:
+        arguments:
+            $settingsBag: '@app.settings'
+
+    app.settings:
+        class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
+        arguments:
+            $parameters:
+                connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'

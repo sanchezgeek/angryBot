@@ -1,13 +1,9 @@
+imports:
+    - { resource: parameters.yaml }
+    - { resource: ../src/modules/Settings/Infrastructure/Symfony/config/services.yaml }
+
 # This file is the entry point to configure your own services.
 # Files in the packages/ subdirectory configure your dependencies.
-
-# Put parameters here that don't need to change on each machine where the app is deployed
-# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
-parameters:
-    account_uids: '%env(ACCOUNTS_UIDS)%'
-    env_bybit_api_key: '%env(BYBIT_API_KEY)%'
-    env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
-    shared_cache.path: '%kernel.project_dir%/var/shared_cache/%env(APP_ENV)%'
 
 services:
     # default configuration for services in *this* file
@@ -26,15 +22,14 @@ services:
             - '../src/Entity/'
             - '../src/modules/'
             - '../src/Kernel.php'
-
     App\Bot\:
         resource: '../src/modules/Bot'
-
     App\Alarm\:
         resource: '../src/modules/Alarm'
-
     App\Output\:
         resource: '../src/modules/Output'
+    App\Connection\:
+        resource: '../src/modules/Connection'
 
 ### schedule
     App\Messenger\SchedulerTransport\TransportFactory:
