@@ -51,9 +51,16 @@ use function sprintf;
 
 /**
  * @todo
- *   what if there is no position?
- *   $this->io->info(sprintf('volume stopped: %.2f%%', ($totalStopsVolume / $position->size) * 100));
- *   handle case when position became support position from main
+ *   1) what if there is no position?
+ *   2) $this->io->info(sprintf('volume stopped: %.2f%%', ($totalStopsVolume / $position->size) * 100));
+ *   3) handle case when position became support position from main
+ *   4) add BuyOrders created after get SL to this table?
+ *   6) [classic] also check result liquidation after transfer available funds from spot?
+ *   7) скорее всего такого не будет, но вдруг. Да и как пример. TP на пути следования => варнинг в случае, если результирующего объёма также недостаточно
+ *
+ *  background
+ *   1) [hedge] Добавить проверку того, что на пути следования цены хватает орддеров для того, чтобы в итоге size был достаточен для обеспечения определённой liqDelta
+ *   2) добавить какой-то фоновый обработчик, который будет кидать оповещение, если что-то идёт не так?
  */
 #[AsCommand(name: 'o:t')]
 class OrdersTotalInfoCommand extends AbstractCommand
