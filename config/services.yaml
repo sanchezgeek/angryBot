@@ -86,7 +86,7 @@ services:
         tags:
             - { name: 'kernel.event_subscriber', priority: -100}
 
-    App\Infrastructure\EventListener\DomainEvents\TriggerDomainEventsListener:
+    App\Infrastructure\DomainEvents\TriggerDomainEventsListener:
         tags:
             - { name: doctrine.event_listener, event: postFlush, method: postFlush }
 
@@ -113,3 +113,8 @@ services:
     #            class: App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
     #            arguments:
     #                $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+### messenger
+    App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageReceivedEvent\CheckShouldMessageRunHandlerListener:
+        arguments:
+            $handlersLocator: '@messenger.bus.default.messenger.handlers_locator'

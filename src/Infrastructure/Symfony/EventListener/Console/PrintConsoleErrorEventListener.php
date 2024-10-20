@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\EventListener\Symfony\Messenger\ConsoleErrorEvent;
+namespace App\Infrastructure\Symfony\EventListener\Console;
 
 use App\Helper\OutputHelper;
 use App\Worker\AppContext;

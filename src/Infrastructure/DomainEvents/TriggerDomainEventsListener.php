@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\EventListener\DomainEvents;
+namespace App\Infrastructure\DomainEvents;
 
 use App\EventBus\EventBus;
 use App\EventBus\HasEvents;

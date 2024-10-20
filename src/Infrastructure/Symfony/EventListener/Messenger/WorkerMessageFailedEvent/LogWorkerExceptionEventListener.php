@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\EventListener\Symfony\Messenger;
+namespace App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageFailedEvent;
 
 use App\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -17,7 +17,7 @@ use function sprintf;
 use function str_contains;
 
 #[AsEventListener]
-final class WorkerExceptionEventListener
+final class LogWorkerExceptionEventListener
 {
     private const CONNECTION_ERR_MESSAGES = [
         'timestamp or recv_window param',

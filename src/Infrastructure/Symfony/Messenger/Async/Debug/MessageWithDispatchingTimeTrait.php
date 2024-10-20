@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger;
+namespace App\Infrastructure\Symfony\Messenger\Async\Debug;
 
 use DateTimeInterface;
 
-trait TimeStampedAsyncMessageTrait
+trait MessageWithDispatchingTimeTrait
 {
     private ?DateTimeInterface $dispatchedDatetime = null;
 

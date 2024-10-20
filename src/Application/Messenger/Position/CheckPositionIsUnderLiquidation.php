@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position;
 
-use App\Application\Messenger\TimeStampedAsyncMessageTrait;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Infrastructure\Symfony\Messenger\Async\Debug\MessageWithDispatchingTimeTrait;
 
 /**
  * @codeCoverageIgnore
  */
 final class CheckPositionIsUnderLiquidation
 {
-    use TimeStampedAsyncMessageTrait;
+    use MessageWithDispatchingTimeTrait;
 
     public function __construct(public readonly Symbol $symbol) {}
 }
