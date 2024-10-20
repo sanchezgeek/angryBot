@@ -12,11 +12,15 @@ final class AppContext
 {
     private static ?string $uniq = null;
     private static bool $debug = false;
-    private static ?RunningWorker $workerAlias = null;
+    private static RunningWorker|null|false $runningWorker = false;
     private static ?TradingAccountType $accType = null;
 
-    public static function workerHash(): string
+    public static function workerHash(): ?string
     {
+        if (!self::runningWorker()) {
+            return null;
+        }
+
         if (self::$uniq === null) {
             self::$uniq = substr(md5(uniqid('', true)), 0, 3);
         }
@@ -24,13 +28,13 @@ final class AppContext
         return self::runningWorker()->value . '_' . self::$uniq;
     }
 
-    public static function runningWorker(): RunningWorker
+    public static function runningWorker(): ?RunningWorker
     {
-        if (self::$workerAlias === null) {
-            self::$workerAlias = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']) ?? RunningWorker::DEFAULT;
+        if (self::$runningWorker === false) {
+            self::$runningWorker = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']);
         }
 
-        return self::$workerAlias;
+        return self::$runningWorker;
     }
 
     public static function procNum(): int

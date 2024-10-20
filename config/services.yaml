@@ -82,7 +82,7 @@ services:
             - { name: 'cache.pool', namespace: 'shared' }
 
 ### events
-    App\Bot\Application\Events\LoggingListener:
+    App\Bot\Application\Events\LogLoggableEventListener:
         tags:
             - { name: 'kernel.event_subscriber', priority: -100}
 

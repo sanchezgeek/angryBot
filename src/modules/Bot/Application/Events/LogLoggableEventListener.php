@@ -15,7 +15,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 use function sprintf;
 
-final class LoggingListener implements EventSubscriberInterface
+final class LogLoggableEventListener implements EventSubscriberInterface
 {
     use LoggerTrait;
 
@@ -29,9 +29,16 @@ final class LoggingListener implements EventSubscriberInterface
 
     public function __invoke(LoggableEvent $event): void
     {
-        if (($log = $event->getLog()) !== null) {
-            $this->info(sprintf('%s [%s]', $log, AppContext::workerHash()), $event->getContext());
+        if (($log = $event->getLog()) === null) {
+            return;
         }
+
+        $message = $log;
+        if ($workerHash = AppContext::workerHash()) {
+            $message .= sprintf(' [%s]', $workerHash);
+        }
+
+        $this->info($message, $event->getContext());
     }
 
     public static function getSubscribedEvents(): array
