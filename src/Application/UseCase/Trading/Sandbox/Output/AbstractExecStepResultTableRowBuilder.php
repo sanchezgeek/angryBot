@@ -50,6 +50,10 @@ abstract class AbstractExecStepResultTableRowBuilder
     {
         $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice, $positionAfter->liquidationPrice);
         $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($positionBefore->side);
+        if ($liquidationPriceDiffWithPrev === 0.00) {
+            $liquidationPriceDiffWithPrev = 0;
+        }
+
         if ($liquidationPriceDiffWithPrev > 0) {
             $liquidationPriceDiffWithPrev = '+' . $this->priceFormatter->format($liquidationPriceDiffWithPrev);
         }

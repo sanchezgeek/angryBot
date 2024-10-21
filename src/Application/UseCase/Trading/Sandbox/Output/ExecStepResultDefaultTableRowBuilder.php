@@ -37,7 +37,6 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
 
     private array $positionNotFoundOrLiquidatedRowCells;
 
-    private array $onlyOrderInfoCells;
     private array $stateChangedRowCells;
     private array $positionClosedRowCells;
 
@@ -113,24 +112,31 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 $positionBefore = $step->getStateBefore()->getPosition($this->targetPositionSide);
                 $positionAfter = $step->getStateAfter()->getPosition($this->targetPositionSide);
 
+                $cellStyle = CellStyle::default();
+
                 // @todo | case when position initially is not support ?
                 if ($positionAfter?->isSupportPosition()) {
                     [$diff, $info] = $this->formatInfoAboutMainPositionLiquidationChanges(
                         $step,
                         $this->targetPositionSide->getOpposite()
                     );
-                    return self::highlightedOrderCell(
-                        $step,
-                        $info,
-                        $diff > 0 ? new CellStyle(fontColor: Color::BRIGHT_GREEN) : new CellStyle(fontColor: Color::BRIGHT_RED)
-                    );
+
+                    return self::highlightedOrderCell($step, $info, match (true) {
+                        $diff > 0 => new CellStyle(fontColor: Color::BRIGHT_GREEN),
+                        $diff < 0 => new CellStyle(fontColor: Color::BRIGHT_RED),
+                        default => CellStyle::default()
+                    });
                 } else {
                     $resultText = $this->priceFormatter->format($positionAfter->liquidationPrice);
-                    $resultText .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBefore, $positionAfter));
+                    if ($positionAfter?->isMainPosition() && !$positionBefore?->isMainPosition()) {
+                        $resultText .= ' (became main)';
+                        $cellStyle = new CellStyle(fontColor: Color::BRIGHT_RED);
+                    } else {
+                        $resultText .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBefore, $positionAfter));
+                    }
                 }
-                // third case (when position just became main position) ... else {...}
 
-                return $resultText;
+                return new Cell($resultText, $cellStyle);
             },
             self::COMMENT_COL => function (ExecutionStepResult $step, RowStyle $rowStyle) {
                 $info = [];
@@ -189,15 +195,6 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 }
 
                 return $cells;
-            }
-        ];
-
-        $this->onlyOrderInfoCells = [
-            $this->stateChangedRowCells[self::ID_COL],
-            $this->stateChangedRowCells[self::PRICE_COL],
-            $this->stateChangedRowCells[self::VOLUME_COL],
-            function () {
-                return Cell::restColumnsMerged();
             }
         ];
 
