@@ -13,6 +13,7 @@ enum Color
     case GRAY;
     case RED;
     case BRIGHT_RED;
+    case CYAN;
 
     public function isDefault(): bool
     {

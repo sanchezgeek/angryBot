@@ -116,16 +116,30 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
 
                 // @todo | case when position initially is not support ?
                 if ($positionAfter?->isSupportPosition()) {
+                    $mainPositionSide = $this->targetPositionSide->getOpposite();
+                    if (!$positionBefore?->isSupportPosition()) {
+                        $oppositePositionAfterExec = $step->getStateAfter()->getPosition($mainPositionSide);
+                        return new Cell(
+                            sprintf('Became support (%s.liquidation = %s)', $mainPositionSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice)),
+                            new CellStyle(fontColor: Color::CYAN)
+                        );
+                    }
+
                     [$diff, $info] = $this->formatInfoAboutMainPositionLiquidationChanges(
                         $step,
-                        $this->targetPositionSide->getOpposite()
+                        $mainPositionSide
                     );
 
-                    return self::highlightedOrderCell($step, $info, match (true) {
+                    if (!$diff) {
+                        return '';
+                    }
+
+                    $cellStyle = match (true) {
                         $diff > 0 => new CellStyle(fontColor: Color::BRIGHT_GREEN),
                         $diff < 0 => new CellStyle(fontColor: Color::BRIGHT_RED),
                         default => CellStyle::default()
-                    });
+                    };
+                    return self::highlightedOrderCell($step, $info, $cellStyle);
                 } else {
                     $resultText = $this->priceFormatter->format($positionAfter->liquidationPrice);
                     if ($positionAfter?->isMainPosition() && !$positionBefore?->isMainPosition()) {
