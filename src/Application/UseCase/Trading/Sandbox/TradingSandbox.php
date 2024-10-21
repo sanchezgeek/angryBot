@@ -36,6 +36,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
+use Exception;
 use RuntimeException;
 
 use function sprintf;
@@ -349,8 +350,7 @@ class TradingSandbox implements TradingSandboxInterface
         $this->considerBuyCostAsLoss = $considerBuyCostAsLoss;
     }
 
-    /** @throws AbstractSandboxExecutionFlowException */
-    private function handleExpectedException(AbstractSandboxExecutionFlowException $exception): void
+    private function handleExpectedException(Exception $exception): void
     {
         if ($this->errorsHandlingType === SandboxErrorsHandlingType::ThrowException) {
             throw $exception;
