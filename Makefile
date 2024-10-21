@@ -166,3 +166,6 @@ l-m-info: pos-m-info
 
 stats:
 	@$(PHP_CONT) ./bin/stats
+
+sound: c=c:sound ## Check the sound
+sound: sf
