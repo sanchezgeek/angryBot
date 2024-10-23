@@ -156,18 +156,21 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 $info = [];
 
                 if ($step->isOnlySingleItem()) {
+                    $additionalInfo = [];
+
                     $orderExecutionResult = $step->getSingleItem();
-                    $additionalOrderInfo = $this->getOrderInfo($orderExecutionResult->order);
-                    $additionalInfo = implode(', ', $additionalOrderInfo);
+                    if ($additionalOrderInfo = $this->getOrderInfo($orderExecutionResult->order)) {
+                        $additionalInfo[] = implode(', ', $additionalOrderInfo);
+                    }
 
                     if ($orderExecutionResult->failReason?->exception instanceof BuyIsNotSafeException) {
-                        $additionalInfo .= sprintf(' | won\'t be executed (%s)', $orderExecutionResult->failReason->exception->getMessage());
+                        $additionalInfo[] = sprintf('won\'t be executed (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     } elseif ($orderExecutionResult->failReason?->exception instanceof SandboxInsufficientAvailableBalanceException) {
-                        $additionalInfo .= sprintf(' | cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
+                        $additionalInfo[] =  sprintf('cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     }
 
                     if ($additionalInfo) {
-                        $info[] = $additionalInfo;
+                        $info[] = implode(' | ', $additionalInfo);
                     }
                 }
 
