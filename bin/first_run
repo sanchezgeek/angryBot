@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+export DOCKER_BUILDKIT=0
+export COMPOSE_DOCKER_CLI_BUILD=0
+
 make prepare_files
 make build ENV_BUILD_FILEPATH=${1:-.env.build}
 make start
