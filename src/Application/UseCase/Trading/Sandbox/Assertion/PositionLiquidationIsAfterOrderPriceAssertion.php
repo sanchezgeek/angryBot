@@ -34,9 +34,13 @@ final readonly class PositionLiquidationIsAfterOrderPriceAssertion
      */
     public function check(): void
     {
-        if ($this->position->isLong() && $this->order->price <= $this->position->liquidationPrice) {
+        if (!($liquidationPrice = $this->position->liquidationPrice)) {
+            return;
+        }
+
+        if ($this->position->isLong() && $this->order->price <= $liquidationPrice) {
             throw new SandboxPositionLiquidatedBeforeOrderPriceException($this->order, $this->position, 'Order price is less than position.liquidationPrice');
-        } elseif ($this->position && $this->position->isShort() && $this->order->price >= $this->position->liquidationPrice) {
+        } elseif ($this->position->isShort() && $this->order->price >= $liquidationPrice) {
             throw new SandboxPositionLiquidatedBeforeOrderPriceException($this->order, $this->position, 'Order price is greater than position.liquidationPrice');
         }
     }

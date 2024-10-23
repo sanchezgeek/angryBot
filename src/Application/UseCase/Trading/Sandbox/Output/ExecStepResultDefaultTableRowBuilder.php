@@ -120,7 +120,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     if (!$positionBefore?->isSupportPosition()) {
                         $oppositePositionAfterExec = $step->getStateAfter()->getPosition($mainPositionSide);
                         return new Cell(
-                            sprintf('Became support (%s.liquidation = %s)', $mainPositionSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice)),
+                            sprintf('became support (%s.liquidation = %s)', $mainPositionSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice)),
                             new CellStyle(fontColor: Color::CYAN)
                         );
                     }
@@ -140,17 +140,20 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         default => CellStyle::default()
                     };
                     return self::highlightedOrderCell($step, $info, $cellStyle);
-                } else {
+                } elseif ($positionAfter) {
                     $resultText = $this->priceFormatter->format($positionAfter->liquidationPrice);
-                    if ($positionAfter?->isMainPosition() && !$positionBefore?->isMainPosition()) {
+                    if ($positionAfter->isMainPosition() && !$positionBefore?->isMainPosition()) {
                         $resultText .= ' (became main)';
                         $cellStyle = new CellStyle(fontColor: Color::BRIGHT_RED);
-                    } else {
+                    } elseif (!(
+                        # skip if liquidationPrice has been appeared only now
+                        $positionAfter->liquidationPrice && !$positionBefore?->liquidationPrice
+                    )) {
                         $resultText .= sprintf(' ( %s )', $this->getLiquidationPriceDiffWithPrev($positionBefore, $positionAfter));
                     }
                 }
 
-                return new Cell($resultText, $cellStyle);
+                return isset($resultText) ? new Cell($resultText, $cellStyle) : '';
             },
             self::COMMENT_COL => function (ExecutionStepResult $step, RowStyle $rowStyle) {
                 $info = [];

@@ -108,6 +108,11 @@ final class Position implements Stringable
         return ($hedge = $this->getHedge()) && $hedge->isSupportPosition($this);
     }
 
+    public function isShortWithoutLiquidation(): bool
+    {
+        return $this->isShort() && !$this->liquidationPrice;
+    }
+
     public function isMainPosition(): bool
     {
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);

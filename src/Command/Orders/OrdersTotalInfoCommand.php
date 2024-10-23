@@ -249,9 +249,11 @@ class OrdersTotalInfoCommand extends AbstractCommand
                     Cell::resetToDefaults('pos:'),
                     # probably some default table behaviour instead of $columnsCount - $tickerColspan
                 ], !$position ? [Cell::restColumnsMerged('No position found')] : [
-                    $position->size, $position->entryPrice, !$position->isSupportPosition() ? $position->liquidationPrice : '',
+                    $position->size,
+                    $position->entryPrice,
+                    (!$position->isSupportPosition() && $position->liquidationPrice) ? $position->liquidationPrice : '-',
                     Cell::resetToDefaults(
-                        !$position->isSupportPosition() ? sprintf('liquidationDistance: %s with position entry, %s with ticker', $position->liquidationDistance(), $position->priceDistanceWithLiquidation($ticker)) : '',
+                        (!$position->isSupportPosition() && !$position->isShortWithoutLiquidation()) ? sprintf('liquidationDistance: %s with position entry, %s with ticker', $position->liquidationDistance(), $position->priceDistanceWithLiquidation($ticker)) : '',
                     )
                 ]);
 
