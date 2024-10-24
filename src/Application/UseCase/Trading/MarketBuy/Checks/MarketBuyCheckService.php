@@ -8,6 +8,7 @@ use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -29,7 +30,7 @@ readonly class MarketBuyCheckService
     public function doChecks(
         MarketBuyEntryDto     $order,
         Ticker                $ticker,
-        SandboxStateInterface $currentState,
+        SandboxStateInterface $currentSandboxState,
         Position              $currentPositionState = null,
         float                 $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
     ): void {
@@ -43,7 +44,10 @@ readonly class MarketBuyCheckService
         $positionSide = $order->positionSide;
 
         $sandbox = $this->sandboxFactory->empty($symbol);
-        $sandbox->setState($currentState);
+        $sandbox->setState($currentSandboxState);
+
+        # order must be bought anyway
+        $sandbox->addIgnoredException(SandboxInsufficientAvailableBalanceException::class);
 
         // creating dto based on MARKET, because source BuyOrder.price might be not actual at this moment
         $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($order, $lastPrice);

@@ -54,12 +54,22 @@ class TradingSandbox implements TradingSandboxInterface
     private bool $considerBuyCostAsLoss = false;
     private SandboxErrorsHandlingType $errorsHandlingType = SandboxErrorsHandlingType::ThrowException;
 
+    private array $ignoredExceptions = [];
+
     public function __construct(
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly CalcPositionLiquidationPriceHandler $liquidationCalculator,
         private readonly Symbol $symbol,
         private readonly bool $isDebugEnabled = false,
     ) {
+    }
+
+    /**
+     * @todo replace with some `checks` array
+     */
+    public function addIgnoredException(string $exceptionClass): void
+    {
+        $this->ignoredExceptions[$exceptionClass] = true;
     }
 
     public function getCurrentState(): SandboxStateInterface
@@ -115,7 +125,7 @@ class TradingSandbox implements TradingSandboxInterface
             $orderExecuted = true;
             $stateAfter = $this->getCurrentState();
         } catch (SandboxPositionLiquidatedBeforeOrderPriceException|BuyIsNotSafeException|SandboxInsufficientAvailableBalanceException $e) {
-            $this->handleExpectedException($e);
+            $this->handleExceptionOnExecutionStep($e);
             $failReason = new OrderExecutionFailResultReason($e);
         }
 
@@ -135,7 +145,7 @@ class TradingSandbox implements TradingSandboxInterface
             $orderExecuted = true;
             $stateAfter = $this->getCurrentState();
         } catch (SandboxPositionLiquidatedBeforeOrderPriceException|SandboxPositionNotFoundException $e) {
-            $this->handleExpectedException($e);
+            $this->handleExceptionOnExecutionStep($e);
             $failReason = new OrderExecutionFailResultReason($e);
         }
 
@@ -178,7 +188,9 @@ class TradingSandbox implements TradingSandboxInterface
 
         $availableBalance = $currentState->getAvailableBalance()->value();
         if ($availableBalance < $cost) {
-            throw SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('balance.avail [%s] less than order.cost [%s]', $availableBalance, $cost));
+            $this->throwExceptionWhileExecute(
+                SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('balance.avail [%s] less than order.cost [%s]', $availableBalance, $cost))
+            );
         }
 
         /**
@@ -350,10 +362,19 @@ class TradingSandbox implements TradingSandboxInterface
         $this->considerBuyCostAsLoss = $considerBuyCostAsLoss;
     }
 
-    private function handleExpectedException(Exception $exception): void
+    private function handleExceptionOnExecutionStep(Exception $exception): void
     {
         if ($this->errorsHandlingType === SandboxErrorsHandlingType::ThrowException) {
             throw $exception;
         }
+    }
+
+    private function throwExceptionWhileExecute(Exception $exception): void
+    {
+        if (isset($this->ignoredExceptions[get_class($exception)])) {
+            return;
+        }
+
+        throw $exception;
     }
 }
