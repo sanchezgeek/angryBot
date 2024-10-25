@@ -55,7 +55,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 
         $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
 
-        # @todo | for now to prevent MarketBuyHandler "buyIsSafe" checks
+        # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
         $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
         $marketBuyHandler->setSafeLiquidationPriceDistance(100);
     }

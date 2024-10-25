@@ -39,7 +39,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
 
         $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
 
-        # @todo | for now to prevent MarketBuyHandler "buyIsSafe" checks
+        # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
         $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
         $marketBuyHandler->setSafeLiquidationPriceDistance(500);
     }
