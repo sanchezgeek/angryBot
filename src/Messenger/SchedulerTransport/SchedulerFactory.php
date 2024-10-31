@@ -48,9 +48,7 @@ final class SchedulerFactory
 
     public static function createScheduler(ClockInterface $clock): Scheduler
     {
-        $runningWorker = AppContext::runningWorker();
-
-        $jobSchedules = match ($runningWorker) {
+        $jobSchedules = match (AppContext::runningWorker()) {
             RunningWorker::SHORT => self::short(),
             RunningWorker::LONG  => self::long(),
             RunningWorker::UTILS => self::utils(),

@@ -31,7 +31,7 @@ final class AppContext
     public static function runningWorker(): ?RunningWorker
     {
         if (self::$runningWorker === false) {
-            self::$runningWorker = RunningWorker::tryFrom($_ENV['RUNNING_WORKER']);
+            self::$runningWorker = RunningWorker::tryFrom($_ENV['RUNNING_WORKER'] ?? '');
         }
 
         return self::$runningWorker;
