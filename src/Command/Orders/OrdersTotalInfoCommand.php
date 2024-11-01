@@ -3,8 +3,9 @@
 namespace App\Command\Orders;
 
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
+use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
-use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException as PosLiquidatedException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Application\UseCase\Trading\Sandbox\Output\ExecStepResultDefaultTableRowBuilder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
@@ -17,11 +18,14 @@ use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Orders\OrdersInfoTable\Dto\InitialStateRow;
 use App\Command\Orders\OrdersInfoTable\Dto\OrdersInfoTableRowAtPriceInterface;
+use App\Command\Orders\OrdersInfoTable\Dto\PositionLiquidationRow;
 use App\Command\Orders\OrdersInfoTable\Dto\SandboxExecStepRow;
 use App\Command\Orders\OrdersInfoTable\Dto\SummaryRow;
 use App\Domain\Order\Parameter\TriggerBy;
@@ -29,6 +33,7 @@ use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
 use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\Style\CellStyle;
@@ -72,12 +77,16 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private const DEFAULT_TABLE_STYLE = 'default';
 
     private const DIVIDE_TO_GROUPS = 'divide';
+    private const DIVIDE_BY_ORDER_TYPES = 'divide-by-order-type';
+    private const DIVIDE_STEP_PNL_PERCENT = 50;
 
     private PriceFormatter $priceFormatter;
     private PnlFormatter $pnlFormatter;
 
     private SandboxState $initialSandboxState;
+
     private ?float $totalPnl = null;
+    private bool $liquidationRowPrinted = false;
 
     protected function configure(): void
     {
@@ -85,6 +94,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             ->configurePositionArgs()
             ->addOption(self::TABLE_STYLE_OPTION, null, InputOption::VALUE_REQUIRED, 'Table style', self::DEFAULT_TABLE_STYLE)
             ->addOption(self::DIVIDE_TO_GROUPS, null, InputOption::VALUE_NEGATABLE, 'Divide orders to groups?')
+            ->addOption(self::DIVIDE_BY_ORDER_TYPES, null, InputOption::VALUE_OPTIONAL, 'Divide by order type?', true)
         ;
     }
 
@@ -135,11 +145,13 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $ordersAfterPositionProfit = [];
 
         foreach ($orders as $order) {
-            Price::float($order->getPrice())->differenceWith($ticker->indexPrice)->isLossFor($positionSide) ? $ordersAfterPositionLoss[] = $order : $ordersAfterPositionProfit[] = $order;
+            Price::float($order->getPrice())->differenceWith($ticker->indexPrice)->isLossFor($positionSide)
+                ? $ordersAfterPositionLoss[] = $order
+                : $ordersAfterPositionProfit[] = $order;
         }
 
-        usort($ordersAfterPositionLoss,   $positionSide->isLong() ? static fn ($a, $b) => $b->getPrice() <=> $a->getPrice() : static fn ($a, $b) => $a->getPrice() <=> $b->getPrice());
-        usort($ordersAfterPositionProfit, $positionSide->isLong() ? static fn ($a, $b) => $a->getPrice() <=> $b->getPrice() : static fn ($a, $b) => $b->getPrice() <=> $a->getPrice());
+        usort($ordersAfterPositionLoss,   static fn ($a, $b) => $positionSide->isLong() ? $b->getPrice() <=> $a->getPrice() : $a->getPrice() <=> $b->getPrice());
+        usort($ordersAfterPositionProfit, static fn ($a, $b) => $positionSide->isLong() ? $a->getPrice() <=> $b->getPrice() : $b->getPrice() <=> $a->getPrice());
 
         $sandbox = $this->createSandbox();
         $this->initialSandboxState = $sandbox->getCurrentState();
@@ -165,7 +177,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $rows[] = new SummaryRow('total PNL:', new Pnl($this->totalPnl));
         }
 
-        $this->print($rows);
+        $this->print($ticker, $rows);
 
         return Command::SUCCESS;
     }
@@ -175,19 +187,78 @@ class OrdersTotalInfoCommand extends AbstractCommand
      */
     private function processOrdersFromInitialPositionState(TradingSandbox $sandbox, array $orders): array
     {
+        $divideToGroups = $this->paramFetcher->getBoolOption(self::DIVIDE_TO_GROUPS);
+        $divideByOrderType = $this->paramFetcher->getBoolOption(self::DIVIDE_BY_ORDER_TYPES);
+
+        $position = $this->initialSandboxState->getPosition($this->getPositionSide());
+        $entryPrice = $position->entryPrice;
+        $divideStep = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::DIVIDE_STEP_PNL_PERCENT, $entryPrice);
+        $groups = [];
+
+        $divideByPositionEntryWasMade = false;
+        # @todo Divide also by side of executed orders?
+        if ($divideToGroups) {
+            $key = 0;
+            foreach ($orders as $order) {
+                $lastType = $groups ? end($groups)['type'] : null;
+                $class = get_class($order);
+                $price = $order->getPrice();
+
+                $orderType = match ($class) {BuyOrder::class => OrderType::Add, Stop::class => OrderType::Stop};
+                if ($divideByOrderType) {
+                    if ($orderType !== $lastType) {
+                        $key++;
+                    }
+                }
+
+                $priceOfFirstOrderInGroup = ($groups[$key]['items'][0] ?? null)?->getPrice();
+                if ($priceOfFirstOrderInGroup && abs($priceOfFirstOrderInGroup - $price) > $divideStep) {
+                    $key++;
+                }
+
+                if (!$divideByPositionEntryWasMade && ($position->isShort() && $price > $entryPrice || $position->isLong()  && $price < $entryPrice)) {
+                    $key++; $divideByPositionEntryWasMade = true;
+                }
+
+                $groups[$key] ??= ['type' => $orderType, 'items' => []];
+                $groups[$key]['items'][] = $order;
+            }
+        } else {
+            foreach ($orders as $order) {
+                $groups[] = ['items' => [$order]];
+            }
+        }
+
         $pnl = 0;
         $rows = [];
-        foreach ($orders as $order) {
-            $stepResult = $sandbox->processOrders($order);
+        $dividedByPosLiq = false;
+        while ($group = array_shift($groups)) {
+            $items = $group['items'];
 
-            if (!$this->isPositionLiquidationPrinted) {
+            $stepResult = $sandbox->processOrders(...$items);
+
+            if (!$this->liquidationRowPrinted) {
+                foreach ($stepResult->getItems() as $key => $item) {
+                    if ($item->failReason?->exception instanceof PosLiquidatedException) {
+                        if ($divideToGroups && !$dividedByPosLiq) {
+                            $ordersBeforeLiq = self::extractSourceOrdersFromOrderExecResult(...array_slice($stepResult->getItems(), 0, $key));
+                            $ordersAfterLiq = self::extractSourceOrdersFromOrderExecResult(...array_slice($stepResult->getItems(), $key));
+
+                            $ordersAfterLiq && array_unshift($groups, ['items' => $ordersAfterLiq]);
+                            $ordersBeforeLiq && array_unshift($groups, ['items' => $ordersBeforeLiq]);
+
+                            $sandbox->setState($stepResult->getStateBefore());
+                            $dividedByPosLiq = true;
+                            continue 2;
+                        }
+                    }
+                }
+
                 foreach ($stepResult->getItems() as $item) {
-                    if ($item->failReason?->exception instanceof SandboxPositionLiquidatedBeforeOrderPriceException) {
-                        $this->isPositionLiquidationPrinted = true;
-                        $liquidatedAt = $this->priceFormatter->format($item->inputState->getPosition($this->getPositionSide())->liquidationPrice);
-                        $rows[] = DataRow::separated(
-                            [Cell::colspan(2, $liquidatedAt)->setAlign(CellAlign::RIGHT), Cell::restColumnsMerged('position liquidation')->setAlign(CellAlign::CENTER)]
-                        )->addStyle(new RowStyle(fontColor: Color::RED));
+                    if ($item->failReason?->exception instanceof PosLiquidatedException) {
+                        $rows[] = new PositionLiquidationRow($item->inputState->getPosition($this->getPositionSide()));
+                        $this->liquidationRowPrinted = true;
+                        break;
                     }
                 }
             }
@@ -207,12 +278,20 @@ class OrdersTotalInfoCommand extends AbstractCommand
         return $rows;
     }
 
-    private function print(array $rows): void
+    /**
+     * @return Stop[]|BuyOrder[]
+     */
+    private static function extractSourceOrdersFromOrderExecResult(OrderExecutionResult ...$items): array
+    {
+        return array_map(static fn(OrderExecutionResult $orderExecutionResult) => $orderExecutionResult->order->sourceOrder, $items);
+    }
+
+    private function print(Ticker $ticker, array $rows): void
     {
         $initialPosition = $this->initialSandboxState->getPosition($this->getPositionSide());
         $isPositionLocationPrinted = false;
 
-        $sandboxExecutionResultRowBuilder = new ExecStepResultDefaultTableRowBuilder($this->getPositionSide(), $this->pnlFormatter, $this->priceFormatter);
+        $sandboxExecutionResultRowBuilder = new ExecStepResultDefaultTableRowBuilder($ticker, $this->getPositionSide(), $this->pnlFormatter, $this->priceFormatter);
 
         $headers = [
             'id' => 'id',
@@ -258,6 +337,11 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 ]);
 
                 $row = DataRow::separated($cells)->addStyle(RowStyle::yellowFont());
+            } elseif ($row instanceof PositionLiquidationRow) {
+                $liquidatedAt = $this->priceFormatter->format($row->liquidatedPosition->liquidationPrice);
+                $row = DataRow::separated(
+                    [Cell::colspan(2, $liquidatedAt)->setAlign(CellAlign::RIGHT), Cell::restColumnsMerged('position liquidation')->setAlign(CellAlign::CENTER)]
+                )->addStyle(new RowStyle(fontColor: Color::RED));
             }
 
             $tableRows[] = $row;
@@ -270,8 +354,6 @@ class OrdersTotalInfoCommand extends AbstractCommand
             ->setStyle($this->paramFetcher->getStringOption(self::TABLE_STYLE_OPTION))
             ->render();
     }
-
-    private bool $isPositionLiquidationPrinted = false;
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,

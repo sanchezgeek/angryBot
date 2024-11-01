@@ -11,7 +11,10 @@ use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Contract\OrderTypeAwareInterface;
+use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -28,7 +31,7 @@ use function sprintf;
  * @see \App\Tests\Unit\Domain\Entity\StopTest
  */
 #[ORM\Entity(repositoryClass: StopRepository::class)]
-class Stop implements HasEvents
+class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
     public const MIN_VOLUME = 0.001;
 
@@ -253,5 +256,15 @@ class Stop implements HasEvents
             'triggerDelta' => $this->triggerDelta,
             'context' => $this->context,
         ];
+    }
+
+    public function signedVolume(): float
+    {
+        return -$this->volume;
+    }
+
+    public function getOrderType(): OrderType
+    {
+        return OrderType::Stop;
     }
 }

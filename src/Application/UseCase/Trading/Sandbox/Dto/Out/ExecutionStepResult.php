@@ -6,6 +6,7 @@ namespace App\Application\UseCase\Trading\Sandbox\Dto\Out;
 
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Domain\Position\ValueObject\Side;
+use LogicException;
 use RuntimeException;
 
 /**
@@ -71,7 +72,7 @@ class ExecutionStepResult
     }
 
     /**
-     * @todo | or check state changes?
+     * @todo | Or check state changes? | Or maybe strictly not (because result state for some reasons may don't differ from initial even if orders was executed)
      */
     public function hasOrdersExecuted(): bool
     {
@@ -104,6 +105,60 @@ class ExecutionStepResult
         }
 
         return $totalPnl;
+    }
+
+    public function getTotalVolumeExecuted(): ?float
+    {
+        $totalVolumeExecuted = 0;
+        foreach ($this->filterItems(static fn(OrderExecutionResult $result) => $result->isOrderExecuted()) as $item) {
+            $totalVolumeExecuted += $item->order->signedVolume();
+        }
+
+        return $totalVolumeExecuted;
+    }
+
+    public function getTotalVolume(): ?float
+    {
+        $totalVolume = 0;
+        foreach ($this->filterItems() as $item) {
+            $totalVolume += $item->order->signedVolume();
+        }
+
+        return $totalVolume;
+    }
+
+    public function getExecutedCount(): int
+    {
+        $executedCount = 0;
+        foreach ($this->items as $item) {
+            ($item->isOrderExecuted()) && $executedCount++;
+        }
+
+        return $executedCount;
+    }
+
+    /**
+     * @return OrderExecutionResult[]
+     */
+    public function filterItems(?callable $callback = null, bool $checkOrdersOnOneSide = true): array
+    {
+        $result = [];
+
+        $lastOrderSide = null;
+        foreach ($this->items as $item) {
+            $order = $item->order;
+            if ($checkOrdersOnOneSide && $lastOrderSide !== null && $lastOrderSide !== $order->positionSide) {
+                throw new LogicException('Bad method call: orders executed on step must be on one side');
+            }
+            $lastOrderSide = $order->positionSide;
+
+            if ($callback !== null && !$callback($item)) {
+                continue;
+            }
+            $result[] = $item;
+        }
+
+        return $result;
     }
 
     public function isPositionBeingClosedThroughStep(Side $positionSide): bool

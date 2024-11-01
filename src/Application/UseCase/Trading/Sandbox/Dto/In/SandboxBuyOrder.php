@@ -6,14 +6,17 @@ namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Contract\OrderTypeAwareInterface;
+use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use Stringable;
 
 use function sprintf;
 
-readonly class SandboxBuyOrder implements Stringable
+readonly class SandboxBuyOrder implements Stringable, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
     public function __construct(
         public Symbol $symbol,
@@ -37,6 +40,16 @@ readonly class SandboxBuyOrder implements Stringable
     public function desc(): string
     {
         return sprintf('%s %s BUY (%s/%s)', $this->symbol->value, $this->positionSide->title(), $this->volume, $this->price);
+    }
+
+    public function signedVolume(): float
+    {
+        return $this->volume;
+    }
+
+    public function getOrderType(): OrderType
+    {
+        return OrderType::Add;
     }
 
     public function __toString(): string

@@ -11,9 +11,13 @@ use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
+use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
+use App\Domain\Price\Price;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\Style\CellStyle;
@@ -41,7 +45,8 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
     private array $positionClosedRowCells;
 
     public function __construct(
-        private Side $targetPositionSide,
+        private readonly Ticker $ticker,
+        private readonly Side $targetPositionSide,
         ?PnlFormatter $pnlFormatter = null,
         ?PriceFormatter $priceFormatter = null,
         ?array $enabledColumns = null,
@@ -50,29 +55,83 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
 
         $this->stateChangedRowCells = [
             self::ID_COL => function (ExecutionStepResult $step) {
-                $content = implode(', ', array_map(static fn (OrderExecutionResult $execResult) => self::formatOrderId($execResult->order), $step->getItems()));
-                if ($step->isOnlySingleItem() && $step->getSingleItem()->order instanceof SandboxStopOrder) {
-                    return self::highlightedOrderCell($step, $content);
+                if ($step->isOnlySingleItem()) {
+                    $content = self::formatOrderId($step->getSingleItem()->order);
+                    if ($step->getSingleItem()->order instanceof SandboxStopOrder) {
+                        return self::highlightedSingleOrderCell($step, $content);
+                    }
+                } else {
+                    $totalBuyItemsQnt = count($step->filterItems(static fn(OrderExecutionResult $result) => $result->order->getOrderType() === OrderType::Add));
+                    $totalStopItemsQnt = count($step->filterItems(static fn(OrderExecutionResult $result) => $result->order->getOrderType() === OrderType::Stop));
+                    $executedBuyItemsQnt = count($step->filterItems(static fn(OrderExecutionResult $result) => $result->isOrderExecuted() && $result->order->getOrderType() === OrderType::Add));
+                    $executedStopItemsQnt = count($step->filterItems(static fn(OrderExecutionResult $result) => $result->isOrderExecuted() && $result->order->getOrderType() === OrderType::Stop));
+
+                    $extendedDesc = [];
+
+                    $execDesc = [];
+                    ($executedBuyItemsQnt) && $execDesc[] = sprintf('%db', $executedBuyItemsQnt);
+                    ($executedStopItemsQnt) && $execDesc[] = sprintf('%ds', $executedStopItemsQnt);
+                    $execDesc = implode('+', $execDesc);
+
+                    $totalDesc = [];
+                    ($totalBuyItemsQnt) && $totalDesc[] = sprintf('%db', $totalBuyItemsQnt);
+                    ($totalStopItemsQnt) && $totalDesc[] = sprintf('%ds', $totalStopItemsQnt);
+                    $totalDesc = implode('+', $totalDesc);
+
+                    $execDesc && ($execDesc .= ' exec.') && $extendedDesc[] = $execDesc;
+
+                    if ($step->getExecutedCount() === $step->itemsCount()) {
+                        $content = $execDesc;
+                    } else {
+                        $totalDesc && ($totalDesc .= ' total') && $extendedDesc[] = $totalDesc;
+
+                        $content = implode(' / ', $extendedDesc);
+                    }
                 }
 
                 return !$step->hasOrdersExecuted() ? new Cell($content, new CellStyle(fontColor: Color::GRAY)) : $content;
             },
             self::PRICE_COL => function (ExecutionStepResult $step) {
-                $content = implode(', ', array_map(static fn (OrderExecutionResult $execResult) => $execResult->order->price, $step->getItems()));
-                if ($step->isOnlySingleItem() && $step->getSingleItem()->order instanceof SandboxStopOrder) {
-                    return self::highlightedOrderCell($step, $content);
+                if ($step->isOnlySingleItem()) {
+                    $content = implode(', ', array_map(static fn (OrderExecutionResult $execResult) => $execResult->order->price, $step->getItems()));
+                    if ($step->getSingleItem()->order instanceof SandboxStopOrder) {
+                        return self::highlightedSingleOrderCell($step, $content);
+                    }
+                } else {
+                    $fromPrice = $step->getFirstItem()->order->price;
+                    $toPrice = $step->getLastItem()->order->price;
+                    if ($this->ticker->getMinPrice()->lessOrEquals($fromPrice)) {
+                        [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
+                    }
+
+                    $content = sprintf('%s - %s', $this->priceFormatter->format($fromPrice), $this->priceFormatter->format($toPrice));
                 }
 
                 return !$step->hasOrdersExecuted() ? new Cell($content, new CellStyle(fontColor: Color::GRAY)) : $content;
             },
             self::VOLUME_COL => function (ExecutionStepResult $step) {
-                $content = [];
-                foreach ($step->getItems() as $item) {
-                    $content[] = sprintf('%s %s', $item->order instanceof SandboxStopOrder ? '-' : '+', $item->order->volume);
-                }
-                $content = implode(', ', $content);
+                if ($step->isOnlySingleItem()) {
+                    $order = $step->getSingleItem()->order;
+                    $content = sprintf('%s %s', $order instanceof SandboxStopOrder ? '-' : '+', $order->volume);
+                    return self::highlightedSingleOrderCell($step, $content);
+                } else {
+                    # @todo Mb get only for $this->targetPositionSide? Or do some previous check before do work on ExecutionStepResult (orders must be on one side)
+                    if ($step->hasOrdersExecuted()) {
+                        $volume = $step->getTotalVolumeExecuted();
+                    } else {
+                        $volume = $step->getTotalVolume();
+                    }
 
-                return self::highlightedOrderCell($step, $content);
+                    [$sign, $style] = match(true) {
+                        $volume < 0 =>  ['- ', new CellStyle(fontColor: Color::BRIGHT_RED)],
+                        $volume > 0 => ['+ ', new CellStyle(fontColor: Color::BRIGHT_GREEN)],
+                        default => ''
+                    };
+
+                    $content = sprintf('%s%s', $sign, abs($volume) ?: ($step->hasOrdersExecuted() ? '=> 0.0' : ''));
+
+                    return self::highlightedMultipleOrdersCell($step, $content, $style);
+                }
             },
             self::PNL_COL => function (ExecutionStepResult $step) {
                 if (!($totalPnl = $step->getTotalPnl())) {
@@ -139,7 +198,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         $diff < 0 => new CellStyle(fontColor: Color::BRIGHT_RED),
                         default => CellStyle::default()
                     };
-                    return self::highlightedOrderCell($step, $info, $cellStyle);
+                    return self::highlightedSingleOrderCell($step, $info, $cellStyle);
                 } elseif ($positionAfter) {
                     $resultText = $this->priceFormatter->format($positionAfter->liquidationPrice);
                     if ($positionAfter->isMainPosition() && !$positionBefore?->isMainPosition()) {
@@ -205,7 +264,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 $positionBefore = $step->getStateBefore()->getPosition($this->targetPositionSide);
                 if ($positionBefore && $positionBefore->isSupportPosition()) {
                     [$diff, $info] = $this->formatInfoAboutMainPositionLiquidationChanges($step, $this->targetPositionSide->getOpposite());
-                    $cells[] = self::highlightedOrderCell(
+                    $cells[] = self::highlightedSingleOrderCell(
                         $step,
                         $info,
                         $diff > 0 ? new CellStyle(fontColor: Color::BRIGHT_GREEN) : new CellStyle(fontColor: Color::BRIGHT_RED)
@@ -238,11 +297,9 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
             $rowStyle = RowStyle::separated();
         } elseif ($step->isPositionBeingOpenedThroughStep($this->targetPositionSide)) {
             $rowStyle = RowStyle::separated();
-//        } elseif (!$sandboxExecutionStep->hasOrdersExecuted()) {
         } elseif (
             !$step->hasOrdersExecuted()
-            && $step->isOnlySingleItem()
-            && $step->getSingleItem()->failReason->isExceptionOneOf([SandboxPositionNotFoundException::class, SandboxPositionLiquidatedBeforeOrderPriceException::class])
+            && $step->getFirstItem()->failReason->isExceptionOneOf([SandboxPositionNotFoundException::class, SandboxPositionLiquidatedBeforeOrderPriceException::class])
         ) {
             // position not found
             $formatters = $this->positionNotFoundOrLiquidatedRowCells;

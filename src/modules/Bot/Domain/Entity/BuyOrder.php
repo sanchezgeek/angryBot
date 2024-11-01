@@ -9,7 +9,10 @@ use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\Contract\OrderTypeAwareInterface;
+use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
@@ -23,7 +26,7 @@ use DomainException;
  * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest
  */
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
-class BuyOrder implements HasEvents
+class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
     use HasWithoutOppositeContext;
 
@@ -233,5 +236,15 @@ class BuyOrder implements HasEvents
             'volume' => $this->volume,
             'context' => $this->context,
         ];
+    }
+
+    public function signedVolume(): float
+    {
+        return $this->volume;
+    }
+
+    public function getOrderType(): OrderType
+    {
+        return OrderType::Add;
     }
 }
