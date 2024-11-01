@@ -80,6 +80,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private const DIVIDE_BY_ORDER_TYPES = 'divide-by-order-type';
     private const DIVIDE_STEP_PNL_PERCENT = 50;
 
+    private const FORCE_EXPAND_EVERY_SINGLE_ORDER = 'force-expand';
+
     private PriceFormatter $priceFormatter;
     private PnlFormatter $pnlFormatter;
 
@@ -88,6 +90,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private ?float $totalPnl = null;
     private bool $liquidationRowPrinted = false;
 
+    private ?bool $divideToGroups = null;
+    private ?bool $divideByOrderType = true;
+
     protected function configure(): void
     {
         $this
@@ -95,6 +100,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             ->addOption(self::TABLE_STYLE_OPTION, null, InputOption::VALUE_REQUIRED, 'Table style', self::DEFAULT_TABLE_STYLE)
             ->addOption(self::DIVIDE_TO_GROUPS, null, InputOption::VALUE_NEGATABLE, 'Divide orders to groups?')
             ->addOption(self::DIVIDE_BY_ORDER_TYPES, null, InputOption::VALUE_OPTIONAL, 'Divide by order type?', true)
+            ->addOption(self::FORCE_EXPAND_EVERY_SINGLE_ORDER, 'f', InputOption::VALUE_NEGATABLE, 'Force expand every single order?')
         ;
     }
 
@@ -140,6 +146,15 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
         /** @var Stop[]|BuyOrder[] $orders */
         $orders = array_merge($stops, $buyOrders);
+
+        if (count($orders) > 50) {
+            $this->divideToGroups = match (true) {
+                $this->paramFetcher->getBoolOption(self::DIVIDE_TO_GROUPS) => true,
+                $this->paramFetcher->getBoolOption(self::FORCE_EXPAND_EVERY_SINGLE_ORDER) => false,
+                default => $this->paramFetcher->getBoolOption(self::DIVIDE_TO_GROUPS) ?: $this->io->ask('Orders qnt is more than 50. Divide to groups?', true)
+            };
+            $this->divideByOrderType = $this->paramFetcher->getBoolOption(self::DIVIDE_BY_ORDER_TYPES) ?: $this->io->ask('Also divide by OrderType?', true);
+        }
 
         $ordersAfterPositionLoss = [];
         $ordersAfterPositionProfit = [];
@@ -187,9 +202,6 @@ class OrdersTotalInfoCommand extends AbstractCommand
      */
     private function processOrdersFromInitialPositionState(TradingSandbox $sandbox, array $orders): array
     {
-        $divideToGroups = $this->paramFetcher->getBoolOption(self::DIVIDE_TO_GROUPS);
-        $divideByOrderType = $this->paramFetcher->getBoolOption(self::DIVIDE_BY_ORDER_TYPES);
-
         $position = $this->initialSandboxState->getPosition($this->getPositionSide());
         $entryPrice = $position->entryPrice;
         $divideStep = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::DIVIDE_STEP_PNL_PERCENT, $entryPrice);
@@ -197,7 +209,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
         $divideByPositionEntryWasMade = false;
         # @todo Divide also by side of executed orders?
-        if ($divideToGroups) {
+        if ($this->divideToGroups) {
             $key = 0;
             foreach ($orders as $order) {
                 $lastType = $groups ? end($groups)['type'] : null;
@@ -205,7 +217,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $price = $order->getPrice();
 
                 $orderType = match ($class) {BuyOrder::class => OrderType::Add, Stop::class => OrderType::Stop};
-                if ($divideByOrderType) {
+                if ($this->divideByOrderType) {
                     if ($orderType !== $lastType) {
                         $key++;
                     }
@@ -240,7 +252,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             if (!$this->liquidationRowPrinted) {
                 foreach ($stepResult->getItems() as $key => $item) {
                     if ($item->failReason?->exception instanceof PosLiquidatedException) {
-                        if ($divideToGroups && !$dividedByPosLiq) {
+                        if ($this->divideToGroups && !$dividedByPosLiq) {
                             $ordersBeforeLiq = self::extractSourceOrdersFromOrderExecResult(...array_slice($stepResult->getItems(), 0, $key));
                             $ordersAfterLiq = self::extractSourceOrdersFromOrderExecResult(...array_slice($stepResult->getItems(), $key));
 
