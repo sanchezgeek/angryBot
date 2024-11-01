@@ -2,6 +2,8 @@
 
 namespace App\Command\Stop;
 
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -102,6 +104,7 @@ class StopInfoCommand extends AbstractCommand
             $showSizeLeft = true;
         } else {
             $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationDistance()));
+            $this->io->note(sprintf('%s l: %.2f', $position->getCaption(), $position->liquidationPrice));
         }
 
         $stops = $this->stopRepository->findActive(
@@ -122,10 +125,12 @@ class StopInfoCommand extends AbstractCommand
         $tradingSandbox = $this->tradingSandboxFactory->byCurrentState($symbol);
 
         $totalUsdPnL = $totalVolume = 0;
-        $initialPositionState = $tradingSandbox->getCurrentState()->getPosition($positionSide);
-        $previousSandboxState = clone $tradingSandbox->getCurrentState();
+        $initialState = $tradingSandbox->getCurrentState();
+        $initialPositionState = $initialState->getPosition($positionSide);
 
         $output = [];
+        $previousSandboxState = $initialState;
+        $positionLiquidationRowPrinted = false;
         foreach ($rangesCollection as $rangeDesc => $rangeStops) {
             /** @var StopsCollection $rangeStops */
             if (!$rangeStops->totalCount()) {
@@ -143,10 +148,21 @@ class StopInfoCommand extends AbstractCommand
             }
 
             $positionBeforeRange = $previousSandboxState->getPosition($positionSide);
-            $currentSandboxState = $tradingSandbox->processOrders(...$rangeStops);
-            $positionAfterRange = $currentSandboxState->getPosition($positionSide);
+            $positionLiquidated = false;
+            $newSandboxState = null;
+            try {
+                $tradingSandbox->processOrders(...$rangeStops);
+                $newSandboxState = $tradingSandbox->getCurrentState();
+            } catch (SandboxPositionLiquidatedBeforeOrderPriceException $e) {
+                $positionLiquidated = true;
+                (!$positionLiquidationRowPrinted) && $output[] = sprintf('position liquidated at %s', $positionBeforeRange->liquidationPrice);
+                $positionLiquidationRowPrinted = true;
+            } catch (SandboxPositionNotFoundException $e) {
+            }
 
-            if ($showSizeLeft) { # size left
+            $positionAfterRange = $newSandboxState?->getPosition($positionSide);
+
+            if ($showSizeLeft && !$positionLiquidated) {
                 if ($positionAfterRange) {
                     $sizeLeft = $positionAfterRange->size; $format .= ' => %.3f';$args[] = $sizeLeft;
                 } else {
@@ -155,11 +171,13 @@ class StopInfoCommand extends AbstractCommand
             }
 
             if ($this->isShowStateChangesEnabled()) {
-                $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $positionBeforeRange, $positionAfterRange);
-                if ($positionAfterRange->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) {
+                if ($positionAfterRange) {
+                    $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $positionBeforeRange, $positionAfterRange);
+                }
+                if ($positionAfterRange?->isSupportPosition() && !$positionBeforeRange->isSupportPosition()) {
                     $format .= ' | became support?';
                 }
-                if ($this->isShowCumulativeStateChangesEnabled()) {
+                if ($positionAfterRange && $this->isShowCumulativeStateChangesEnabled()) {
                     $this->appendNewPositionStateChanges($format, $args, $positionSide, $rangeStops, $initialPositionState, $positionAfterRange, true);
                 }
             }
@@ -173,7 +191,7 @@ class StopInfoCommand extends AbstractCommand
             $totalUsdPnL += $usdPnL;
             $totalVolume += $rangeStops->totalVolume();
 
-            $previousSandboxState = clone $currentSandboxState;
+            $previousSandboxState = $newSandboxState ?? $previousSandboxState;
         }
 
         if ($positionSide->isShort()) {

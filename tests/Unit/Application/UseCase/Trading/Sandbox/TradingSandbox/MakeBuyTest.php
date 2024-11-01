@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
@@ -33,7 +33,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $this->tradingSandbox->setState($initialState);
 
         // Act
-        $resultState = $this->tradingSandbox->processOrders($sandboxBuyOrder);
+        $this->tradingSandbox->processOrders($sandboxBuyOrder);
+        $resultState = $this->tradingSandbox->getCurrentState();
 
         // Assert
         self::assertSandboxStateEqualsToExpected($expectedStateAfterMakeBuy, $resultState);

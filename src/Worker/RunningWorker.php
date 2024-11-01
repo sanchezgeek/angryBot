@@ -6,8 +6,6 @@ namespace App\Worker;
 
 enum RunningWorker: string
 {
-    case DEFAULT = 'default';
-
     case SHORT = 'short';
     case LONG = 'long';
 

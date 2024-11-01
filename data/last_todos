@@ -2,3 +2,4 @@ src/Infrastructure/Cache/PositionsCache.php
 tests/Unit/Domain/Position/Helper/PositionCloneTest.php
 src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
 tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
+regexp CTRL-F: @todo.*sandbox

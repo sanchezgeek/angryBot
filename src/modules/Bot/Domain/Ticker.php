@@ -32,4 +32,14 @@ final readonly class Ticker
     {
         return $positionSide->isShort() ? $this->lastPrice->lessThan($this->indexPrice) : $this->lastPrice->greaterThan($this->indexPrice);
     }
+
+    public function getMinPrice(): Price
+    {
+        return min($this->indexPrice, $this->markPrice, $this->lastPrice);
+    }
+
+    public function getMaxPrice(): Price
+    {
+        return max($this->indexPrice, $this->markPrice, $this->lastPrice);
+    }
 }

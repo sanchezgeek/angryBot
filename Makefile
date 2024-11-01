@@ -29,7 +29,7 @@ build: ## Builds the Docker images
 	@ bash -c 'printf "\n"'
 	@ bash -c ' \
 		set -e && \
-		export ARGS="$$(./bin/get_build_args $$ENV_BUILD_FILEPATH)" && \
+		export ARGS="$$(sudo ./bin/get_build_args $$ENV_BUILD_FILEPATH)" && \
 		if [[ ! "$${ARGS}" =~ BYBIT_API_KEY=.*BYBIT_API_SECRET=.* ]]; then echo " -- Error: provided file contains invalid secrets definition (right format: BYBIT_API_KEY=...<newline>BYBIT_API_SECRET=...)"; exit 1; fi; \
 		read -p "Go build? " -n 1 -r && printf "\n" && \
 		docker compose --env-file=.env.local build $$ARGS'
@@ -58,6 +58,9 @@ sh: ## Connect to the PHP FPM container
 composer: ## Run composer, pass the parameter "c=" to run a given command, example: make composer c='req symfony/orm-pack'
 	@$(eval c ?=)
 	@$(COMPOSER) $(c)
+
+dump-al: c=dump-autoload
+dump-al: composer
 
 vendor: ## Install vendors according to the current composer.lock file
 vendor: c=install --prefer-dist --no-dev --no-progress --no-scripts --no-interaction
@@ -163,3 +166,6 @@ l-m-info: pos-m-info
 
 stats:
 	@$(PHP_CONT) ./bin/stats
+
+sound: c=c:sound ## Check the sound
+sound: sf

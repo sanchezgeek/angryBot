@@ -10,9 +10,14 @@ final readonly class Pnl implements \Stringable
     {
     }
 
+    public function getValue(): float
+    {
+        return $this->value;
+    }
+
     public function format(): string
     {
-        $sign = $this->value > 0 ? '+' : '-';
+        $sign = $this->value !== 0.00 ? ($this->value > 0 ? '+' : '-') : '';
 
         return \sprintf('%s%.2f %s', $sign, \abs($this->value), $this->currency);
     }

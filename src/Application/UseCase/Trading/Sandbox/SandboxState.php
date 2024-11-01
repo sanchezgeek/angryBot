@@ -21,7 +21,7 @@ use function count;
 use function max;
 use function sprintf;
 
-class SandboxState
+class SandboxState implements SandboxStateInterface
 {
     /** @var Position[] */
     private array $positions = [];
@@ -39,6 +39,11 @@ class SandboxState
         foreach ($positions as $position) {
             $this->setPositionAndActualizeOpposite($position);
         }
+    }
+
+    public function getSymbol(): Symbol
+    {
+        return $this->symbol;
     }
 
     /**

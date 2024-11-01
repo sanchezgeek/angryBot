@@ -22,7 +22,6 @@ class CreateBuyCommand extends AbstractCommand
     {
         $this
             ->configurePositionArgs()
-            ->addArgument('trigger_delta', InputArgument::REQUIRED, 'Trigger delta')
             ->addArgument('volume', InputArgument::REQUIRED, 'Buy volume')
             ->addArgument('price', InputArgument::REQUIRED, 'Trigger price')
         ;

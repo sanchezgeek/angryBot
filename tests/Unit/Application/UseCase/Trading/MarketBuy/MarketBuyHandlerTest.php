@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Application\UseCase\Trading\MarketBuy;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
-use App\Application\UseCase\Trading\Sandbox\Dto\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
+use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -24,8 +27,13 @@ use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\PHPUnit\Assertions;
+use App\Tests\PHPUnit\TestLogger;
+use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Throwable;
 
 class MarketBuyHandlerTest extends KernelTestCase
 {
@@ -33,84 +41,85 @@ class MarketBuyHandlerTest extends KernelTestCase
 
     private const SAFE_PRICE_DISTANCE = 2000;
 
-    private MarketBuyHandler $marketBuyHandler;
-    private TradingSandboxFactoryInterface $executionSandboxFactory;
-
     private OrderCostCalculator $orderCostCalculator;
     private CalcPositionLiquidationPriceHandler $liquidationCalculator;
+    private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
+    private TradingSandboxFactoryInterface|MockObject $executionSandboxFactory;
+    private LoggerInterface $logger;
+
+    private MarketBuyHandler $marketBuyHandler;
 
     protected function setUp(): void
     {
         $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
         $this->liquidationCalculator = self::getContainer()->get(CalcPositionLiquidationPriceHandler::class);
 
+        $this->sandboxStateFactory = $this->createMock(SandboxStateFactoryInterface::class);
+
         $this->executionSandboxFactory = $this->createMock(TradingSandboxFactoryInterface::class);
 
-        $this->marketBuyHandler = new MarketBuyHandler(
-            self::getContainer()->get(OrderServiceInterface::class),
-            $this->executionSandboxFactory,
-            self::getContainer()->get(ExchangeServiceInterface::class),
+        $this->logger = new TestLogger();
+
+        $marketBuyCheckService = new MarketBuyCheckService(
             self::getContainer()->get(PositionServiceInterface::class),
+            $this->executionSandboxFactory,
+            $this->logger
+        );
+
+        $this->marketBuyHandler = new MarketBuyHandler(
+            $marketBuyCheckService,
+            self::getContainer()->get(OrderServiceInterface::class),
+            self::getContainer()->get(ExchangeServiceInterface::class),
+            $this->sandboxStateFactory,
             self::SAFE_PRICE_DISTANCE
         );
     }
 
     /**
-     * @dataProvider failTestCases
+     * @dataProvider positionsWithTooNearLiquidationTestCases
      */
-    public function testFail(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxStateAfterMakeBuy, $expectedException): void
+    public function testFail(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxStateAfterMakeBuy): void
     {
         $this->haveTicker($ticker);
-        $this->mockSandboxMakeBuyCall($ticker, $buyEntryDto, $sandboxStateAfterMakeBuy);
-
-        // Assert
-        self::expectExceptionObject($expectedException);
+        $this->mockSandboxWillBeCalledAndReturnNewState($ticker, $buyEntryDto, $sandboxStateAfterMakeBuy);
 
         // Act
-        $this->marketBuyHandler->handle($buyEntryDto);
-    }
-
-    /**
-     * @dataProvider allSuccessTestCases
-     */
-    public function testSuccess(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxStateAfterMakeBuy): void
-    {
-        $this->haveTicker($ticker);
-        if (!$buyEntryDto->force) {
-            $this->mockSandboxMakeBuyCall($ticker, $buyEntryDto, $sandboxStateAfterMakeBuy);
+        try {
+            $this->marketBuyHandler->handle($buyEntryDto);
+        } catch (Throwable $e) {
+            // Arrange
+            self::assertTrue(Assertions::exceptionEquals(new BuyIsNotSafeException('liquidationPrice is too near'), $e));
+            return;
         }
 
-        // Assert
-        $this->expectsToMakeApiCalls(...self::successMarketBuyApiCallExpectations($buyEntryDto->symbol, [$buyEntryDto]));
-
-        // Act
-        $this->marketBuyHandler->handle($buyEntryDto);
+        self::assertFalse(true);
     }
 
     /**
-     * @dataProvider safeSuccessTestCases
+     * @dataProvider positionsWithTooNearLiquidationTestCases
      */
-    public function testSuccessWhenSandboxThrewException(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxState): void
+    public function testFailWhenSandboxThrewExceptionAndCurrentLiquidationIsNotInSafeRange(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxState): void
     {
-        # ... but initial state is safe for buy
         $this->haveTicker($ticker);
         $this->havePosition($ticker->symbol, $sandboxState->getPosition($buyEntryDto->positionSide));
-        $sandboxBuyOrder = SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice);
 
-        $sandboxMock = $this->createMock(TradingSandboxInterface::class);
-        $sandboxMock->expects(self::once())->method('processOrders')->with($sandboxBuyOrder)->willThrowException(
-            $exception = new RuntimeException('some error')
-        );
-        $this->executionSandboxFactory->expects(self::once())->method('byCurrentState')->with($buyEntryDto->symbol)->willReturn($sandboxMock);
-
-        // Assert
-        $this->expectsToMakeApiCalls(...self::successMarketBuyApiCallExpectations($buyEntryDto->symbol, [$buyEntryDto]));
+        $thrownException = new RuntimeException('some error');
+        $this->mockSandboxWillBeCalledAndThrowException($ticker, $buyEntryDto, $thrownException);
 
         // Act
-        $this->marketBuyHandler->handle($buyEntryDto);
+        try {
+            $this->marketBuyHandler->handle($buyEntryDto);
+        } catch (Throwable $e) {
+            // Arrange
+            self::assertTrue(Assertions::exceptionEquals(new BuyIsNotSafeException('liquidationPrice is too near'), $e));
+            self::assertTrue(Assertions::errorLogged($this->logger, 'some error', 'critical'));
+            return;
+        }
+
+        self::assertFalse(true);
     }
 
-    public function failTestCases(): iterable
+    public function positionsWithTooNearLiquidationTestCases(): iterable
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
@@ -118,17 +127,67 @@ class MarketBuyHandlerTest extends KernelTestCase
         yield 'LONG' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Buy),
             '$sandboxState[afterBuy]' => new SandboxState($ticker, new CoinAmount($symbol->associatedCoin(), 10), self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy)),
-            'expectedException' => new BuyIsNotSafeException(),
         ];
 
         yield 'SHORT' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Sell),
             '$sandboxState[afterBuy]' => new SandboxState($ticker, new CoinAmount($symbol->associatedCoin(), 10), self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell)),
-            'expectedException' => new BuyIsNotSafeException(),
         ];
     }
 
-    public function safeSuccessTestCases(): iterable
+    /**
+     * @dataProvider notSafeButForceOrderSuccessTestCases
+     */
+    public function testSuccessWhenMakeBuyForForcedOrder(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxStateAfterMakeBuy): void
+    {
+        $this->haveTicker($ticker);
+        $this->mockSandboxWontBeCalled();
+
+        // Assert
+        $this->expectsToMakeApiCalls(...self::successMarketBuyApiCallExpectations($buyEntryDto->symbol, [$buyEntryDto]));
+
+        // Act
+        $this->marketBuyHandler->handle($buyEntryDto);
+    }
+
+    /**
+     * @dataProvider safeBuySuccessTestCases
+     */
+    public function testSuccessWhenMakeBuyForSimpleOrder(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxStateAfterMakeBuy): void
+    {
+        $this->haveTicker($ticker);
+        $this->mockSandboxWillBeCalledAndReturnNewState($ticker, $buyEntryDto, $sandboxStateAfterMakeBuy);
+
+        // Assert
+        $this->expectsToMakeApiCalls(...self::successMarketBuyApiCallExpectations($buyEntryDto->symbol, [$buyEntryDto]));
+
+        // Act
+        $this->marketBuyHandler->handle($buyEntryDto);
+    }
+
+    /**
+     * @dataProvider safeBuySuccessTestCases
+     */
+    public function testSuccessWhenSandboxThrewException(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $sandboxState): void
+    {
+        # ... but initial state is safe for buy
+        $this->haveTicker($ticker);
+        $this->havePosition($ticker->symbol, $sandboxState->getPosition($buyEntryDto->positionSide));
+
+        $thrownException = new RuntimeException('some error');
+        $this->mockSandboxWillBeCalledAndThrowException($ticker, $buyEntryDto, $thrownException);
+
+        // Assert
+        $this->expectsToMakeApiCalls(...self::successMarketBuyApiCallExpectations($buyEntryDto->symbol, [$buyEntryDto]));
+
+        // Act
+        $this->marketBuyHandler->handle($buyEntryDto);
+
+        // Assert
+        self::assertTrue(Assertions::errorLogged($this->logger, 'some error', 'critical'));
+    }
+
+    public function safeBuySuccessTestCases(): iterable
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
@@ -147,20 +206,20 @@ class MarketBuyHandlerTest extends KernelTestCase
         ];
     }
 
-    public function notSafeSuccessTestCases(): iterable
+    public function notSafeButForceOrderSuccessTestCases(): iterable
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
         $freeBalance = new CoinAmount($symbol->associatedCoin(), 10);
 
         # LONG
-        yield 'LONG, buy is NOT save .. but `force` => check skipped even' => [
+        yield 'LONG, buy is NOT save .. but `force` => check skipped' => [
             '$ticker' => $ticker, '$buyDto' => self::forceBuyDto($symbol, Side::Buy),
             '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy)),
         ];
 
         # SHORT
-        yield 'SHORT, buy is NOT save .. but `force` => check skipped even' => [
+        yield 'SHORT, buy is NOT save .. but `force` => check skipped' => [
             '$ticker' => $ticker, '$buyDto' => self::forceBuyDto($symbol, Side::Sell),
             '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell)),
         ];
@@ -168,7 +227,7 @@ class MarketBuyHandlerTest extends KernelTestCase
 
     public function allSuccessTestCases(): iterable
     {
-        foreach ([...$this->safeSuccessTestCases(), ...$this->notSafeSuccessTestCases()] as $key => $case) {
+        foreach ([...$this->safeBuySuccessTestCases(), ...$this->notSafeButForceOrderSuccessTestCases()] as $key => $case) {
             yield $key => $case;
         }
     }
@@ -198,12 +257,39 @@ class MarketBuyHandlerTest extends KernelTestCase
         return PositionBuilder::bySide($side)->entry($ticker->lastPrice)->liq($liquidation->value())->build();
     }
 
-    private function mockSandboxMakeBuyCall(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, $stateAfterExec): void
+    private function mockSandboxWillBeCalledAndReturnNewState(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, SandboxState $stateAfterExec): void
     {
-        $sandboxBuyOrder = SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice);
+        $sandboxMock = $this->mockEmptySandbox($ticker->symbol);
+        $sandboxMock->expects(self::once())->method('processOrders')->with(SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice));
+        $sandboxMock->method('getCurrentState')->willReturn($stateAfterExec);
+    }
+
+    private function mockSandboxWillBeCalledAndThrowException(Ticker $ticker, MarketBuyEntryDto $buyEntryDto, \Throwable $exception): void
+    {
+        $sandboxMock = $this->mockEmptySandbox($ticker->symbol);
+        $sandboxMock->expects(self::once())->method('processOrders')
+            ->with(SandboxBuyOrder::fromMarketBuyEntryDto($buyEntryDto, $ticker->lastPrice))
+            ->willThrowException($exception);
+    }
+
+    private function mockEmptySandbox(Symbol $symbol): TradingSandboxInterface|MockObject
+    {
+        $initialState = $this->createMock(SandboxStateInterface::class);
+        $initialState->method('getSymbol')->willReturn($symbol);
+
+        $this->sandboxStateFactory->expects(self::once())->method('byCurrentTradingAccountState')->with($symbol)->willReturn($initialState);
 
         $sandboxMock = $this->createMock(TradingSandboxInterface::class);
-        $sandboxMock->expects(self::once())->method('processOrders')->with($sandboxBuyOrder)->willReturn($stateAfterExec);
-        $this->executionSandboxFactory->expects(self::once())->method('byCurrentState')->with($buyEntryDto->symbol)->willReturn($sandboxMock);
+        // @todo | use stub instead?
+        $sandboxMock->expects(self::once())->method('setState')->with($initialState);
+
+        $this->executionSandboxFactory->expects(self::once())->method('empty')->with($symbol)->willReturn($sandboxMock);
+
+        return $sandboxMock;
+    }
+
+    private function mockSandboxWontBeCalled(): void
+    {
+        $this->executionSandboxFactory->expects(self::never())->method(self::anything());
     }
 }

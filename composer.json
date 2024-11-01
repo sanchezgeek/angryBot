@@ -49,6 +49,9 @@
             "App\\": "src/",
             "App\\Bot\\": "src/modules/Bot",
             "App\\Alarm\\": "src/modules/Alarm",
+            "App\\Output\\": "src/modules/Output",
+            "App\\Connection\\": "src/modules/Connection",
+            "App\\Settings\\": "src/modules/Settings",
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }
     },

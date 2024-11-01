@@ -67,6 +67,11 @@ final class Position implements Stringable
         return Price::toObj($this->liquidationPrice);
     }
 
+    public function entryPrice(): Price
+    {
+        return Price::toObj($this->entryPrice);
+    }
+
     public function setOppositePosition(Position $oppositePosition): void
     {
         assert($this->oppositePosition === null, new LogicException('Opposite position already set.'));
@@ -101,6 +106,11 @@ final class Position implements Stringable
     public function isSupportPosition(): bool
     {
         return ($hedge = $this->getHedge()) && $hedge->isSupportPosition($this);
+    }
+
+    public function isShortWithoutLiquidation(): bool
+    {
+        return $this->isShort() && !$this->liquidationPrice;
     }
 
     public function isMainPosition(): bool
