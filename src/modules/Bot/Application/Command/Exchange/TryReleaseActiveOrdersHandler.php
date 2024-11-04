@@ -6,19 +6,24 @@ namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Throwable;
 
 use function count;
 
@@ -35,10 +40,12 @@ final class TryReleaseActiveOrdersHandler
      */
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly PositionServiceInterface $positionService,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly EventDispatcherInterface $events,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -94,18 +101,49 @@ final class TryReleaseActiveOrdersHandler
     private function release(ActiveStopOrder $exchangeStop, ?Stop $existedStop): void
     {
         $this->exchangeService->closeActiveConditionalOrder($exchangeStop);
+
+        try {
+            $this->entityManager->beginTransaction();
+            $this->doRelease($exchangeStop, $existedStop);
+            $this->entityManager->commit();
+        } catch (Throwable $e) {
+            $this->entityManager->rollback();
+            $position = $this->positionService->getPosition($exchangeStop->symbol, $exchangeStop->positionSide);
+            $newExchangeOrderId = $this->positionService->addConditionalStop($position, $exchangeStop->triggerPrice, $exchangeStop->volume, TriggerBy::from($exchangeStop->triggerBy));
+
+            if ($existedStop) {
+                $existedStop->setExchangeOrderId($newExchangeOrderId);
+                $this->stopRepository->save($existedStop);
+            }
+
+            # DRY
+            $oppositeOrders = $this->buyOrderRepository->findOppositeToStopByExchangeOrderId($exchangeStop->positionSide, $exchangeStop->orderId);
+            foreach ($oppositeOrders as $oppositeOrder) {
+                $oppositeOrder->setOnlyAfterExchangeOrderExecutedContext($newExchangeOrderId);
+                $this->buyOrderRepository->save($oppositeOrder);
+            }
+
+            throw $e;
+        }
+
+        if ($existedStop) {
+            $this->events->dispatch(new ActiveCondStopMovedBack($existedStop));
+        }
+    }
+
+    private function doRelease(ActiveStopOrder $exchangeStop, ?Stop $existedStop): void
+    {
         $side = $exchangeStop->positionSide;
 
         if ($existedStop) {
             $existedStop->clearExchangeOrderId();
             $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + 3); // Increase triggerDelta little bit
             $this->stopRepository->save($existedStop);
-
             // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?
-
-            $this->events->dispatch(new ActiveCondStopMovedBack($existedStop));
         } else {
-            $this->stopService->create($side, $exchangeStop->triggerPrice, $exchangeStop->volume, self::DEFAULT_TRIGGER_DELTA);
+            $this->stopService->create($side, $exchangeStop->triggerPrice, $exchangeStop->volume, self::DEFAULT_TRIGGER_DELTA, [
+                'fromExchangeWithoutExistedStop' => true
+            ]);
         }
 
         $oppositeOrders = $this->buyOrderRepository->findOppositeToStopByExchangeOrderId($side, $exchangeStop->orderId);

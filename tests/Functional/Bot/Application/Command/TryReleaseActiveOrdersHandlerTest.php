@@ -23,6 +23,7 @@ use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -39,7 +40,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
     protected EventDispatcherInterface $eventDispatcher;
     protected StopService $stopService;
     private ExchangeServiceInterface $exchangeServiceMock;
-    private PositionServiceInterface $positionServiceStub;
+    private PositionServiceStub $positionServiceStub;
 
     private TryReleaseActiveOrdersHandler $handler;
 
@@ -58,7 +59,15 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
         $this->positionServiceStub = new PositionServiceStub();
         $this->stopService = self::getContainer()->get(StopService::class);
 
-        $this->handler = new TryReleaseActiveOrdersHandler($this->exchangeServiceMock, $this->stopService, self::getStopRepository(), self::getBuyOrderRepository(), $this->eventDispatcher);
+        $this->handler = new TryReleaseActiveOrdersHandler(
+            $this->exchangeServiceMock,
+            $this->positionServiceStub,
+            $this->stopService,
+            self::getStopRepository(),
+            self::getBuyOrderRepository(),
+            $this->eventDispatcher,
+            self::getContainer()->get(EntityManagerInterface::class),
+        );
 
         self::ensureTableIsEmpty(Stop::class);
     }
