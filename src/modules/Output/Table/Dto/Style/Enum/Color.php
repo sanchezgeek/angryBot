@@ -14,6 +14,7 @@ enum Color
     case RED;
     case BRIGHT_RED;
     case CYAN;
+    case BRIGHT_MAGENTA;
 
     public function isDefault(): bool
     {

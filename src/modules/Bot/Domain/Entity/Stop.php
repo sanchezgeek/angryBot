@@ -267,4 +267,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     {
         return OrderType::Stop;
     }
+
+    public function isOrderPushedToExchange(): bool
+    {
+        return $this->getExchangeOrderId() !== null;
+    }
 }

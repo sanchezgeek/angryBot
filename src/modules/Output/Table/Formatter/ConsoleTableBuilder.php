@@ -105,6 +105,7 @@ final class ConsoleTableBuilder
             null => null,
             Color::BRIGHT_GREEN => 'bright-green',
             Color::BRIGHT_RED => 'bright-red',
+            Color::BRIGHT_MAGENTA => 'bright-magenta',
             default => !$color->isDefault() ? $color->name : null,
         };
     }

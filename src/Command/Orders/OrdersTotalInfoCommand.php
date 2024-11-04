@@ -135,10 +135,15 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $ticker = $this->exchangeService->ticker($this->getSymbol());
         $positionSide = $this->getPositionSide();
+        $ticker = $this->exchangeService->ticker($this->getSymbol());
+        $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
 
-        $stops = $this->stopRepository->findActive($positionSide);
+        $stops = array_filter(
+            $this->stopRepository->findAllByPositionSide($positionSide),
+            static fn(Stop $stop):bool => !$stop->isOrderPushedToExchange() || isset($pushedStops[$stop->getExchangeOrderId()])
+        );
+
         $buyOrders = $this->buyOrderRepository->findActive($positionSide);
         if (!$stops && !$buyOrders) {
             $this->io->block('Orders not found.'); return Command::SUCCESS;

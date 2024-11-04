@@ -7,6 +7,8 @@ namespace App\Application\UseCase\Trading\Sandbox\Output;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
+use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Domain\Pnl\Helper\PnlFormatter;
@@ -107,19 +109,17 @@ abstract class AbstractExecStepResultTableRowBuilder
         return (string)$liquidationPriceDiffWithPrev;
     }
 
-    protected function getOrderInfo(SandboxStopOrder|SandboxBuyOrder $order): array
+    protected function getSourceOrderInfo(BuyOrder|Stop $sourceOrder): array
     {
-        $sourceOrder = $order->sourceOrder;
-
         $info = [];
-        if ($order instanceof SandboxStopOrder) {
-
+        if ($sourceOrder instanceof Stop) {
             $info[] = match (true) {
                 $sourceOrder->isTakeProfitOrder() => 'TakeProfit order',
                 $sourceOrder->isCloseByMarketContextSet() => '!by market!',
-                default => 'Conditional order'
+                default => sprintf('Conditional order (td=%.2f)', $this->priceFormatter->format($sourceOrder->getTriggerDelta())),
             };
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without opposite BO';
+            $sourceOrder->isOrderPushedToExchange() && $info[] = 'PUSHED TO EXCHANGE';
         } else {
             $sourceOrder->isForceBuyOrder() && $info[] = '!force buy!';
             $sourceOrder->isOppositeBuyOrderAfterStopLoss() && $info[] = 'opposite BuyOrder after SL';

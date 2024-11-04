@@ -11,6 +11,7 @@ use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
@@ -216,12 +217,14 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
             },
             self::COMMENT_COL => function (ExecutionStepResult $step, RowStyle $rowStyle) {
                 $info = [];
+                $cellStyle = CellStyle::default();
 
                 if ($step->isOnlySingleItem()) {
                     $additionalInfo = [];
-
                     $orderExecutionResult = $step->getSingleItem();
-                    if ($additionalOrderInfo = $this->getOrderInfo($orderExecutionResult->order)) {
+                    $sourceOrder = $orderExecutionResult->order->sourceOrder;
+
+                    if ($additionalOrderInfo = $this->getSourceOrderInfo($sourceOrder)) {
                         $additionalInfo[] = implode(', ', $additionalOrderInfo);
                     }
 
@@ -234,6 +237,10 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     if ($additionalInfo) {
                         $info[] = implode(' | ', $additionalInfo);
                     }
+
+                    if ($sourceOrder instanceof Stop && $sourceOrder->isOrderPushedToExchange()) {
+                        $cellStyle->fontColor = Color::BRIGHT_MAGENTA;
+                    }
                 }
 
                 if ($step->isPositionBeingOpenedThroughStep($this->targetPositionSide)) {
@@ -244,7 +251,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     $rowStyle->separated = true;
                 }
 
-                return implode(PHP_EOL, $info);
+                return new Cell(implode(PHP_EOL, $info), $cellStyle);
             }
         ];
 
