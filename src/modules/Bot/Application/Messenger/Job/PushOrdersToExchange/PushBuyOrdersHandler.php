@@ -568,9 +568,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                         }
                     }
 
-                    $range = PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl);
-                    if ($fromPnl && $toPnl && $currentPrice->isPriceInRange($range)) {
-                        return sprintf('l=%d | ~isPriceInRange[%s..%s / %s]~', $totalPositionLeverage, $fromPnl, $toPnl, $range);
+                    if ($fromPnl && $toPnl) {
+                        $range = PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl);
+                        if ($currentPrice->isPriceInRange($range)) {
+                            return sprintf('l=%d | ~isPriceInRange[%s..%s / %s]~', $totalPositionLeverage, $fromPnl, $toPnl, $range);
+                        }
                     }
 
                     break;
