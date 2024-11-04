@@ -1,0 +1,7 @@
+framework:
+    rate_limiter:
+        ignore_buy_throttling:
+            # use 'sliding_window' if you prefer that policy
+            policy: 'fixed_window'
+            limit: 1
+            interval: '30 seconds'

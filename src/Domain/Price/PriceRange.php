@@ -9,13 +9,15 @@ use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use Generator;
 
+use Stringable;
+
 use function ceil;
 use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceRangeTest
  */
-final readonly class PriceRange
+final readonly class PriceRange implements Stringable
 {
     public function __construct(private Price $from, private Price $to)
     {
@@ -104,5 +106,10 @@ final readonly class PriceRange
         return Price::float(
             ($this->from->value() + $this->to->value()) / 2
         );
+    }
+
+    public function __toString(): string
+    {
+        return sprintf('%s - %s', $this->from(), $this->to());
     }
 }

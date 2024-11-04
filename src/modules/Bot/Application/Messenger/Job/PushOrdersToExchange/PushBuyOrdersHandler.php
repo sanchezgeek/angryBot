@@ -43,12 +43,13 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDeco
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Worker\TradingAccountType;
 use App\Worker\AppContext;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\RateLimiter\LimiterInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
 use function abs;
@@ -80,6 +81,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private ?DateTimeImmutable $lastCannotAffordAt = null;
     private ?float $lastCannotAffordAtPrice = null;
+
+    private readonly LimiterInterface $ignoreBuyThrottlingLimiter;
 
     /**
      * @todo It must be separated service receiving some context of spot usage to make decision.
@@ -181,7 +184,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 13, 100);
         } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
-            $ignoreBuy = true;
+            $ignoreBuy = '~isLastPriceOverIndexPrice~ more than 65';
         }
 
         $orders = $this->findOrdersNearTicker($side, $position, $ticker);
@@ -192,6 +195,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $boughtOrders = [];
             foreach ($orders as $order) {
                 if ($ignoreBuy && !$order->isForceBuyOrder()) {
+                    $this->noticeAboutIgnoreBuy($position, $order, $ignoreBuy);
+
                     continue;
                 }
 
@@ -518,47 +523,54 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     }
 
     public const LEVERAGE_SLEEP_RANGES = [
-        92 => [-50, 80, 1250],
-        83 => [-40, 70, 1000],
-        73 => [-35, 60, 900],
-        63 => [-30, 50, 750],
+        92 => [-50, 80, 300],
+        83 => [-40, 70, 250],
+        73 => [-35, 60, 225],
+        63 => [-30, 50, 170],
     ];
 
     public const HEDGE_LEVERAGE_SLEEP_RANGES = [
-        92 => [-40, 70, 3500],
-        85 => [-25, 55, 3000],
-        75 => [-20, 40, 2000],
-        65 => [-5, 5, 1500],
+        92 => [null, null, 750],
+        85 => [null, null, 625],
+        75 => [null, null, 450],
+        65 => [null, null, 350],
     ];
 
-    private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): bool
+    private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): ?string
     {
-//        if (AppContext::accType()->isUTA()) {
-//            return false;
-//        }
-
         if ($position) {
-            $hedge = $position->getHedge();
-            if ($hedge?->isSupportPosition($position) && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
-                return true;
+            if ($position->isSupportPosition()) {
+                if ($this->hedgeService->isSupportSizeEnoughForSupportMainPosition($position->getHedge())) {
+                    return '~SupportSizeEnoughForSupportMainPosition~';
+                }
+                return null;
             }
 
             $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $currentPrice = $position->isShort() ? PriceHelper::max($ticker->indexPrice, $ticker->markPrice) : PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
             $totalPositionLeverage = $this->totalPositionLeverage($position, $ticker);
 
-            $sleepRanges = $hedge?->isMainPosition($position) ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
-            foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistance]) {
+            $sleepRanges = $position->isMainPosition() ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
+            foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistancePnlPercent]) {
+                $minLiqDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($minLiqDistancePnlPercent, $position->entryPrice);
                 // @todo | by now only for linear
                 if ($totalPositionLeverage >= $leverage) {
-                    if ($position->isPositionInLoss($currentPrice) && $distanceWithLiquidation > $minLiqDistance) {
-                        break;
+                    if ($position->isMainPosition()) {
+                        if ($distanceWithLiquidation < $minLiqDistance) {
+                            return sprintf('l=%d | ~isMainPosition~ | $distanceWithLiquidation(%s) < $minLiqDistance (%s)', $totalPositionLeverage, $distanceWithLiquidation, $minLiqDistance);
+                        }
+                    } else {
+                        if ($position->isPositionInLoss($currentPrice) && $distanceWithLiquidation > $minLiqDistance) {
+                            break;
+                        }
+                        if ($position->isPositionInProfit($currentPrice) && $distanceWithLiquidation < $minLiqDistance) {
+                            return sprintf('l=%d | ~isPositionInProfit~ | $distanceWithLiquidation(%s) < $minLiqDistance (%s)', $totalPositionLeverage, $distanceWithLiquidation, $minLiqDistance);
+                        }
                     }
-                    if ($position->isPositionInProfit($currentPrice) && $distanceWithLiquidation < $minLiqDistance) {
-                        return true;
-                    }
-                    if ($currentPrice->isPriceInRange(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl))) {
-                        return true;
+
+                    $range = PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl);
+                    if ($fromPnl && $toPnl && $currentPrice->isPriceInRange($range)) {
+                        return sprintf('l=%d | ~isPriceInRange[%s..%s / %s]~', $totalPositionLeverage, $fromPnl, $toPnl, $range);
                     }
 
                     break;
@@ -566,7 +578,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private function noticeAboutIgnoreBuy(Position $position, BuyOrder $order, string $ignoreBuy): void
+    {
+        OutputHelper::print($message = sprintf('%s: ignore buy : %s (id=b.%d)', $position->side->title(), $ignoreBuy, $order->getId()));
+        if ($this->ignoreBuyThrottlingLimiter->consume()->isAccepted()) {
+            $this->logger->critical($message);
+        }
     }
 
     /**
@@ -589,12 +609,14 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         private readonly OrderServiceInterface $orderService,
 
         private readonly MarketBuyHandler $marketBuyHandler,
+        RateLimiterFactory $ignoreBuyThrottlingLimiter,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         ClockInterface $clock,
         LoggerInterface $appErrorLogger,
     ) {
+        $this->ignoreBuyThrottlingLimiter = $ignoreBuyThrottlingLimiter->create('push_buy_orders');
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }

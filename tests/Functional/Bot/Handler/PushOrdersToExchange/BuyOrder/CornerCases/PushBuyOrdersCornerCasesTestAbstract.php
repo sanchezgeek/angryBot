@@ -25,6 +25,8 @@ use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 {
@@ -39,6 +41,15 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
+        $ignoreBuyThrottlingLimiter = new RateLimiterFactory([
+            'policy' => 'token_bucket',
+            'id' => 'test',
+            'limit' => 5,
+            'rate' => [
+                'interval' => '5 seconds',
+            ],
+        ], new InMemoryStorage());
+
         $this->handler = new PushBuyOrdersHandler(
             self::getContainer()->get(CreateBuyOrderHandler::class),
             self::getContainer()->get(HedgeService::class),
@@ -51,6 +62,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(ByBitMarketService::class),
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(MarketBuyHandler::class),
+            $ignoreBuyThrottlingLimiter,
 
             self::getContainer()->get(ExchangeServiceInterface::class),
             self::getContainer()->get(PositionServiceInterface::class),
