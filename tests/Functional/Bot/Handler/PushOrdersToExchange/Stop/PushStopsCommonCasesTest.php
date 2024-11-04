@@ -349,6 +349,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         foreach ($orders as $order) {
             $order->setOnlyAfterExchangeOrderExecutedContext($pushedStopExchangeOrderId);
+            $order->setOppositeStopId($stop->getId());
             $order->setIsOppositeBuyOrderAfterStopLossContext();
             $order->setIsForceBuyOrderContext();
             $order->setStopDistanceContext($oppositeSlPriceDistanceOnCreatedBuyOrders);

@@ -120,9 +120,16 @@ abstract class AbstractExecStepResultTableRowBuilder
             };
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without opposite BO';
             $sourceOrder->isOrderPushedToExchange() && $info[] = 'PUSHED TO EXCHANGE';
+            $sourceOrder->getExchangeOrderId() && $info[] = sprintf('%s', $sourceOrder->getExchangeOrderId());
+            // @todo | move to context
+            $sourceOrder->getContext('fromExchangeWithoutExistedStop') && $info[] = 'fromExchange (without ExistedStop)';
         } else {
             $sourceOrder->isForceBuyOrder() && $info[] = '!force buy!';
-            $sourceOrder->isOppositeBuyOrderAfterStopLoss() && $info[] = 'opposite BuyOrder after SL';
+
+            if ($sourceOrder->isOppositeBuyOrderAfterStopLoss()) {
+                $info[] = sprintf('opposite after SL (id=s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');
+            }
+
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without Stop';
         }
         // opposite?

@@ -149,6 +149,17 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $this->io->block('Orders not found.'); return Command::SUCCESS;
         }
 
+        foreach ($buyOrders as $buyOrder) {
+            if (!$buyOrder->isOppositeBuyOrderAfterStopLoss()) {
+                continue;
+            }
+
+            $stopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext();
+            if (!isset($pushedStops[$stopExchangeOrderId])) {
+                $buyOrder->setIsOppositeStopExecuted();
+            }
+        }
+
         /** @var Stop[]|BuyOrder[] $orders */
         $orders = array_merge($stops, $buyOrders);
 

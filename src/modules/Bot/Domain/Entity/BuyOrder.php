@@ -43,6 +43,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
      */
     public const ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
     public const IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
+    public const OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
     public const STOP_DISTANCE_CONTEXT = 'stopDistance';
 
     use HasVolume;
@@ -68,6 +69,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
      */
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
+
+    private bool $isOppositeStopExecuted = false;
 
     public function __construct(int $id, Price|float $price, float $volume, Side $positionSide, array $context = [])
     {
@@ -191,6 +194,18 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return $this->context[self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT] ?? null;
     }
 
+    public function getOppositeStopId(): ?int
+    {
+        return $this->context[self::OPPOSITE_SL_ID_CONTEXT] ?? null;
+    }
+
+    public function setOppositeStopId(int $stopId): self
+    {
+        $this->context[self::OPPOSITE_SL_ID_CONTEXT] = $stopId;
+
+        return $this;
+    }
+
     public function getStopDistance(): ?float
     {
         return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;
@@ -246,5 +261,21 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function getOrderType(): OrderType
     {
         return OrderType::Add;
+    }
+
+    public function setIsOppositeStopExecuted(): self
+    {
+        $this->isOppositeStopExecuted = true;
+
+        return $this;
+    }
+
+    /**
+     * @todo It's currently being set in OrdersTotalInfoCommand by search in $pushed Stops
+     *       => It must be moved to some handler OR change mechanic of creation instead
+     */
+    public function isOppositeStopExecuted(): bool
+    {
+        return $this->isOppositeStopExecuted;
     }
 }
