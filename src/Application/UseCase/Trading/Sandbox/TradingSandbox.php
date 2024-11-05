@@ -189,7 +189,7 @@ class TradingSandbox implements TradingSandboxInterface
         $availableBalance = $currentState->getAvailableBalance()->value();
         if ($availableBalance < $cost) {
             $this->throwExceptionWhileExecute(
-                SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('balance.avail [%s] less than order.cost [%s]', $availableBalance, $cost))
+                SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('avail=%s < order.cost=%s', $availableBalance, $cost))
             );
         }
 
