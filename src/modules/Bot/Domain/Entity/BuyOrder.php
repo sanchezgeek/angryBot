@@ -165,6 +165,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return $this;
     }
 
+    public function unsetForceBuyOrderContext(): self
+    {
+        $this->context[self::FORCE_BUY_CONTEXT] = false;
+
+        return $this;
+    }
+
     public function isOnlyIfHasAvailableBalanceContextSet(): bool
     {
         return ($this->context[self::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT] ?? null) === true;
