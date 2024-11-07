@@ -127,7 +127,7 @@ abstract class AbstractExecStepResultTableRowBuilder
             $sourceOrder->isForceBuyOrder() && $info[] = '!force buy!';
 
             if ($sourceOrder->isOppositeBuyOrderAfterStopLoss()) {
-                $info[] = sprintf('opposite after SL (id=s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');
+                $info[] = sprintf('after SL (s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');
             }
 
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without Stop';
