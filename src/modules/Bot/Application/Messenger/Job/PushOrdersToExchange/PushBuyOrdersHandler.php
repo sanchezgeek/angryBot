@@ -336,7 +336,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 unset($order);
             }
         } catch (BuyIsNotSafeException $e) {
-            OutputHelper::warning(sprintf('Skip buy %s|%s on %s (buy is not safe).', $order->getVolume(), $order->getPrice(), $position));
+            OutputHelper::warning(sprintf('Skip buy %s|%s on %s (%s).', $order->getVolume(), $order->getPrice(), $position, $e->getMessage()));
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
