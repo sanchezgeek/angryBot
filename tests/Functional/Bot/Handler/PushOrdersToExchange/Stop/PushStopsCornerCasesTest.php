@@ -133,16 +133,16 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
 
-        yield '[BTCUSDT SHORT] liquidation not in critical range' => [
+        yield '[BTCUSDT SHORT] liquidation is not in warning range => use IndexPrice' => [
             'ticker' => $ticker,
-            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1),
+            'position' => PositionFactory::short(self::SYMBOL, 20000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1),
             'stop' => StopBuilder::short(5, 29051, 0.011)->withTD(10)->build(),
             'expectedTriggerBy' => TriggerBy::IndexPrice,
         ];
 
-        yield '[BTCUSDT SHORT] liquidation in critical range' => [
-            'ticker' => $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070),
-            'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance),
+        yield '[BTCUSDT SHORT] liquidation in warning range => use MarkPrice' => [
+            'ticker' => $ticker,
+            'position' => PositionFactory::short(self::SYMBOL, 20000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance),
             'stop' => StopBuilder::short(5, 29061, 0.011)->withTD(10)->build(),
             'expectedTriggerBy' => TriggerBy::MarkPrice,
         ];
