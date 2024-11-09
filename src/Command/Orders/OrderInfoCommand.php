@@ -2,10 +2,13 @@
 
 namespace App\Command\Orders;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Command\AbstractCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Helper\OutputHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -17,6 +20,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'o:info')]
 class OrderInfoCommand extends AbstractCommand
 {
+    use SymbolAwareCommand;
+
     private const IDS_ARG = 'ids';
     private const REMOVE_OPTION = 'remove';
     private const EDIT_OPTION = 'edit';
@@ -25,6 +30,7 @@ class OrderInfoCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
+            ->configureSymbolArgs()
             ->addArgument(self::IDS_ARG, InputArgument::REQUIRED, 'Orders IDs (prefixed with `b.` [buy] or `s.` [sell]) separated by comma')
             ->addOption(self::REMOVE_OPTION, 'r', InputOption::VALUE_NEGATABLE, 'Remove?')
             ->addOption(self::EDIT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Edit?')
@@ -74,6 +80,20 @@ class OrderInfoCommand extends AbstractCommand
                 $repository->save($order);
             } elseif ($action === 'r') {
                 if ($this->io->confirm('Are you sure you want to remove this order?', false)) {
+                    $closeActiveCondOrder = false;
+                    $activeCondOrder = null;
+                    if ($order instanceof Stop && ($exchangeOrderId = $order->getExchangeOrderId())) {
+                        $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
+                        if (isset($pushedStops[$exchangeOrderId])) {
+                            $activeCondOrder = $pushedStops[$exchangeOrderId];
+                            $closeActiveCondOrder = $this->io->confirm(sprintf('Order pushed to exchange ("%s"). Close?', $exchangeOrderId));
+                        }
+                    }
+
+                    if ($closeActiveCondOrder) {
+                        $this->exchangeService->closeActiveConditionalOrder($activeCondOrder);
+                    }
+
                     $repository->remove($order);
                 }
             }
@@ -85,6 +105,7 @@ class OrderInfoCommand extends AbstractCommand
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderRepository $buyOrderRepository,
+        private readonly ExchangeServiceInterface $exchangeService,
         string $name = null,
     ) {
         parent::__construct($name);
