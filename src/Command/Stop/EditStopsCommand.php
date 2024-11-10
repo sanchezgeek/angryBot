@@ -2,9 +2,11 @@
 
 namespace App\Command\Stop;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -100,14 +102,18 @@ class EditStopsCommand extends AbstractCommand
             $position = null;
         }
 
-        $stops = $this->stopRepository->findActive(
-            side: $positionSide,
-            qbModifier: static function (QueryBuilder $qb) use ($positionSide) {
-                QueryHelper::addOrder($qb, 'volume', 'ASC');
-                QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC');
-                QueryHelper::addOrder($qb, 'triggerDelta', 'ASC');
-            }
-        );
+        if ($action === self::ACTION_REMOVE) {
+            $stops = $this->stopRepository->findAllByPositionSide($positionSide);
+        } else {
+            $stops = $this->stopRepository->findActive(
+                side: $positionSide,
+                qbModifier: static function (QueryBuilder $qb) use ($positionSide) {
+                    QueryHelper::addOrder($qb, 'volume', 'ASC');
+                    QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC');
+                    QueryHelper::addOrder($qb, 'triggerDelta', 'ASC');
+                }
+            );
+        }
         $stopsCollection = new StopsCollection(...$stops);
 
         $stopsInSpecifiedRange = $priceRange ? $stopsCollection->grabFromRange($priceRange) : $stopsCollection;
@@ -204,6 +210,22 @@ class EditStopsCommand extends AbstractCommand
         }
 
         if ($action === self::ACTION_REMOVE) {
+            $exchangeOrdersIds = array_map(static fn (Stop $stop) => $stop->getExchangeOrderId(), $stops);
+            $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
+
+
+            $pushedStops = array_filter($pushedStops, static fn(ActiveStopOrder $activeStopOrder) => in_array($activeStopOrder->orderId, $exchangeOrdersIds, true));
+            $closeActiveCondOrder = false;
+            if ($pushedStops) {
+                $closeActiveCondOrder = $this->io->confirm('Some orders pushed to exchange. Close?');
+            }
+
+            if ($closeActiveCondOrder) {
+                foreach ($pushedStops as $activeCondOrder) {
+                    $this->exchangeService->closeActiveConditionalOrder($activeCondOrder);
+                }
+            }
+
             $this->entityManager->wrapInTransaction(function() use ($filteredStops) {
                 foreach ($filteredStops as $stop) {
                     $this->entityManager->remove($stop);
@@ -272,6 +294,7 @@ class EditStopsCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         PositionServiceInterface $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
         string $name = null,
     ) {
         $this->withPositionService($positionService);
