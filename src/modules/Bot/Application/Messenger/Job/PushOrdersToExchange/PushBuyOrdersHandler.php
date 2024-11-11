@@ -149,14 +149,16 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     /**
      * @return BuyOrder[]
      */
-    public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
+    public function findOrdersNearTicker(Side $side, Ticker $ticker, ?Position $openedPosition = null): array
     {
-        $volumeOrdering = $this->canTakeProfit($position, $ticker) ? 'DESC' : 'ASC'; // To get the cheapest orders (if can afford buy less qty)
+        $volumeOrdering = $openedPosition && $this->canTakeProfit($openedPosition, $ticker)
+            ? 'DESC' // To get bigger orders first (to take bigger profit by their volume)
+            : 'ASC'; // Buy cheapest orders first
 
         return $this->buyOrderRepository->findActiveInRange(
             side: $side,
-            from: ($position->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
-            to: ($position->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
+            from: ($side->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
+            to: ($side->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
             qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
@@ -179,17 +181,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         $position = $this->positionService->getPosition($symbol, $side);
-        $ignoreBuy = $this->isNeedIgnoreBuy($position, $ticker);
+        $orders = $this->findOrdersNearTicker($side, $ticker, $position);
+
+        $ignoreBuy = null;
+        if ($position && $ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 100) {
+            $ignoreBuy = '~isLastPriceOverIndexPrice~ more than 100';
+        } elseif ($orders) {
+            $ignoreBuy = $this->getNeedIgnoreBuyReason($position, $ticker);
+        }
 
         if (!$position) {
             $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 13, 100);
-        } elseif ($ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 65) {
-            $ignoreBuy = '~isLastPriceOverIndexPrice~ more than 65';
         }
 
-        $orders = $this->findOrdersNearTicker($side, $position, $ticker);
-
-        /** @var BuyOrder $lastBuy To use, for example, after catch `CannotAffordOrderCost` exception */
+        /** @var BuyOrder $lastBuy For `CannotAffordOrderCost` exception processing */
         $lastBuy = null;
         try {
             $boughtOrders = [];
@@ -536,7 +541,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         65 => [null, null, 350],
     ];
 
-    private function isNeedIgnoreBuy(?Position $position, Ticker $ticker): ?string
+    private function getNeedIgnoreBuyReason(?Position $position, Ticker $ticker): ?string
     {
         if ($position) {
             if ($position->isSupportPosition()) {
