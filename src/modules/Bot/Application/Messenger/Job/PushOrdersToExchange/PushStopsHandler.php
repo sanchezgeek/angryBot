@@ -168,6 +168,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
 
         if ($loss > 0) {
+            // @todo | m.b. publish new message for each stop? =)
             $this->messageBus->dispatch(CoverLossesAfterCloseByMarketConsumerDto::forPosition($position, $loss));
         }
     }
