@@ -68,7 +68,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 200;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 120;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     public const FIX_SUPPORT_ENABLED = false;
@@ -140,6 +140,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
+        if (!self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT) {
+            return false;
+        }
         $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
         $minLastPricePnlPercentToTakeProfit = $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT / 1.3 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
 
@@ -590,10 +593,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function noticeAboutIgnoreBuy(Position $position, BuyOrder $order, string $ignoreBuy): void
     {
-        OutputHelper::print($message = sprintf('%s: ignore buy : %s (id=b.%d)', $position->side->title(), $ignoreBuy, $order->getId()));
-        if ($this->ignoreBuyThrottlingLimiter->consume()->isAccepted()) {
-            $this->logger->critical($message);
-        }
+//        OutputHelper::print($message = sprintf('%s: ignore buy : %s (id=b.%d)', $position->side->title(), $ignoreBuy, $order->getId()));
+//        if ($this->ignoreBuyThrottlingLimiter->consume()->isAccepted()) {
+//            $this->logger->critical($message);
+//        }
     }
 
     /**

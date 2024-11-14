@@ -49,7 +49,7 @@ final class LogLoggableEventListener implements EventSubscriberInterface
             TickerUpdateSkipped::class => '__invoke',
             PositionUpdated::class => '__invoke',
 //            BuyOrderPushedToExchange::class => '__invoke',,
-            ActiveCondStopMovedBack::class => '__invoke',
+//            ActiveCondStopMovedBack::class => '__invoke',
         ];
     }
 }
