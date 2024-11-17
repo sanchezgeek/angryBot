@@ -68,7 +68,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 120;
+    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 170;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     public const FIX_SUPPORT_ENABLED = false;
@@ -343,8 +343,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->buyOrderRepository->remove($order);
                 unset($order);
             }
-        } catch (BuyIsNotSafeException $e) {
-            OutputHelper::warning(sprintf('Skip buy %s|%s on %s (%s).', $order->getVolume(), $order->getPrice(), $position, $e->getMessage()));
+        } catch (BuyIsNotSafeException) {
+            OutputHelper::warning(sprintf('Skip buy %s|%s on %s.', $order->getVolume(), $order->getPrice(), $position));
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
