@@ -22,6 +22,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Infrastructure\ByBit\API\V5\Request\Account\GetAllCoinsBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
 use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
@@ -60,7 +61,11 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance
     {
-        return $this->getWalletBalance(self::getSpotAccountType(), $coin);
+        if (AppContext::accType()->isUTA()) {
+            return $this->getFundingBalance($coin);
+        } else {
+            return $this->getWalletBalance(AccountType::SPOT, $coin);
+        }
     }
 
     /**
@@ -217,11 +222,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         if (!$walletBalance) {
-            $this->appErrorLogger->critical(
-                sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value),
-                ['file' => __FILE__, 'line' => __LINE__],
-            );
-
+            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
             return new WalletBalance($accountType, $coin, 0, 0);
         }
 
@@ -303,6 +304,37 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         return $free;
+    }
+
+    /**
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     */
+    private function getFundingBalance(Coin $coin): WalletBalance
+    {
+        $accountType = AccountType::FUNDING;
+        $request = new GetAllCoinsBalanceRequest($accountType, $coin);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['balance'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $walletBalance = null;
+        foreach ($list as $item) {
+            if ($item['coin'] === $coin->value) {
+                $walletBalance = new WalletBalance($accountType, $coin, (float)$item['walletBalance'], (float)$item['transferBalance']);
+            }
+        }
+
+        if (!$walletBalance) {
+            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
+            return new WalletBalance($accountType, $coin, 0, 0);
+        }
+
+        return $walletBalance;
     }
 
     /**
