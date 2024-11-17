@@ -9,13 +9,16 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\Stop\EditStopsCommand;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\CommandsTester;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\Mock\Response\ByBitV5Api\Trade\CurrentOrdersResponseBuilder;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_map;
@@ -39,6 +42,15 @@ final class RemoveStopsInRangeTest extends KernelTestCase
         self::truncateStops();
 
         $this->tester = $this->createCommandTester(self::COMMAND_NAME);
+
+        # now command check active exchange orders before remove Stops
+        $assetCategory = AssetCategory::linear;
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation(
+                GetCurrentOrdersRequest::openOnly($assetCategory, Symbol::BTCUSDT),
+                CurrentOrdersResponseBuilder::ok($assetCategory)->build()
+            )
+        );
     }
 
     /**
