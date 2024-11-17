@@ -12,6 +12,7 @@ use JsonSerializable;
 use RuntimeException;
 use Stringable;
 
+use function in_array;
 use function sprintf;
 
 /**
@@ -33,7 +34,7 @@ final readonly class WalletBalance implements JsonSerializable, Stringable
     ) {
         $this->total = new CoinAmount($this->assetCoin, $totalBalance);
         $this->available = new CoinAmount($this->assetCoin, $availableBalance);
-        if ($this->accountType === AccountType::CONTRACT && $freeBalance === null) {
+        if (in_array($this->accountType, [AccountType::CONTRACT, AccountType::UNIFIED], true) && $freeBalance === null) {
             throw new RuntimeException(
                 sprintf('%s: incorrect usage: `free` balance must be specified', __METHOD__)
             );
@@ -56,9 +57,9 @@ final readonly class WalletBalance implements JsonSerializable, Stringable
 
     public function free(): float
     {
-        if ($this->accountType === AccountType::SPOT) {
+        if (in_array($this->accountType, [AccountType::SPOT, AccountType::FUNDING], true)) {
             throw new RuntimeException(
-                sprintf('incorrect usage of %s for SPOT accountType', __METHOD__)
+                sprintf('incorrect usage of %s for %s accountType', __METHOD__, $this->accountType->name)
             );
         }
 
@@ -67,11 +68,11 @@ final readonly class WalletBalance implements JsonSerializable, Stringable
 
     public function __toString(): string
     {
-        if ($this->accountType === AccountType::SPOT) {
-            return sprintf('%s available | %s total', $this->available, $this->total);
+        if (in_array($this->accountType, [AccountType::SPOT, AccountType::FUNDING], true)) {
+            return sprintf('%s: %s available | %s total', $this->accountType->name, $this->available, $this->total);
         }
 
-        return sprintf('%s available | %s free | %s total', $this->available, $this->free, $this->total);
+        return sprintf('%s: %s available | %s free | %s total', $this->accountType->name, $this->available, $this->free, $this->total);
     }
 
     public function jsonSerialize(): string

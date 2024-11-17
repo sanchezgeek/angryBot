@@ -32,6 +32,7 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+use function in_array;
 use function is_array;
 use function sprintf;
 use function uuid_create;
@@ -59,22 +60,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance
     {
-        if (AppContext::accType()->isUTA()) {
-            if (!$suppressUTAWarning) {
-                $context = [];
-                foreach (debug_backtrace() as $back) {
-                    if (($function = $back['function']) === '__invoke') {
-                        $class = explode('\\', $back['class']); $context[] = end($class); break;
-                    }
-                    $context[] = $function;
-                }
-                OutputHelper::warning(sprintf('SPOT wallet unavailable (%s)', implode(' -> ', array_reverse($context))));
-            }
-
-            return new WalletBalance(AccountType::SPOT, $coin, 0, 0);
-        }
-
-        return $this->getWalletBalance(AccountType::SPOT, $coin);
+        return $this->getWalletBalance(self::getSpotAccountType(), $coin);
     }
 
     /**
@@ -85,9 +71,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getContractWalletBalance(Coin $coin): WalletBalance
     {
-        $accountType = AppContext::accType()->isUTA() ? AccountType::UNIFIED : AccountType::CONTRACT;
-
-        return $this->getWalletBalance($accountType, $coin);
+        return $this->getWalletBalance(self::getContractAccountType(), $coin);
     }
 
     public function universalTransfer(
@@ -125,7 +109,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::CONTRACT, $amount);
+        $this->interTransfer($coin, self::getSpotAccountType(), self::getContractAccountType(), $amount);
     }
 
     /**
@@ -136,7 +120,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, AccountType::CONTRACT, AccountType::SPOT, $amount);
+        $this->interTransfer($coin, self::getContractAccountType(), self::getSpotAccountType(), $amount);
     }
 
     /**
@@ -211,7 +195,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             if ($item['accountType'] === $accountType->value) {
                 foreach ($item['coin'] as $coinData) {
                     if ($coinData['coin'] === $coin->value) {
-                        if ($accountType === AccountType::SPOT) {
+                        if (in_array($accountType, [AccountType::SPOT, AccountType::FUNDING], true)) {
                             $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
                         } elseif (in_array($accountType, [AccountType::CONTRACT, AccountType::UNIFIED], true)) {
                             $total = (float)$coinData['walletBalance'];
@@ -235,7 +219,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         if (!$walletBalance) {
             $this->appErrorLogger->critical(
                 sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value),
-                ['file' => __FILE__, 'line' => __LINE__]
+                ['file' => __FILE__, 'line' => __LINE__],
             );
 
             return new WalletBalance($accountType, $coin, 0, 0);
@@ -319,5 +303,18 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         return $free;
+    }
+
+    /**
+     * After migration to UTA only FUND account is available to store assets a-ka "SPOT".
+     */
+    private static function getSpotAccountType(): AccountType
+    {
+        return AppContext::accType()->isUTA() ? AccountType::FUNDING : AccountType::SPOT;
+    }
+
+    private static function getContractAccountType(): AccountType
+    {
+        return AppContext::accType()->isUTA() ? AccountType::UNIFIED : AccountType::CONTRACT;
     }
 }

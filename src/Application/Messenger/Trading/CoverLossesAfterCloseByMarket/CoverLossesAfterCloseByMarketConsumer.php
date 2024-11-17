@@ -16,11 +16,6 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
-        # On UTA trading account there is no other wallets to transfer coins from
-        if (AppContext::accType()->isUTA()) {
-            return;
-        }
-
         $loss = $dto->loss->value();
         $closedPosition = $dto->closedPosition;
 

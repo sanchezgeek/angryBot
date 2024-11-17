@@ -64,12 +64,10 @@ class BalanceInfoCommand extends AbstractCommand
         }
 
         try {
-            if (!AppContext::accType()->isUTA()) {
-                $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
-                $this->io->note(sprintf('spot: %s', $spotWalletBalance));
-            }
+            $spotWalletBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+            $this->io->note($spotWalletBalance);
             $contractWalletBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
-            $this->io->note(sprintf('contract: %s', $contractWalletBalance));
+            $this->io->note($contractWalletBalance);
 //             var_dump($spotWalletBalance->availableBalance, $contractWalletBalance->availableBalance);die;
         } catch (Exception $e) {
             if (!str_contains($e->getMessage(), 'coin data not found')) {
