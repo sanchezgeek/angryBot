@@ -9,6 +9,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\RateLimiter\LimiterInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Throwable;
 
@@ -26,11 +28,15 @@ final class LogWorkerExceptionEventListener
 //        'Timestamp for this request is outside of the recvWindow',
     ];
 
+    private readonly LimiterInterface $connectionErrorsLogThrottlingLimiter;
+
     public function __construct(
         private readonly LoggerInterface $appErrorLogger,
         private readonly LoggerInterface $connectionErrorLogger,
         private readonly ClockInterface $clock,
+        RateLimiterFactory $connectionErrorsLogThrottlingLimiter,
     ) {
+        $this->connectionErrorsLogThrottlingLimiter = $connectionErrorsLogThrottlingLimiter->create();
     }
 
     public function __invoke(WorkerMessageFailedEvent $event): void
@@ -107,10 +113,12 @@ final class LogWorkerExceptionEventListener
             return;
         }
 
-        $this->connectionErrorLogger->critical($error->getMessage(), [
-            'file' => $error->getFile(),
-            'line' => $error->getLine(),
-            'previous' => $error->getPrevious(),
-        ]);
+        if ($this->connectionErrorsLogThrottlingLimiter->consume()->isAccepted()) {
+            $this->connectionErrorLogger->critical($error->getMessage(), [
+                'file' => $error->getFile(),
+                'line' => $error->getLine(),
+                'previous' => $error->getPrevious(),
+            ]);
+        }
     }
 }
