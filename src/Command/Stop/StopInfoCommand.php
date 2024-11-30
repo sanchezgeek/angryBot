@@ -103,8 +103,8 @@ class StopInfoCommand extends AbstractCommand
         if ($position->isSupportPosition()) {
             $showSizeLeft = true;
         } else {
-            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationDistance()));
             $this->io->note(sprintf('%s l: %.2f', $position->getCaption(), $position->liquidationPrice));
+            $this->io->note(sprintf('%s lD: %.3f', $position->getCaption(), $position->liquidationDistance()));
         }
 
         $stops = $this->stopRepository->findActive(

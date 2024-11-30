@@ -10,6 +10,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use Stringable;
 
 use function sprintf;
@@ -28,9 +29,11 @@ readonly class SandboxStopOrder implements Stringable, VolumeSignAwareInterface,
     ) {
     }
 
-    public static function fromStop(Stop $stop): self
+    public static function fromStop(Stop $stop, Price|float $withPrice = null): self
     {
-        return new self($stop->getSymbol(), $stop->getPositionSide(), $stop->getPrice(), $stop->getVolume(), $stop);
+        $withPrice = $withPrice === null ? $stop->getPrice() : Price::toFloat($withPrice);
+
+        return new self($stop->getSymbol(), $stop->getPositionSide(), $withPrice, $stop->getVolume(), $stop);
     }
 
     public function desc(): string

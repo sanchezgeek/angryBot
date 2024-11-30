@@ -3,6 +3,8 @@
 namespace App\Command\Orders;
 
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException as PosLiquidatedException;
@@ -82,6 +84,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
     private const FORCE_EXPAND_EVERY_SINGLE_ORDER = 'force-expand';
 
+    private const USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC = 'use-last-price';
+
     private PriceFormatter $priceFormatter;
     private PnlFormatter $pnlFormatter;
 
@@ -93,6 +97,10 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private ?bool $divideToGroups = null;
     private ?bool $divideByOrderType = true;
 
+    private Ticker $currentTicker;
+    private float $lastPriceDiff;
+    private bool $useLastPriceAsEstimatedForExec;
+
     protected function configure(): void
     {
         $this
@@ -101,6 +109,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             ->addOption(self::DIVIDE_TO_GROUPS, null, InputOption::VALUE_NEGATABLE, 'Divide orders to groups?')
             ->addOption(self::DIVIDE_BY_ORDER_TYPES, null, InputOption::VALUE_OPTIONAL, 'Divide by order type?', true)
             ->addOption(self::FORCE_EXPAND_EVERY_SINGLE_ORDER, 'f', InputOption::VALUE_NEGATABLE, 'Force expand every single order?')
+            ->addOption(self::USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC, 'l', InputOption::VALUE_OPTIONAL, 'Use ticker.lastPrice as actual order price when exec orders?', true)
         ;
     }
 
@@ -111,6 +120,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $symbol = $this->getSymbol();
         $this->priceFormatter = new PriceFormatter($symbol);
         $this->pnlFormatter = PnlFormatter::bySymbol($symbol)->setPrecision(2)->setShowCurrency(false);
+        $this->currentTicker = $this->exchangeService->ticker($this->getSymbol());
+        $this->lastPriceDiff = $this->currentTicker->indexPrice->sub($this->currentTicker->lastPrice)->value();
+        $this->useLastPriceAsEstimatedForExec = $this->paramFetcher->getBoolOption(self::USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC);
     }
 
     private function createSandbox(): TradingSandbox
@@ -136,7 +148,6 @@ class OrdersTotalInfoCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $positionSide = $this->getPositionSide();
-        $ticker = $this->exchangeService->ticker($this->getSymbol());
         $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
 
         $stops = array_filter(
@@ -176,7 +187,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $ordersAfterPositionProfit = [];
 
         foreach ($orders as $order) {
-            Price::float($order->getPrice())->differenceWith($ticker->indexPrice)->isLossFor($positionSide)
+            Price::float($order->getPrice())->differenceWith($this->currentTicker->indexPrice)->isLossFor($positionSide)
                 ? $ordersAfterPositionLoss[] = $order
                 : $ordersAfterPositionProfit[] = $order;
         }
@@ -199,7 +210,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $rowsAfterPositionLoss = array_reverse($rowsAfterPositionLoss, true);
         }
 
-        $middleRows = [new InitialStateRow($ticker, $this->initialSandboxState)];
+        $middleRows = [new InitialStateRow($this->currentTicker, $this->initialSandboxState)];
         $rows = $positionSide->isShort()
             ? array_merge($rowsAfterPositionLoss, $middleRows, $rowsAfterPositionProfit)
             : array_merge($rowsAfterPositionProfit, $middleRows, $rowsAfterPositionLoss);
@@ -208,7 +219,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             $rows[] = new SummaryRow('total PNL:', new Pnl($this->totalPnl));
         }
 
-        $this->print($ticker, $rows);
+        $this->print($rows);
 
         return Command::SUCCESS;
     }
@@ -263,6 +274,15 @@ class OrdersTotalInfoCommand extends AbstractCommand
         while ($group = array_shift($groups)) {
             $items = $group['items'];
 
+            if ($this->useLastPriceAsEstimatedForExec) {
+                foreach ($items as $key => $item) {
+                    $items[$key] = match (true) {
+                        $item instanceof BuyOrder => SandboxBuyOrder::fromBuyOrder($item, $item->getPrice() - $this->lastPriceDiff),
+                        $item instanceof Stop => SandboxStopOrder::fromStop($item, $item->getPrice() - $this->lastPriceDiff),
+                    };
+                }
+            }
+
             $stepResult = $sandbox->processOrders(...$items);
 
             if (!$this->liquidationRowPrinted) {
@@ -314,12 +334,18 @@ class OrdersTotalInfoCommand extends AbstractCommand
         return array_map(static fn(OrderExecutionResult $orderExecutionResult) => $orderExecutionResult->order->sourceOrder, $items);
     }
 
-    private function print(Ticker $ticker, array $rows): void
+    private function print(array $rows): void
     {
         $initialPosition = $this->initialSandboxState->getPosition($this->getPositionSide());
         $isPositionLocationPrinted = false;
 
-        $sandboxExecutionResultRowBuilder = new ExecStepResultDefaultTableRowBuilder($ticker, $this->getPositionSide(), $this->pnlFormatter, $this->priceFormatter);
+        $sandboxExecutionResultRowBuilder = new ExecStepResultDefaultTableRowBuilder(
+            currentTicker: $this->currentTicker,
+            targetPositionSide: $this->getPositionSide(),
+            pnlFormatter: $this->pnlFormatter,
+            priceFormatter: $this->priceFormatter,
+            showEstimatedRealExecPrice: $this->useLastPriceAsEstimatedForExec
+        );
 
         $headers = [
             'id' => 'id',

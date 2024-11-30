@@ -14,16 +14,16 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundExc
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
-use App\Domain\Price\Price;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\Style\CellStyle;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
+
+use function sprintf;
 
 /**
  * @todo in other mode it must be separated rows by default
@@ -46,11 +46,12 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
     private array $positionClosedRowCells;
 
     public function __construct(
-        private readonly Ticker $ticker,
+        private readonly Ticker $currentTicker,
         private readonly Side $targetPositionSide,
         ?PnlFormatter $pnlFormatter = null,
         ?PriceFormatter $priceFormatter = null,
         ?array $enabledColumns = null,
+        private bool $showEstimatedRealExecPrice = false,
     ) {
         parent::__construct($pnlFormatter, $priceFormatter);
 
@@ -94,14 +95,26 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
             },
             self::PRICE_COL => function (ExecutionStepResult $step) {
                 if ($step->isOnlySingleItem()) {
-                    $content = implode(', ', array_map(static fn (OrderExecutionResult $execResult) => $execResult->order->price, $step->getItems()));
+//                    $content = implode(', ', array_map(static fn (OrderExecutionResult $execResult) => $execResult->order->price, $step->getItems()));
+                    $prices = array_map(function(OrderExecutionResult $execResult) {
+                        $sandboxOrder = $execResult->order;
+                        $sourceOrder = $sandboxOrder->sourceOrder;
+                        $content = $this->priceFormatter->format($sourceOrder->getPrice());
+
+                        if ($this->showEstimatedRealExecPrice && $sandboxOrder->price !== $sourceOrder->getPrice()) {
+                            $content = sprintf('%s index (~%s last)', $content, $this->priceFormatter->format($sandboxOrder->price));
+                        }
+
+                        return $content;
+                    }, $step->getItems());
+                    $content = implode(', ', $prices);
                     if ($step->getSingleItem()->order instanceof SandboxStopOrder) {
                         return self::highlightedSingleOrderCell($step, $content);
                     }
                 } else {
                     $fromPrice = $step->getFirstItem()->order->price;
                     $toPrice = $step->getLastItem()->order->price;
-                    if ($this->ticker->getMinPrice()->lessOrEquals($fromPrice)) {
+                    if ($this->currentTicker->getMinPrice()->lessOrEquals($fromPrice)) {
                         [$fromPrice, $toPrice] = [$toPrice, $fromPrice];
                     }
 
@@ -181,13 +194,13 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         $oppositePositionAfterExec = $step->getStateAfter()->getPosition($mainPositionSide);
                         return new Cell(
                             sprintf('became support (%s.liquidation = %s)', $mainPositionSide->title(), $this->priceFormatter->format($oppositePositionAfterExec->liquidationPrice)),
-                            new CellStyle(fontColor: Color::CYAN)
+                            new CellStyle(fontColor: Color::CYAN),
                         );
                     }
 
                     [$diff, $info] = $this->formatInfoAboutMainPositionLiquidationChanges(
                         $step,
-                        $mainPositionSide
+                        $mainPositionSide,
                     );
 
                     if (!$diff) {
@@ -252,7 +265,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 }
 
                 return new Cell(implode(PHP_EOL, $info), $cellStyle);
-            }
+            },
         ];
 
         if ($enabledColumns) {
@@ -274,14 +287,14 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     $cells[] = self::highlightedSingleOrderCell(
                         $step,
                         $info,
-                        $diff > 0 ? new CellStyle(fontColor: Color::BRIGHT_GREEN) : new CellStyle(fontColor: Color::BRIGHT_RED)
+                        $diff > 0 ? new CellStyle(fontColor: Color::BRIGHT_GREEN) : new CellStyle(fontColor: Color::BRIGHT_RED),
                     );
                 } else {
                     $mainCell->style->addColspan(1);
                 }
 
                 return $cells;
-            }
+            },
         ];
 
         $this->positionNotFoundOrLiquidatedRowCells = [
