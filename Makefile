@@ -29,7 +29,9 @@ build: ## Builds the Docker images
 	@ bash -c 'printf "\n"'
 	@ bash -c ' \
 		set -e && \
-		export ARGS="$$(sudo ./bin/get_build_args $$ENV_BUILD_FILEPATH)" && \
+		export DOCKER_BUILDKIT=0 && \
+		export COMPOSE_DOCKER_CLI_BUILD=0 && \
+		export ARGS="$$(sudo ./bin/get_build_args $${ENV_BUILD_FILEPATH:-.env.build})" && \
 		if [[ ! "$${ARGS}" =~ BYBIT_API_KEY=.*BYBIT_API_SECRET=.* ]]; then echo " -- Error: provided file contains invalid secrets definition (right format: BYBIT_API_KEY=...<newline>BYBIT_API_SECRET=...)"; exit 1; fi; \
 		read -p "Go build? " -n 1 -r && printf "\n" && \
 		docker compose --env-file=.env.local build $$ARGS'

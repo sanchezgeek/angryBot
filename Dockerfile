@@ -55,6 +55,8 @@ RUN docker-php-ext-install pdo pdo_pgsql
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY --link docker/php/conf.d/app.ini $PHP_INI_DIR/conf.d/
 COPY --link docker/php/conf.d/app.prod.ini $PHP_INI_DIR/conf.d/
+
+# https://www.ioncube.com/loaders.php
 COPY --link docker/php/modules/ioncube_loader_lin_8.2.so /usr/local/lib/php/modules/
 
 COPY --link docker/php/php-fpm.d/zz-docker.conf /usr/local/etc/php-fpm.d/zz-docker.conf
