@@ -12,7 +12,6 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -39,7 +38,7 @@ use function implode;
 use function sprintf;
 use function substr;
 
-#[AsCommand(name: 'sandbox:test')]
+#[AsCommand(name: 's:test')]
 class SandboxTestCommand extends AbstractCommand
 {
     use PositionAwareCommand;
@@ -47,6 +46,7 @@ class SandboxTestCommand extends AbstractCommand
 
     public const ORDERS_OPTION = 'orders';
     public const DEBUG_OPTION = 'deb';
+    public const FORCE_OPTION = 'force';
 
     protected function configure(): void
     {
@@ -54,6 +54,7 @@ class SandboxTestCommand extends AbstractCommand
             ->configurePositionArgs()
             ->addOption(self::ORDERS_OPTION, 'o', InputOption::VALUE_REQUIRED)
             ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
+            ->addOption(self::FORCE_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->configurePriceRangeArgs()
         ;
     }
@@ -70,8 +71,8 @@ class SandboxTestCommand extends AbstractCommand
         foreach (explode('|', $this->paramFetcher->getStringOption(self::ORDERS_OPTION)) as $orderDefinition) {
             $type = substr($orderDefinition, 0, 1); $volume = substr($orderDefinition, 1);
             $orders[] = match ($type) {
-                '+' => new BuyOrder(1, $ticker->markPrice, (float)$volume, $positionSide),
-                '-' => new Stop(1, $ticker->markPrice->value(), (float)$volume, 1, $positionSide),
+                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $positionSide),
+                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $positionSide),
                 default => throw new InvalidArgumentException('Invalid type provided: ' . $type . ' ("+/-" expected)')
             };
         }
@@ -98,11 +99,11 @@ class SandboxTestCommand extends AbstractCommand
 
         $sandbox = $this->tradingSandboxFactory->byCurrentState($symbol, true);
 
-        $this->printCurrentStats($sandbox, 'BEFORE make buy in sandbox');
+        [$realContractBalance, ] = $this->printCurrentStats($sandbox, 'BEFORE make buy in sandbox', true);
         $sandbox->processOrders(...$orders);
         $this->printCurrentStats($sandbox, 'AFTER make buy in sandbox');
 
-        if (!$this->io->confirm($infoMsg)) {
+        if (!$this->paramFetcher->getBoolOption(self::FORCE_OPTION) && !$this->io->confirm($infoMsg)) {
             return Command::FAILURE;
         }
 
@@ -115,12 +116,12 @@ class SandboxTestCommand extends AbstractCommand
         }
 
         # stats after REAL EXEC
-        $this->printCurrentStats($sandbox, 'AFTER real exec', true);
+        $this->printCurrentStats($sandbox, 'AFTER real exec', true, $realContractBalance);
 
         return Command::SUCCESS;
     }
 
-    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false): void
+    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, WalletBalance $diffWithContractBalance = null): array
     {
         $currentState = $sandbox->getCurrentState();
 
@@ -137,16 +138,20 @@ class SandboxTestCommand extends AbstractCommand
 
         OutputHelper::print('');
         OutputHelper::notice($description);
+        $realContractBalance = $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
         if ($printRealPositionStats) {
-            $coin = $this->getSymbol()->associatedCoin();
-            $realContractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
             OutputHelper::print(sprintf('real       contractBalance: %s', $realContractBalance));
+            if ($diffWithContractBalance) {
+                OutputHelper::print(sprintf('                                                                     current - prev : %.3f', $diffWithContractBalance->total() - $realContractBalance->total()));
+            }
         }
         OutputHelper::print(sprintf('calculated contractBalance: %s available | %s free', $availableBalance, $freeBalance));
         OutputHelper::print($mainPosition->getCaption());
         $printRealPositionStats && OutputHelper::positionStats('real       ', $realPosition);
         OutputHelper::positionStats('calculated ', $mainPosition);
         OutputHelper::print(sprintf('                                                                     real - calculated : %.3f', $mainPosition->liquidationPrice()->differenceWith($realPosition->liquidationPrice())->deltaForPositionLoss($realPosition->side)));
+
+        return [$realContractBalance];
     }
 
     public function makeBuy(BuyOrder $buyOrder): ExchangeOrder
