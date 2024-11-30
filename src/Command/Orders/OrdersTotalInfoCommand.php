@@ -121,7 +121,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $this->priceFormatter = new PriceFormatter($symbol);
         $this->pnlFormatter = PnlFormatter::bySymbol($symbol)->setPrecision(2)->setShowCurrency(false);
         $this->currentTicker = $this->exchangeService->ticker($this->getSymbol());
-        $this->lastPriceDiff = $this->currentTicker->indexPrice->sub($this->currentTicker->lastPrice)->value();
+        $this->lastPriceDiff = $this->currentTicker->indexPrice->value() - $this->currentTicker->lastPrice->value();
         $this->useLastPriceAsEstimatedForExec = $this->paramFetcher->getBoolOption(self::USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC);
     }
 
@@ -378,7 +378,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $ticker = $row->ticker;
                 $position = $row->initialSandboxState->getPosition($this->getPositionSide());
                 $cells = array_merge([
-                    Cell::colspan(4, sprintf('%s ticker: %s  %s  %s', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
+                    Cell::colspan(4, sprintf('%s ticker: last=%s, mark=%s, index=%s', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
                     Cell::resetToDefaults('pos:'),
                     # probably some default table behaviour instead of $columnsCount - $tickerColspan
                 ], !$position ? [Cell::restColumnsMerged('No position found')] : [
