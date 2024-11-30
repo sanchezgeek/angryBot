@@ -9,6 +9,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
+use App\Worker\AppContext;
 use LogicException;
 
 /**
@@ -69,6 +70,10 @@ final readonly class CalcPositionLiquidationPriceHandler
 
     public function getMaintenanceMarginLiquidationDistance(Position $position): float
     {
+        if (AppContext::accType()->isUTA()) {
+            return $position->entryPrice / 100 / 2;
+        }
+
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
 
         return $maintenanceMargin->value() / $position->size;
