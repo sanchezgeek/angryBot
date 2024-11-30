@@ -55,14 +55,16 @@ class OrderInfoCommand extends AbstractCommand
         $repository = $orderType === 'b' ? $this->buyOrderRepository : $this->stopRepository;
         $orderType = $orderType === 'b' ? OrderType::Add : OrderType::Stop;
 
+        $globalEC = $this->paramFetcher->getStringOption(self::EDIT_CALLBACK_OPTION, false);
+
         $action = match (true) {
             $this->paramFetcher->getBoolOption(self::REMOVE_OPTION) => 'r',
-            $this->paramFetcher->getBoolOption(self::EDIT_OPTION) => 'e',
+            $globalEC || $this->paramFetcher->getBoolOption(self::EDIT_OPTION) => 'e',
             default => $this->io->ask('Select action: "e" - edit, "r" - remove'),
         };
 
         $showInfo = true;
-        if ($action === 'e' && ($globalEC = $this->paramFetcher->getStringOption(self::EDIT_CALLBACK_OPTION, false))) {
+        if ($action === 'e' && $globalEC) {
             $showInfo = false;
         }
 
