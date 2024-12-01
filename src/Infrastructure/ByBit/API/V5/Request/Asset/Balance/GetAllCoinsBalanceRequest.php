@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API\V5\Request\Account;
+namespace App\Infrastructure\ByBit\API\V5\Request\Asset\Balance;
 
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;

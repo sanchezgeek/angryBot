@@ -71,7 +71,7 @@ final readonly class CalcPositionLiquidationPriceHandler
     public function getMaintenanceMarginLiquidationDistance(Position $position): float
     {
         if (AppContext::accType()->isUTA()) {
-            return $position->entryPrice / 100 / 2;
+            return $position->entryPrice / $position->leverage->value() / 2;
         }
 
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);

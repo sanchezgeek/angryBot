@@ -10,7 +10,7 @@ use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -93,7 +93,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      * => estimated to transfer amount also must be provided for this check
      * it's the SECOND[2] big reason for separate this functionality (most probably it should be used not only here)
      */
-    private function canUseSpot(Ticker $ticker, Position $position, WalletBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
+    private function canUseSpot(Ticker $ticker, Position $position, SpotBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
         if ($spotBalance->available() === 0.00) {
             return false;
@@ -194,7 +194,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         if (!$position) {
-            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 13, 100);
+            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
         }
 
         /** @var BuyOrder $lastBuy For `CannotAffordOrderCost` exception processing */
@@ -512,7 +512,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         return ($position->initialMargin->value() / (0.94 * $totalBalance)) * 100;
     }
 
-    private function transferToContract(WalletBalance $spotBalance, float $amount): bool
+    private function transferToContract(SpotBalance $spotBalance, float $amount): bool
     {
         $availableBalance = $spotBalance->available() - 0.1;
 

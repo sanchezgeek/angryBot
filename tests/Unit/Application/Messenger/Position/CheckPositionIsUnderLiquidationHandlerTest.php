@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Application\Messenger\Position;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -18,10 +18,10 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Value\Percent\Percent;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
+use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
 use PHPUnit\Framework\TestCase;
 
 use function min;
@@ -31,10 +31,12 @@ use function sprintf;
  * @group liquidation
  *
  * @covers CheckPositionIsUnderLiquidationHandler
+ * @todo functional?
  */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
     use PositionSideAwareTest;
+    use AppErrorsLoggerTrait;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
@@ -71,6 +73,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->orderService,
             $this->stopService,
             $this->stopRepository,
+            self::getTestAppErrorsLogger(),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }
@@ -130,11 +133,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([]);
         $this->stopService->expects(self::never())->method(self::anything());
 
-        if ($spotAvailableBalance > 2) {
-            $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
-                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance),
-            );
-        }
+        $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
+            new SpotBalance($coin, $spotAvailableBalance, $spotAvailableBalance),
+        );
 
         if ($expectedTransferAmount !== null) {
             $this->exchangeAccountService->expects(self::once())->method('interTransferFromSpotToContract')->with($coin, $expectedTransferAmount);

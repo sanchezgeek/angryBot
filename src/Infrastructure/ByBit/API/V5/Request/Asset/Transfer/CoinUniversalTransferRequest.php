@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API\V5\Request\Coin;
+namespace App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer;
 
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
@@ -17,7 +17,7 @@ use function sprintf;
 /**
  * @see https://bybit-exchange.github.io/docs/v5/asset/unitransfer
  *
- * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Coin\CoinUniversalTransferRequestTest
+ * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Asset\Transfer\CoinUniversalTransferRequestTest
  */
 final readonly class CoinUniversalTransferRequest extends AbstractByBitApiRequest
 {

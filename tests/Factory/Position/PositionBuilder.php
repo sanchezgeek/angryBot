@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Factory\Position;
 
+use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
@@ -29,6 +30,9 @@ class PositionBuilder
     private int $leverage = self::DEFAULT_LEVERAGE;
     private ?float $unrealizedPnl = null;
     private ?Position $oppositePosition = null;
+
+    private ?CalcPositionLiquidationPriceHandler $liquidationCalculator = null;
+    private float $fundsForLiquidation;
 
     public function __construct(Side $side)
     {
@@ -111,6 +115,14 @@ class PositionBuilder
         return $builder;
     }
 
+    public function withLiquidationCalculator(float $fundsForLiquidation): self
+    {
+        $this->liquidationCalculator = new CalcPositionLiquidationPriceHandler();
+        $this->fundsForLiquidation = $fundsForLiquidation;
+
+        return $this;
+    }
+
     /**
      * @throws SizeCannotBeLessOrEqualsZeroException
      */
@@ -120,9 +132,17 @@ class PositionBuilder
         $entry = $this->entry;
 
         $positionValue = $entry * $this->size;
-        $positionBalance = $initialMargin = new CoinAmount($this->symbol->associatedCoin(), $positionValue / $this->leverage);
+        $initialMargin = new CoinAmount($this->symbol->associatedCoin(), ($positionValue / $this->leverage));
 
-        $liquidation = $this->liquidation ?? ($side->isShort() ? $entry + 99999 : 0);
+        $liquidation = null;
+        if ($this->liquidation !== null) {
+            $liquidation = $this->liquidation;
+        } elseif ($this->liquidationCalculator) {
+            $fundsForLiquidation = $this->fundsForLiquidation;
+            // ...
+        } else {
+            $liquidation = $side->isShort() ? $entry + 99999 : 0;
+        }
 
 //        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
 //            throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
@@ -136,7 +156,6 @@ class PositionBuilder
             $positionValue,
             $liquidation,
             $initialMargin->value(),
-            $positionBalance->value(),
             $this->leverage,
             $this->unrealizedPnl,
         );

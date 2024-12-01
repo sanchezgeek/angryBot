@@ -7,20 +7,18 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder as PB;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Mixin\Helper\TestCaseDescriptionHelper;
+use App\Tests\Helper\ContractBalanceTestHelper;
+use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 
 /**
  * @group sandbox
  */
 class MakeStopTest extends AbstractTestOfTradingSandbox
 {
-    use TestCaseDescriptionHelper;
-
     /**
      * @dataProvider makeStopTestDataProvider
      */
@@ -49,7 +47,7 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         $longInitial = PB::long()->entry(59426.560)->size(0.084)->build();
         $shortInitial = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($longInitial)->build();
         $positionsBefore = [$shortInitial, $longInitial];
-        $initialState = new SandboxState($ticker, new CoinAmount($symbol->associatedCoin(), $initialFree), ...$positionsBefore);
+        $initialState = new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, $positionsBefore, $ticker), ...$positionsBefore);
 
         # SHORT
         $sandboxStopOrder = new SandboxStopOrder($symbol, Side::Sell, 68150, 0.001);
@@ -58,9 +56,9 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longInitialCloned, $shortAfterMake];
 
         $expectedFree = 98.10013; $expectedAvailable = 34.5934;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), new CoinAmount($symbol->associatedCoin(), $expectedFree), ...$positionsAfter);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
 
-        yield self::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [
+        yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxStopOrder, $expectedStateAfterMake, $expectedAvailable
         ];
 
@@ -71,9 +69,9 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longAfterMakeStop, $shortAfterMake];
 
         $expectedFree = 107.44014; $expectedAvailable = 42.7003;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), new CoinAmount($symbol->associatedCoin(), $expectedFree), ...$positionsAfter);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
 
-        yield self::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [
+        yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxStopOrder, $expectedStateAfterMake, $expectedAvailable
         ];
     }

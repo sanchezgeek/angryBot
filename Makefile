@@ -81,6 +81,9 @@ test: ## Run tests
 	@$(eval gr ?= )
 	@$(PHP_CONT) bin/phpunit --testdox $(gr)
 
+test_err:
+	@$(PHP_CONT) cat /srv/app/var/log/test/app_errors.log
+
 run: ## Run bot
 	@$(PHP_CONT) /usr/bin/supervisord
 

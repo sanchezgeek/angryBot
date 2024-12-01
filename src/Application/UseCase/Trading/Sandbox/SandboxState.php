@@ -6,6 +6,7 @@ namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -29,12 +30,14 @@ class SandboxState implements SandboxStateInterface
     private Price $lastPrice;
 
     private CoinAmount $freeBalance;
+    private CoinAmount $freeBalanceForLiquidation;
 
-    public function __construct(Ticker $ticker, CoinAmount $currentFreeBalance, Position ...$positions)
+    public function __construct(Ticker $ticker, ContractBalance $contractBalance, Position ...$positions)
     {
         $this->setLastPrice($ticker->lastPrice);
         $this->symbol = $ticker->symbol;
-        $this->freeBalance = $currentFreeBalance;
+        $this->freeBalance = $contractBalance->free;
+        $this->freeBalanceForLiquidation = $contractBalance->freeForLiquidation;
 
         foreach ($positions as $position) {
             $this->setPositionAndActualizeOpposite($position);
@@ -114,12 +117,18 @@ class SandboxState implements SandboxStateInterface
     public function modifyFreeBalance(CoinAmount|float $amount): self
     {
         $this->freeBalance = $this->freeBalance->add($amount);
+        $this->freeBalanceForLiquidation = $this->freeBalanceForLiquidation->add($amount);
         return $this;
     }
 
     public function getFreeBalance(): CoinAmount
     {
         return $this->freeBalance;
+    }
+
+    public function getFreeBalanceForLiq(): CoinAmount
+    {
+        return $this->freeBalanceForLiquidation;
     }
 
     public function getAvailableBalance(): CoinAmount

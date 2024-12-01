@@ -30,7 +30,6 @@ final class Position implements Stringable
 {
     public readonly Leverage $leverage;
     public readonly CoinAmount $initialMargin;
-    public readonly CoinAmount $positionBalance;
 
     public ?Position $oppositePosition = null;
     private Hedge|null|false $hedge = false;
@@ -46,7 +45,6 @@ final class Position implements Stringable
         public readonly float $value,
         public readonly float $liquidationPrice,
         float $initialMargin,
-        float $positionBalance,
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
@@ -54,7 +52,6 @@ final class Position implements Stringable
 
         $this->leverage = new Leverage($leverage);
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
-        $this->positionBalance = new CoinAmount($this->symbol->associatedCoin(), $positionBalance);
     }
 
     public function liquidationDistance(): float
@@ -204,5 +201,13 @@ final class Position implements Stringable
     public function __clone(): void
     {
         throw new Exception(sprintf('%s: clone denied. Use %s instead.', __METHOD__, PositionClone::class));
+    }
+
+    /**
+     * @internal Only for tests
+     */
+    public function uninitializeRuntimeCache(): void
+    {
+        $this->hedge = false;
     }
 }

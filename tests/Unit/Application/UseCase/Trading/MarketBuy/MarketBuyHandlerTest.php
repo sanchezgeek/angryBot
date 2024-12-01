@@ -26,6 +26,7 @@ use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Helper\ContractBalanceTestHelper;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\PHPUnit\Assertions;
 use App\Tests\PHPUnit\TestLogger;
@@ -123,15 +124,18 @@ class MarketBuyHandlerTest extends KernelTestCase
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
+        $free = 10;
 
+        $long = self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy);
         yield 'LONG' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Buy),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, new CoinAmount($symbol->associatedCoin(), 10), self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$long], $ticker), $long),
         ];
 
+        $short = self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell);
         yield 'SHORT' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Sell),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, new CoinAmount($symbol->associatedCoin(), 10), self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$short], $ticker), $short),
         ];
     }
 
@@ -191,18 +195,20 @@ class MarketBuyHandlerTest extends KernelTestCase
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
-        $freeBalance = new CoinAmount($symbol->associatedCoin(), 10);
+        $free = 10;
 
         # LONG
+        $long = self::positionWithStateSafeForMakeBuy($ticker, Side::Buy);
         yield 'LONG, buy is safe' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Buy),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateSafeForMakeBuy($ticker, Side::Buy)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$long], $ticker), $long),
         ];
 
         # SHORT
+        $short = self::positionWithStateSafeForMakeBuy($ticker, Side::Sell);
         yield 'SHORT, buy is safe' => [
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Sell),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateSafeForMakeBuy($ticker, Side::Sell)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$short], $ticker), $short),
         ];
     }
 
@@ -210,18 +216,20 @@ class MarketBuyHandlerTest extends KernelTestCase
     {
         $symbol = Symbol::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
-        $freeBalance = new CoinAmount($symbol->associatedCoin(), 10);
+        $free = 10;
 
         # LONG
-        yield 'LONG, buy is NOT save .. but `force` => check skipped' => [
+        $long = self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy);
+        yield 'LONG, buy is NOT safe .. but `force` => check skipped' => [
             '$ticker' => $ticker, '$buyDto' => self::forceBuyDto($symbol, Side::Buy),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Buy)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$long], $ticker), $long),
         ];
 
         # SHORT
+        $short = self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell);
         yield 'SHORT, buy is NOT save .. but `force` => check skipped' => [
             '$ticker' => $ticker, '$buyDto' => self::forceBuyDto($symbol, Side::Sell),
-            '$sandboxState[afterBuy]' => new SandboxState($ticker, $freeBalance, self::positionWithStateNOTSafeForMakeBuy($ticker, Side::Sell)),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$short], $ticker), $short),
         ];
     }
 

@@ -118,7 +118,7 @@ class OpenCommand extends AbstractCommand
         $size = $this->getSizeArgument();
 
         // fake position to make some calc
-        $addedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 10, 100);
+        $addedPosition = new Position($positionSide, $this->symbol, $indexPrice->value(), $size, $size * $indexPrice->value(), 0, 10, 100);
 
         if ($this->isWithStopsOptionChecked()) {
             $this->createStopsGrid($addedPosition);

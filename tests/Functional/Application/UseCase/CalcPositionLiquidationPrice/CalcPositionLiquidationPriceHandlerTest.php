@@ -28,14 +28,14 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
     /**
      * @dataProvider simpleCalcTestData
      */
-    public function testSimpleCalc(Position $position, float $totalContractBalance, float $expectedLiquidationPrice): void
+    public function testSimpleCalc(Position $position, float $freeContractBalance, float $expectedLiquidationPrice): void
     {
-        $totalContractBalance = new CoinAmount($position->symbol->associatedCoin(), $totalContractBalance);
+        $freeContractBalance = new CoinAmount($position->symbol->associatedCoin(), $freeContractBalance);
         $expectedLiquidationDistance = FloatHelper::round(Price::float($position->entryPrice)->deltaWith($expectedLiquidationPrice));
 
         // Act
-        $result = $this->handler->handle($position, $totalContractBalance);
-        $docsResult = $this->handler->handleFromDocs($position, $totalContractBalance);
+        $result = $this->handler->handle($position, $freeContractBalance);
+        $docsResult = $this->handler->handleFromDocs($position, $freeContractBalance);
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $result);
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $docsResult);
 

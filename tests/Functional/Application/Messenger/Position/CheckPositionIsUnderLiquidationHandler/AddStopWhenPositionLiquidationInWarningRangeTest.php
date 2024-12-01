@@ -20,7 +20,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\VolumeHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Mixin\Helper\TestCaseDescriptionHelper;
+use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -45,7 +45,6 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
-    use TestCaseDescriptionHelper;
 
     private const CHECK_STOPS_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::CHECK_STOPS_ON_DISTANCE;
     private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
@@ -110,7 +109,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->build();
         yield sprintf(
             '[%s] in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
-            self::getPositionCaption($short), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
+            TestCaseDescriptionHelper::getPositionCaption($short), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
         ) => [
             'position' => $short,
             'ticker' => $ticker,
@@ -123,7 +122,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($long)->build();
         yield sprintf(
             '[%s] in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
-            self::getPositionCaption($short), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
+            TestCaseDescriptionHelper::getPositionCaption($short), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
         ) => [
             'position' => $short,
             'ticker' => $ticker,
@@ -142,7 +141,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $long = PositionBuilder::long()->entry($markPrice)->size(0.2)->liq($liquidationPrice)->build();
         yield sprintf(
             '[%s] in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
-            self::getPositionCaption($long), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
+            TestCaseDescriptionHelper::getPositionCaption($long), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
         ) => [
             'position' => $long,
             'ticker' => $ticker,
@@ -156,7 +155,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $long = PositionBuilder::long()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($short)->build();
         yield sprintf(
             '[%s] in warning range (ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%%',
-            self::getPositionCaption($long), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
+            TestCaseDescriptionHelper::getPositionCaption($long), $markPrice, $delayedStopsPercent + $pushedStopsPercent, $needToCoverPercent
         ) => [
             'position' => $long,
             'ticker' => $ticker,

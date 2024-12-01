@@ -23,9 +23,11 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use Doctrine\ORM\QueryBuilder;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
@@ -33,6 +35,7 @@ use function array_filter;
 use function max;
 use function min;
 use function random_int;
+use function sprintf;
 
 /**
  * @group liquidation
@@ -105,7 +108,11 @@ final class CheckPositionIsUnderLiquidationHandler
                         $decreaseStopDistance = true;
                     }
                 }
-            } catch (Throwable $e) {var_dump($e->getMessage());}
+            } catch (Throwable $e) {
+                $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
+                OutputHelper::print($msg);
+                $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
+            }
         }
 
         $checkStopsOnDistance = FloatHelper::modify(self::CHECK_STOPS_ON_DISTANCE, 0.1);
@@ -245,6 +252,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly OrderServiceInterface $orderService,
         private readonly StopServiceInterface $stopService,
         private readonly StopRepositoryInterface $stopRepository,
+        private readonly LoggerInterface $appErrorLogger,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {
         $this->selectedPositionService = $this->cachedPositionService;

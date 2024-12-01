@@ -6,7 +6,7 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentEx
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -121,10 +121,11 @@ class SandboxTestCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, WalletBalance $diffWithContractBalance = null): array
+    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, ContractBalance $prevContractBalance = null): array
     {
         $currentState = $sandbox->getCurrentState();
 
+        // @todo print freeForLiq
         $freeBalance = $currentState->getFreeBalance();
         $availableBalance = $currentState->getAvailableBalance();
 
@@ -141,8 +142,8 @@ class SandboxTestCommand extends AbstractCommand
         $realContractBalance = $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
         if ($printRealPositionStats) {
             OutputHelper::print(sprintf('real       contractBalance: %s', $realContractBalance));
-            if ($diffWithContractBalance) {
-                OutputHelper::print(sprintf('                                                                     current - prev : %.3f', $diffWithContractBalance->total() - $realContractBalance->total()));
+            if ($prevContractBalance) {
+                OutputHelper::print(sprintf('                                                                     prev - current : %.3f', $prevContractBalance->total() - $realContractBalance->total()));
             }
         }
         OutputHelper::print(sprintf('calculated contractBalance: %s available | %s free', $availableBalance, $freeBalance));
@@ -200,7 +201,7 @@ class SandboxTestCommand extends AbstractCommand
         return $this->paramFetcher->getBoolOption(self::DEBUG_OPTION);
     }
 
-    public function currentBalance(): WalletBalance
+    public function currentBalance(): ContractBalance
     {
         return $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
     }

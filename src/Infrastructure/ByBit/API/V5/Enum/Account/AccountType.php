@@ -7,8 +7,6 @@ namespace App\Infrastructure\ByBit\API\V5\Enum\Account;
  */
 enum AccountType: string
 {
-    case SPOT = 'SPOT';
-    case CONTRACT = 'CONTRACT';
     case FUNDING = 'FUND';
     case UNIFIED = 'UNIFIED';
 }

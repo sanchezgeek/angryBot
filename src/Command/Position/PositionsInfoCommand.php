@@ -69,8 +69,8 @@ class PositionsInfoCommand extends AbstractCommand
         $position = $hedge?->mainPosition ?? $positions[0];
 //        if ($this->isDebugEnabled() && ($hedge = $position->getHedge())) {OutputHelper::printIfDebug($hedge->info());}
 
-        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->free));
-        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $contractBalance->free));
+        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->freeForLiquidation));
+        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $contractBalance->freeForLiquidation));
 
         return Command::SUCCESS;
     }

@@ -47,6 +47,10 @@ when@test:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
+            app_errors:
+                type: stream
+                path: "%kernel.logs_dir%/%kernel.environment%/app_errors.log"
+                channels: [ app_error ]
 
 when@prod:
     monolog:

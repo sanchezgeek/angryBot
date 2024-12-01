@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Mixin\Helper;
+namespace App\Tests\Helper\Tests;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
@@ -11,12 +11,12 @@ use App\Bot\Domain\Position;
 
 use function sprintf;
 
-trait TestCaseDescriptionHelper
+class TestCaseDescriptionHelper
 {
     /**
      * @todo | Price | trading symbol price precision
      */
-    private static function getPositionCaption(Position $position): string
+    public static function getPositionCaption(Position $position): string
     {
         $hedge = $position->getHedge();
         if ($hedge) {
@@ -29,8 +29,9 @@ trait TestCaseDescriptionHelper
         }
     }
 
-    private static function sandboxTestCaseCaption(SandboxState $initialState, SandboxBuyOrder|SandboxStopOrder $sandboxOrder, SandboxState $newState): string
+    public static function sandboxTestCaseCaption(SandboxState $initialState, SandboxBuyOrder|SandboxStopOrder $sandboxOrder, SandboxState $newState): string
     {
+        // @todo print freeForLiq
         return sprintf(
             "\ninitial state: [free=%s, positions=%s] state\n            => [free=%s, positions=%s] state expected [after make %s]\n",
             $initialState->getFreeBalance(),

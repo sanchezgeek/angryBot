@@ -5,8 +5,6 @@ namespace App\Command\Account;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Worker\TradingAccountType;
-use App\Worker\AppContext;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -52,10 +50,6 @@ class BalanceInfoCommand extends AbstractCommand
                 $this->exchangeAccountService->interTransferFromSpotToContract($coin, $transferAmount);
             } elseif ($to === 'cs') {
                 $this->exchangeAccountService->interTransferFromContractToSpot($coin, $transferAmount);
-            } elseif ($to === 'fs') {
-                $this->exchangeAccountService->interTransferFromFundingToSpot($coin, $transferAmount);
-            } elseif ($to === 'sf') {
-                $this->exchangeAccountService->interTransferFromSpotToFunding($coin, $transferAmount);
             } else {
                 throw new InvalidArgumentException(sprintf('Unknown direction ("%s")', $to));
             }

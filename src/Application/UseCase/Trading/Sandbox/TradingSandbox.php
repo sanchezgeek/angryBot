@@ -302,7 +302,10 @@ class TradingSandbox implements TradingSandboxInterface
 
     private function actualizePositionLiquidation(Position $position): void
     {
-        $liquidation = $position->isSupportPosition() ? 0 : $this->liquidationCalculator->handle($position, $this->currentState->getFreeBalance())->estimatedLiquidationPrice()->value();
+        $liquidation = $position->isSupportPosition()
+            ? 0
+            : $this->liquidationCalculator->handle($position, $this->currentState->getFreeBalanceForLiq())->estimatedLiquidationPrice()->value()
+        ;
 
         $actualizedWithCalculatedLiquidation = PositionClone::clean($position)->withLiquidation($liquidation)->create();
         $this->currentState->setPositionAndActualizeOpposite($actualizedWithCalculatedLiquidation);
@@ -322,9 +325,9 @@ class TradingSandbox implements TradingSandboxInterface
         $entry = $orderDto->getPrice()->value();
         $size = $orderDto->getVolume();
         $positionValue = $entry * $size;
-        $positionBalance = $initialMargin = (new CoinAmount($this->symbol->associatedCoin(), $positionValue / $leverage->value()))->value();
+        $initialMargin = (new CoinAmount($this->symbol->associatedCoin(), $positionValue / $leverage->value()))->value();
 
-        return new Position($side, $this->symbol, $entry, $size, $positionValue, 0, $initialMargin, $positionBalance, $leverage->value());
+        return new Position($side, $this->symbol, $entry, $size, $positionValue, 0, $initialMargin, $leverage->value());
     }
 
     private function prepareBuyOrderDto(SandboxBuyOrder|BuyOrder $order): SandboxBuyOrder

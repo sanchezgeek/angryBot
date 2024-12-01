@@ -37,7 +37,6 @@ final class PositionFactory
             $positionValue,
             $liquidationPrice,
             $im,
-            $im,
             $leverage
         );
     }
@@ -60,7 +59,6 @@ final class PositionFactory
             $size,
             $positionValue,
             $liquidationPrice,
-            $im,
             $im,
             $leverage
         );

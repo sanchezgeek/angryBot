@@ -14,7 +14,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function array_replace_recursive;
 
-final class AccountBalanceResponseBuilder implements ResponseBuilderInterface
+final class GetWalletBalanceResponseBuilder implements ResponseBuilderInterface
 {
     use MockResponseFactoryTrait;
 
@@ -29,34 +29,37 @@ final class AccountBalanceResponseBuilder implements ResponseBuilderInterface
     ];
 
     public const COIN_BALANCE_ITEM = [
-        "accountType" => "SPOT",
-        "accountIMRate" => "",
-        "accountMMRate" => "",
-        "accountLTV" => "",
-        "totalEquity" => "",
-        "totalWalletBalance" => "",
-        "totalMarginBalance" => "",
-        "totalAvailableBalance" => "",
-        "totalPerpUPL" => "",
-        "totalInitialMargin" => "",
-        "totalMaintenanceMargin" => "",
-        "coin" => [
+        'accountType' => 'UNIFIED',
+        'totalEquity' => '17675.54658936',
+        'accountIMRate' => '0.0785',
+        'totalMarginBalance' => '17675.54658936',
+        'totalInitialMargin' => '1388.08488494',
+        'totalAvailableBalance' => '16287.46170442',
+        'accountMMRate' => '0.0304',
+        'totalPerpUPL' => '16172.74060582',
+        'totalWalletBalance' => '1502.80598353',
+        'accountLTV' => '0',
+        'totalMaintenanceMargin' => '538.13305221',
+        'coin' => [
             [
-                "coin" => "USDT",
-                "equity" => "",
-                "usdValue" => "",
-                "walletBalance" => "2.8017489995",
-                "free" => "2.8017489995",
-                "locked" => "0",
-                "availableToWithdraw" => "",
-                "availableToBorrow" => "",
-                "borrowAmount" => "",
-                "accruedInterest" => "",
-                "totalOrderIM" => "",
-                "totalPositionIM" => "",
-                "totalPositionMM" => "",
-                "unrealisedPnl" => "",
-                "cumRealisedPnl" => "",
+                'coin' => 'USDT',
+                'availableToBorrow' => '',
+                'bonus' => '0',
+                'accruedInterest' => '0',
+                'availableToWithdraw' => '1501.71873917',
+                'totalOrderIM' => '0',
+                'equity' => '17662.75875203',
+                'totalPositionMM' => '537.74372576',
+                'usdValue' => '17675.54658936',
+                'unrealisedPnl' => '16161.04001286',
+                'collateralSwitch' => true,
+                'spotHedgingQty' => '0',
+                'borrowAmount' => '0.000000000000000000',
+                'totalPositionIM' => '1387.08063856',
+                'walletBalance' => '1501.71873917',
+                'cumRealisedPnl' => '-12466.15546267',
+                'locked' => '0',
+                'marginCollateral' => true,
             ],
         ],
     ];
@@ -77,28 +80,17 @@ final class AccountBalanceResponseBuilder implements ResponseBuilderInterface
         return new self($error);
     }
 
-    public function withAvailableSpotBalance(CoinAmount $availableAmount): self
+    /**
+     * @todo rename
+     */
+    public function withUnifiedBalance(Coin $coin, float $totalAmount, float $totalPositionIM): self
     {
         $item = self::COIN_BALANCE_ITEM;
 
-        $item['accountType'] = AccountType::SPOT->value;
-        $item['coin'][0]['coin'] = $availableAmount->coin()->value;
-        $item['coin'][0]['walletBalance'] = (string)$availableAmount->value();
-        $item['coin'][0]['free'] = (string)$availableAmount->value();
-
-        $this->listItems[] = $item;
-
-        return $this;
-    }
-
-    public function withContractBalance(Coin $coin, float $totalAmount, float $availableAmount): self
-    {
-        $item = self::COIN_BALANCE_ITEM;
-
-        $item['accountType'] = AccountType::CONTRACT->value;
+        $item['accountType'] = AccountType::UNIFIED->value;
         $item['coin'][0]['coin'] = $coin->value;
         $item['coin'][0]['walletBalance'] = (string)$totalAmount;
-        $item['coin'][0]['availableToWithdraw'] = (string)$availableAmount;
+        $item['coin'][0]['totalPositionIM'] = (string)$totalPositionIM;
 
         $this->listItems[] = $item;
 

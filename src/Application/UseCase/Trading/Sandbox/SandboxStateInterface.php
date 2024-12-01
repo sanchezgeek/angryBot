@@ -20,6 +20,7 @@ interface SandboxStateInterface
     public function setPositionAndActualizeOpposite(Position|ClosedPosition $input): void;
     public function modifyFreeBalance(CoinAmount|float $amount): self;
     public function getFreeBalance(): CoinAmount;
+    public function getFreeBalanceForLiq(): CoinAmount;
     public function getAvailableBalance(): CoinAmount;
     public function setLastPrice(Price|float $price): self;
 }
