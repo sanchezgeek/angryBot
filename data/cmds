@@ -1,0 +1,2 @@
+# find errors
+cat var/log/dev.log | grep CRITICAL | egrep -v "Could not resolve" | egrep -v "recv_window" | egrep -v "must not be rejected" | egrep -v "TimeoutException"
