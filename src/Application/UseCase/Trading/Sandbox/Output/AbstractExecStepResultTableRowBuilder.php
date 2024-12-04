@@ -124,7 +124,7 @@ abstract class AbstractExecStepResultTableRowBuilder
             // @todo | move to context
             $sourceOrder->getContext('fromExchangeWithoutExistedStop') && $info[] = 'fromExchange (without ExistedStop)';
         } else {
-            $sourceOrder->isForceBuyOrder() && $info[] = '!force buy!';
+            $sourceOrder->isForceBuyOrder() && $info[] = '!force!';
 
             if ($sourceOrder->isOppositeBuyOrderAfterStopLoss()) {
                 $info[] = sprintf('after SL (s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');

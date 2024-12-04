@@ -102,7 +102,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         $content = $this->priceFormatter->format($sourceOrder->getPrice());
 
                         if ($this->showEstimatedRealExecPrice && $sandboxOrder->price !== $sourceOrder->getPrice()) {
-                            $content = sprintf('%s index (~%s last)', $content, $this->priceFormatter->format($sandboxOrder->price));
+                            $content = sprintf('%s[i] (~%s[l])', $content, $this->priceFormatter->format($sandboxOrder->price));
                         }
 
                         return $content;
