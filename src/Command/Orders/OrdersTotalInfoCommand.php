@@ -378,7 +378,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $ticker = $row->ticker;
                 $position = $row->initialSandboxState->getPosition($this->getPositionSide());
                 $cells = array_merge([
-                    Cell::colspan(4, sprintf('%s ticker: last=%s, mark=%s, index=%s', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
+                    Cell::colspan(4, sprintf('ticker: %s[l], %s[m], %s[i]', $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
                     Cell::resetToDefaults('pos:'),
                     # probably some default table behaviour instead of $columnsCount - $tickerColspan
                 ], !$position ? [Cell::restColumnsMerged('No position found')] : [
