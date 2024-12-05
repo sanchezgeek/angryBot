@@ -14,8 +14,11 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -336,10 +339,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $distance = $side->isLong()
-            ? self::getSettingValue(TradingSettings::Opposite_BuyOrder_PriceDistance_ForLongPosition)
-            : self::getSettingValue(TradingSettings::Opposite_BuyOrder_PriceDistance_ForShortPosition)
-        ;
+        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stopPrice), 0.1, 0.2);
 
         $priceModifier = $side->isLong() ? $distance : -$distance;
         $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
@@ -363,6 +363,19 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         }
 
         return $orders;
+    }
+
+    private static ?array $oppositeBuyOrderPnlDistances = null;
+    private static function oppositeBuyOrderPnlDistance(Side $positionSide): Percent
+    {
+        if (null === self::$oppositeBuyOrderPnlDistances) {
+            self::$oppositeBuyOrderPnlDistances = [
+                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)),
+                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)),
+            ];
+        }
+
+        return self::$oppositeBuyOrderPnlDistances[$positionSide->value];
     }
 
     /**
