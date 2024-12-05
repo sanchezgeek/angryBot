@@ -6,24 +6,30 @@ namespace App\Application\EventListener\Stop;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
+use App\Settings\Application\Service\AppSettingsProvider;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
 final class CreateOppositeBuyOrdersListener
 {
-    /*
-     * @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
-     */
-    public const SHORT_OPPOSITE_PRICE_DISTANCE = 300;
-    public const LONG_OPPOSITE_PRICE_DISTANCE = 400;
     public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
-    public function __construct(private readonly CreateBuyOrderHandler $createBuyOrderHandler) {}
+    private float $shortOppositePriceDistance;
+    private float $longOppositePriceDistance;
+
+    public function __construct(
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        private readonly AppSettingsProvider $settings,
+    ) {
+        $this->longOppositePriceDistance = $this->settings->get(TradingSettings::Opposite_BuyOrder_PriceDistance_ForLongPosition);
+        $this->shortOppositePriceDistance = $this->settings->get(TradingSettings::Opposite_BuyOrder_PriceDistance_ForShortPosition);
+    }
 
     public function __invoke(StopPushedToExchange $event): void
     {
@@ -36,7 +42,7 @@ final class CreateOppositeBuyOrdersListener
         $stopVolume = $stop->getVolume();
         $stopPrice = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
-        $distance = FloatHelper::modify($side->isShort() ? self::SHORT_OPPOSITE_PRICE_DISTANCE : self::LONG_OPPOSITE_PRICE_DISTANCE, 0.1, 0.2);
+        $distance = FloatHelper::modify($side->isShort() ? $this->shortOppositePriceDistance : $this->longOppositePriceDistance, 0.1, 0.2);
         $triggerPrice = $side->isShort() ? $stopPrice - $distance : $stopPrice + $distance;
 
         $context = [

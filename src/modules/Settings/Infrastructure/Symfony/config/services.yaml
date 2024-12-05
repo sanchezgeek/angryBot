@@ -19,3 +19,7 @@ services:
 
                 # trading
                 trading.marketBuy.safePriceDistance: 3000
+
+                # @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
+                trading.opposite.BuyOrder.priceDistance.forLongPosition: 400
+                trading.opposite.BuyOrder.priceDistance.forShortPosition: 300

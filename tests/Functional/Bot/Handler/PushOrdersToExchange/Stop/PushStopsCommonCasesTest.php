@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 use App\Application\EventListener\Stop\CreateOppositeBuyOrdersListener;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -24,6 +25,7 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\OrderCasesTester;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -43,6 +45,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     use BuyOrdersTester;
     use MessageConsumerTrait;
     use ByBitV5ApiRequestsMocker;
+    use SettingsAwareTest;
 
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
@@ -333,7 +336,11 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $distance = $side->isLong() ? CreateOppositeBuyOrdersListener::LONG_OPPOSITE_PRICE_DISTANCE : CreateOppositeBuyOrdersListener::SHORT_OPPOSITE_PRICE_DISTANCE;
+        $distance = $side->isLong()
+            ? self::getSettingValue(TradingSettings::Opposite_BuyOrder_PriceDistance_ForLongPosition)
+            : self::getSettingValue(TradingSettings::Opposite_BuyOrder_PriceDistance_ForShortPosition)
+        ;
+
         $priceModifier = $side->isLong() ? $distance : -$distance;
         $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
 
