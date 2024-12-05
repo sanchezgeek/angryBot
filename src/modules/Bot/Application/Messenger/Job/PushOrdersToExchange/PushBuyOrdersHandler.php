@@ -282,8 +282,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if (self::FIX_SUPPORT_ENABLED && ($hedge = $position->getHedge())?->isMainPosition($position)
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
                 && (
-                    $lastBuy->isForceBuyOrder()
-                    || (!self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL || $lastBuy->isOppositeBuyOrderAfterStopLoss())
+                    (
+                        !self::FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL
+                        && $lastBuy->isForceBuyOrder() // @todo separated context for allow fix support
+                    )
+                    || $lastBuy->isOppositeBuyOrderAfterStopLoss()
                 )
                 && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
                 && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
