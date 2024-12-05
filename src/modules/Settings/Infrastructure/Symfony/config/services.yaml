@@ -14,4 +14,8 @@ services:
         class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
         arguments:
             $parameters:
+                # connection
                 connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'
+
+                # trading
+                trading.marketBuy.safePriceDistance: 3000

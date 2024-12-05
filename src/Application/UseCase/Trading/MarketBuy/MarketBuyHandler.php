@@ -11,15 +11,15 @@ use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
+use App\Settings\Application\Service\AppSettingsProvider;
 
 class MarketBuyHandler
 {
-    const SAFE_PRICE_DISTANCE_DEFAULT = 3000;
-
     /**
      * @throws BuyIsNotSafeException
      *
@@ -83,7 +83,9 @@ class MarketBuyHandler
         private readonly OrderServiceInterface        $orderService,
         private readonly ExchangeServiceInterface     $exchangeService,
         private readonly SandboxStateFactoryInterface $sandboxStateFactory,
-        private float                                 $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
+        private readonly AppSettingsProvider          $settings,
+        private ?float                                $safePriceDistance = null
     ) {
+        $this->safePriceDistance = $this->safePriceDistance ?? $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }
 }

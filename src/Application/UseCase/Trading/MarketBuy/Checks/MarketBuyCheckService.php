@@ -12,9 +12,11 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailab
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
+use App\Settings\Application\Service\AppSettingsProvider;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -22,7 +24,7 @@ use Psr\Log\LoggerInterface;
  */
 readonly class MarketBuyCheckService
 {
-    const SAFE_PRICE_DISTANCE_DEFAULT = MarketBuyHandler::SAFE_PRICE_DISTANCE_DEFAULT;
+    private float $defaultSafePriceDistance;
 
     /**
      * @throws BuyIsNotSafeException
@@ -32,7 +34,7 @@ readonly class MarketBuyCheckService
         Ticker                $ticker,
         SandboxStateInterface $currentSandboxState,
         Position              $currentPositionState = null,
-        float                 $safePriceDistance = self::SAFE_PRICE_DISTANCE_DEFAULT
+        float                 $safePriceDistance = null
     ): void {
         if ($order->force) {
             return;
@@ -79,6 +81,7 @@ readonly class MarketBuyCheckService
 
         $liquidationPrice = $positionToCheckLiquidation->liquidationPrice();
 
+        $safePriceDistance ??= $this->defaultSafePriceDistance;
         $isLiquidationOnSafeDistance = $positionSide->isShort()
             ? $liquidationPrice->sub($safePriceDistance)->greaterOrEquals($markPrice)
             : $liquidationPrice->add($safePriceDistance)->lessOrEquals($markPrice);
@@ -92,6 +95,8 @@ readonly class MarketBuyCheckService
         private PositionServiceInterface $positionService,
         private TradingSandboxFactoryInterface $sandboxFactory,
         private LoggerInterface $appErrorLogger,
+        private AppSettingsProvider $settings,
     ) {
+        $this->defaultSafePriceDistance = $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }
 }

@@ -1,7 +1,3 @@
-<?php
-
-namespace App\Command\Orders;
-
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;

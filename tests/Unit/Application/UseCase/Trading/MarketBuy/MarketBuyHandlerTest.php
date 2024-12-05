@@ -24,6 +24,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
+use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -60,10 +61,13 @@ class MarketBuyHandlerTest extends KernelTestCase
 
         $this->logger = new TestLogger();
 
+        $settings = self::getContainer()->get(AppSettingsProvider::class);
+
         $marketBuyCheckService = new MarketBuyCheckService(
             self::getContainer()->get(PositionServiceInterface::class),
             $this->executionSandboxFactory,
-            $this->logger
+            $this->logger,
+            $settings,
         );
 
         $this->marketBuyHandler = new MarketBuyHandler(
@@ -71,6 +75,7 @@ class MarketBuyHandlerTest extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(ExchangeServiceInterface::class),
             $this->sandboxStateFactory,
+            $settings,
             self::SAFE_PRICE_DISTANCE
         );
     }
