@@ -2,7 +2,7 @@
 
 namespace App\Connection\Application\Messenger\Job;
 
-use App\Settings\Application\Enum\SettingsMap;
+use App\Connection\Application\Settings\ConnectionSettings;
 use App\Settings\Application\Service\AppSettingsProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,7 +15,7 @@ final readonly class CheckConnectionHandler
 {
     public function __invoke(CheckConnection $dto): void
     {
-        if ($this->settingProvider->get(SettingsMap::CheckConnectionEnabled) !== true) {
+        if ($this->settings->get(ConnectionSettings::CheckConnectionEnabled) !== true) {
             return;
         }
 
@@ -31,7 +31,7 @@ final readonly class CheckConnectionHandler
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $appErrorLogger,
-        private AppSettingsProvider $settingProvider
+        private AppSettingsProvider $settings
     ) {
     }
 }

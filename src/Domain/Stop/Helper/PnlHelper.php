@@ -27,11 +27,13 @@ final class PnlHelper
     /**
      * @todo cover with tests (in case if method will not used by any other covered methods)
     */
-    public static function convertPnlPercentOnPriceToAbsDelta(float $percent, float|Price $onPrice): float
+    public static function convertPnlPercentOnPriceToAbsDelta(float|Percent $percent, float|Price $onPrice): float
     {
+        $percent = $percent instanceof Percent ? $percent : new Percent($percent, false);
+
         $value = Price::toFloat($onPrice) / self::getPositionLeverage();
 
-        return PriceHelper::round(($percent / 100) * $value);
+        return PriceHelper::round($percent->part() * $value);
     }
 
     public static function getPnlInPercents(Position $position, float $price): float
