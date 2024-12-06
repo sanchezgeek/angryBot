@@ -25,5 +25,5 @@ services:
                 trading.opposite.BuyOrder.pnlDistance.forShortPosition: '70%'
 
                 # push BuyOrder
-                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
-                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
+                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: true
+                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: true
