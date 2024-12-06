@@ -43,6 +43,7 @@ use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
+use App\Settings\Application\Service\AppSettingsProvider;
 use Psr\Log\NullLogger;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -138,7 +139,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
-        $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger());
+        $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings);
 
         $tradingSandbox->setMarketBuyCheckService($marketBuyCheckService);
 
@@ -415,6 +416,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         private readonly BuyOrderRepository       $buyOrderRepository,
         PositionServiceInterface                  $positionService,
         private readonly TradingSandboxFactory    $tradingSandboxFactory,
+        private readonly AppSettingsProvider      $settings,
         string                                    $name = null,
     ) {
         $this->withPositionService($positionService);
