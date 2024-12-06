@@ -18,6 +18,7 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Application\Settings\PushBuyOrderSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -43,6 +44,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDeco
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Settings\Application\Service\AppSettingsProvider;
 use App\Worker\AppContext;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
@@ -83,6 +85,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private ?float $lastCannotAffordAtPrice = null;
 
     private readonly LimiterInterface $ignoreBuyThrottlingLimiter;
+
+    private readonly bool $useIsLastPriceOverIndexPriceCheck;
+    private readonly bool $useIgnoreBuyCheckBasedOnTotalPositionLeverage;
 
     /**
      * @todo It must be separated service receiving some context of spot usage to make decision.
@@ -182,19 +187,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         if (!$this->canBuy($ticker)) {
             return;
         }
+        $index = $ticker->indexPrice; $last = $ticker->lastPrice;
 
         $position = $this->positionService->getPosition($symbol, $side);
         $orders = $this->findOrdersNearTicker($side, $ticker, $position);
 
         $ignoreBuy = null;
-        if ($position && $ticker->isLastPriceOverIndexPrice($side) && $ticker->lastPrice->deltaWith($ticker->indexPrice) >= 100) {
+        if ($this->useIsLastPriceOverIndexPriceCheck && $position && $ticker->isLastPriceOverIndexPrice($side) && $last->deltaWith($index) >= 100) {
             $ignoreBuy = '~isLastPriceOverIndexPrice~ more than 100';
-        } elseif ($orders) {
+        } elseif ($this->useIgnoreBuyCheckBasedOnTotalPositionLeverage && $orders) {
             $ignoreBuy = $this->getNeedIgnoreBuyReason($position, $ticker);
         }
 
         if (!$position) {
-            $position = new Position($side, $symbol, $ticker->indexPrice->value(), 0.05, 1000, 0, 13, 100);
+            $position = new Position($side, $symbol, $index->value(), 0.05, 1000, 0, 13, 100);
         }
 
         /** @var BuyOrder $lastBuy For `CannotAffordOrderCost` exception processing */
@@ -213,7 +219,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     $this->buy($position, $ticker, $order);
 
                      if ($order->getExchangeOrderId()) {
-                         $boughtOrders[] = new ExchangeOrder($symbol, $order->getVolume(), $ticker->lastPrice);
+                         $boughtOrders[] = new ExchangeOrder($symbol, $order->getVolume(), $last);
                      }
                 }
             }
@@ -236,7 +242,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } catch (CannotAffordOrderCostException $e) {
             $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($symbol->associatedCoin());
             if ($this->canUseSpot($ticker, $position, $spotBalance, $lastBuy)) {
-                $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $e->qty, $ticker->lastPrice), $position->leverage, $position->side)->value();
+                $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $e->qty, $last), $position->leverage, $position->side)->value();
                 $amount = $orderCost * self::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
                 if ($this->transferToContract($spotBalance, $amount)) {
                     $lastBuy->incSuccessSpotTransfersCounter();
@@ -253,23 +259,23 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 && $this->canTakeProfit($position, $ticker)
                 && !(
                     ($hedge = $position->getHedge())?->isSupportPosition($position)
-                    && $hedge->mainPosition->isPositionInLoss($ticker->lastPrice)
+                    && $hedge->mainPosition->isPositionInLoss($last)
                 )
             ) {
-                $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
+                $currentPnlPercent = $last->getPnlPercentFor($position);
                 // @todo | move to some service | DRY (below)
                 $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.5 / 100));
                 $this->orderService->closeByMarket($position, $volumeClosed);
 
                 if (!$position->isSupportPosition()) {
-                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $ticker->lastPrice, $volumeClosed);
+                    $expectedProfit = PnlHelper::getPnlInUsdt($position, $last, $volumeClosed);
                     $transferToSpotAmount = $expectedProfit * self::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
                     $this->exchangeAccountService->interTransferFromContractToSpot($symbol->associatedCoin(), $transferToSpotAmount);
                 }
 
                 // reopen closed volume on further movement
                 $distance = 100; if (!AppContext::isTest()) $distance += random_int(-20, 35);
-                $reopenPrice = $position->isShort() ? $ticker->indexPrice->sub($distance) : $ticker->indexPrice->add($distance);
+                $reopenPrice = $position->isShort() ? $index->sub($distance) : $index->add($distance);
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
                 );
@@ -288,8 +294,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     )
                     || $lastBuy->isOppositeBuyOrderAfterStopLoss()
                 )
-                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
-                && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
+                && ($mainPositionPnlPercent = $last->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
+                && ($supportPnlPercent = $last->getPnlPercentFor($hedge->supportPosition)) > 228.228
                 && (
                     $lastBuy->isForceBuyOrder()
                     || abs($priceToCalcLiqDiff - $position->liquidationPrice) > 2500               # position liquidation too far
@@ -308,7 +314,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             # support BuyOrder => grab profit from MainPosition
             if (self::FIX_MAIN_POSITION_ENABLED && ($hedge = $position->getHedge())?->isSupportPosition($position)
                 && $lastBuy->getHedgeSupportFixationsCount() < 1
-                && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) > 152.228 # main position at least must not be in loss
+                && ($mainPositionPnlPercent = $last->getPnlPercentFor($hedge->mainPosition)) > 152.228 # main position at least must not be in loss
                 && (
                     $lastBuy->isForceBuyOrder()
                     || !$this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
@@ -323,7 +329,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
-            $this->lastCannotAffordAtPrice = $ticker->indexPrice->value();
+            $this->lastCannotAffordAtPrice = $index->value();
             $this->lastCannotAffordAt = $this->clock->now();
         }
     }
@@ -623,6 +629,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         private readonly MarketBuyHandler $marketBuyHandler,
         RateLimiterFactory $ignoreBuyThrottlingLimiter,
+        private readonly AppSettingsProvider $settings,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
@@ -630,6 +637,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         LoggerInterface $appErrorLogger,
     ) {
         $this->ignoreBuyThrottlingLimiter = $ignoreBuyThrottlingLimiter->create('push_buy_orders');
+
+        # checks
+        $this->useIsLastPriceOverIndexPriceCheck = $this->settings->get(PushBuyOrderSettings::Checks_lastPriceOverIndexPriceCheckEnabled);
+        $this->useIgnoreBuyCheckBasedOnTotalPositionLeverage = $this->settings->get(PushBuyOrderSettings::Checks_ignoreBuyBasedOnTotalPositionLeverageEnabled);
+
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }

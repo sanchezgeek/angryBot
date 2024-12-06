@@ -19,6 +19,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
+use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -63,6 +64,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(MarketBuyHandler::class),
             $ignoreBuyThrottlingLimiter,
+            self::getContainer()->get(AppSettingsProvider::class),
 
             self::getContainer()->get(ExchangeServiceInterface::class),
             self::getContainer()->get(PositionServiceInterface::class),
