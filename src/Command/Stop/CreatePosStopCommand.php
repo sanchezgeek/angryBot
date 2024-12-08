@@ -89,7 +89,7 @@ class CreatePosStopCommand extends AbstractCommand
 //        $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
 
         $alreadyStopped = 0;
-        $stops = $this->stopRepository->findActive($position->side);
+        $stops = $this->stopRepository->findActive($position->symbol, $position->side);
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
         }
@@ -100,7 +100,7 @@ class CreatePosStopCommand extends AbstractCommand
             }
         }
 
-        $this->stopService->create($position->side, $price, $forVolume, $triggerDelta, $context);
+        $this->stopService->create($position->symbol, $position->side, $price, $forVolume, $triggerDelta, $context);
 
 //        foreach ($orders as $order) {
 //            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);

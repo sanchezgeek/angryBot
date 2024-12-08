@@ -75,9 +75,9 @@ class PositionsInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    public function printState(?Position $position, CalcPositionLiquidationPriceResult $result): void
+    public function printState(Position $position, CalcPositionLiquidationPriceResult $result): void
     {
-        $liquidationDiff = PriceMovement::fromToTarget($position->liquidationPrice, $result->estimatedLiquidationPrice());
+        $liquidationDiff = PriceMovement::fromToTarget($position->liquidationPrice(), $position->symbol->makePrice($result->estimatedLiquidationPrice()->value()));
 
         OutputHelper::print($position->getCaption());
         OutputHelper::positionStats('real      ', $position);

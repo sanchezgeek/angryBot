@@ -139,7 +139,7 @@ class PlaceOrderCommand extends AbstractCommand
             foreach ($orders as $order) {
                 if ($type === self::DELAYED_TP) {
                     $context = array_merge($context, Stop::getTakeProfitContext());
-                    $this->stopService->create($position->side, $order->price()->value(), $order->volume(), Stop::getTakeProfitTriggerDelta(), $context);
+                    $this->stopService->create($this->getSymbol(), $position->side, $order->price()->value(), $order->volume(), Stop::getTakeProfitTriggerDelta(), $context);
                 } else {
                     $this->tradeService->addLimitTP($position, $order->volume(), $order->price()->value());
                 }
@@ -172,7 +172,7 @@ class PlaceOrderCommand extends AbstractCommand
             return PnlHelper::targetPriceByPnlPercentFromPositionEntry($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
             try {
-                return Price::float($this->paramFetcher->requiredFloatOption($name));
+                return $this->getSymbol()->makePrice($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
                 if ($required) {
                     throw $e;

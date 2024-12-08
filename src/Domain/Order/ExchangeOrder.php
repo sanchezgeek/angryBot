@@ -20,7 +20,7 @@ final class ExchangeOrder // implements OrderInterface
     {
         $this->symbol = $symbol;
         $this->volume = $volume;
-        $this->price = Price::toObj($price);
+        $this->price = $symbol->makePrice(Price::toFloat($price));
     }
 
     public function getSymbol(): Symbol

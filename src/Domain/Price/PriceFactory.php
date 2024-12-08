@@ -14,7 +14,6 @@ class PriceFactory
 
     public function make(float $value): Price
     {
-        return Price::float($value);
-//        return Price::float($value, $this->symbol);
+        return Price::float($value, $this->symbol->pricePrecision());
     }
 }

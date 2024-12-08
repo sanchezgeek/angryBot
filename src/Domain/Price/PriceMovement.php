@@ -6,7 +6,6 @@ namespace App\Domain\Price;
 
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 
@@ -19,31 +18,28 @@ use function abs;
  */
 readonly class PriceMovement
 {
-    private Price $fromPrice;
-    private Price $toTargetPrice;
-
-    private function __construct(float|Price $fromPrice, float|Price $toTargetPrice)
+    private function __construct(private Price $fromPrice, private Price $toTargetPrice)
     {
-        $this->fromPrice = Price::toObj($fromPrice);
-        $this->toTargetPrice = Price::toObj($toTargetPrice);
     }
 
-    public static function fromToTarget(float|Price $fromPrice, float|Price $toTargetPrice): self
+    public static function fromToTarget(Price $fromPrice, Price $toTargetPrice): self
     {
         return new self($fromPrice, $toTargetPrice);
     }
 
     public function absDelta(): float
     {
-        return PriceHelper::round(abs($this->fromPrice->value() - $this->toTargetPrice->value()));
+        return FloatHelper::round(abs(Price::toFloat($this->fromPrice) - Price::toFloat($this->toTargetPrice)), $this->fromPrice->precision);
     }
 
     public function deltaForPositionProfit(Side $positionSide): float
     {
-        $result = $positionSide->isShort() ? $this->fromPrice->value() - $this->toTargetPrice->value() : $this->toTargetPrice->value() - $this->fromPrice->value();
+        $delta = $positionSide->isShort()
+            ? Price::toFloat($this->fromPrice) - Price::toFloat($this->toTargetPrice)
+            : Price::toFloat($this->toTargetPrice) - Price::toFloat($this->fromPrice)
+        ;
 
-        // @todo | make round with initial prices precision (get from Price object)
-        return FloatHelper::round($result);
+        return FloatHelper::round($delta, $this->fromPrice->precision);
     }
 
     public function deltaForPositionLoss(Side $positionSide): float

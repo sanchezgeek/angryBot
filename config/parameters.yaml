@@ -6,3 +6,5 @@ parameters:
     env_bybit_api_key: '%env(BYBIT_API_KEY)%'
     env_bybit_api_secret: '%env(BYBIT_API_SECRET)%'
     shared_cache.path: '%kernel.project_dir%/var/shared_cache/%env(APP_ENV)%'
+
+    opened_positions: '%env(OPENED_POSITIONS)%'

@@ -6,8 +6,6 @@ namespace App\Bot\Application\Service\Hedge;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
-use App\Domain\Price\Helper\PriceHelper;
-use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
 
 use function abs;
@@ -128,7 +126,7 @@ final readonly class Hedge
     public function getSupportProfitOnMainEntryPrice(): ?float
     {
         if ($this->isProfitableHedge()) {
-            return $this->supportPosition->size * PriceHelper::round($this->getPositionsDistance());
+            return $this->supportPosition->size * $this->getPositionsDistance();
         }
 
         return null;
@@ -151,7 +149,7 @@ final readonly class Hedge
      */
     public function getSupportPnlPercentOnMainEntryPrice(): Percent
     {
-        return new Percent(Price::float($this->mainPosition->entryPrice)->getPnlPercentFor($this->supportPosition), false);
+        return new Percent($this->mainPosition->entryPrice()->getPnlPercentFor($this->supportPosition), false);
     }
 
     /**
@@ -159,7 +157,7 @@ final readonly class Hedge
      */
     public function getMainPnlPercentOnSupportEntryPrice(): Percent
     {
-        return new Percent(Price::float($this->supportPosition->entryPrice)->getPnlPercentFor($this->mainPosition), false);
+        return new Percent($this->supportPosition->entryPrice()->getPnlPercentFor($this->mainPosition), false);
     }
 
 //    /**

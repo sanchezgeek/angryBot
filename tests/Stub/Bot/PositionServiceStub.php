@@ -9,6 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
+use Exception;
 use LogicException;
 
 use function array_shift;
@@ -97,5 +98,10 @@ final class PositionServiceStub implements PositionServiceInterface
         $this->positions[] = $position;
 
         return $this;
+    }
+
+    public function getOpenedPositionsSymbols(): array
+    {
+        throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
     }
 }

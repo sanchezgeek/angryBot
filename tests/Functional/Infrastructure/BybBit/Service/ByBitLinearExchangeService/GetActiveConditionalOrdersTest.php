@@ -160,7 +160,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
 
         yield sprintf('get active %s stops (%s) with PriceRange specified', $symbol->value, $category->value) => [
             $category, $symbol,
-            '$priceRange' => PriceRange::create(31500, 32001),
+            '$priceRange' => PriceRange::create(31500, 32001, $symbol),
             '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
                 $secondLongStopId => new ActiveStopOrder(

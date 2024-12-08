@@ -47,9 +47,9 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         return new self($value);
     }
 
-    public static function fromPart(float $part): self
+    public static function fromPart(float $part, bool $strict = true): self
     {
-        return new self($part * 100);
+        return new self($part * 100, $strict);
     }
 
     public function part(): float

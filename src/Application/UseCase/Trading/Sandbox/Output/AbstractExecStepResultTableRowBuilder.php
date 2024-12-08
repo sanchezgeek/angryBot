@@ -96,7 +96,7 @@ abstract class AbstractExecStepResultTableRowBuilder
 
     protected function getLiquidationPriceDiffWithPrev(Position $positionBefore, Position $positionAfter): string
     {
-        $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice, $positionAfter->liquidationPrice);
+        $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice(), $positionAfter->liquidationPrice());
         $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($positionBefore->side);
         if ($liquidationPriceDiffWithPrev === 0.00) {
             $liquidationPriceDiffWithPrev = 0;

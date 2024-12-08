@@ -61,10 +61,17 @@ final class SchedulerFactory
 
     private static function short(): array
     {
-        return [
+        $items = [
             PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::CONF['short.sl']), new PushStops(Symbol::BTCUSDT, Side::Sell)),
             PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['short.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Sell))),
         ];
+
+        foreach (AppContext::getOpenedPositions() as $symbol) {
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Sell));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
+        }
+
+        return $items;
     }
 
     private static function long(): array
@@ -79,16 +86,16 @@ final class SchedulerFactory
     {
         $cleanupPeriod = '45S';
 
-        return [
-            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Stop, Side::Sell, 30, 6, true))),
+        $items = [
+            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             //            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
-            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Stop, Side::Buy, 30, 6, true))),
+            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
             //            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # position
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Side::Buy))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
 
             # market
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(Symbol::BTCUSDT))),
@@ -97,11 +104,18 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT12S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
 
             # alarm
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT3S', AsyncMessage::for(new CheckAlarm(Symbol::BTCUSDT))),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckAlarm())),
 
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
         ];
+
+        # release other symbols orders
+        foreach (AppContext::getOpenedPositions() as $symbol) {
+            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
+        }
+
+        return $items;
     }
 
     private static function cache(): array

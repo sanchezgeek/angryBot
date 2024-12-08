@@ -342,8 +342,6 @@ class TradingSandbox implements TradingSandboxInterface
 
     private function createTicker(float|Price $price): Ticker
     {
-        $price = Price::toObj($price);
-
         return new Ticker($this->symbol, $price, $price, $price);
     }
 

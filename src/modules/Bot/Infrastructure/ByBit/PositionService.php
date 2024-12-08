@@ -25,6 +25,8 @@ use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
 
 /**
+ * ** RIP **
+ *
  * @deprecated
  */
 final class PositionService implements PositionServiceInterface
@@ -163,5 +165,10 @@ final class PositionService implements PositionServiceInterface
         }
 
         return $result['result']['order_id'];
+    }
+
+    public function getOpenedPositionsSymbols(): array
+    {
+        return [];
     }
 }

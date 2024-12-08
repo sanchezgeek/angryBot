@@ -8,6 +8,7 @@ use App\Bot\Application\Command\CreateStop;
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
@@ -30,7 +31,7 @@ final class StopService implements StopServiceInterface
         $this->commandBus = $commandBus;
     }
 
-    public function create(Side $positionSide, Price|float $price, float $volume, float $triggerDelta, array $context = []): int
+    public function create(Symbol $symbol, Side $positionSide, Price|float $price, float $volume, ?float $triggerDelta = null, array $context = []): int
     {
         // @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         // Но не переборщить
@@ -42,6 +43,7 @@ final class StopService implements StopServiceInterface
         $this->dispatchCommand(
             new CreateStop(
                 $id,
+                $symbol,
                 $positionSide,
                 $volume,
                 $price,
@@ -92,6 +94,7 @@ final class StopService implements StopServiceInterface
             $price += $position->side === Side::Sell ? ($step) : (-$step);
 
             $this->create(
+                $position->symbol,
                 $position->side,
                 $price,
                 $stepVolume,

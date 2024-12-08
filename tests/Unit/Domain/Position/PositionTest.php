@@ -295,8 +295,10 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationDistance(Side $side): void
     {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 100);
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.01, 50, 100);
+        self::assertEquals(1000.01, $position->liquidationDistance());
 
-        self::assertEquals(1000.001, $position->liquidationDistance());
+        $position = new Position($side, Symbol::BTCUSDT, 51000.01, 0.1, 5000, 50000, 50, 100);
+        self::assertEquals(1000.01, $position->liquidationDistance());
     }
 }

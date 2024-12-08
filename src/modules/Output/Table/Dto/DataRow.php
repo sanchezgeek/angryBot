@@ -6,6 +6,7 @@ namespace App\Output\Table\Dto;
 
 use App\Output\Table\Dto\Style\RowStyle;
 use IteratorAggregate;
+use Stringable;
 use Traversable;
 
 /**
@@ -17,7 +18,7 @@ final class DataRow implements RowInterface, IteratorAggregate
     private array $cells;
     public function __construct(
         public RowStyle $style,
-        Cell|string|int|float ...$cells,
+        Cell|string|int|float|Stringable ...$cells,
     ) {
         $this->cells = $cells;
     }

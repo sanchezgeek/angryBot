@@ -137,6 +137,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function getPosition(Symbol $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getOpenedPositionsSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
         $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings);
@@ -149,14 +150,16 @@ class OrdersTotalInfoCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $positionSide = $this->getPositionSide();
-        $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
+        $symbol = $this->getSymbol();
+
+        $pushedStops = $this->exchangeService->activeConditionalOrders($symbol);
 
         $stops = array_filter(
-            $this->stopRepository->findAllByPositionSide($positionSide),
+            $this->stopRepository->findAllByPositionSide($symbol, $positionSide),
             static fn(Stop $stop):bool => !$stop->isOrderPushedToExchange() || isset($pushedStops[$stop->getExchangeOrderId()])
         );
 
-        $buyOrders = $this->buyOrderRepository->findActive($positionSide);
+        $buyOrders = $this->buyOrderRepository->findActive($symbol, $positionSide);
         if (!$stops && !$buyOrders) {
             $this->io->block('Orders not found.'); return Command::SUCCESS;
         }
@@ -188,7 +191,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $ordersAfterPositionProfit = [];
 
         foreach ($orders as $order) {
-            Price::float($order->getPrice())->differenceWith($this->currentTicker->indexPrice)->isLossFor($positionSide)
+            $symbol->makePrice($order->getPrice())->differenceWith($this->currentTicker->indexPrice)->isLossFor($positionSide)
                 ? $ordersAfterPositionLoss[] = $order
                 : $ordersAfterPositionProfit[] = $order;
         }

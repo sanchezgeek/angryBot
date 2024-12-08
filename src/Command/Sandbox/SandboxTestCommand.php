@@ -71,8 +71,8 @@ class SandboxTestCommand extends AbstractCommand
         foreach (explode('|', $this->paramFetcher->getStringOption(self::ORDERS_OPTION)) as $orderDefinition) {
             $type = substr($orderDefinition, 0, 1); $volume = substr($orderDefinition, 1);
             $orders[] = match ($type) {
-                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $positionSide),
-                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $positionSide),
+                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $this->getSymbol(), $positionSide),
+                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $this->getSymbol(), $positionSide),
                 default => throw new InvalidArgumentException('Invalid type provided: ' . $type . ' ("+/-" expected)')
             };
         }

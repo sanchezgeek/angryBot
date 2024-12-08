@@ -194,13 +194,13 @@ final class OrdersGridTest extends TestCase
                 '$qnt' => 8,
                 'expectedOrders' => [
                     new Order(Price::float(29985), 0.006),
-                    new Order(Price::float(29986.88), 0.006),
+                    new Order(Price::float(29986.875), 0.006),
                     new Order(Price::float(29988.75), 0.006),
-                    new Order(Price::float(29990.63), 0.006),
+                    new Order(Price::float(29990.625), 0.006),
                     new Order(Price::float(29992.5), 0.006),
-                    new Order(Price::float(29994.38), 0.006),
+                    new Order(Price::float(29994.375), 0.006),
                     new Order(Price::float(29996.25), 0.006),
-                    new Order(Price::float(29998.13), 0.006),
+                    new Order(Price::float(29998.125), 0.006),
                 ]
             ],
             [
@@ -209,11 +209,11 @@ final class OrdersGridTest extends TestCase
                 '$qnt' => 6,
                 'expectedOrders' => [
                     new Order(Price::float(29000), 0.008),
-                    new Order(Price::float(29002.42), 0.008),
-                    new Order(Price::float(29004.83), 0.008),
-                    new Order(Price::float(29007.25), 0.008),
-                    new Order(Price::float(29009.67), 0.008),
-                    new Order(Price::float(29012.08), 0.008),
+                    new Order(Price::float(29002.416666666668), 0.008),
+                    new Order(Price::float(29004.833333333336), 0.008),
+                    new Order(Price::float(29007.250000000004), 0.008),
+                    new Order(Price::float(29009.66666666667), 0.008),
+                    new Order(Price::float(29012.08333333334), 0.008),
                 ]
             ],
             [
@@ -225,14 +225,14 @@ final class OrdersGridTest extends TestCase
                 'expectedOrders' => [
                     new Order(Price::float(28710), 0.003),
                     new Order(Price::float(28736.1), 0.003),
-                    new Order(Price::float(28762.2), 0.003),
-                    new Order(Price::float(28788.3), 0.003),
-                    new Order(Price::float(28814.4), 0.003),
-                    new Order(Price::float(28840.5), 0.003),
-                    new Order(Price::float(28866.6), 0.003),
-                    new Order(Price::float(28892.7), 0.003),
-                    new Order(Price::float(28918.8), 0.003),
-                    new Order(Price::float(28944.9), 0.003),
+                    new Order(Price::float(28762.199999999997), 0.003),
+                    new Order(Price::float(28788.299999999996), 0.003),
+                    new Order(Price::float(28814.399999999994), 0.003),
+                    new Order(Price::float(28840.499999999993), 0.003),
+                    new Order(Price::float(28866.59999999999), 0.003),
+                    new Order(Price::float(28892.69999999999), 0.003),
+                    new Order(Price::float(28918.79999999999), 0.003),
+                    new Order(Price::float(28944.899999999987), 0.003),
 
                 ]
             ],
@@ -244,8 +244,8 @@ final class OrdersGridTest extends TestCase
                     new Order(Price::float(28710), 0.001),
                     new Order(Price::float(28762.2), 0.001),
                     new Order(Price::float(28814.4), 0.001),
-                    new Order(Price::float(28866.6), 0.001),
-                    new Order(Price::float(28918.8), 0.001),
+                    new Order(Price::float(28866.600000000002), 0.001),
+                    new Order(Price::float(28918.800000000003), 0.001),
 
                 ]
             ],

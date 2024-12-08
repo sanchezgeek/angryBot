@@ -75,6 +75,7 @@ class MoveStopsCommand extends AbstractCommand
             }
 
             $stops = $this->stopRepository->findActive(
+                symbol: $this->getSymbol(),
                 side: $positionSide,
                 qbModifier: function (QueryBuilder $qb) use ($positionSide, $priceToBeginFrom) {
                     $priceField = $qb->getRootAliases()[0] . '.price';

@@ -104,16 +104,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => $toPnl,
             '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, $stopVolume, 28710),
-                self::buildExpectedStop($side, 2, $stopVolume, 28736.1),
-                self::buildExpectedStop($side, 3, $stopVolume, 28762.2),
-                self::buildExpectedStop($side, 4, $stopVolume, 28788.3),
-                self::buildExpectedStop($side, 5, $stopVolume, 28814.4),
-                self::buildExpectedStop($side, 6, $stopVolume, 28840.5),
-                self::buildExpectedStop($side, 7, $stopVolume, 28866.6),
-                self::buildExpectedStop($side, 8, $stopVolume, 28892.7),
-                self::buildExpectedStop($side, 9, $stopVolume, 28918.8),
-                self::buildExpectedStop($side, 10, $stopVolume, 28944.9),
+                self::buildExpectedStop($symbol, $side, 1, $stopVolume, 28710),
+                self::buildExpectedStop($symbol, $side, 2, $stopVolume, 28736.1),
+                self::buildExpectedStop($symbol, $side, 3, $stopVolume, 28762.2),
+                self::buildExpectedStop($symbol, $side, 4, $stopVolume, 28788.3),
+                self::buildExpectedStop($symbol, $side, 5, $stopVolume, 28814.4),
+                self::buildExpectedStop($symbol, $side, 6, $stopVolume, 28840.5),
+                self::buildExpectedStop($symbol, $side, 7, $stopVolume, 28866.6),
+                self::buildExpectedStop($symbol, $side, 8, $stopVolume, 28892.7),
+                self::buildExpectedStop($symbol, $side, 9, $stopVolume, 28918.8),
+                self::buildExpectedStop($symbol, $side, 10, $stopVolume, 28944.9),
             ]
         ];
 
@@ -131,16 +131,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => $toPnl,
             '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, $stopVolume, 28710),
-                self::buildExpectedStop($side, 2, $stopVolume, 28736.1),
-                self::buildExpectedStop($side, 3, $stopVolume, 28762.2),
-                self::buildExpectedStop($side, 4, $stopVolume, 28788.3),
-                self::buildExpectedStop($side, 5, $stopVolume, 28814.4),
-                self::buildExpectedStop($side, 6, $stopVolume, 28840.5),
-                self::buildExpectedStop($side, 7, $stopVolume, 28866.6),
-                self::buildExpectedStop($side, 8, $stopVolume, 28892.7),
-                self::buildExpectedStop($side, 9, $stopVolume, 28918.8),
-                self::buildExpectedStop($side, 10, $stopVolume, 28944.9),
+                self::buildExpectedStop($symbol, $side, 1, $stopVolume, 28710),
+                self::buildExpectedStop($symbol, $side, 2, $stopVolume, 28736.1),
+                self::buildExpectedStop($symbol, $side, 3, $stopVolume, 28762.2),
+                self::buildExpectedStop($symbol, $side, 4, $stopVolume, 28788.3),
+                self::buildExpectedStop($symbol, $side, 5, $stopVolume, 28814.4),
+                self::buildExpectedStop($symbol, $side, 6, $stopVolume, 28840.5),
+                self::buildExpectedStop($symbol, $side, 7, $stopVolume, 28866.6),
+                self::buildExpectedStop($symbol, $side, 8, $stopVolume, 28892.7),
+                self::buildExpectedStop($symbol, $side, 9, $stopVolume, 28918.8),
+                self::buildExpectedStop($symbol, $side, 10, $stopVolume, 28944.9),
             ]
         ];
 
@@ -158,16 +158,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => (string)$to,
             '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, $stopVolume, 28900),
-                self::buildExpectedStop($side, 2, $stopVolume, 28920),
-                self::buildExpectedStop($side, 3, $stopVolume, 28940),
-                self::buildExpectedStop($side, 4, $stopVolume, 28960),
-                self::buildExpectedStop($side, 5, $stopVolume, 28980),
-                self::buildExpectedStop($side, 6, $stopVolume, 29000),
-                self::buildExpectedStop($side, 7, $stopVolume, 29020),
-                self::buildExpectedStop($side, 8, $stopVolume, 29040),
-                self::buildExpectedStop($side, 9, $stopVolume, 29060),
-                self::buildExpectedStop($side, 10, $stopVolume, 29080),
+                self::buildExpectedStop($symbol, $side, 1, $stopVolume, 28900),
+                self::buildExpectedStop($symbol, $side, 2, $stopVolume, 28920),
+                self::buildExpectedStop($symbol, $side, 3, $stopVolume, 28940),
+                self::buildExpectedStop($symbol, $side, 4, $stopVolume, 28960),
+                self::buildExpectedStop($symbol, $side, 5, $stopVolume, 28980),
+                self::buildExpectedStop($symbol, $side, 6, $stopVolume, 29000),
+                self::buildExpectedStop($symbol, $side, 7, $stopVolume, 29020),
+                self::buildExpectedStop($symbol, $side, 8, $stopVolume, 29040),
+                self::buildExpectedStop($symbol, $side, 9, $stopVolume, 29060),
+                self::buildExpectedStop($symbol, $side, 10, $stopVolume, 29080),
             ]
         ];
 
@@ -186,16 +186,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => (string)$to,
             '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, $stopVolume, 29000),
-                self::buildExpectedStop($side, 2, $stopVolume, 29030),
-                self::buildExpectedStop($side, 3, $stopVolume, 29060),
-                self::buildExpectedStop($side, 4, $stopVolume, 29090),
-                self::buildExpectedStop($side, 5, $stopVolume, 29120),
-                self::buildExpectedStop($side, 6, $stopVolume, 29150),
-                self::buildExpectedStop($side, 7, $stopVolume, 29180),
-                self::buildExpectedStop($side, 8, $stopVolume, 29210),
-                self::buildExpectedStop($side, 9, $stopVolume, 29240),
-                self::buildExpectedStop($side, 10, $stopVolume, 29270),
+                self::buildExpectedStop($symbol, $side, 1, $stopVolume, 29000),
+                self::buildExpectedStop($symbol, $side, 2, $stopVolume, 29030),
+                self::buildExpectedStop($symbol, $side, 3, $stopVolume, 29060),
+                self::buildExpectedStop($symbol, $side, 4, $stopVolume, 29090),
+                self::buildExpectedStop($symbol, $side, 5, $stopVolume, 29120),
+                self::buildExpectedStop($symbol, $side, 6, $stopVolume, 29150),
+                self::buildExpectedStop($symbol, $side, 7, $stopVolume, 29180),
+                self::buildExpectedStop($symbol, $side, 8, $stopVolume, 29210),
+                self::buildExpectedStop($symbol, $side, 9, $stopVolume, 29240),
+                self::buildExpectedStop($symbol, $side, 10, $stopVolume, 29270),
             ]
         ];
 
@@ -212,11 +212,11 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => (string)$to,
             '$commandParams' => [CreateStopsGridCommand::ORDERS_QNT_OPTION => (string)$qnt],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, 0.001, 29000),
-                self::buildExpectedStop($side, 2, 0.001, 29060),
-                self::buildExpectedStop($side, 3, 0.001, 29120),
-                self::buildExpectedStop($side, 4, 0.001, 29180),
-                self::buildExpectedStop($side, 5, 0.001, 29240),
+                self::buildExpectedStop($symbol, $side, 1, 0.001, 29000),
+                self::buildExpectedStop($symbol, $side, 2, 0.001, 29060),
+                self::buildExpectedStop($symbol, $side, 3, 0.001, 29120),
+                self::buildExpectedStop($symbol, $side, 4, 0.001, 29180),
+                self::buildExpectedStop($symbol, $side, 5, 0.001, 29240),
             ]
         ];
 
@@ -233,16 +233,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => (string)$to,
             '$commandParams' => [],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, 0.001, 29000),
-                self::buildExpectedStop($side, 2, 0.001, 29030),
-                self::buildExpectedStop($side, 3, 0.001, 29060),
-                self::buildExpectedStop($side, 4, 0.001, 29090),
-                self::buildExpectedStop($side, 5, 0.001, 29120),
-                self::buildExpectedStop($side, 6, 0.001, 29150),
-                self::buildExpectedStop($side, 7, 0.001, 29180),
-                self::buildExpectedStop($side, 8, 0.001, 29210),
-                self::buildExpectedStop($side, 9, 0.001, 29240),
-                self::buildExpectedStop($side, 10, 0.001, 29270),
+                self::buildExpectedStop($symbol, $side, 1, 0.001, 29000),
+                self::buildExpectedStop($symbol, $side, 2, 0.001, 29030),
+                self::buildExpectedStop($symbol, $side, 3, 0.001, 29060),
+                self::buildExpectedStop($symbol, $side, 4, 0.001, 29090),
+                self::buildExpectedStop($symbol, $side, 5, 0.001, 29120),
+                self::buildExpectedStop($symbol, $side, 6, 0.001, 29150),
+                self::buildExpectedStop($symbol, $side, 7, 0.001, 29180),
+                self::buildExpectedStop($symbol, $side, 8, 0.001, 29210),
+                self::buildExpectedStop($symbol, $side, 9, 0.001, 29240),
+                self::buildExpectedStop($symbol, $side, 10, 0.001, 29270),
             ]
         ];
 
@@ -259,16 +259,16 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$to' => (string)$to,
             '$commandParams' => [],
             'expectedStopsInDb' => [
-                self::buildExpectedStop($side, 1, 0.002, 29000),
-                self::buildExpectedStop($side, 2, 0.002, 29030),
-                self::buildExpectedStop($side, 3, 0.002, 29060),
-                self::buildExpectedStop($side, 4, 0.002, 29090),
-                self::buildExpectedStop($side, 5, 0.002, 29120),
-                self::buildExpectedStop($side, 6, 0.002, 29150),
-                self::buildExpectedStop($side, 7, 0.002, 29180),
-                self::buildExpectedStop($side, 8, 0.002, 29210),
-                self::buildExpectedStop($side, 9, 0.002, 29240),
-                self::buildExpectedStop($side, 10, 0.002, 29270),
+                self::buildExpectedStop($symbol, $side, 1, 0.002, 29000),
+                self::buildExpectedStop($symbol, $side, 2, 0.002, 29030),
+                self::buildExpectedStop($symbol, $side, 3, 0.002, 29060),
+                self::buildExpectedStop($symbol, $side, 4, 0.002, 29090),
+                self::buildExpectedStop($symbol, $side, 5, 0.002, 29120),
+                self::buildExpectedStop($symbol, $side, 6, 0.002, 29150),
+                self::buildExpectedStop($symbol, $side, 7, 0.002, 29180),
+                self::buildExpectedStop($symbol, $side, 8, 0.002, 29210),
+                self::buildExpectedStop($symbol, $side, 9, 0.002, 29240),
+                self::buildExpectedStop($symbol, $side, 10, 0.002, 29270),
             ]
         ];
     }
@@ -361,10 +361,10 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
     }
 
-    private static function buildExpectedStop(Side $side, int $id, float $volume, float $price, float $tD = null): Stop
+    private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, float $tD = null): Stop
     {
         $tD = $tD ?: (float) self::DEFAULT_TRIGGER_DELTA;
 
-        return new Stop($id, $price, $volume, $tD, $side, ['uniqid' => self::UNIQID_CONTEXT]);
+        return new Stop($id, $price, $volume, $tD, $symbol, $side, ['uniqid' => self::UNIQID_CONTEXT]);
     }
 }

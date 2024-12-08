@@ -19,6 +19,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\SetLeverageRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
@@ -26,10 +27,13 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderT
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use InvalidArgumentException;
 use LogicException;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 use function end;
 use function in_array;
 use function is_array;
+use function json_decode;
 use function preg_match;
 use function print_r;
 use function sleep;
@@ -48,9 +52,40 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    /** @var string[] */
+    private array $openedPositionsSymbols;
+
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly LoggerInterface $appErrorLogger,
+        string $openedPositionsRaw,
+    ) {
         $this->apiClient = $apiClient;
+
+        $symbols = [];
+        foreach (json_decode($openedPositionsRaw) as $item) {
+            try {
+                $symbols[] = Symbol::from($item);
+            } catch (Throwable $e) {
+                $this->appErrorLogger->critical(sprintf('Error "%s" while create Symbol from string "%s"', $e->getMessage(), $item));
+            }
+        }
+
+        $this->openedPositionsSymbols = $symbols;
+    }
+
+    public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
+    {
+        $request = new SetLeverageRequest(self::ASSET_CATEGORY, $symbol, $forBuy, $forSell);
+        $this->sendRequest($request);
+    }
+
+    /**
+     * @return Symbol[]
+     */
+    public function getOpenedPositionsSymbols(): array
+    {
+        return $this->openedPositionsSymbols;
     }
 
     /**
@@ -126,7 +161,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         return new Position(
             Side::from(strtolower($apiData['side'])),
             Symbol::from($apiData['symbol']),
-            VolumeHelper::round((float)$apiData['avgPrice'], 2),
+            (float)$apiData['avgPrice'],
             (float)$apiData['size'],
             VolumeHelper::round((float)$apiData['positionValue'], 2),
             (float)$apiData['liqPrice'],

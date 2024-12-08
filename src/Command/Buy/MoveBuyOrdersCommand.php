@@ -4,6 +4,7 @@ namespace App\Command\Buy;
 
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Command\AbstractCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -15,6 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'buy:move', description: 'Move position buy-orders')]
 class MoveBuyOrdersCommand extends AbstractCommand
 {
+    use SymbolAwareCommand;
+
     public function __construct(
         private readonly BuyOrderRepository $buyOrderRepository,
         string $name = null,
@@ -25,6 +28,7 @@ class MoveBuyOrdersCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
+            ->configureSymbolArgs()
             ->addArgument('priceToBeginBefore', InputArgument::REQUIRED, 'Price from which BuyOrders must be moved')
             ->addArgument('moveOverPrice', InputArgument::REQUIRED, 'Price above|under which BuyOrders must be placed');
     }
@@ -53,6 +57,7 @@ class MoveBuyOrdersCommand extends AbstractCommand
             }
 
             $orders = $this->buyOrderRepository->findActive(
+                symbol: $this->getSymbol(),
                 side: $positionSide,
                 qbModifier: function (QueryBuilder $qb) use ($positionSide, $priceToBeginBefore) {
                     $priceField = $qb->getRootAliases()[0] . '.price';

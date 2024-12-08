@@ -80,12 +80,12 @@ class CreateStopsCommand extends AbstractCommand
 
             if ($fromPrice > $toPrice) {
                 for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
-                    $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
+                    $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
                     $volume = VolumeHelper::round($volume+$increment);
                 }
             } else {
                 for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                    $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
+                    $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
                     $volume = VolumeHelper::round($volume+$increment);
                 }
             }

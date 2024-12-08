@@ -26,4 +26,9 @@ interface PositionServiceInterface
      * @return string Created stop `orderId`
      */
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string;
+
+    /**
+     * @return Symbol[]
+     */
+    public function getOpenedPositionsSymbols(): array;
 }

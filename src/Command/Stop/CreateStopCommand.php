@@ -28,9 +28,9 @@ class CreateStopCommand extends AbstractCommand
     {
         $this
             ->configurePositionArgs()
-            ->addArgument('trigger_delta', InputArgument::REQUIRED, 'Trigger delta')
             ->addArgument('volume', InputArgument::REQUIRED, 'Stop volume')
             ->addArgument('price', InputArgument::REQUIRED, 'Trigger price')
+            ->addArgument('trigger_delta', InputArgument::OPTIONAL, 'Trigger delta', null)
         ;
     }
 
@@ -41,7 +41,7 @@ class CreateStopCommand extends AbstractCommand
         try {
             $price = $input->getArgument('price');
             $volume = $input->getArgument('volume');
-            $triggerDelta = $input->getArgument('trigger_delta') ?? null;
+            $triggerDelta = $input->getArgument('trigger_delta');
             $positionSide = $this->getPositionSide();
 
             if (!(float)$price) {
@@ -55,7 +55,7 @@ class CreateStopCommand extends AbstractCommand
                 );
             }
 
-            $this->stopService->create($positionSide, $price, $volume, $triggerDelta);
+            $this->stopService->create($this->getSymbol(), $positionSide, $price, $volume, $triggerDelta);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {

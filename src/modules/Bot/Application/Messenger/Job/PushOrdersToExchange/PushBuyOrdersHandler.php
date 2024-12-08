@@ -26,6 +26,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -59,6 +60,7 @@ use function max;
 use function min;
 use function random_int;
 use function sprintf;
+use function var_dump;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\PushBuyOrdersCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases */
@@ -163,10 +165,17 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             ? 'DESC' // To get bigger orders first (to take bigger profit by their volume)
             : 'ASC'; // Buy cheapest orders first
 
+        $profitModifier = 0.0002 * $ticker->indexPrice->value();
+        $lossModifier = 0.00036 * $ticker->indexPrice->value();
+
+        $from = $side->isShort() ? $ticker->indexPrice->value() - $profitModifier : $ticker->indexPrice->value() - $lossModifier;
+        $to = $side->isShort() ? $ticker->indexPrice->value() + $lossModifier : $ticker->indexPrice->value() + $profitModifier;
+
         return $this->buyOrderRepository->findActiveInRange(
+            symbol: $ticker->symbol,
             side: $side,
-            from: ($side->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
-            to: ($side->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
+            from: $from,
+            to: $to,
             qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
@@ -190,7 +199,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $index = $ticker->indexPrice; $last = $ticker->lastPrice;
 
         $position = $this->positionService->getPosition($symbol, $side);
+
         $orders = $this->findOrdersNearTicker($side, $ticker, $position);
+
+        if ($ticker->symbol !== Symbol::BTCUSDT && $orders) {
+            var_dump($orders);return;
+        }
 
         $ignoreBuy = null;
         if ($this->useIsLastPriceOverIndexPriceCheck && $position && $ticker->isLastPriceOverIndexPrice($side) && $last->deltaWith($index) >= 100) {
@@ -277,7 +291,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $distance = 100; if (!AppContext::isTest()) $distance += random_int(-20, 35);
                 $reopenPrice = $position->isShort() ? $index->sub($distance) : $index->add($distance);
                 $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
+                    new CreateBuyOrderEntryDto($symbol, $side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
                 );
 
                 return;
@@ -378,7 +392,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         if ($specifiedStopDistance = $buyOrder->getStopDistance()) {
             $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
-            $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
+            $this->stopService->create($position->symbol, $side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
             return;
         }
 
@@ -435,7 +449,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
         }
 
-        $this->stopService->create($side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
+        $this->stopService->create($position->symbol, $side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
     }
 
     /**
@@ -488,6 +502,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canBuy(Ticker $ticker): bool
     {
+        $modifier = $ticker->indexPrice->value() * 0.0005;
+
         $refreshSeconds = 8;
         $canBuy =
             ($this->lastCannotAffordAt === null && $this->lastCannotAffordAtPrice === null)
@@ -495,7 +511,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             || (
                 $this->lastCannotAffordAtPrice !== null
                 && !$ticker->indexPrice->isPriceInRange(
-                    PriceRange::create($this->lastCannotAffordAtPrice - 15, $this->lastCannotAffordAtPrice + 15),
+                    PriceRange::create($this->lastCannotAffordAtPrice - $modifier, $this->lastCannotAffordAtPrice + $modifier, $ticker->symbol),
                 )
             );
 

@@ -3,8 +3,11 @@
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
+
+use Throwable;
 
 use function sprintf;
 
@@ -21,13 +24,24 @@ trait SymbolAwareCommand
     {
         if ($this->symbolOptionName) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
-            if (!$symbol = Symbol::tryFrom($providedSymbolValue)) {
-                throw new InvalidArgumentException(
-                    sprintf('Invalid $%s provided ("%s" given)', $this->symbolOptionName, $providedSymbolValue),
-                );
+            try {
+                $symbol = $this->trySymbolFromValue($providedSymbolValue);
+            } catch (InvalidArgumentException) {
+                $symbol = $this->trySymbolFromValue($providedSymbolValue . 'USDT');
             }
         } else {
             $symbol = self::DEFAULT_SYMBOL;
+        }
+
+        return $symbol;
+    }
+
+    private function trySymbolFromValue(string $symbolName): Symbol
+    {
+        if (!$symbol = Symbol::tryFrom($symbolName)) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid $%s provided ("%s" given)', $this->symbolOptionName, $symbolName),
+            );
         }
 
         return $symbol;
@@ -37,7 +51,7 @@ trait SymbolAwareCommand
     {
         $this->symbolOptionName = $symbolOptionName;
 
-        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', self::DEFAULT_SYMBOL->value);
+        return $this->addOption($symbolOptionName, 's', InputOption::VALUE_REQUIRED, 'Symbol', self::DEFAULT_SYMBOL->value);
     }
 
     protected function isSymbolArgsConfigured(): bool

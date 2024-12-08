@@ -31,7 +31,7 @@ class RemoveStaleStopsCommand extends AbstractCommand
     {
         $positionSide = $this->getPositionSide();
 
-        $stopsPushedToExchange = $this->stopRepository->findPushedToExchange($positionSide);
+        $stopsPushedToExchange = $this->stopRepository->findPushedToExchange($this->getSymbol(), $positionSide);
         $activeConditionalOrders = $this->exchangeService->activeConditionalOrders($this->getSymbol());
 
         $staleStops = array_filter($stopsPushedToExchange, static function(Stop $stop) use ($activeConditionalOrders) {

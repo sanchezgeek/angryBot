@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
-use App\Domain\Price\Helper\PriceHelper;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Stop\Helper\PnlHelper;
 use Generator;
-
 use Stringable;
 
 use function ceil;
@@ -19,23 +18,23 @@ use function sprintf;
  */
 final readonly class PriceRange implements Stringable
 {
-    public function __construct(private Price $from, private Price $to)
+    public function __construct(private Price $from, private Price $to, private Symbol $symbol = Symbol::BTCUSDT)
     {
         if ($from->greaterOrEquals($to)) {
             throw new \LogicException('$from must be greater than $to.');
         }
     }
 
-    public static function create(Price|float $from, Price|float $to): self
+    public static function create(Price|float $from, Price|float $to, Symbol $symbol = Symbol::BTCUSDT): self
     {
-        $from = $from instanceof Price ? $from : Price::float($from);
-        $to = $to instanceof Price ? $to : Price::float($to);
+        $from = $symbol->makePrice(Price::toFloat($from));
+        $to = $symbol->makePrice(Price::toFloat($to));
 
         if ($from->greaterThan($to)) {
             [$from, $to] = [$to, $from];
         }
 
-        return new self($from, $to);
+        return new self($from, $to, $symbol);
     }
 
     public static function byPositionPnlRange(Position $position, float $fromPnl, float $toPnl): self
@@ -43,7 +42,7 @@ final readonly class PriceRange implements Stringable
         $fromPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $fromPnl);
         $toPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $toPnl);
 
-        return self::create($fromPrice, $toPrice);
+        return self::create($fromPrice, $toPrice, $position->symbol);
     }
 
     public function isPriceInRange(Price|float $price): bool
@@ -80,7 +79,7 @@ final readonly class PriceRange implements Stringable
     public function byStepIterator(int $step): Generator
     {
         for ($price = $this->from()->value(); $price < $this->to()->value(); $price += $step) {
-            yield Price::float($price);
+            yield $this->symbol->makePrice($price);
         }
     }
 
@@ -96,7 +95,7 @@ final readonly class PriceRange implements Stringable
 
         $resultQnt = 0;
         for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
-            yield Price::float(PriceHelper::round($price));
+            yield $this->symbol->makePrice($price);
             $resultQnt++;
         }
     }

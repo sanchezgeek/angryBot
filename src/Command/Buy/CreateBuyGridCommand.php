@@ -80,7 +80,7 @@ class CreateBuyGridCommand extends AbstractCommand
                 $rand = random_int(-$modifier, $modifier);
 
                 $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($side, $volume, $price->add($rand)->value(), $context)
+                    new CreateBuyOrderEntryDto($this->getSymbol(), $side, $volume, $price->add($rand)->value(), $context)
                 );
             }
 

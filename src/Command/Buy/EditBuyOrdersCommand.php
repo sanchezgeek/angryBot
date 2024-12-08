@@ -66,6 +66,7 @@ class EditBuyOrdersCommand extends AbstractCommand
         $action = $this->getAction();
 
         $orders = $this->buyOrderRepository->findActive(
+            symbol: $this->getSymbol(),
             side: $this->getPositionSide(),
             qbModifier: function (QueryBuilder $qb) {
                 $qb->orderBy($qb->getRootAliases()[0] . '.volume', 'ASC'); //$qb->orderBy($qb->getRootAliases()[0] . '.price', $this->getPositionSide()->isShort() ? 'ASC' : 'DESC');
@@ -83,7 +84,7 @@ class EditBuyOrdersCommand extends AbstractCommand
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
         if ($toPrice && $fromPrice) {
-            $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice));
+            $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice, $this->getSymbol()));
         }
 
         $buyOrders = $this->applyFilters($buyOrdersCollection);

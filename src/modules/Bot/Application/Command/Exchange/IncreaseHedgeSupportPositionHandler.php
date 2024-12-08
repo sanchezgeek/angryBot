@@ -81,6 +81,7 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
         $volume = VolumeHelper::round($command->qty / 13);
 
         $this->stopService->create(
+            $mainPosition->symbol,
             $mainPosition->side,
             $triggerPrice,
             $volume,

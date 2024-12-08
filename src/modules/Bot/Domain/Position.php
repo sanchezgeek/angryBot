@@ -56,17 +56,17 @@ final class Position implements Stringable
 
     public function liquidationDistance(): float
     {
-        return abs(FloatHelper::round($this->entryPrice - $this->liquidationPrice));
+        return FloatHelper::round(abs($this->entryPrice - $this->liquidationPrice), $this->symbol->pricePrecision());
     }
 
     public function liquidationPrice(): Price
     {
-        return Price::toObj($this->liquidationPrice);
+        return Price::float($this->liquidationPrice, $this->symbol->pricePrecision());
     }
 
     public function entryPrice(): Price
     {
-        return Price::toObj($this->entryPrice);
+        return Price::float($this->entryPrice, $this->symbol->pricePrecision());
     }
 
     public function setOppositePosition(Position $oppositePosition): void
@@ -154,12 +154,12 @@ final class Position implements Stringable
 
     public function isPositionInProfit(Price|float $currentPrice): bool
     {
-        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isProfitFor($this->side);
+        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isProfitFor($this->side);
     }
 
     public function isPositionInLoss(Price|float $currentPrice): bool
     {
-        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isLossFor($this->side);
+        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isLossFor($this->side);
     }
 
     public function getVolumePart(float $percent): float

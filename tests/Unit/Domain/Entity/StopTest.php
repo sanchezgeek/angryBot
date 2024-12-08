@@ -72,7 +72,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContextIfContextIsEmpty(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, []);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, []);
 
         self::assertSame([], $stop->getContext());
     }
@@ -82,7 +82,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContext(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
 
         self::assertSame($context, $stop->getContext());
     }
@@ -92,7 +92,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContextByName(Side $side, array $context, string $name, mixed $expectedValue): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
 
         self::assertSame($expectedValue, $stop->getContext($name));
         self::assertSame($expectedValue, $stop->getContext()[$name]);
@@ -120,13 +120,13 @@ final class StopTest extends TestCase
      */
     public function testGetIsWithOppositeOrder(Side $side): void
     {
-        $stopWithOpposite1 = new Stop(1, 100500, 123.456, 10, $side);
+        $stopWithOpposite1 = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side);
         self::assertTrue($stopWithOpposite1->isWithOppositeOrder());
 
-        $stopWithOpposite2 = new Stop(1, 100500, 123.456, 10, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => false]);
+        $stopWithOpposite2 = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => false]);
         self::assertTrue($stopWithOpposite2->isWithOppositeOrder());
 
-        $stopWithoutOpposite = new Stop(1, 100500, 123.456, 10, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
+        $stopWithoutOpposite = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
         self::assertFalse($stopWithoutOpposite->isWithOppositeOrder());
     }
 
@@ -135,7 +135,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsWithOppositeOrderContext(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
         $stop->setIsWithOppositeOrder();
         self::assertTrue($stop->isWithOppositeOrder());
     }
@@ -145,7 +145,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsWithoutOppositeOrderContext(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ETHUSDT, $side);
         $stop->setIsWithoutOppositeOrder();
         self::assertFalse($stop->isWithOppositeOrder());
     }
@@ -155,7 +155,7 @@ final class StopTest extends TestCase
      */
     public function testIsTakeProfitOrder(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, [self::IS_TP_CONTEXT => true]);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::IS_TP_CONTEXT => true]);
 
         self::assertTrue($stop->isTakeProfitOrder());
     }
@@ -165,7 +165,7 @@ final class StopTest extends TestCase
      */
     public function testIsNotTakeProfitOrder(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
 
         self::assertFalse($stop->isTakeProfitOrder());
     }
@@ -175,7 +175,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsTakeProfitOrder(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
         $stop->setIsTakeProfitOrder();
         self::assertTrue($stop->isTakeProfitOrder());
     }
@@ -200,6 +200,7 @@ final class StopTest extends TestCase
             $price = 29000.1,
             $volume = 0.011,
             $triggerDelta = 13.1,
+            $symbol = Symbol::BTCUSD,
             $positionSide,
             $context = [
                 'root.string.context' => 'some string context',
@@ -215,6 +216,7 @@ final class StopTest extends TestCase
             [
                 'id' => $id,
                 'positionSide' => $positionSide->value,
+                'symbol' => $symbol->value,
                 'price' => $price,
                 'volume' => $volume,
                 'triggerDelta' => $triggerDelta,
@@ -232,6 +234,7 @@ final class StopTest extends TestCase
         $data = [
             'id' => $id = 100500,
             'positionSide' => $positionSide->value,
+            'symbol' => Symbol::BTCUSDT->value,
             'price' => $price = 29000.1,
             'volume' => $volume = 0.011,
             'triggerDelta' => $triggerDelta = 13.1,
@@ -246,7 +249,7 @@ final class StopTest extends TestCase
         ];
 
         self::assertEquals(
-            new Stop($id, $price, $volume, $triggerDelta, $positionSide, $context),
+            new Stop($id, $price, $volume, $triggerDelta, Symbol::BTCUSDT, $positionSide, $context),
             Stop::fromArray($data)
         );
     }

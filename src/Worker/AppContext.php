@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Worker;
 
+use App\Bot\Domain\ValueObject\Symbol;
+
+use function json_decode;
 use function md5;
 use function substr;
 use function uniqid;
@@ -72,5 +75,20 @@ final class AppContext
     public static function isDebug(): bool
     {
         return self::$debug;
+    }
+
+    /**
+     * @return Symbol[]
+     */
+    public static function getOpenedPositions(): array
+    {
+        $items = json_decode($_ENV['OPENED_POSITIONS'] ?? '[]');
+
+        $symbols = [];
+        foreach ($items as $item) {
+            $symbols[] = Symbol::from($item);
+        }
+
+        return $symbols;
     }
 }

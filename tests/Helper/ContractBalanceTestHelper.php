@@ -63,7 +63,7 @@ class ContractBalanceTestHelper
 
         $lastPrice = $ticker->lastPrice;
         if ($positionForCalcLoss?->isPositionInLoss($lastPrice)) {
-            $priceDelta = $lastPrice->differenceWith($positionForCalcLoss->entryPrice);
+            $priceDelta = $lastPrice->differenceWith($positionForCalcLoss->entryPrice());
             $loss = $positionForCalcLoss->getNotCoveredSize() * $priceDelta->absDelta();
 
             $available = $free - $loss;

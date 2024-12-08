@@ -103,9 +103,10 @@ class EditStopsCommand extends AbstractCommand
         }
 
         if ($action === self::ACTION_REMOVE) {
-            $stops = $this->stopRepository->findAllByPositionSide($positionSide);
+            $stops = $this->stopRepository->findAllByPositionSide($this->getSymbol(), $positionSide);
         } else {
             $stops = $this->stopRepository->findActive(
+                symbol: $this->getSymbol(),
                 side: $positionSide,
                 qbModifier: static function (QueryBuilder $qb) use ($positionSide) {
                     QueryHelper::addOrder($qb, 'volume', 'ASC');
@@ -199,6 +200,7 @@ class EditStopsCommand extends AbstractCommand
 
                 // @todo some uniqueid to context
                 $this->stopService->create(
+                    $this->getSymbol(),
                     $positionSide,
                     $price->value(),
                     $total,

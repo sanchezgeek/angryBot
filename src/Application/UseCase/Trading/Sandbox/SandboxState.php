@@ -34,8 +34,8 @@ class SandboxState implements SandboxStateInterface
 
     public function __construct(Ticker $ticker, ContractBalance $contractBalance, Position ...$positions)
     {
-        $this->setLastPrice($ticker->lastPrice);
         $this->symbol = $ticker->symbol;
+        $this->setLastPrice($ticker->lastPrice);
         $this->freeBalance = $contractBalance->free;
         $this->freeBalanceForLiquidation = $contractBalance->freeForLiquidation;
 
@@ -143,7 +143,7 @@ class SandboxState implements SandboxStateInterface
 
         // + test: all free must be available
         if ($positionForCalcLoss?->isPositionInLoss($lastPrice)) {
-            $priceDelta = $lastPrice->differenceWith($positionForCalcLoss->entryPrice);
+            $priceDelta = $lastPrice->differenceWith($positionForCalcLoss->entryPrice());
             $loss = $positionForCalcLoss->getNotCoveredSize() * $priceDelta->absDelta();
 
             $available = $this->freeBalance->sub($loss)->value();
@@ -158,7 +158,8 @@ class SandboxState implements SandboxStateInterface
 
     public function setLastPrice(Price|float $price): self
     {
-        $this->lastPrice = Price::toObj($price);
+        $this->lastPrice = $this->symbol->makePrice(Price::toFloat($price));
+
         return $this;
     }
 }

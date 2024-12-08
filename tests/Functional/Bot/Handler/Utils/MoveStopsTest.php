@@ -73,21 +73,21 @@ final class MoveStopsTest extends KernelTestCase
         $this->applyDbFixtures(...array_map(static fn (Stop $s) => new StopFixture($s), $initialStops));
 
         # first run (nothing's changed)
-        ($this->handler)(new MoveStops($position->side));
+        ($this->handler)(MoveStops::ofPosition($position));
         self::seeStopsInDb(...$initialStops);
 
         # position moved
         $this->positionServiceStub->havePosition(PositionFactory::short(self::SYMBOL, $newPositionEntryPrice), true);
 
         // Act I
-        ($this->handler)(new MoveStops($position->side));
+        ($this->handler)(MoveStops::ofPosition($position));
 
         // Assert I (stops moved)
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
         $currentStops = self::getCurrentStopsSnapshot();
 
         // Act II
-        ($this->handler)(new MoveStops($position->side));
+        ($this->handler)(MoveStops::ofPosition($position));
 
         // Assert II (nothing's gonna changed)
         self::seeStopsInDb(...$currentStops);
@@ -163,7 +163,7 @@ final class MoveStopsTest extends KernelTestCase
         $result = [];
 
         foreach ($stops as $s) {
-            $stop = new Stop($s->getId(), $s->getPrice(), $s->getVolume(), $s->getTriggerDelta(), $s->getPositionSide(), $s->getContext());
+            $stop = new Stop($s->getId(), $s->getPrice(), $s->getVolume(), $s->getTriggerDelta(), $s->getSymbol(), $s->getPositionSide(), $s->getContext());
             $modifier($stop);
 
             $result[] = $stop;

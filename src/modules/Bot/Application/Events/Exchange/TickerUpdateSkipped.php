@@ -23,6 +23,6 @@ final class TickerUpdateSkipped extends LoggableEvent
         $ticker = $this->foundCachedTickerDto->ticker;
         $updatedBy = $this->foundCachedTickerDto->updatedByAccName;
 
-        return \sprintf('%s: %.2f (cache from %s)', $ticker->symbol->value, $ticker->indexPrice->value(), $updatedBy);
+        return \sprintf('%s: %s (cache from %s)', $ticker->symbol->value, $ticker->indexPrice->value(), $updatedBy);
     }
 }

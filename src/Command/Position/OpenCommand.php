@@ -24,6 +24,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\VolumeHelper;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -88,7 +89,7 @@ class OpenCommand extends AbstractCommand
 # close current opened position
         // @todo | reopen | remove all BO left from previous position? (without `uniq` or just bigger than 0.005)
 
-        $currentOpenedPosition = $this->getPosition(false);
+        $currentOpenedPosition = $this->getPosition(throwException: false);
         if ($this->paramFetcher->getBoolOption(self::REOPEN_OPTION) && ($closePositionError = $this->closeCurrentPosition($currentOpenedPosition)) !== null) {
             return $closePositionError;
         }
@@ -104,7 +105,7 @@ class OpenCommand extends AbstractCommand
         }
 
 # remove stops?
-        $existedStops = $this->stopRepository->findActive($positionSide); // @todo | or findAll?
+        $existedStops = $this->stopRepository->findActive($this->getSymbol(), $positionSide); // @todo | or findAll?
         $removeStops = $currentOpenedPosition === null /* position not opened => force remove */ || ($existedStops && $this->io->confirm('Remove existed stops?', false));
 
 # begin position open
@@ -150,7 +151,7 @@ class OpenCommand extends AbstractCommand
 
         foreach ($buyOrders as $order) {
             $this->createBuyOrderHandler->handle(
-                new CreateBuyOrderEntryDto($positionSide, $order->volume(), $order->price()->value(), $buyOrdersContext)
+                new CreateBuyOrderEntryDto($this->getSymbol(), $positionSide, $order->volume(), $order->price()->value(), $buyOrdersContext)
             );
         }
 
@@ -222,7 +223,7 @@ class OpenCommand extends AbstractCommand
             $fromPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $fromPercent);
             $toPrice = PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $toPercent);
 
-            $priceRange = PriceRange::create($fromPrice, $toPrice);
+            $priceRange = PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
 
             $stopsGrid = new OrdersGrid($priceRange);
 
@@ -230,7 +231,7 @@ class OpenCommand extends AbstractCommand
             $forVolume = $volumePart->of($position->size);
 
             foreach ($stopsGrid->ordersByQnt($forVolume, $rangeOrdersQnt) as $order) {
-                $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $stopsContext);
+                $this->stopService->create($position->symbol, $position->side, $order->price()->value(), $order->volume(), $triggerDelta, $stopsContext);
             }
         }
     }
@@ -242,7 +243,12 @@ class OpenCommand extends AbstractCommand
 
     private function getSizeArgument(): float
     {
-        $specifiedPartOfAvailableBalance = new Percent($this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT));
+        try {
+            $value = $this->paramFetcher->getPercentArgument(self::SIZE_ARGUMENT);
+            $specifiedPartOfAvailableBalance = new Percent($value);
+        } catch (Exception $e) {
+            return $this->paramFetcher->getStringArgument(self::SIZE_ARGUMENT);
+        }
 
         $contractBalance = $this->accountService->getContractWalletBalance($this->symbol->associatedCoin());
         if (!($contractBalance->available() > 0)) {

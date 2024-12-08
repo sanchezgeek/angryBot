@@ -256,7 +256,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         // what if there is network problems?
         $ticker = $this->exchangeService->ticker($symbol);
 
-        $priceDelta = $ticker->lastPrice->differenceWith($positionForCalc->entryPrice);
+        $priceDelta = $ticker->lastPrice->differenceWith($positionForCalc->entryPrice());
         $isMainPositionInLoss = $priceDelta->isLossFor($positionForCalc->side);
 
         $available = $free;

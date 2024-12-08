@@ -60,6 +60,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(nullable: true)]
     private ?float $triggerDelta = null;
 
+    #[ORM\Column(type: 'string', enumType: Symbol::class)]
+    private Symbol $symbol;
+
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
 
@@ -69,7 +72,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
+    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $price;
@@ -77,6 +80,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->triggerDelta = $triggerDelta;
         $this->positionSide = $positionSide;
         $this->context = $context;
+        $this->symbol = $symbol;
     }
 
     public function getId(): int
@@ -89,7 +93,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
      */
     public function getSymbol(): Symbol
     {
-        return Symbol::BTCUSDT;
+        return $this->symbol;
     }
 
     public function getPrice(): float
@@ -175,11 +179,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
-    public function wasPushedToExchange(Symbol $symbol, string $exchangeOrderId): self
+    public function wasPushedToExchange(string $thisExchangeOrderId): self
     {
-        $this->recordThat(new StopPushedToExchange($this, $symbol));
+        $this->recordThat(new StopPushedToExchange($this));
 
-        return $this->setExchangeOrderId($exchangeOrderId);
+        return $this->setExchangeOrderId($thisExchangeOrderId);
     }
 
     public function isCloseByMarketContextSet(): bool
@@ -227,6 +231,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return [
             'id' => $this->id,
             'positionSide' => $this->positionSide->value,
+            'symbol' => $this->symbol->value,
             'price' => $this->price,
             'volume' => $this->volume,
             'triggerDelta' => $this->triggerDelta,
@@ -241,6 +246,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
             $data['price'],
             $data['volume'],
             $data['triggerDelta'],
+            Symbol::from($data['symbol']),
             Side::from($data['positionSide']),
             $data['context']
         );

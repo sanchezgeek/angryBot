@@ -171,7 +171,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         assert(in_array($part, ['whole', 'notCovered']));
         $size = $part === 'whole' ? $position->size : $position->getNotCoveredSize();
 
-        return new Stop(self::$nextStopId++, $price, VolumeHelper::round((new Percent($positionSizePart))->of($size)), 10, $position->side);
+        return new Stop(self::$nextStopId++, $price, VolumeHelper::round((new Percent($positionSizePart))->of($size)), 10, $position->symbol, $position->side);
     }
 
     private static function activeCondOrder(Position $position, float $positionSizePart, float $price): ActiveStopOrder

@@ -17,11 +17,11 @@ final class TickerFactory
         $markPrice = $markPrice ?? $indexPrice - 10;
         $lastPrice = $lastPrice ?? $markPrice - 10;
 
-        return new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
+        return new Ticker($symbol, $markPrice, $indexPrice, $lastPrice);
     }
 
     public static function withEqualPrices(Symbol $symbol, float $price): Ticker
     {
-        return new Ticker($symbol, Price::float($price), Price::float($price), Price::float($price));
+        return new Ticker($symbol, $price, $price, $price);
     }
 }

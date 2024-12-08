@@ -34,6 +34,7 @@ final class FixupOrdersDoublingHandler
             : $this->stopRepository;
 
         $orders = $repository->findActive(
+            symbol: $message->symbol,
             side: $message->positionSide,
 //            exceptOppositeOrders: true,
             qbModifier: static fn (QueryBuilder $qb) => $qb->addOrderBy(new OrderBy($qb->getRootAliases()[0] . '.price', 'desc'))

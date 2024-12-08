@@ -67,9 +67,7 @@ final class PnlHelper
 
         $delta = self::convertPnlPercentOnPriceToAbsDelta($percent, $fromPrice);
 
-        return Price::float(
-            $fromPrice + ($sign * $delta)
-        );
+        return Price::float($fromPrice + ($sign * $delta), $position->symbol->pricePrecision());
     }
 
     protected static function getPositionLeverage(?Position $position = null): float

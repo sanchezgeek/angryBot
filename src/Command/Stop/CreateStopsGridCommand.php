@@ -53,7 +53,6 @@ class CreateStopsGridCommand extends AbstractCommand
     public const FOR_VOLUME_OPTION = 'forVolume';
     public const MODE_OPTION = 'mode';
     public const ORDERS_QNT_OPTION = 'ordersQnt';
-    public const PRICE_STEP_OPTION = 'priceStep';
     public const TRIGGER_DELTA_OPTION = 'triggerDelta';
 
     private const DEFAULT_ORDERS_QNT = '10';
@@ -66,7 +65,6 @@ class CreateStopsGridCommand extends AbstractCommand
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-            ->addOption(self::PRICE_STEP_OPTION, '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
             ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta', self::DEFAULT_TRIGGER_DELTA)
             ->configureStopAdditionalContexts()
         ;
@@ -119,7 +117,7 @@ class CreateStopsGridCommand extends AbstractCommand
         }
 
         $alreadyStopped = 0;
-        $stops = new StopsCollection(...$this->stopRepository->findActive($positionSide));
+        $stops = new StopsCollection(...$this->stopRepository->findActive($this->getSymbol(), $positionSide));
         $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
@@ -132,7 +130,7 @@ class CreateStopsGridCommand extends AbstractCommand
         }
 
         foreach ($orders as $order) {
-            $this->stopService->create($positionSide, $order->price()->value(), $order->volume(), $triggerDelta, $context);
+            $this->stopService->create($this->getSymbol(), $positionSide, $order->price()->value(), $order->volume(), $triggerDelta, $context);
         }
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));

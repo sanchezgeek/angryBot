@@ -144,7 +144,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
                     $stopPriceDistance = FloatHelper::modify($stopPriceDistance, 0.15, 0.05);
                     $stopPrice = $position->isShort() ? $position->liquidationPrice()->sub($stopPriceDistance) : $position->liquidationPrice()->add($stopPriceDistance);
-                    $this->stopService->create($position->side, $stopPrice, $stopQty, $triggerDelta);
+                    $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta);
                 }
             }
         } elseif (
@@ -163,7 +163,7 @@ final class CheckPositionIsUnderLiquidationHandler
     private function getStopsVolumeBeforeLiquidation(Position $position, Ticker $ticker): float
     {
         $positionSide = $position->side;
-        $liquidation = Price::float($position->liquidationPrice);
+        $liquidation = $position->liquidationPrice();
         $criticalDeltaBeforeLiquidation = $this->getStopCriticalDeltaBeforeLiquidation($ticker, $positionSide);
 
         $indexPrice = $ticker->indexPrice; $markPrice = $ticker->markPrice;
@@ -171,9 +171,10 @@ final class CheckPositionIsUnderLiquidationHandler
         $priceRangeToFindExistedStops = PriceRange::create(
             $position->isShort() ? $liquidation->sub($criticalDeltaBeforeLiquidation) : $liquidation->add($criticalDeltaBeforeLiquidation),
             $position->isShort() ? min($indexPrice->value(), $markPrice->value()) : max($indexPrice->value(), $markPrice->value()),
+            $position->symbol
         );
 
-        $delayedStops = $this->stopRepository->findActive(side: $positionSide, qbModifier: function (QueryBuilder $qb) use ($priceRangeToFindExistedStops) {
+        $delayedStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $positionSide, qbModifier: function (QueryBuilder $qb) use ($priceRangeToFindExistedStops) {
             $priceField = $qb->getRootAliases()[0] . '.price';
             $from = $priceRangeToFindExistedStops->from()->value();
             $to = $priceRangeToFindExistedStops->to()->value();

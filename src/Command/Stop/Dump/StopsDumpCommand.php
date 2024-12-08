@@ -63,11 +63,12 @@ class StopsDumpCommand extends AbstractCommand
         $filepath = sprintf('%s/%s.%s.json', $dir, $positionSide->value, $this->clock->now()->format('Y-m-d_H:i:s'));
 
         if ($mode === self::MODE_ALL) {
-            $stops = $this->stopRepository->findAllByPositionSide($positionSide);
+            $stops = $this->stopRepository->findAllByPositionSide($this->getSymbol(), $positionSide);
         }
 
         if ($mode === self::MODE_ACTIVE) {
             $stops = $this->stopRepository->findActive(
+                symbol: $this->getSymbol(),
                 side: $positionSide,
                 qbModifier: function (QueryBuilder $qb) use ($positionSide) {
                     $priceField = $qb->getRootAliases()[0] . '.price';

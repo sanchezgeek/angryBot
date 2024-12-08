@@ -61,6 +61,9 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     #[ORM\Column]
     private float $volume;
 
+    #[ORM\Column(type: 'string', enumType: Symbol::class)]
+    private Symbol $symbol;
+
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
 
@@ -72,13 +75,14 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     private bool $isOppositeStopExecuted = false;
 
-    public function __construct(int $id, Price|float $price, float $volume, Side $positionSide, array $context = [])
+    public function __construct(int $id, Price|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = FloatHelper::round(Price::toFloat($price));
         $this->volume = $volume;
         $this->positionSide = $positionSide;
         $this->context = $context;
+        $this->symbol = $symbol;
     }
 
     public function getId(): int
@@ -91,7 +95,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
      */
     public function getSymbol(): Symbol
     {
-        return Symbol::BTCUSDT;
+        return $this->symbol;
     }
 
     public function getPositionSide(): Side

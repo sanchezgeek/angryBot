@@ -100,7 +100,7 @@ final class FixMainHedgePositionListener
         $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
         $distance = self::SUPPLY_STOP_DISTANCE + random_int(-150, 30);
         $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance;
-        $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
+        $this->stopService->create($hedge->mainPosition->symbol, $hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
 
         var_dump('supply stop created');
     }

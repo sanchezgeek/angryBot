@@ -8,7 +8,6 @@ use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -36,6 +35,7 @@ final class CreateOppositeBuyOrdersListener
     public function __invoke(StopPushedToExchange $event): void
     {
         $stop = $event->stop;
+        $symbol = $stop->getSymbol();
         if (!$stop->isWithOppositeOrder()) {
             return;
         }
@@ -57,53 +57,24 @@ final class CreateOppositeBuyOrdersListener
         ];
 
         $orders = [
-            ['volume' => $stopVolume >= 0.006 ? VolumeHelper::round($stopVolume / 3) : $stopVolume, 'price' => $triggerPrice]
+            ['volume' => $stopVolume >= 0.006 ? VolumeHelper::round($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
         ];
 
         if ($stopVolume >= 0.006) {
             $orders[] = [
                 'volume' => VolumeHelper::round($stopVolume / 4.5),
-                'price' => PriceHelper::round($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8),
+                'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8)->value(),
             ];
             $orders[] = [
                 'volume' => VolumeHelper::round($stopVolume / 3.5),
-                'price' => PriceHelper::round($side->isShort() ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2),
+                'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2)->value(),
             ];
         }
 
         foreach ($orders as $order) {
             $this->createBuyOrderHandler->handle(
-                new CreateBuyOrderEntryDto($side, $order['volume'], $order['price'], $context)
+                new CreateBuyOrderEntryDto($symbol, $side, $order['volume'], $order['price'], $context)
             );
         }
     }
 }
-
-//        private const SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA = 5;
-
-//        $isHedge = ($oppositePosition = $this->positionService->getOppositePosition($position)) !== null;
-//        $isHedge = false;
-//        if ($isHedge) {
-//            $hedge = Hedge::create($position, $oppositePosition);
-//            // If this is support position, we need to make sure that we can afford opposite buy after stop (which was added, for example, by mistake)
-//            if (
-//                $hedge->isSupportPosition($position)
-//                && $hedge->needIncreaseSupport()
-//            ) {
-//                $vol = VolumeHelper::round($volume / 3);
-//                if ($vol > 0.005) $vol = 0.005;
-//
-//                $price = $oppositePosition->side === Side::Sell ? ($triggerPrice - 3) : ($triggerPrice + 3);
-//                $this->stopService->create($oppositePosition->side, $price, $vol, self::SL_SUPPORT_FROM_MAIN_HEDGE_POSITION_TRIGGER_DELTA, ['asSupportFromMainHedgePosition' => true, 'createdWhen' => 'tryGetHelpFromHandler']);
-//            } elseif (
-//                $hedge->isMainPosition($position)
-//                && $ticker->isIndexAlreadyOverStop($position->side, $position->entryPrice) // MainPosition now in loss
-//                && !$hedge->needKeepSupportSize()
-//            ) {
-//                // @todo Need async job instead (to check $hedge->needKeepSupportSize() in future, if now still need keep support size)
-//                // Or it can be some problems at runtime...Need async job
-//                $this->hedgeService->createStopIncrementalGridBySupport($hedge, $stop);
-//            }
-//            // @todo Придумать нормульную логику (доделать проверку баланса и необходимость в фиксации main-позиции?)
-//            // Пока что добавил отлов CannotAffordOrderCost в PushBuyOrdersHandler при попытке купить
-//        }
