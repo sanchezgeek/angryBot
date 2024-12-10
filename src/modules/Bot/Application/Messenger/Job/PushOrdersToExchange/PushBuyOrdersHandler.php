@@ -56,6 +56,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
 use function abs;
+use function array_map;
 use function max;
 use function min;
 use function random_int;
@@ -203,7 +204,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $orders = $this->findOrdersNearTicker($side, $ticker, $position);
 
         if ($ticker->symbol !== Symbol::BTCUSDT && $orders) {
-            var_dump($orders);return;
+            var_dump(array_map(static fn(BuyOrder $order) => $order->info(), $orders));
         }
 
         $ignoreBuy = null;

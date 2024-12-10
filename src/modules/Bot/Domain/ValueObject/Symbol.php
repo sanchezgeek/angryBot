@@ -24,6 +24,8 @@ enum Symbol: string
     case LINKUSDT = 'LINKUSDT';
     case WIFUSDT = 'WIFUSDT';
     case OPUSDT = 'OPUSDT';
+    case DOGEUSDT = 'DOGEUSDT';
+    case SUIUSDT = 'SUIUSDT';
 
     private const ASSOCIATED_COINS = [
         self::BTCUSDT->value => Coin::USDT,
@@ -36,6 +38,8 @@ enum Symbol: string
         self::LINKUSDT->value => Coin::USDT,
         self::WIFUSDT->value => Coin::USDT,
         self::OPUSDT->value => Coin::USDT,
+        self::DOGEUSDT->value => Coin::USDT,
+        self::SUIUSDT->value => Coin::USDT,
     ];
 
     private const ASSOCIATED_CATEGORIES = [
@@ -49,6 +53,8 @@ enum Symbol: string
         self::LINKUSDT->value => AssetCategory::linear,
         self::WIFUSDT->value => AssetCategory::linear,
         self::OPUSDT->value => AssetCategory::linear,
+        self::DOGEUSDT->value => AssetCategory::linear,
+        self::SUIUSDT->value => AssetCategory::linear,
     ];
 
     private const TRADING_PRICE_PRECISION = [
@@ -63,6 +69,8 @@ enum Symbol: string
         self::SOLUSDT->value => 3,
         self::WIFUSDT->value => 4,
         self::OPUSDT->value => 4,
+        self::DOGEUSDT->value => 5,
+        self::SUIUSDT->value => 5,
     ];
 
     private const STOP_TRIGGER_DELTA = [

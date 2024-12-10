@@ -147,7 +147,7 @@ final class TryReleaseActiveOrdersHandler
             $this->stopRepository->save($existedStop);
             // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?
         } else {
-            $this->stopService->create($symbol, $side, $exchangeStop->triggerPrice, $exchangeStop->volume, $existedStop->getSymbol()->stopDefaultTriggerDelta(), [
+            $this->stopService->create($symbol, $side, $exchangeStop->triggerPrice, $exchangeStop->volume, $exchangeStop->symbol->stopDefaultTriggerDelta(), [
                 'fromExchangeWithoutExistedStop' => true
             ]);
         }

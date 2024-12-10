@@ -51,7 +51,7 @@ trait SymbolAwareCommand
     {
         $this->symbolOptionName = $symbolOptionName;
 
-        return $this->addOption($symbolOptionName, 's', InputOption::VALUE_REQUIRED, 'Symbol', self::DEFAULT_SYMBOL->value);
+        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', self::DEFAULT_SYMBOL->value);
     }
 
     protected function isSymbolArgsConfigured(): bool

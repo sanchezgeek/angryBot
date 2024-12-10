@@ -15,11 +15,16 @@ use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Output\Table\Dto\DataRow;
+use App\Output\Table\Dto\SeparatorRow;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+
+use function array_merge;
+use function sprintf;
 
 #[AsCommand(name: 'p:opened')]
 class AllOpenedPositionsInfoCommand extends AbstractCommand
@@ -35,17 +40,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $rows = [];
         foreach ($symbols as $symbol) {
-            if ($row = $this->posInfo($symbol)) {
-                $rows[] = $row;
+            if ($symbolRows = $this->posInfo($symbol)) {
+                $rows = array_merge($rows, $symbolRows);
             }
         }
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader([
                 'symbol',
-                'ticker.last',
-                'entry',
-                'size',
+                'entry / size',
                 'liq.price',
                 'liq.price - entry',
                 '=> % of entry',
@@ -55,38 +58,59 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ])
             ->withRows(...$rows)
             ->build()
+            ->setStyle('box-double')
             ->render();
 
         return Command::SUCCESS;
     }
 
-    private function posInfo(Symbol $symbol): ?DataRow
+    /**
+     * @return DataRow|SeparatorRow[]
+     */
+    private function posInfo(Symbol $symbol): array
     {
+        $result = [];
+
         $positions = $this->positionService->getPositions($symbol);
         $ticker = $this->exchangeService->ticker($symbol);
 
         if (!$positions) {
-            return null;
+            return [];
         }
 
         $hedge = $positions[0]->getHedge();
-        $mainPosition = $hedge?->mainPosition ?? $positions[0];
+        $main = $hedge?->mainPosition ?? $positions[0];
 
-        $liquidationDistance = $mainPosition->liquidationDistance();
-        $distanceWithLiquidation = $mainPosition->priceDistanceWithLiquidation($ticker);
+        $liquidationDistance = $main->liquidationDistance();
+        $distanceWithLiquidation = $main->priceDistanceWithLiquidation($ticker);
 
-        return DataRow::default([
-            $symbol->value,
-            (string)$ticker->lastPrice->value(),
-            $mainPosition->entryPrice(),
-            $mainPosition->size,
-            $mainPosition->liquidationPrice(),
+        $result[] = DataRow::default([
+            sprintf('%10s: %8s | %8s | %8s', $symbol->value, $ticker->lastPrice->value(), $ticker->markPrice, $ticker->indexPrice),
+            sprintf('%13s   / %5s', $main->entryPrice(), $main->size),
+            $main->liquidationPrice(),
             $liquidationDistance,
-            (string)Percent::fromPart($liquidationDistance / $mainPosition->entryPrice, false),
+            (string)Percent::fromPart($liquidationDistance / $main->entryPrice, false),
             $distanceWithLiquidation,
             (string)Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false),
-            $mainPosition->unrealizedPnl,
+            $main->unrealizedPnl,
         ]);
+
+        if ($support = $main->getHedge()?->supportPosition) {
+            $result[] = DataRow::default([
+                '',
+                sprintf('sup.: %7s   / %5s', $support->entryPrice(), $support->size),
+                '',
+                '',
+                '',
+                '',
+                '',
+                $support->unrealizedPnl
+            ]);
+        }
+
+        $result[] = new SeparatorRow();
+
+        return $result;
     }
 
     /**

@@ -68,7 +68,7 @@ final class SchedulerFactory
 
         foreach (AppContext::getOpenedPositions() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
 
         return $items;
