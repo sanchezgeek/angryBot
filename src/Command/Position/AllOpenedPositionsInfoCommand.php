@@ -38,12 +38,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $symbols = $this->positionService->getOpenedPositionsSymbols();
         $symbols[] = Symbol::BTCUSDT;
 
+        $unrealised = 0;
         $rows = [];
         foreach ($symbols as $symbol) {
-            if ($symbolRows = $this->posInfo($symbol)) {
+            if ($symbolRows = $this->posInfo($symbol, $unrealised)) {
                 $rows = array_merge($rows, $symbolRows);
             }
         }
+
+        $rows[] = DataRow::default([$unrealised]);
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader([
@@ -67,7 +70,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /**
      * @return DataRow|SeparatorRow[]
      */
-    private function posInfo(Symbol $symbol): array
+    private function posInfo(Symbol $symbol, float &$unrealized): array
     {
         $result = [];
 
@@ -94,6 +97,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             (string)Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false),
             $main->unrealizedPnl,
         ]);
+
+        $unrealized += $main->unrealizedPnl;
 
 //        if ($support = $main->getHedge()?->supportPosition) {
 //            $result[] = DataRow::default([
