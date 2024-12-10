@@ -95,18 +95,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $main->unrealizedPnl,
         ]);
 
-        if ($support = $main->getHedge()?->supportPosition) {
-            $result[] = DataRow::default([
-                '',
-                sprintf('sup.: %7s   / %5s', $support->entryPrice(), $support->size),
-                '',
-                '',
-                '',
-                '',
-                '',
-                $support->unrealizedPnl
-            ]);
-        }
+//        if ($support = $main->getHedge()?->supportPosition) {
+//            $result[] = DataRow::default([
+//                '',
+//                sprintf('sup.: %7s   / %5s', $support->entryPrice(), $support->size),
+//                '',
+//                '',
+//                '',
+//                '',
+//                '',
+//                $support->unrealizedPnl
+//            ]);
+//        }
 
         $result[] = new SeparatorRow();
 
