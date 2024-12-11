@@ -62,7 +62,7 @@ class CreateBuyGridCommand extends AbstractCommand
         try {
             $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
-            $step = $this->paramFetcher->getIntArgument('step');
+            $step = $this->paramFetcher->getFloatArgument('step');
             $priceRange = $this->getPriceRange();
 
             $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('buy-grid')];

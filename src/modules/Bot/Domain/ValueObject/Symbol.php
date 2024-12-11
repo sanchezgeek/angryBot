@@ -7,9 +7,11 @@ namespace App\Bot\Domain\ValueObject;
 use App\Domain\Coin\Coin;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceFactory;
+use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 
 use function pow;
+use function strlen;
 
 enum Symbol: string
 {
@@ -64,11 +66,40 @@ enum Symbol: string
         self::ADAUSDT->value => 4,
         self::TONUSDT->value => 4,
         self::ETHUSDT->value => 2,
-        self::ETHUSDT->value => 2,
         self::XRPUSDT->value => 4,
         self::SOLUSDT->value => 3,
         self::WIFUSDT->value => 4,
         self::OPUSDT->value => 4,
+        self::DOGEUSDT->value => 5,
+        self::SUIUSDT->value => 5,
+    ];
+
+    private const MIN_ORDER_QTY = [
+        self::BTCUSDT->value => 0.001,
+        self::BTCUSD->value => 1,
+        self::LINKUSDT->value => 0.1,
+        self::ADAUSDT->value => 1,
+        self::TONUSDT->value => 0.1,
+        self::ETHUSDT->value => 0.01,
+        self::XRPUSDT->value => 1,
+        self::SOLUSDT->value => 0.1,
+        self::WIFUSDT->value => 1,
+        self::OPUSDT->value => 0.1,
+        self::DOGEUSDT->value => 1,
+        self::SUIUSDT->value => 10,
+    ];
+
+    private const MIN_NOTIONAL_ORDER_VALUE = [
+        self::BTCUSDT->value => 5,
+        self::BTCUSD->value => 5,
+        self::LINKUSDT->value => 5,
+        self::ADAUSDT->value => 5,
+        self::TONUSDT->value => 5,
+        self::ETHUSDT->value => 5,
+        self::XRPUSDT->value => 5,
+        self::SOLUSDT->value => 5,
+        self::WIFUSDT->value => 5,
+        self::OPUSDT->value => 5,
         self::DOGEUSDT->value => 5,
         self::SUIUSDT->value => 5,
     ];
@@ -116,5 +147,38 @@ enum Symbol: string
         $factory = new PriceFactory($this);
 
         return $factory->make($value);
+    }
+
+    public function minOrderQty(): float|int
+    {
+        return self::MIN_ORDER_QTY[$this->value];
+    }
+
+    public function minNotionalOrderValue(): float|int
+    {
+        return self::MIN_NOTIONAL_ORDER_VALUE[$this->value];
+    }
+
+    public function contractSizePrecision(): ?int
+    {
+        $minOrderQty = $this->minOrderQty();
+
+        if (is_int($minOrderQty)) {
+            return 0;
+        }
+
+        $parts = explode('.', (string)$minOrderQty);
+
+        return strlen($parts[1]);
+    }
+
+    public function roundVolume(float $volume): float
+    {
+        $value = VolumeHelper::forceRoundUp($volume, $this->contractSizePrecision());
+        if ($value < $this->minOrderQty()) {
+            $value = $this->minOrderQty();
+        }
+
+        return $value;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Worker\AppContext;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
@@ -34,6 +35,25 @@ trait SymbolAwareCommand
         }
 
         return $symbol;
+    }
+
+    /**
+     * @return Symbol[]
+     * @throws Exception
+     */
+    private function getSymbols(): array
+    {
+        try {
+            $symbol = $this->getSymbol();
+        } catch (Exception $e) {
+            $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
+            if ($providedSymbolValue === 'all') {
+                return AppContext::getOpenedPositions();
+            }
+            throw $e;
+        }
+
+        return [$symbol];
     }
 
     private function trySymbolFromValue(string $symbolName): Symbol

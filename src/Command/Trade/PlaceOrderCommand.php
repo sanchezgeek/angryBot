@@ -3,6 +3,7 @@
 namespace App\Command\Trade;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
@@ -11,9 +12,14 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Value\Percent\Percent;
+use App\Helper\OutputHelper;
+use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -22,10 +28,14 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
 use function implode;
 use function in_array;
+use function is_float;
 use function sprintf;
+use function str_contains;
+use function str_replace;
 
 #[AsCommand(name: 'order:place')]
 class PlaceOrderCommand extends AbstractCommand
@@ -64,17 +74,38 @@ class PlaceOrderCommand extends AbstractCommand
         $type = $this->getType();
 
         if ($type === self::MARKET_BUY) {
-            $symbol = $this->getSymbol();
             $side = $this->getPositionSide();
-            $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
+            $symbols = $this->getSymbols();
 
-            $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbol->value, $side->title());
+            $additional = null;
+            try {
+                $volume = $this->paramFetcher->getFloatArgument(self::VOLUME_ARGUMENT);
+            } catch (Exception $e) {
+                $volumeDefinition = $this->paramFetcher->getStringArgument(self::VOLUME_ARGUMENT);
+                if (str_contains($volumeDefinition, 'ofPosition')) {
+                    $additional = 'ofPosition';
+                    $volumePartDefinition = str_replace('ofPosition', '', $volumeDefinition);
+                    $volume = Percent::string($volumePartDefinition);
+                } else {
+                    throw $e;
+                }
+            }
+
+            if (count($symbols) > 1 && !$volume instanceof Percent) {
+                throw new InvalidArgumentException('Invalid usage: when more than one symbol specified, it must be Percent of current position volume as `volume` argument');
+            }
+
+            if (count($symbols) > 1) {
+                $msg = sprintf('You\'re about to buy %s%s on %d symbols". Continue?', $volume, $additional ?? '', count($symbols));
+            } else {
+                $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbols[0]->value, $side->title());
+            }
 
             if (!$this->io->confirm($msg)) {
                 return Command::FAILURE;
             }
 
-            $this->tradeService->marketBuy($symbol, $side, $volume);
+            $this->doMarketBuy($symbols, $side, $volume, $additional);
         }
 
         if ($type === self::MARKET_CLOSE) {
@@ -91,7 +122,7 @@ class PlaceOrderCommand extends AbstractCommand
             $msg = sprintf(
                 'You\'re about to close %s of "%s" position. Continue?',
                 $positionSizePart !== null ? sprintf('%.1f%%', $positionSizePart) : $volume,
-                $position->getCaption()
+                $position->getCaption(),
             );
 
             if (!$this->io->confirm($msg)) {
@@ -153,6 +184,77 @@ class PlaceOrderCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
+    /**
+     * @param Symbol[] $symbols
+     */
+    private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, string $mode = null): void
+    {
+        if ($mode === 'ofPosition' && !$volume instanceof Percent) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid usage: when selected `%s` mode, $volume argument must be of type Percent', $mode)
+            );
+        }
+
+        $orders = [];
+        foreach ($symbols as $symbol) {
+            $ticker = $this->exchangeService->ticker($symbol);
+            if (is_float($volume)) {
+                $orders[] = new ExchangeOrder($symbol, $volume, $ticker->indexPrice, true);
+            } else {
+                if ($mode === 'ofPosition') {
+                    if (!($position = $this->positionService->getPosition($symbol, $positionSide))) {
+                        continue;
+                    }
+
+                    $qtyCalculated = $volume->of($position->size);
+                    $qtyRounded = $symbol->roundVolume($qtyCalculated);
+
+                    $orders[] = new ExchangeOrder($symbol, $qtyRounded, $ticker->indexPrice, true);
+                } else {
+                    throw new InvalidArgumentException(sprintf('Unrecognized option `%s`', $mode ?? ''));
+                }
+            }
+        }
+
+        if ($orders) {
+            foreach ($orders as $order) {
+                if ($order->getProvidedVolume() !== $order->getVolume()) {
+                    if (!$this->io->confirm(
+                        sprintf(
+                            'Calculated volume for "%s" not equals initially provided one. Calculated: %s, initial: %s. Are you sure you want to buy %s on %s %s?',
+                            $order->getSymbol()->value,
+                            $order->getVolume(),
+                            $order->getProvidedVolume(),
+                            $order->getVolume(),
+                            $order->getSymbol()->value,
+                            $positionSide->title()
+                        )
+                    )) {
+                        throw new Exception('OK!');
+                    }
+                }
+            }
+
+            OutputHelper::print(sprintf('You attempt to buy:'), '');
+            foreach ($orders as $order) {
+                OutputHelper::print(sprintf('%s %s: %s', $order->getSymbol()->value, $positionSide->title(), $order->getVolume()));
+            }
+            OutputHelper::print('');
+
+            if (!$this->io->confirm('Sure?', false)) {
+                throw new Exception('OK!');
+            }
+
+            foreach ($orders as $order) {
+                try {
+                    $this->tradeService->marketBuy($order->getSymbol(), $positionSide, $order->getVolume());
+                } catch (Throwable $e) {
+                    OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $order->getSymbol()->value, $positionSide->title()));
+                }
+            }
+        }
+    }
+
     private function getType(): string
     {
         $mode = $this->paramFetcher->getStringOption(self::TYPE_OPTION);
@@ -188,6 +290,7 @@ class PlaceOrderCommand extends AbstractCommand
         private readonly StopServiceInterface $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

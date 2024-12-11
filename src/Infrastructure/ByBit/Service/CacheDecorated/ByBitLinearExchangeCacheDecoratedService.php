@@ -6,6 +6,7 @@ namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
+use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -165,6 +166,11 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
         $this->exchangeService->closeActiveConditionalOrder($order);
+    }
+
+    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto
+    {
+        return $this->exchangeService->getInstrumentInfo($symbol);
     }
 
     private function tickerCacheKey(Symbol $symbol): string

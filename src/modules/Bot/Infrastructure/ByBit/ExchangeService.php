@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Infrastructure\ByBit;
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
+use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -15,6 +16,7 @@ use App\Domain\Price\PriceRange;
 use App\Helper\Json;
 use App\Infrastructure\Cache\TickersCache;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
+use Exception;
 use Lin\Bybit\BybitLinear;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -239,5 +241,8 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 //
 //        return $this->tickersHotCache[$symbol->value]->get();
 //    }
-
+    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto
+    {
+        throw new Exception('RIP');
+    }
 }

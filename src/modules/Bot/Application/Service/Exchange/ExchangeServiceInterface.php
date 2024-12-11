@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange;
 
+use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -19,4 +20,6 @@ interface ExchangeServiceInterface
     public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array;
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void;
+
+    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto;
 }

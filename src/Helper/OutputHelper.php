@@ -9,8 +9,10 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Worker\AppContext;
+use JsonSerializable;
 
 use function is_array;
+use function is_object;
 use function json_encode;
 use function sprintf;
 use function var_dump;
@@ -44,7 +46,7 @@ class OutputHelper
     public static function print(mixed ...$data): void
     {
         foreach ($data as $item) {
-            if (is_array($item)) {
+            if (is_array($item) || $item instanceof JsonSerializable || is_object($item)) {
                 echo json_encode($item, JSON_PRETTY_PRINT);
                 return;
             }

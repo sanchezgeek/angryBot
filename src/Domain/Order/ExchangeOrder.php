@@ -9,23 +9,38 @@ use App\Domain\Price\Price;
 use DomainException;
 
 use function floor;
+use function var_dump;
 
 final class ExchangeOrder // implements OrderInterface
 {
     private Symbol $symbol;
     private float $volume;
+    private float $providedVolume;
     private Price $price;
 
-    public function __construct(Symbol $symbol, float $volume, Price|float $price)
+    public function __construct(Symbol $symbol, float $volume, Price|float $price, bool $roundValueToMinNotional = false)
     {
         $this->symbol = $symbol;
-        $this->volume = $volume;
         $this->price = $symbol->makePrice(Price::toFloat($price));
+        $this->providedVolume = $volume;
+
+        $value = $volume * $this->price->value();
+        if ($roundValueToMinNotional && $value < ($minNotionalValue = $symbol->minNotionalOrderValue())) {
+            $volumeCalculated = $minNotionalValue / $this->price->value();
+            $volume = $symbol->roundVolume($volumeCalculated);
+        }
+
+        $this->volume = $volume;
     }
 
     public function getSymbol(): Symbol
     {
         return $this->symbol;
+    }
+
+    public function getProvidedVolume(): float
+    {
+        return $this->providedVolume;
     }
 
     public function getVolume(): float
