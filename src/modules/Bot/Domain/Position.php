@@ -61,12 +61,12 @@ final class Position implements Stringable
 
     public function liquidationPrice(): Price
     {
-        return Price::float($this->liquidationPrice, $this->symbol->pricePrecision());
+        return $this->symbol->makePrice($this->liquidationPrice);
     }
 
     public function entryPrice(): Price
     {
-        return Price::float($this->entryPrice, $this->symbol->pricePrecision());
+        return $this->symbol->makePrice($this->entryPrice);
     }
 
     public function setOppositePosition(Position $oppositePosition): void
@@ -127,7 +127,7 @@ final class Position implements Stringable
             );
         }
 
-        return VolumeHelper::round($hedge->mainPosition->size - $hedge->supportPosition->size);
+        return $this->symbol->roundVolume($hedge->mainPosition->size - $hedge->supportPosition->size);
     }
 
     public function getCaption(): string

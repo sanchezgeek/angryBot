@@ -15,8 +15,11 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -39,6 +42,8 @@ use function uuid_create;
  * @group liquidation
  *
  * @covers CheckPositionIsUnderLiquidationHandler
+ *
+ * @group liquidation
  */
 class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 {
@@ -50,8 +55,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
 
     private const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
-    private const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
-    private const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
+//    private const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
+//    private const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
 
     protected ExchangeServiceInterface $exchangeServiceMock;
     protected PositionServiceInterface $positionServiceStub;
@@ -93,16 +98,20 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     public function addStopTestCases(): iterable
     {
         # CONST
-        $additionalStopDistanceWithLiquidation = self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
-        $additionalStopTriggerDelta = $additionalStopDistanceWithLiquidation > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
-
         $symbol = Symbol::BTCUSDT;
         $markPrice = 35000;
         $ticker = TickerFactory::create($symbol, $markPrice - 20, $markPrice, $markPrice - 20);
 
+
+        $additionalStopDistanceWithLiquidation = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, $ticker->indexPrice), 0.1);
+//        $additionalStopTriggerDelta = $additionalStopDistanceWithLiquidation > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
+        $additionalStopTriggerDelta = FloatHelper::modify($symbol->stopDefaultTriggerDelta() * 10, 0.1);
+
+        $checkStopsOnDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CHECK_STOPS_ON_DISTANCE, $ticker->indexPrice), 0.1);
+
         # BTCUSDT SHORT
-        $liquidationPrice = $markPrice + self::CHECK_STOPS_ON_DISTANCE;
-        $additionalStopPrice = PriceHelper::round($liquidationPrice - $additionalStopDistanceWithLiquidation);
+        $liquidationPrice = $symbol->makePrice($markPrice + $checkStopsOnDistance);
+        $additionalStopPrice = $liquidationPrice->sub($additionalStopDistanceWithLiquidation);
         $delayedStopsPercent = 4; $pushedStopsPercent = 7;
         $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
 
@@ -132,8 +141,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         # BTCUSDT LONG
-        $liquidationPrice = $markPrice - self::CHECK_STOPS_ON_DISTANCE;
-        $additionalStopPrice = PriceHelper::round($liquidationPrice + $additionalStopDistanceWithLiquidation);
+        $liquidationPrice = $symbol->makePrice($markPrice - $checkStopsOnDistance);
+        $additionalStopPrice = $liquidationPrice->add($additionalStopDistanceWithLiquidation);
         $delayedStopsPercent = 6; $pushedStopsPercent = 4;
         $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPercent - $pushedStopsPercent;
 
@@ -166,12 +175,14 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     }
 
     private static int $nextStopId = 1;
-    private static function delayedStop(Position $position, float $positionSizePart, float $price, string $part = 'whole'): Stop
+    private static function delayedStop(Position $position, float $positionSizePart, Price|float $price, string $part = 'whole'): Stop
     {
+        $price = Price::toFloat($price);
+
         assert(in_array($part, ['whole', 'notCovered']));
         $size = $part === 'whole' ? $position->size : $position->getNotCoveredSize();
 
-        return new Stop(self::$nextStopId++, $price, VolumeHelper::round((new Percent($positionSizePart))->of($size)), 10, $position->symbol, $position->side);
+        return new Stop(self::$nextStopId++, $price, $position->symbol->roundVolume((new Percent($positionSizePart))->of($size)), 10, $position->symbol, $position->side);
     }
 
     private static function activeCondOrder(Position $position, float $positionSizePart, float $price): ActiveStopOrder
@@ -180,7 +191,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             $position->symbol,
             $position->side,
             uuid_create(),
-            VolumeHelper::round((new Percent($positionSizePart))->of($position->getNotCoveredSize())),
+            $position->symbol->roundVolume((new Percent($positionSizePart))->of($position->getNotCoveredSize())),
             $price,
             TriggerBy::IndexPrice->value,
         );

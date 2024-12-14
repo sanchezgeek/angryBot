@@ -162,7 +162,7 @@ class EditStopsCommand extends AbstractCommand
                     )
                 );
             }
-            $needMoveVolume = VolumeHelper::round($filteredStops->totalVolume() * $movePart / 100);
+            $needMoveVolume = $this->getSymbol()->roundVolume($filteredStops->totalVolume() * $movePart / 100);
 
             $tD = self::DEFAULT_TRIGGER_DELTA;
             $movedVolume = 0;

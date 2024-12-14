@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Helper\FloatHelper;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
@@ -37,11 +38,11 @@ final readonly class TransferFundingFeesHandler
             $totalValue += $position->isShort() ? $position->value : -$position->value;
         }
 
-        $prevPeriodRate = PriceHelper::round($this->marketService->getPreviousPeriodFundingRate($symbol), 7);
+        $prevPeriodRate = FloatHelper::round($this->marketService->getPreviousPeriodFundingRate($symbol), 7);
         var_dump(sprintf('prev period funding rate: %.7f', $prevPeriodRate));
 
         $coin = $symbol->associatedCoin();
-        $fee = PriceHelper::round($totalValue * $prevPeriodRate, $coin->coinCostPrecision());
+        $fee = FloatHelper::round($totalValue * $prevPeriodRate, $coin->coinCostPrecision());
 
         $tries = 0;
         $result = false;

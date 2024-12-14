@@ -125,7 +125,7 @@ final class Price implements Stringable
 
     public function deltaWith(Price|float $otherPrice): float
     {
-        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)));
+        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)), $this->precision);
     }
 
     public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self

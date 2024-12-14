@@ -6,9 +6,9 @@ namespace App\Domain\Price;
 
 use App\Bot\Domain\ValueObject\Symbol;
 
-class PriceFactory
+readonly class PriceFactory
 {
-    public function __construct(private readonly Symbol $symbol)
+    public function __construct(private Symbol $symbol)
     {
     }
 

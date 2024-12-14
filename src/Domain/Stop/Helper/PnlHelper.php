@@ -27,13 +27,13 @@ final class PnlHelper
     /**
      * @todo cover with tests (in case if method will not used by any other covered methods)
     */
-    public static function convertPnlPercentOnPriceToAbsDelta(float|Percent $percent, float|Price $onPrice): float
+    public static function convertPnlPercentOnPriceToAbsDelta(float|Percent $percent, Price $onPrice): float
     {
         $percent = $percent instanceof Percent ? $percent : new Percent($percent, false);
 
         $value = Price::toFloat($onPrice) / self::getPositionLeverage();
 
-        return PriceHelper::round($percent->part() * $value);
+        return PriceHelper::round($percent->part() * $value, $onPrice->precision);
     }
 
     public static function getPnlInPercents(Position $position, float $price): float
@@ -57,17 +57,16 @@ final class PnlHelper
 
     public static function targetPriceByPnlPercentFromPositionEntry(Position $position, float $percent): Price
     {
-        return self::targetPriceByPnlPercent($position->entryPrice, $percent, $position);
+        return self::targetPriceByPnlPercent($position->entryPrice(), $percent, $position);
     }
 
-    public static function targetPriceByPnlPercent(Price|float $fromPrice, float $percent, Position $position): Price
+    public static function targetPriceByPnlPercent(Price $fromPrice, float $percent, Position $position): Price
     {
-        $fromPrice = $fromPrice instanceof Price ? $fromPrice->value() : $fromPrice;
         $sign = $position->isShort() ? -1 : +1;
 
         $delta = self::convertPnlPercentOnPriceToAbsDelta($percent, $fromPrice);
 
-        return Price::float($fromPrice + ($sign * $delta), $position->symbol->pricePrecision());
+        return Price::float($fromPrice->add($sign * $delta)->value(), $position->symbol->pricePrecision());
     }
 
     protected static function getPositionLeverage(?Position $position = null): float

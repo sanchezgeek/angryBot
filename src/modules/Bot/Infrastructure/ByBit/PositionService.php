@@ -65,9 +65,9 @@ final class PositionService implements PositionServiceInterface
                     $position = new Position(
                         $side,
                         $symbol,
-                        VolumeHelper::round($item['entry_price'], 2),
+                        $item['entry_price'],
                         $item['size'],
-                        VolumeHelper::round($item['position_value'], 2),
+                        $item['position_value'],
                         $item['liq_price'],
                         $item['position_margin'],
                         $item['leverage'],
@@ -105,7 +105,7 @@ final class PositionService implements PositionServiceInterface
             'close_on_trigger' => 'false',
             'base_price' => $this->exchangeService->ticker($position->symbol)->indexPrice->value(),
             'order_type' => ExecutionOrderType::Market->value,
-            'qty' => VolumeHelper::round($qty),
+            'qty' => $position->symbol->roundVolume($qty),
             'stop_px' => PriceHelper::round($price),
             'time_in_force' => 'GoodTillCancel',
         ]);
@@ -147,7 +147,7 @@ final class PositionService implements PositionServiceInterface
             'close_on_trigger' => 'false',
             'base_price' => $price->value(),
             'order_type' => ExecutionOrderType::Market->value,
-            'qty' => VolumeHelper::round($qty),
+            'qty' => $position->symbol->roundVolume($qty),
             'trigger_price' => $price->value(),
             'time_in_force' => 'GoodTillCancel',
         ]);

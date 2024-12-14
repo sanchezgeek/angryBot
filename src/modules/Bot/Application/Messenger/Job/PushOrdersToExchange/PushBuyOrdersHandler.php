@@ -279,7 +279,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             ) {
                 $currentPnlPercent = $last->getPnlPercentFor($position);
                 // @todo | move to some service | DRY (below)
-                $volumeClosed = VolumeHelper::forceRoundUp($e->qty / ($currentPnlPercent * 0.5 / 100));
+                $volumeClosed = $symbol->roundVolumeUp($e->qty / ($currentPnlPercent * 0.5 / 100));
                 $this->orderService->closeByMarket($position, $volumeClosed);
 
                 if (!$position->isSupportPosition()) {
@@ -317,7 +317,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     || $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)   # or support size enough
                 )
             ) {
-                $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
+                $volume = $symbol->roundVolumeUp($e->qty / ($supportPnlPercent * 0.75 / 100));
 
                 $this->orderService->closeByMarket($hedge->supportPosition, $volume);
                 $lastBuy->incHedgeSupportFixationsCounter();
@@ -335,7 +335,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                     || !$this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)
                 )
             ) {
-                $volume = VolumeHelper::forceRoundUp($e->qty / ($mainPositionPnlPercent * 0.75 / 100));
+                $volume = $symbol->roundVolumeUp($e->qty / ($mainPositionPnlPercent * 0.75 / 100));
 
                 $this->orderService->closeByMarket($hedge->mainPosition, $volume);
                 $lastBuy->incHedgeSupportFixationsCounter();
@@ -586,7 +586,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
             $sleepRanges = $position->isMainPosition() ? self::HEDGE_LEVERAGE_SLEEP_RANGES : self::LEVERAGE_SLEEP_RANGES;
             foreach ($sleepRanges as $leverage => [$fromPnl, $toPnl, $minLiqDistancePnlPercent]) {
-                $minLiqDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($minLiqDistancePnlPercent, $position->entryPrice);
+                $minLiqDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($minLiqDistancePnlPercent, $position->entryPrice());
                 // @todo | by now only for linear
                 if ($totalPositionLeverage >= $leverage) {
                     if ($position->isMainPosition()) {

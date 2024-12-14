@@ -10,6 +10,7 @@ use App\Domain\Price\PriceFactory;
 use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 
+use function ceil;
 use function pow;
 use function strlen;
 
@@ -88,7 +89,7 @@ enum Symbol: string
 
     private const MIN_ORDER_QTY = [
         self::BTCUSDT->value => 0.001,
-        self::BTCUSD->value => 1,
+        self::BTCUSD->value => 0.001,
         self::LINKUSDT->value => 0.1,
         self::ADAUSDT->value => 1,
         self::TONUSDT->value => 0.1,
@@ -192,7 +193,7 @@ enum Symbol: string
 
     public function roundVolume(float $volume): float
     {
-        $value = VolumeHelper::round($volume, $this->contractSizePrecision());
+        $value = round($volume, $this->contractSizePrecision());
         if ($value < $this->minOrderQty()) {
             $value = $this->minOrderQty();
         }
@@ -202,7 +203,11 @@ enum Symbol: string
 
     public function roundVolumeUp(float $volume): float
     {
-        $value = VolumeHelper::forceRoundUp($volume, $this->contractSizePrecision());
+        $precision = $this->contractSizePrecision();
+
+        $fig = 10 ** $precision;
+        $value = (ceil($volume * $fig) / $fig);
+
         if ($value < $this->minOrderQty()) {
             $value = $this->minOrderQty();
         }

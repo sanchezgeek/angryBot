@@ -87,7 +87,7 @@ final class HedgeServiceTest extends KernelTestCase
             $mainImPercentToSupport = $mainImPercentToSupport->sub(1);
         }
 
-        return VolumeHelper::round($mainPosition->initialMargin->getPercentPart($mainImPercentToSupport)->value() / $priceDistance);
+        return $mainPosition->symbol->roundVolume($mainPosition->initialMargin->getPercentPart($mainImPercentToSupport)->value() / $priceDistance);
     }
 
     /**

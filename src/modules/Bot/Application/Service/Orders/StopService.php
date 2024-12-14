@@ -20,7 +20,6 @@ final class StopService implements StopServiceInterface
 {
     use DispatchCommandTrait;
 
-    // private const DEFAULT_INC = 0.001;
     private const DEFAULT_STEP = 11;
     private const DEFAULT_TRIGGER_DELTA = 3;
 
@@ -55,6 +54,9 @@ final class StopService implements StopServiceInterface
         return $id;
     }
 
+    /**
+     * @todo | symbol
+     */
     public function createIncrementalToPosition(
         Position $position,
         float $volume,
@@ -62,19 +64,20 @@ final class StopService implements StopServiceInterface
         float $toPrice,
         array $context = []
     ): CreatedIncGridInfo {
+        $symbol = $position->symbol;
         $context['uniqid'] = \uniqid('inc-stop', true);
 
         $delta = abs($fromPrice - $toPrice);
         $step = self::DEFAULT_STEP;
 
         $count = \ceil($delta / $step);
-        if ($volume / $count < VolumeHelper::MIN_VOLUME) {
-            $count = $volume / VolumeHelper::MIN_VOLUME;
+        if ($volume / $count < $symbol->minOrderQty()) {
+            $count = $volume / $symbol->minOrderQty();
             $step = PriceHelper::round($delta / $count);
 
-            $stepVolume = VolumeHelper::MIN_VOLUME;
+            $stepVolume = $symbol->minOrderQty();
         } else {
-            $stepVolume = VolumeHelper::round($volume / $count);
+            $stepVolume = $symbol->roundVolume($volume / $count);
         }
 
         $price = $fromPrice;

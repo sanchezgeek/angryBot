@@ -91,7 +91,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
         ## for part of the `BTCUSDT SHORT`-position volume (within PNL range)
         $volumePart = 2; $qnt = 10;
-        $stopVolume = VolumeHelper::round($position->size / $qnt / 100 * $volumePart);
+        $stopVolume = $symbol->roundVolume($position->size / $qnt / 100 * $volumePart);
         yield sprintf(
             '%d stops for %d%% part of `%s %s` position (in %s .. %s pnl range)',
             $qnt, $volumePart,
@@ -118,7 +118,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
 
         ## for specified volume of the `BTCUSDT SHORT`-position (within PNL range)
-        $stopVolume = VolumeHelper::round(($volume = 0.02) / ($qnt = 10));
+        $stopVolume = $symbol->roundVolume(($volume = 0.02) / ($qnt = 10));
         yield sprintf(
             '%d stops for %.3f of `%s %s` position (in %s .. %s pnl range)',
             $qnt, $volume,
@@ -145,7 +145,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
 
         ## for specified volume of the `BTCUSDT SHORT`-position (within specified price range)
-        $stopVolume = VolumeHelper::round(($volume = 0.02) / ($qnt = 10));
+        $stopVolume = $symbol->roundVolume(($volume = 0.02) / ($qnt = 10));
         yield sprintf(
             '%d stops for %.3f of `%s %s` (from %d to %d)',
             $qnt, $volume,
@@ -173,7 +173,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
         ## for part of the `BTCUSDT SHORT`-position volume (within mixed range)
         $volumePart = 2; $qnt = 10;
-        $stopVolume = VolumeHelper::round($position->size / $qnt / 100 * $volumePart);
+        $stopVolume = $symbol->roundVolume($position->size / $qnt / 100 * $volumePart);
         yield sprintf(
             '%d stops for %d%% part of `%s %s` (in mixed %s .. %d range)',
             $qnt, $volumePart,

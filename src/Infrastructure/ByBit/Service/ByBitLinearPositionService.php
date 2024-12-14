@@ -163,7 +163,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             Symbol::from($apiData['symbol']),
             (float)$apiData['avgPrice'],
             (float)$apiData['size'],
-            VolumeHelper::round((float)$apiData['positionValue'], 2),
+            (float)$apiData['positionValue'],
             (float)$apiData['liqPrice'],
             (float)$apiData['positionIM'],
             (int)$apiData['leverage'],
@@ -186,6 +186,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
         $price = $position->symbol->makePrice($price);
+        $qty = $position->symbol->roundVolume($qty);
 
         $request = PlaceOrderRequest::stopConditionalOrder(
             self::ASSET_CATEGORY,

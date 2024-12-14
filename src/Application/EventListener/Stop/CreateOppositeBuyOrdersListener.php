@@ -42,11 +42,12 @@ final class CreateOppositeBuyOrdersListener
 
         $side = $stop->getPositionSide();
         $stopVolume = $stop->getVolume();
-        $stopPrice = $stop->getPrice(); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
+        $stopPrice = $symbol->makePrice($stop->getPrice()); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
         $pnlDistance = $side->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
         $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $stopPrice), 0.1, 0.2);
-        $triggerPrice = $side->isShort() ? $stopPrice - $distance : $stopPrice + $distance;
+        $triggerPrice = $side->isShort() ? $stopPrice->sub($distance) : $stopPrice->add($distance);
+        $triggerPrice = $triggerPrice->value();
 
         $context = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -57,16 +58,16 @@ final class CreateOppositeBuyOrdersListener
         ];
 
         $orders = [
-            ['volume' => $stopVolume >= 0.006 ? VolumeHelper::round($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
+            ['volume' => $stopVolume >= 0.006 ? $symbol->roundVolume($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
         ];
 
         if ($stopVolume >= 0.006) {
             $orders[] = [
-                'volume' => VolumeHelper::round($stopVolume / 4.5),
+                'volume' => $symbol->roundVolume($stopVolume / 4.5),
                 'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8)->value(),
             ];
             $orders[] = [
-                'volume' => VolumeHelper::round($stopVolume / 3.5),
+                'volume' => $symbol->roundVolume($stopVolume / 3.5),
                 'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2)->value(),
             ];
         }

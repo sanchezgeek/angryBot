@@ -82,6 +82,7 @@ final class ByBitOrderService implements OrderServiceInterface
     public function closeByMarket(Position $position, float $qty): string
     {
         $symbol = $position->symbol;
+        $qty = $symbol->roundVolume($qty);
 
         $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $symbol, $position->side, $qty)

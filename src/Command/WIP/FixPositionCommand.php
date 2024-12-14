@@ -21,6 +21,7 @@ class FixPositionCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
+    // @todo | symbol
     private const DEFAULT_INITIAL_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
@@ -39,6 +40,8 @@ class FixPositionCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
+            $symbol = $this->getSymbol();
+
             if (!($step = (float)$input->getOption('step'))) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $step provided (%s)', $step),
@@ -74,12 +77,12 @@ class FixPositionCommand extends AbstractCommand
             if ($fromPrice > $toPrice) {
                 for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
                     $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             } else {
                 for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
                     $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             }
 

@@ -31,7 +31,7 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
     public function testSimpleCalc(Position $position, float $freeContractBalance, float $expectedLiquidationPrice): void
     {
         $freeContractBalance = new CoinAmount($position->symbol->associatedCoin(), $freeContractBalance);
-        $expectedLiquidationDistance = FloatHelper::round(Price::float($position->entryPrice)->deltaWith($expectedLiquidationPrice));
+        $expectedLiquidationDistance = $position->entryPrice()->deltaWith($expectedLiquidationPrice);
 
         // Act
         $result = $this->handler->handle($position, $freeContractBalance);
@@ -70,8 +70,7 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
     public function testCalcForPositionWithSupport(Position $mainPosition, float $freeContractBalance, float $expectedLiquidationPrice): void
     {
         $freeContractBalance = new CoinAmount($mainPosition->symbol->associatedCoin(), $freeContractBalance);
-
-        $expectedLiquidationDistance = FloatHelper::round(Price::float($mainPosition->entryPrice)->deltaWith($expectedLiquidationPrice));
+        $expectedLiquidationDistance = $mainPosition->entryPrice()->deltaWith($expectedLiquidationPrice);
 
         // Act
         $result = $this->handler->handle($mainPosition, $freeContractBalance);
@@ -79,7 +78,7 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
         // Assert
         self::assertInstanceOf(CalcPositionLiquidationPriceResult::class, $result);
         self::assertEquals($expectedLiquidationPrice, $result->estimatedLiquidationPrice()->value());
-        self::assertEquals($expectedLiquidationDistance, FloatHelper::round($result->liquidationDistance()));
+        self::assertEquals($expectedLiquidationDistance, $result->liquidationDistance());
     }
 
     public function calcForPositionWithSupportTestData(): iterable

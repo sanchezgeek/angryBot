@@ -234,7 +234,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private function processOrdersFromInitialPositionState(TradingSandbox $sandbox, array $orders): array
     {
         $position = $this->initialSandboxState->getPosition($this->getPositionSide());
-        $entryPrice = $position->entryPrice;
+        $entryPrice = $position->entryPrice();
         $divideStep = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::DIVIDE_STEP_PNL_PERCENT, $entryPrice);
         $groups = [];
 
@@ -259,7 +259,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                     $key++;
                 }
 
-                if (!$divideByPositionEntryWasMade && ($position->isShort() && $price > $entryPrice || $position->isLong()  && $price < $entryPrice)) {
+                if (!$divideByPositionEntryWasMade && ($position->isShort() && $price > $entryPrice->value() || $position->isLong()  && $price < $entryPrice->value())) {
                     $key++; $divideByPositionEntryWasMade = true;
                 }
 

@@ -102,9 +102,14 @@ final readonly class PriceRange implements Stringable
 
     public function getMiddlePrice(): Price
     {
-        return Price::float(
+        return $this->symbol->makePrice(
             ($this->from->value() + $this->to->value()) / 2
         );
+    }
+
+    public function getSymbol(): Symbol
+    {
+        return $this->symbol;
     }
 
     public function __toString(): string

@@ -113,6 +113,7 @@ class CreateBuyGridCommand extends AbstractCommand
      */
     protected function getStopDistanceOption(): ?float
     {
+        $symbol = $this->getSymbol();
         $name = self::STOP_DISTANCE_OPTION;
 
         try {
@@ -130,7 +131,7 @@ class CreateBuyGridCommand extends AbstractCommand
             // @todo | can calc with existed helpers?
             $pp100 = $basedOnPrice->value() / 100;
 
-            return FloatHelper::round((new Percent($pnlValue, false))->of($pp100));
+            return $symbol->makePrice((new Percent($pnlValue, false))->of($pp100))->value();
         } catch (InvalidArgumentException) {
             return $this->paramFetcher->floatOption($name);
         }
@@ -148,7 +149,17 @@ class CreateBuyGridCommand extends AbstractCommand
                 $symbol = $this->getSymbol();
                 $ticker = $this->exchangeService->ticker($symbol);
                 $indexPrice = $ticker->indexPrice;
-                return new Position($this->getPositionSide(), $symbol, $indexPrice->value(), $size = 0.001, $size * $indexPrice->value(), 0, 10, 100);
+
+                return new Position(
+                    $this->getPositionSide(),
+                    $symbol,
+                    $indexPrice->value(),
+                    $size = 0.001, // @todo | symbol
+                    $size * $indexPrice->value(),
+                    0,
+                    10, // @todo | symbol
+                    100,
+                );
             }
 
             throw $e;

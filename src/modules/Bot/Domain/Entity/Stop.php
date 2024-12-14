@@ -33,8 +33,6 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
-    public const MIN_VOLUME = 0.001;
-
     public const IS_TP_CONTEXT = 'isTakeProfit';
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
     public const TP_TRIGGER_DELTA = 50;
@@ -75,6 +73,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $price = $symbol->makePrice($price)->value();
+        $volume = $symbol->roundVolume($volume);
 
         $this->id = $id;
         $this->price = $price;
@@ -134,13 +133,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     {
         $restVolume = $this->volume - $value;
 
-        if (!($restVolume >= self::MIN_VOLUME)) {
+        if (!($restVolume >= $this->symbol->minOrderQty())) {
             throw new DomainException(
-                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= $symbol->minOrderQty().', $value, $restVolume)
             );
         }
 
-        $this->volume = VolumeHelper::round($restVolume);
+        $this->volume = $this->symbol->roundVolume($restVolume);
 
         return $this;
     }

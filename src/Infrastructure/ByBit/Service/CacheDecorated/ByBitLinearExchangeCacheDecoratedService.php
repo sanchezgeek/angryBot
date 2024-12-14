@@ -117,9 +117,9 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      */
     public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): void
     {
-        $itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol);
         /** @var CachedTickerDto $itemFromExternalCacheValue */
         if (
+            ($itemFromExternalCache = $this->getTickerCacheItemFromExternalCache($symbol)) &&
             $itemFromExternalCache->isHit() &&
             ($itemFromExternalCacheValue = $itemFromExternalCache->get())
             && $itemFromExternalCacheValue->updatedByAccName !== self::thisAccName()
@@ -132,9 +132,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         $this->updateTicker($symbol, $ttl);
     }
 
-    private function getTickerCacheItemFromExternalCache(Symbol $symbol): CacheItem
+    private function getTickerCacheItemFromExternalCache(Symbol $symbol): ?CacheItem
     {
-        return $this->externalCache->getItem($this->tickerCacheKey($symbol));
+        if ($this->externalCache) {
+            return $this->externalCache->getItem($this->tickerCacheKey($symbol));
+        }
+
+        return null;
     }
 
     private static function thisAccName(): string

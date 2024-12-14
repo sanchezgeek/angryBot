@@ -113,6 +113,7 @@ final class SchedulerFactory
         # release other symbols orders
         foreach (AppContext::getOpenedPositions() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
+            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT20S', AsyncMessage::for(new CheckPositionIsUnderLiquidation($symbol)));
         }
 
         return $items;

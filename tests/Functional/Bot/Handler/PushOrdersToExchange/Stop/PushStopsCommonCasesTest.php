@@ -394,16 +394,16 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stopPrice), 0.1, 0.2);
+        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stop->getSymbol()->makePrice($stopPrice)), 0.1, 0.2);
 
         $priceModifier = $side->isLong() ? $distance : -$distance;
         $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
 
         if ($stopVolume >= 0.006) {
             $orders = [
-                new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier)->value(), VolumeHelper::round($stopVolume / 3), $symbol, $side),
-                new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier + $priceModifier / 3.8)->value(), VolumeHelper::round($stopVolume / 4.5), $symbol, $side),
-                new BuyOrder($fromId, $symbol->makePrice($stopPrice + $priceModifier + $priceModifier / 2)->value(), VolumeHelper::round($stopVolume / 3.5), $symbol, $side),
+                new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier)->value(), $symbol->roundVolume($stopVolume / 3), $symbol, $side),
+                new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier + $priceModifier / 3.8)->value(), $symbol->roundVolume($stopVolume / 4.5), $symbol, $side),
+                new BuyOrder($fromId, $symbol->makePrice($stopPrice + $priceModifier + $priceModifier / 2)->value(), $symbol->roundVolume($stopVolume / 3.5), $symbol, $side),
             ];
         } else {
             $orders = [new BuyOrder($fromId, $symbol->makePrice($stopPrice + $priceModifier)->value(), $stopVolume, $symbol, $side)];

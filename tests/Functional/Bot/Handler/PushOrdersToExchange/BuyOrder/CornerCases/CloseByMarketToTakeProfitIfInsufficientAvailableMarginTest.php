@@ -150,7 +150,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
             'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side),
-            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
+            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
 
         $needBuyOrderVolume = 0.004;
@@ -159,12 +159,12 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
             'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side),
-            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, Price::float($lastPrice)->getPnlPercentFor($position)),
+            'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
     }
 
     private static function getExpectedVolumeToClose(float $needBuyVolume, float $lastPriceCurrentPnlPercent): float
     {
-        return VolumeHelper::forceRoundUp($needBuyVolume / ($lastPriceCurrentPnlPercent * 0.5 / 100));
+        return Symbol::BTCUSDT->roundVolumeUp($needBuyVolume / ($lastPriceCurrentPnlPercent * 0.5 / 100));
     }
 }

@@ -22,6 +22,7 @@ use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\VolumeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
@@ -135,7 +136,7 @@ class OpenCommand extends AbstractCommand
         }
 
 # do market buy
-        $marketBuyVolume = VolumeHelper::round($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
+        $marketBuyVolume = $this->symbol->roundVolume($size - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
         $this->tradeService->marketBuy($this->symbol, $positionSide, $marketBuyVolume);
 
         $this->entityManager->flush();
@@ -181,12 +182,12 @@ class OpenCommand extends AbstractCommand
 
         $this->tradeService->closeByMarket($currentOpenedPosition, $currentOpenedPosition->size);
 
-        $currentLoss = PriceHelper::round(-$unrealizedPnl, 2);
+        $currentLoss = FloatHelper::round(-$unrealizedPnl, 2);
         $spotBalance = $this->accountService->getSpotWalletBalance($this->symbol->associatedCoin());
         if ($spotBalance->available() > 2) {
             $this->accountService->interTransferFromSpotToContract(
                 $this->symbol->associatedCoin(),
-                min(PriceHelper::round($spotBalance->available() - 1), $currentLoss),
+                min(FloatHelper::round($spotBalance->available() - 1, 2), $currentLoss),
             );
         }
 

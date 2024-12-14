@@ -278,7 +278,7 @@ final class StopTest extends TestCase
         $subVolume = 0.5;
 
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessage(sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $subVolume, 0));
+        $this->expectExceptionMessage(sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= $symbol->minOrderQty().', $subVolume, 0));
 
         $stop->subVolume($subVolume);
     }

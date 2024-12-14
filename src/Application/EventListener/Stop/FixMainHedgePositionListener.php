@@ -33,8 +33,10 @@ final class FixMainHedgePositionListener
     public const ENABLED = false;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
+    /** @todo | symbol */
     const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
 
+    /** @todo | symbol */
     const SUPPLY_STOP_VOLUME = 0.001;
     const SUPPLY_STOP_DISTANCE = 500;
 
@@ -54,9 +56,8 @@ final class FixMainHedgePositionListener
             return;
         }
 
-        $symbol = $event->symbol;
-
         $stop = $event->stop;
+        $symbol = $stop->getSymbol();
         $stopPrice = $stop->getPrice();
         $closedVolume = $stop->getVolume();
 

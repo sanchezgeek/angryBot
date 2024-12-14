@@ -22,6 +22,7 @@ class CreateStopsCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
+    // @todo | symbol
     private const DEFAULT_INITIAL_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
@@ -40,6 +41,8 @@ class CreateStopsCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
+            $symbol = $this->getSymbol();
+
             if (!(string)($volume = $input->getArgument('volume'))) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $volume provided (%s)', $volume),
@@ -81,12 +84,12 @@ class CreateStopsCommand extends AbstractCommand
             if ($fromPrice > $toPrice) {
                 for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
                     $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             } else {
                 for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
                     $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             }
 

@@ -30,8 +30,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 {
     use HasWithoutOppositeContext;
 
-    public const MIN_VOLUME = 0.001;
-
     public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
     public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
@@ -78,8 +76,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function __construct(int $id, Price|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = FloatHelper::round(Price::toFloat($price));
-        $this->volume = $volume;
+        $this->price = $symbol->makePrice(Price::toFloat($price))->value();
+        $this->volume = $symbol->roundVolume($volume);
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
@@ -131,13 +129,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     {
         $restVolume = $this->volume - $value;
 
-        if (!($restVolume >= self::MIN_VOLUME)) {
+        if (!($restVolume >= $this->symbol->minOrderQty())) {
             throw new DomainException(
-                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= $symbol->minOrderQty().', $value, $restVolume)
             );
         }
 
-        $this->volume = VolumeHelper::round($restVolume);
+        $this->volume = $this->symbol->roundVolume($restVolume);
 
         return $this;
     }

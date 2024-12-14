@@ -17,7 +17,9 @@ use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -31,6 +33,8 @@ use function sprintf;
  * @group liquidation
  *
  * @covers CheckPositionIsUnderLiquidationHandler
+ *
+ * @group liquidation
  * @todo functional?
  */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
@@ -96,18 +100,18 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
     public function doNothingWhenPositionIsNotUnderLiquidationTestCases(): iterable
     {
-        $distance = self::TRANSFER_FROM_SPOT_ON_DISTANCE + 1;
         $markPrice = 35000;
         $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
+        $transferFromSpotOnDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
 
         yield 'SHORT' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::short()->entry(34000)->liq($markPrice + $distance)->build(),
+            '$position' => PositionBuilder::short()->entry(34000)->liq($markPrice + $transferFromSpotOnDistance + 1)->build(),
         ];
 
         yield 'LONG' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::long()->entry(36000)->liq($markPrice - $distance)->build(),
+            '$position' => PositionBuilder::long()->entry(36000)->liq($markPrice - $transferFromSpotOnDistance - 1)->build(),
         ];
     }
 
@@ -121,7 +125,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     ): void {
         $liquidationPrice = $position->liquidationPrice;
 
-        $markPrice = $position->isShort() ? $liquidationPrice - self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN : $liquidationPrice + self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
+        $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);
+
+        $markPrice = $position->isShort() ? $liquidationPrice - $closeByMarketIfDistanceLessThan : $liquidationPrice + $closeByMarketIfDistanceLessThan;
         $ticker = TickerFactory::withEqualPrices($position->symbol, $markPrice);
 
         $this->havePositions($position);
