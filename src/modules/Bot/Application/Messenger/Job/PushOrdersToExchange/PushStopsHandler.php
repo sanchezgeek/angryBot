@@ -37,6 +37,7 @@ use Throwable;
  */
 
 
+use function abs;
 use function sprintf;
 use function var_dump;
 
@@ -72,11 +73,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
         $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $currentPrice);
 
-        $additionalTriggerDelta = StopHelper::getAdditionalTriggerDeltaIfCurrentPriceOverStop($symbol);
-        $priceModifierIfCurrentPriceOverStop = StopHelper::getPriceModifierIfCurrentPriceOverStop($currentPrice);
-
         foreach ($stops as $stop) {
-            ### TP
+            ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
                     $this->pushStopToExchange($ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
@@ -84,38 +82,45 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 continue;
             }
 
-            ### Regular
-            $td = $this->getStopTriggerDelta($stop);
+            ### Regular ###
             $stopPrice = $stop->getPrice();
-
             $currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice);
-            $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $td;
-            if ($currentPriceOverStop || $stopMustBePushedByTriggerDelta) {
-                $callback = null;
-                if ($stop->isCloseByMarketContextSet()) {
-                    $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
-                        $orderId = $orderService->closeByMarket($position, $stop->getVolume());
-                        $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), $stop->getPrice());
 
-                        return $orderId;
-                    };
-                } elseif ($currentPriceOverStop) {
+            $callback = null;
+            if ($stop->isCloseByMarketContextSet()) {
+                if (!$currentPriceOverStop) continue;
+                $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
+                    $orderId = $orderService->closeByMarket($position, $stop->getVolume());
+                    $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), $stop->getPrice());
+
+                    return $orderId;
+                };
+            } else {
+                $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $stop->getTriggerDelta();
+                if (!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) {
+                    continue;
+                }
+
+                if ($currentPriceOverStop) {
                     if ($distanceWithLiquidation <= $liquidationCriticalDistance) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
+                        $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+                        $priceModifierIfCurrentPriceOverStop = StopHelper::priceModifierIfCurrentPriceOverStop($currentPrice);
+
                         $newPrice = $side->isShort() ? $currentPrice->value() + $priceModifierIfCurrentPriceOverStop : $currentPrice->value() - $priceModifierIfCurrentPriceOverStop;
-                        $stop->setPrice($newPrice)->setTriggerDelta($symbol->makePrice($td + $additionalTriggerDelta)->value());
+                        $stop->setPrice($newPrice)->increaseTriggerDelta($additionalTriggerDelta);
                     }
                 }
-
-                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
-                    try {
-                        return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
-                    } catch (Throwable $e) {
-                        return $orderService->closeByMarket($position, $stop->getVolume());
-                    }
-                });
             }
+
+            $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+                try {
+                    return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
+                } catch (Throwable $e) {
+                    return $orderService->closeByMarket($position, $stop->getVolume());
+                }
+            });
         }
 
         $stopsClosedByMarket && $this->processOrdersClosedByMarket($position, $stopsClosedByMarket);
@@ -137,15 +142,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
         } finally {
             $this->repository->save($stop);
         }
-    }
-
-    private function getStopTriggerDelta(Stop $stop): float
-    {
-        if ($stop->isCloseByMarketContextSet()) {
-            return $stop->getSymbol()->byMarketTd();
-        }
-
-        return $stop->getTriggerDelta() ?: $stop->getSymbol()->stopDefaultTriggerDelta();
     }
 
     /**
