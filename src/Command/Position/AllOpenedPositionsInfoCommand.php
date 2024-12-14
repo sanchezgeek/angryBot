@@ -89,7 +89,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $result[] = DataRow::default([
             sprintf('%10s: %8s | %8s | %8s', $symbol->value, $ticker->lastPrice->value(), $ticker->markPrice, $ticker->indexPrice),
-            sprintf('%13s   / %5s', $main->entryPrice(), $main->size),
+            sprintf('%5s: %9s   | %6s', $main->side->title(), $main->entryPrice(), $main->size),
             $main->liquidationPrice(),
             $liquidationDistance,
             (string)Percent::fromPart($liquidationDistance / $main->entryPrice, false),
@@ -100,18 +100,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $unrealized += $main->unrealizedPnl;
 
-//        if ($support = $main->getHedge()?->supportPosition) {
-//            $result[] = DataRow::default([
-//                '',
-//                sprintf('sup.: %7s   / %5s', $support->entryPrice(), $support->size),
-//                '',
-//                '',
-//                '',
-//                '',
-//                '',
-//                $support->unrealizedPnl
-//            ]);
-//        }
+        if ($support = $main->getHedge()?->supportPosition) {
+            $result[] = DataRow::default([
+                '',
+                sprintf('sup.: %10s   | %6s', $support->entryPrice(), $support->size),
+                '',
+                '',
+                '',
+                '',
+                '',
+                $support->unrealizedPnl
+            ]);
+            $unrealized += $support->unrealizedPnl;
+        }
 
         $result[] = new SeparatorRow();
 

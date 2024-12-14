@@ -28,6 +28,9 @@ enum Symbol: string
     case OPUSDT = 'OPUSDT';
     case DOGEUSDT = 'DOGEUSDT';
     case SUIUSDT = 'SUIUSDT';
+    case AAVEUSDT = 'AAVEUSDT';
+    case AVAXUSDT = 'AVAXUSDT';
+    case LTCUSDT = 'LTCUSDT';
 
     private const ASSOCIATED_COINS = [
         self::BTCUSDT->value => Coin::USDT,
@@ -42,6 +45,9 @@ enum Symbol: string
         self::OPUSDT->value => Coin::USDT,
         self::DOGEUSDT->value => Coin::USDT,
         self::SUIUSDT->value => Coin::USDT,
+        self::AAVEUSDT->value => Coin::USDT,
+        self::AVAXUSDT->value => Coin::USDT,
+        self::LTCUSDT->value => Coin::USDT,
     ];
 
     private const ASSOCIATED_CATEGORIES = [
@@ -57,6 +63,9 @@ enum Symbol: string
         self::OPUSDT->value => AssetCategory::linear,
         self::DOGEUSDT->value => AssetCategory::linear,
         self::SUIUSDT->value => AssetCategory::linear,
+        self::AAVEUSDT->value => AssetCategory::linear,
+        self::AVAXUSDT->value => AssetCategory::linear,
+        self::LTCUSDT->value => AssetCategory::linear,
     ];
 
     private const TRADING_PRICE_PRECISION = [
@@ -72,6 +81,9 @@ enum Symbol: string
         self::OPUSDT->value => 4,
         self::DOGEUSDT->value => 5,
         self::SUIUSDT->value => 5,
+        self::AAVEUSDT->value => 2,
+        self::AVAXUSDT->value => 2,
+        self::LTCUSDT->value => 2,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -87,6 +99,9 @@ enum Symbol: string
         self::OPUSDT->value => 0.1,
         self::DOGEUSDT->value => 1,
         self::SUIUSDT->value => 10,
+        self::AAVEUSDT->value => 0.01,
+        self::AVAXUSDT->value => 0.1,
+        self::LTCUSDT->value => 0.01,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
@@ -102,6 +117,9 @@ enum Symbol: string
         self::OPUSDT->value => 5,
         self::DOGEUSDT->value => 5,
         self::SUIUSDT->value => 5,
+        self::AAVEUSDT->value => 5,
+        self::AVAXUSDT->value => 5,
+        self::LTCUSDT->value => 5,
     ];
 
     private const STOP_TRIGGER_DELTA = [
@@ -173,6 +191,16 @@ enum Symbol: string
     }
 
     public function roundVolume(float $volume): float
+    {
+        $value = VolumeHelper::round($volume, $this->contractSizePrecision());
+        if ($value < $this->minOrderQty()) {
+            $value = $this->minOrderQty();
+        }
+
+        return $value;
+    }
+
+    public function roundVolumeUp(float $volume): float
     {
         $value = VolumeHelper::forceRoundUp($volume, $this->contractSizePrecision());
         if ($value < $this->minOrderQty()) {

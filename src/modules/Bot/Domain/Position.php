@@ -168,7 +168,7 @@ final class Position implements Stringable
             throw new LogicException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $percent));
         }
 
-        return VolumeHelper::round($this->size * ($percent / 100));
+        return $this->symbol->roundVolume($this->size * ($percent / 100));
     }
 
     public function isShort(): bool

@@ -68,7 +68,7 @@ final class SchedulerFactory
 
         foreach (AppContext::getOpenedPositions() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
 
         return $items;
@@ -112,7 +112,7 @@ final class SchedulerFactory
 
         # release other symbols orders
         foreach (AppContext::getOpenedPositions() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
+            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
         }
 
         return $items;

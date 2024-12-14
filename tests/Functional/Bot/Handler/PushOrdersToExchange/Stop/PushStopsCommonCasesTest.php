@@ -243,7 +243,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             1 => StopBuilder::short(1, 3.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
             5 => StopBuilder::short(5, 3.684, 11, $symbol)->withTD($defaultTd)->build()->setIsWithoutOppositeOrder(), # before ticker => push | without oppositeBuy
             10 => StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build(), # by tD | with oppositeBuy
-            15 => StopBuilder::short(15, 3.696, 12, $symbol)->withTD(0.05)->build(),
+            15 => StopBuilder::short(15, 3.696, 12, $symbol)->withTD($defaultTd)->build(),
             // @todo takeProfit order
         ];
         $stopsExpectedToPush = [(clone $stops[5])->setPrice($ticker->indexPrice->value() + $addPriceDelta), $stops[10]];
@@ -266,7 +266,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
                 ### unchanged ###
                 StopBuilder::short(1, 3.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId),
-                StopBuilder::short(15, 3.696, 12, $symbol)->withTD(0.05)->build(),
+                StopBuilder::short(15, 3.696, 12, $symbol)->withTD($defaultTd)->build(),
             ],
             'buyOrdersExpectedAfterHandle' => [
                 ...$this->expectedOppositeOrders($stops[10], $exchangeOrderIds[1])

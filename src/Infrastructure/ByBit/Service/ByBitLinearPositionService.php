@@ -185,12 +185,14 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
+        $price = $position->symbol->makePrice($price);
+
         $request = PlaceOrderRequest::stopConditionalOrder(
             self::ASSET_CATEGORY,
             $position->symbol,
             $position->side,
             $qty,
-            $price,
+            $price->value(),
             $triggerBy,
         );
 

@@ -24,10 +24,11 @@ final class ExchangeOrder // implements OrderInterface
         $this->price = $symbol->makePrice(Price::toFloat($price));
         $this->providedVolume = $volume;
 
+        /** @todo tests */
         $value = $volume * $this->price->value();
         if ($roundValueToMinNotional && $value < ($minNotionalValue = $symbol->minNotionalOrderValue())) {
             $volumeCalculated = $minNotionalValue / $this->price->value();
-            $volume = $symbol->roundVolume($volumeCalculated);
+            $volume = $symbol->roundVolumeUp($volumeCalculated);
         }
 
         $this->volume = $volume;

@@ -74,6 +74,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
     {
+        $price = $symbol->makePrice($price)->value();
+
         $this->id = $id;
         $this->price = $price;
         $this->volume = $volume;
@@ -105,6 +107,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     {
         $this->setOriginalPrice($this->price);
 
+        $price = $this->symbol->makePrice($price)->value();
+
         $this->price = $price;
 
         return $this;
@@ -112,7 +116,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function addPrice(float $value): self
     {
-        $this->price += $value;
+        $price = $this->price + $value;
+        $this->price = $this->symbol->makePrice($price)->value();
+
         return $this;
     }
 
