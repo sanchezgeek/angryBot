@@ -85,7 +85,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($nearTicker) {
-            $range = $nearTicker->symbol->makePrice($nearTicker->indexPrice->value() / 100)->value();
+            $range = $nearTicker->symbol->makePrice($nearTicker->indexPrice->value() / 600)->value();
 
             $cond = $side->isShort()    ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
             $price = $side->isShort()   ? $nearTicker->indexPrice->value() + $range  : $nearTicker->indexPrice->value() - $range;

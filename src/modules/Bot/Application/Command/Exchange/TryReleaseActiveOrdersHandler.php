@@ -77,7 +77,7 @@ final class TryReleaseActiveOrdersHandler
 
             // @todo | m.b. `...ByIds` ?
             $existedStop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId);
-            $distance = $existedStop ? $existedStop->getTriggerDelta() + StopHelper::getAdditionalTriggerDeltaIfCurrentPriceOverStop($symbol) : $defaultReleaseOverDistance;
+            $distance = $existedStop ? $existedStop->getTriggerDelta() + StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol) : $defaultReleaseOverDistance;
 
             if ($distance < $defaultReleaseOverDistance) {
                 $distance = $defaultReleaseOverDistance;
@@ -141,8 +141,8 @@ final class TryReleaseActiveOrdersHandler
         if ($existedStop) {
             $existedStop->clearExchangeOrderId();
 
-            $addTriggerDelta = StopHelper::getAdditionalTriggerDeltaIfCurrentPriceOverStop($symbol);
-            $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + $addTriggerDelta); // Increase triggerDelta little bit
+            $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+            $existedStop->increaseTriggerDelta($addTriggerDelta); // Increase triggerDelta little bit
 
             $this->stopRepository->save($existedStop);
             // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?

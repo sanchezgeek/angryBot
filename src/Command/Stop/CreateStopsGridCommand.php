@@ -40,8 +40,6 @@ class CreateStopsGridCommand extends AbstractCommand
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
-    public const DEFAULT_TRIGGER_DELTA = '37';
-
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';
 
@@ -65,7 +63,7 @@ class CreateStopsGridCommand extends AbstractCommand
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
             ->configureStopAdditionalContexts()
         ;
     }
@@ -76,7 +74,7 @@ class CreateStopsGridCommand extends AbstractCommand
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
-        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
+        $triggerDelta = $this->paramFetcher->floatOption(self::TRIGGER_DELTA_OPTION);
         $positionSide = $this->getPositionSide();
 
         $position = null;

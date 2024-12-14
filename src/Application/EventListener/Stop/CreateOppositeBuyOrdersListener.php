@@ -12,7 +12,6 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use App\Settings\Application\Service\AppSettingsProvider;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 

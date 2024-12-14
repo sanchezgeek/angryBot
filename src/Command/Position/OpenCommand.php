@@ -18,12 +18,10 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use InvalidArgumentException;
@@ -60,7 +58,6 @@ class OpenCommand extends AbstractCommand
 
     private const DEFAULT_STOPS_GRIDS_DEF = '-40|30%,-100|20%,-125|20%,-200|15%';
     public const DEFAULT_STOP_GRID_QNT = 2;
-    public const DEFAULT_TRIGGER_DELTA = '37';
 
     private Symbol $symbol;
 
@@ -71,7 +68,7 @@ class OpenCommand extends AbstractCommand
             ->addArgument(self::SIZE_ARGUMENT, InputArgument::REQUIRED, 'Position size or %')
             ->addOption(self::GRID_RANGE_OPTION, 'r', InputOption::VALUE_REQUIRED, 'Grid range', self::DEFAULT_GRID_RANGE)
             ->addOption(self::STOPS_GRIDS_DEF_OPTION, 's', InputOption::VALUE_REQUIRED, 'Stop grids def', self::DEFAULT_STOPS_GRIDS_DEF)
-            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta')
             ->addOption(self::REOPEN_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reopen position?')
             ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
             ->addOption(self::WITH_STOPS_OPTION, null, InputOption::VALUE_OPTIONAL, 'With stops?', true)
@@ -213,7 +210,7 @@ class OpenCommand extends AbstractCommand
     private function createStopsGrid(Position $position, int $rangeOrdersQnt = self::DEFAULT_STOP_GRID_QNT): void
     {
         $stopsContext = [];
-        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
+        $triggerDelta = $this->paramFetcher->floatOption(self::TRIGGER_DELTA_OPTION);
 
         $gridDefs = explode(',', $this->paramFetcher->getStringOption(self::STOPS_GRIDS_DEF_OPTION));
         foreach ($gridDefs as $item) {

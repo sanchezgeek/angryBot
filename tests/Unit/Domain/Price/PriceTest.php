@@ -238,14 +238,14 @@ final class PriceTest extends TestCase
     private function priceIsOverStopTestCases(): iterable
     {
         yield 'over SHORT SL (+)' => [
-            'price' => Price::float(200500),
+            'price' => Price::float(200501.01),
             'stop.positionSide' => Side::Sell,
             'stop.price' => 200500,
             'expectedResult' => true,
         ];
 
         yield 'over SHORT SL (-)' => [
-            'price' => Price::float(200500),
+            'price' => Price::float(200501),
             'stop.positionSide' => Side::Sell,
             'stop.price' => 200501,
             'expectedResult' => false,
@@ -254,14 +254,14 @@ final class PriceTest extends TestCase
         yield 'over LONG SL (+)' => [
             'price' => Price::float(200500),
             'stop.positionSide' => Side::Buy,
-            'stop.price' => 200500,
+            'stop.price' => 200500.01,
             'expectedResult' => true,
         ];
 
         yield 'over LONG SL (-)' => [
             'price' => Price::float(200500),
             'stop.positionSide' => Side::Buy,
-            'stop.price' => 200499,
+            'stop.price' => 200500,
             'expectedResult' => false,
         ];
     }

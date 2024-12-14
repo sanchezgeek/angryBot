@@ -19,7 +19,6 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -94,14 +93,14 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     {
         # BTCUSDT
         $symbol = Symbol::BTCUSDT;
-        $addTriggerDelta = StopHelper::getAdditionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+        $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 29050, 29030, 29030);
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
         $position = PositionFactory::short($symbol, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1);
         $triggerBy = TriggerBy::IndexPrice;
-        $addPriceDelta = StopHelper::getPriceModifierIfCurrentPriceOverStop($ticker->indexPrice);
+        $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->indexPrice);
 
         /** @var Stop[] $stops */
         $stops = [
@@ -150,7 +149,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
         $position = PositionFactory::short($symbol, 29000, 1, 99, $ticker->markPrice->value() + $liquidationWarningDistance);
         $triggerBy = TriggerBy::MarkPrice;
-        $addPriceDelta = StopHelper::getPriceModifierIfCurrentPriceOverStop($ticker->markPrice);
+        $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->markPrice);
 
         $stops = [
             1 => StopBuilder::short(1, 29035, 0.4)->withTD(5)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
@@ -188,10 +187,44 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         $exchangeOrderIds = [];
+        $ticker = TickerFactory::create($symbol, 29050, 29030, 29030);
+        $position = PositionFactory::short($symbol, 29000, 1, 100, 100500);
+
+        /** @var Stop[] $stops */
+        $stops = [
+            1 => StopBuilder::short(1, 29049, 0.4)->build()->setIsCloseByMarketContext()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
+            5 => StopBuilder::short(5, 29049, 0.011)->build()->setIsWithoutOppositeOrder()->setIsCloseByMarketContext(), # must be pushed
+            10 => StopBuilder::short(10, 29050, 0.1)->build()->setIsCloseByMarketContext(), # must not be pushed (ticker index price is not over stop price)
+            15 => StopBuilder::short(15, 29049.99, 0.012)->build()->setIsCloseByMarketContext(), # must be pushed + with opposite orders
+        ];
+        $stopsExpectedToPush = [clone $stops[5], clone $stops[15]];
+
+        yield 'BTCUSDT SHORT (close by market)' => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            'stops' => $stops,
+            'expectedStopAddApiCalls' => self::successByMarketApiCallExpectations($ticker->symbol, $stopsExpectedToPush,$exchangeOrderIds),
+            'stopsExpectedAfterHandle' => [
+                ### pushed (in right order) ###
+
+                # initial price is before ticker => set new price + push
+                StopBuilder::short(5, 29049, 0.011)->build()->setIsCloseByMarketContext()->setIsWithoutOppositeOrder()->setExchangeOrderId($exchangeOrderIds[0]),
+                StopBuilder::short(15, 29049.99, 0.012)->build()->setIsCloseByMarketContext()->setExchangeOrderId($exchangeOrderIds[1]),
+
+                ### unchanged ###
+                StopBuilder::short(1, 29049, 0.4)->build()->setIsCloseByMarketContext()->setExchangeOrderId($existedExchangeOrderId),
+                StopBuilder::short(10, 29050, 0.1)->build()->setIsCloseByMarketContext(),
+            ],
+            'buyOrdersExpectedAfterHandle' => [
+                ...$this->expectedOppositeOrders($stops[15], $exchangeOrderIds[1])
+            ],
+        ];
+
+        $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 29050);
         $position = PositionFactory::long($symbol, 29000);
         $triggerBy = TriggerBy::IndexPrice;
-        $addPriceDelta = StopHelper::getPriceModifierIfCurrentPriceOverStop($ticker->indexPrice);
+        $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->indexPrice);
 
         $stops = [
             1 => StopBuilder::long(1, 29045, 0.011)->withTD(10)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
@@ -228,14 +261,14 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         # LINKUSDT
         $symbol = Symbol::LINKUSDT;
-        $addTriggerDelta = StopHelper::getAdditionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+        $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 3.685, 3.687, 3.688);
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
         $position = PositionFactory::short($symbol, 24.894, 30, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1);
         $triggerBy = TriggerBy::IndexPrice;
-        $addPriceDelta = StopHelper::getPriceModifierIfCurrentPriceOverStop($ticker->indexPrice);
+        $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->indexPrice);
         $defaultTd = 0.01;
 
         /** @var Stop[] $stops */
@@ -261,6 +294,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                     ->setOriginalPrice(3.684)
                     ->setIsWithoutOppositeOrder()
                     ->setExchangeOrderId($exchangeOrderIds[0]),
+
                 # just push
                 StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($exchangeOrderIds[1]),
 
@@ -434,7 +468,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     }
 
     /**
-     * @param BuyOrder[] $stops
+     * @param Stop[] $stops
      *
      * @return ByBitApiCallExpectation[]
      */
@@ -457,6 +491,28 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 $triggerBy,
             );
 
+            $result[] = new ByBitApiCallExpectation($request, PlaceOrderResponseBuilder::ok($exchangeOrderId)->build());
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param Stop[] $stops
+     *
+     * @return ByBitApiCallExpectation[]
+     */
+    protected static function successByMarketApiCallExpectations(Symbol $symbol, array $stops, array &$exchangeOrderIdsCollector = null): array
+    {
+        $result = [];
+        foreach ($stops as $stop) {
+            $exchangeOrderId = uuid_create();
+
+            if ($exchangeOrderIdsCollector !== null) {
+                $exchangeOrderIdsCollector[] = $exchangeOrderId;
+            }
+
+            $request = PlaceOrderRequest::marketClose($symbol->associatedCategory(), $symbol, $stop->getPositionSide(), $stop->getVolume());
             $result[] = new ByBitApiCallExpectation($request, PlaceOrderResponseBuilder::ok($exchangeOrderId)->build());
         }
 

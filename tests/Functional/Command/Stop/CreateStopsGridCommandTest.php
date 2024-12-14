@@ -10,7 +10,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
-use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -32,7 +31,6 @@ final class CreateStopsGridCommandTest extends KernelTestCase
     use ByBitV5ApiRequestsMocker;
 
     private const COMMAND_NAME = 'sl:grid';
-    private const DEFAULT_TRIGGER_DELTA = CreateStopsGridCommand::DEFAULT_TRIGGER_DELTA;
     private const UNIQID_CONTEXT = 'awesome-unique-stops-grid';
 
     protected function setUp(): void
@@ -363,7 +361,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
     private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, float $tD = null): Stop
     {
-        $tD = $tD ?: (float) self::DEFAULT_TRIGGER_DELTA;
+        $tD = $tD ?: $symbol->stopDefaultTriggerDelta();
 
         return new Stop($id, $price, $volume, $tD, $symbol, $side, ['uniqid' => self::UNIQID_CONTEXT]);
     }

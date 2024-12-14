@@ -7,7 +7,6 @@ namespace App\Bot\Domain\ValueObject;
 use App\Domain\Coin\Coin;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceFactory;
-use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 
 use function ceil;
@@ -152,13 +151,6 @@ enum Symbol: string
         $pricePrecision = $this->pricePrecision();
 
         return round(pow(0.1, $pricePrecision - 1), $pricePrecision);
-    }
-
-    public function byMarketTd(): float
-    {
-        $pricePrecision = $this->pricePrecision();
-
-        return round(pow(0.1, $pricePrecision), $pricePrecision + 1);
     }
 
     public function makePrice(float $value): Price

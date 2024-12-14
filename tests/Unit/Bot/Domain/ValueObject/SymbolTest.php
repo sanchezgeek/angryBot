@@ -43,6 +43,7 @@ class SymbolTest extends TestCase
             [Symbol::ADAUSDT, 0.0001, 1, 1],
             [Symbol::ADAUSDT, 0.02, 1, 1],
             [Symbol::ADAUSDT, 0.1, 1, 1],
+            [Symbol::ADAUSDT, 1, 1, 1],
             [Symbol::ADAUSDT, 1.1, 1, 2],
             [Symbol::ADAUSDT, 1.49, 1, 2],
             [Symbol::ADAUSDT, 1.5, 2, 2],
@@ -51,6 +52,7 @@ class SymbolTest extends TestCase
             [Symbol::OPUSDT, 0.001, 0.1, 0.1],
             [Symbol::OPUSDT, 0.01, 0.1, 0.1],
             [Symbol::OPUSDT, 0.1, 0.1, 0.1],
+            [Symbol::OPUSDT, 1.1, 1.1, 1.1],
             [Symbol::OPUSDT, 1.11, 1.1, 1.2],
             [Symbol::OPUSDT, 1.149, 1.1, 1.2],
             [Symbol::OPUSDT, 1.15, 1.2, 1.2],
@@ -99,35 +101,6 @@ class SymbolTest extends TestCase
             [Symbol::AAVEUSDT,  0.1],
             [Symbol::AVAXUSDT,  0.1],
             [Symbol::LTCUSDT,   0.1],
-        ];
-    }
-
-    /**
-     * @dataProvider byMarketTdTestCases
-     */
-    public function testByMarketTd(Symbol $symbol, float $expectedDistance): void
-    {
-        self::assertSame($expectedDistance, $symbol->byMarketTd());
-    }
-
-    public function byMarketTdTestCases(): array
-    {
-        return [
-            [Symbol::BTCUSDT,   0.01],
-            [Symbol::BTCUSD,    0.01],
-            [Symbol::LINKUSDT,  0.001],
-            [Symbol::ADAUSDT,   0.0001],
-            [Symbol::TONUSDT,   0.0001],
-            [Symbol::ETHUSDT,   0.01],
-            [Symbol::XRPUSDT,   0.0001],
-            [Symbol::SOLUSDT,   0.001],
-            [Symbol::WIFUSDT,   0.0001],
-            [Symbol::OPUSDT,    0.0001],
-            [Symbol::DOGEUSDT,  0.00001],
-            [Symbol::SUIUSDT,   0.00001],
-            [Symbol::AAVEUSDT,  0.01],
-            [Symbol::AVAXUSDT,  0.01],
-            [Symbol::LTCUSDT,   0.01],
         ];
     }
 }

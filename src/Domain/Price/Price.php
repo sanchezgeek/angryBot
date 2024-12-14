@@ -115,7 +115,7 @@ final class Price implements Stringable
 
     public function isPriceOverStop(Side $positionSide, float $stopPrice): bool
     {
-        return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
+        return $positionSide->isShort() ? $this->value > $stopPrice : $this->value < $stopPrice;
     }
 
     public function differenceWith(Price $otherPrice): PriceMovement

@@ -20,7 +20,6 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -56,7 +55,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     private float $volume;
 
     #[ORM\Column(nullable: true)]
-    private ?float $triggerDelta = null;
+    private float $triggerDelta;
 
     #[ORM\Column(type: 'string', enumType: Symbol::class)]
     private Symbol $symbol;
@@ -78,7 +77,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->id = $id;
         $this->price = $price;
         $this->volume = $volume;
-        $this->triggerDelta = $triggerDelta;
+        $this->triggerDelta = $triggerDelta ?? $symbol->stopDefaultTriggerDelta();
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
@@ -154,9 +153,16 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this->triggerDelta;
     }
 
+    public function increaseTriggerDelta(float $withValue): self
+    {
+        $this->triggerDelta = $this->symbol->makePrice($this->triggerDelta + $withValue)->value();
+
+        return $this;
+    }
+
     public function setTriggerDelta(float $triggerDelta): self
     {
-        $this->triggerDelta = $triggerDelta;
+        $this->triggerDelta = $this->symbol->makePrice($triggerDelta)->value();
 
         return $this;
     }
@@ -177,9 +183,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
         /**
          * @todo | пока что такой костыль, т.к. для того, чтобы PushStopsHandler нашёл этот ордер, нужна trigger_delta
-         * @see \App\Bot\Domain\Repository\StopRepository::findActive() + $nearTicker
+         * @see StopRepository::findActive() + $nearTicker
          */
-        $this->setTriggerDelta(self::TP_TRIGGER_DELTA);
+        $this->setTriggerDelta($this->getPrice() / 600);
 
         return $this;
     }

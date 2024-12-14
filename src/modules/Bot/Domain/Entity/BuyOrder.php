@@ -17,8 +17,6 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
-use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 

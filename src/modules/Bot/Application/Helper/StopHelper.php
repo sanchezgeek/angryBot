@@ -10,12 +10,12 @@ use App\Domain\Price\Price;
 
 class StopHelper
 {
-    public static function getPriceModifierIfCurrentPriceOverStop(Price $currentPrice): float
+    public static function priceModifierIfCurrentPriceOverStop(Price $currentPrice): float
     {
         return 0.0005 * $currentPrice->value();
     }
 
-    public static function getAdditionalTriggerDeltaIfCurrentPriceOverStop(Symbol $symbol): float
+    public static function additionalTriggerDeltaIfCurrentPriceOverStop(Symbol $symbol): float
     {
         return $symbol->makePrice($symbol->stopDefaultTriggerDelta() / 3)->value();
     }

@@ -183,7 +183,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         yield 'BTCUSDT SHORT' => [
             'ticker' => $ticker,
             'position' => PositionFactory::short(self::SYMBOL, 29000, 1, 100, $ticker->markPrice->value() + $liquidationCriticalDistance),
-            'stop' => StopBuilder::short(5, 29060, 0.011)->withTD(10)->build(),
+            'stop' => StopBuilder::short(5, 29059.99, 0.011)->withTD(10)->build(),
         ];
     }
 

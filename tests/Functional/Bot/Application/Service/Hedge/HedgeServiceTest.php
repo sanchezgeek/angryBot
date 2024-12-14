@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Value\Percent\Percent;
-use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;

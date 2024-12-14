@@ -116,7 +116,7 @@ abstract class AbstractExecStepResultTableRowBuilder
             $info[] = match (true) {
                 $sourceOrder->isTakeProfitOrder() => 'TakeProfit order',
                 $sourceOrder->isCloseByMarketContextSet() => '!by market!',
-                default => sprintf('Conditional order (td=%.2f)', $this->priceFormatter->format($sourceOrder->getTriggerDelta())),
+                default => sprintf('Conditional order (td=%.2f)', $sourceOrder->getTriggerDelta()),
             };
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without opposite BO';
             $sourceOrder->isOrderPushedToExchange() && $info[] = 'PUSHED TO EXCHANGE';

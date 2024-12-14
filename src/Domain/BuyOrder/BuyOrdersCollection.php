@@ -6,7 +6,6 @@ namespace App\Domain\BuyOrder;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Domain\Price\PriceRange;
-use App\Helper\VolumeHelper;
 use IteratorAggregate;
 use LogicException;
 

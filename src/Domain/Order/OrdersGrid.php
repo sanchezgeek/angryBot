@@ -6,7 +6,6 @@ namespace App\Domain\Order;
 
 use App\Bot\Domain\Position;
 use App\Domain\Price\PriceRange;
-use App\Helper\VolumeHelper;
 use DomainException;
 use Generator;
 

@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Helper\VolumeHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,7 +22,6 @@ class FixPositionCommand extends AbstractCommand
 
     // @todo | symbol
     private const DEFAULT_INITIAL_VOLUME = 0.001;
-    private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
 
     protected function configure(): void
@@ -32,7 +30,7 @@ class FixPositionCommand extends AbstractCommand
             ->configurePositionArgs()
 //            ->addOption('volume', 'v', InputOption::VALUE_OPTIONAL, \sprintf('Initial volume (default: %s)', self::DEFAULT_INITIAL_VOLUME), self::DEFAULT_INITIAL_VOLUME)
             ->addOption('step', 's', InputOption::VALUE_OPTIONAL, \sprintf('Step (default: %s)', self::DEFAULT_STEP), self::DEFAULT_STEP)
-            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, \sprintf('Trigger delta (default: %s)', self::DEFAULT_TRIGGER_DELTA), self::DEFAULT_TRIGGER_DELTA)
+            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, 'Trigger delta')
             ->addOption('increment', 'i', InputOption::VALUE_OPTIONAL, 'Increment (optional; default: 0.000)')
         ;
     }

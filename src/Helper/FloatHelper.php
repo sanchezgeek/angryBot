@@ -17,6 +17,9 @@ use function round;
 use function rtrim;
 use function strlen;
 
+/**
+ * @see \App\Tests\Unit\Helper\FloatHelperTest
+ */
 final class FloatHelper
 {
     public const DEFAULT_ROUND_PRECISION = 3;

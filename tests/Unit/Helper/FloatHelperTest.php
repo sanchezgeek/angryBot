@@ -26,6 +26,7 @@ class FloatHelperTest extends TestCase
     public function roundTestDataProvider(): array
     {
         return [
+            [0.00000000, 0.00],
             [0.000000001, 0.001],
             [0.000000001, 0.001, 3],
             [0.000000001, 0.0001, 4],
