@@ -18,6 +18,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\CheckLiquidationParametersHelper;
@@ -39,8 +40,6 @@ use function uuid_create;
  * @group liquidation
  *
  * @covers CheckPositionIsUnderLiquidationHandler
- *
- * @group liquidation
  */
 class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 {
@@ -48,10 +47,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
 
-    private const CHECK_STOPS_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::CHECK_STOPS_ON_DISTANCE;
     private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
 
-    private const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
+    private const ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION = CheckPositionIsUnderLiquidationHandler::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE;
 //    private const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 //    private const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
 
@@ -94,18 +92,17 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     public function addStopTestCases(): iterable
     {
-        ### BTCUSDT ###
-        $markPrice = 35000;
-        $ticker = TickerFactory::withMarkSomeBigger($symbol = Symbol::BTCUSDT, $markPrice, Side::Sell);
-        $checkStopsOnDistance = CheckLiquidationParametersHelper::checkStopsDistance($ticker);
-
-        # SHORT
-        $liquidationPrice = $symbol->makePrice($markPrice + $checkStopsOnDistance);
         $delayedStopsPercent = 4; $pushedStopsPercent = 7;
 
+        ### BTCUSDT ###
+        $symbol = Symbol::BTCUSDT;
+
+        # SHORT
+        $shortEntry = 35000; $shortLiquidation = 40000;
         // --- just short
-        $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($short->liquidationPrice(), $ticker->indexPrice);
+        $short = PositionBuilder::short()->entry($shortEntry)->size(0.5)->liq($shortLiquidation)->build();
+        $ticker = self::tickerInWarningRange($short);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($short, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($short, $ticker, [...$delayed, ...$active]);
@@ -114,9 +111,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         // --- short with hedge
-        $long = PositionBuilder::long()->entry($markPrice - 10000)->size(0.11)->build();
-        $short = PositionBuilder::short()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($long)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($short->liquidationPrice(), $ticker->indexPrice);
+        $long = PositionBuilder::long()->entry($shortEntry - 10000)->size(0.11)->build();
+        $short = PositionBuilder::short()->entry($shortEntry)->size(0.5)->liq($shortLiquidation)->opposite($long)->build();
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($short, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($short, $ticker, [...$delayed, ...$active]);
@@ -125,12 +122,11 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         # LONG
-        $liquidationPrice = $symbol->makePrice($markPrice - $checkStopsOnDistance);
-        $delayedStopsPercent = 4; $pushedStopsPercent = 7;
-
+        $longEntry = 35000; $longLiquidation = 25000;
         // -- just long
-        $long = PositionBuilder::long()->entry($markPrice)->size(0.2)->liq($liquidationPrice)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($long->liquidationPrice(), $ticker->indexPrice);
+        $long = PositionBuilder::long()->entry($longEntry)->size(0.5)->liq($longLiquidation)->build();
+        $ticker = self::tickerInWarningRange($long);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($long, $ticker, [...$delayed, ...$active]);
@@ -139,9 +135,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         // -- long with hedge
-        $short = PositionBuilder::short()->entry($markPrice + 10000)->size(0.11)->build();
-        $long = PositionBuilder::long()->entry($markPrice)->size(0.5)->liq($liquidationPrice)->opposite($short)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($long->liquidationPrice(), $ticker->indexPrice);
+        $short = PositionBuilder::short()->entry($longEntry + 10000)->size(0.11)->build();
+        $long = PositionBuilder::long()->entry($longEntry)->size(0.5)->liq($longLiquidation)->opposite($short)->build();
+        $ticker = self::tickerInWarningRange($long);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($long, $ticker, [...$delayed, ...$active]);
@@ -151,16 +148,13 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         ### LINKUSDT ###
         $symbol = Symbol::LINKUSDT;
-        $ticker = TickerFactory::withMarkSomeBigger($symbol, $markPrice = 29.500, Side::Sell);
-        $checkStopsOnDistance = CheckLiquidationParametersHelper::checkStopsDistance($ticker);
 
         # SHORT
-        $liquidationPrice = $symbol->makePrice($markPrice + $checkStopsOnDistance);
-        $delayedStopsPercent = 4; $pushedStopsPercent = 7;
-
+        $shortEntry = 20.500; $shortLiquidation = 30.000;
         // --- just short
-        $short = PositionBuilder::short()->symbol($symbol)->entry($markPrice)->size(10.5)->liq($liquidationPrice)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($short->liquidationPrice(), $ticker->indexPrice);
+        $short = PositionBuilder::short()->symbol($symbol)->entry($shortEntry)->size(10.5)->liq($shortLiquidation)->build();
+        $ticker = self::tickerInWarningRange($short);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($short, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($short, $ticker, [...$delayed, ...$active]);
@@ -169,9 +163,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         // --- short with hedge
-        $long = PositionBuilder::long()->symbol($symbol)->entry($markPrice - 1)->size(2.5)->build();
-        $short = PositionBuilder::short()->symbol($symbol)->entry($markPrice)->size(10.5)->liq($liquidationPrice)->opposite($long)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($short->liquidationPrice(), $ticker->indexPrice);
+        $long = PositionBuilder::long()->symbol($symbol)->entry($shortEntry - 1)->size(2.5)->build();
+        $short = PositionBuilder::short()->symbol($symbol)->entry($shortEntry)->size(10.5)->liq($shortLiquidation)->opposite($long)->build();
+        $ticker = self::tickerInWarningRange($short);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($short, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($short, $ticker, [...$delayed, ...$active]);
@@ -179,13 +174,13 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'position' => $short, 'ticker' => $ticker, 'delayedStops' => $delayed, 'activeExchangeConditionalStops' => $active, 'expectedAdditionalStops' => [$expectedStop],
         ];
 
-        # SHORT
-        $liquidationPrice = $symbol->makePrice($markPrice - $checkStopsOnDistance);
-        $delayedStopsPercent = 4; $pushedStopsPercent = 7;
+        # LONG
+        $longEntry = 20.500; $longLiquidation = 15.000;
 
         // --- just long
-        $long = PositionBuilder::long()->symbol($symbol)->entry($markPrice)->size(10.5)->liq($liquidationPrice)->build();
-        $existedStopsPrice = PriceTestHelper::middleBetween($long->liquidationPrice(), $ticker->indexPrice);
+        $long = PositionBuilder::long()->symbol($symbol)->entry($longEntry)->size(10.5)->liq($longLiquidation)->build();
+        $ticker = self::tickerInWarningRange($long);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($long, $ticker, [...$delayed, ...$active]);
@@ -193,17 +188,36 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'position' => $long, 'ticker' => $ticker, 'delayedStops' => $delayed, 'activeExchangeConditionalStops' => $active, 'expectedAdditionalStops' => [$expectedStop],
         ];
 
-        // --- short with hedge
-        $short = PositionBuilder::short()->symbol($symbol)->entry($markPrice + 1)->size(2.5)->build();
-        $long = PositionBuilder::long()->symbol($symbol)->entry($markPrice)->size(10.5)->liq($liquidationPrice)->opposite($short)->build();
-
-        $existedStopsPrice = PriceTestHelper::middleBetween($long->liquidationPrice(), $ticker->indexPrice);
+        // --- long with hedge
+        $short = PositionBuilder::short()->symbol($symbol)->entry($longEntry + 1)->size(2.5)->build();
+        $long = PositionBuilder::long()->symbol($symbol)->entry($longEntry)->size(10.5)->liq($longLiquidation)->opposite($short)->build();
+        $ticker = self::tickerInWarningRange($long);
+        $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
         $expectedStop = self::expectedAdditionalStop($long, $ticker, [...$delayed, ...$active]);
         yield self::caseDescription($long, $ticker, $delayed, $active, $expectedStop) => [
             'position' => $long, 'ticker' => $ticker, 'delayedStops' => $delayed, 'activeExchangeConditionalStops' => $active, 'expectedAdditionalStops' => [$expectedStop],
         ];
+    }
+
+    private static function tickerInWarningRange(Position $position): Ticker
+    {
+        $checkStopsOnDistance = CheckLiquidationParametersHelper::checkStopsOnDistance($position);
+
+        return TickerFactory::withMarkSomeBigger(
+            $position->symbol,
+            $position->isShort() ? $position->liquidationPrice - $checkStopsOnDistance : $position->liquidationPrice + $checkStopsOnDistance,
+            Side::Sell
+        );
+    }
+
+    private function stopPriceThatLeanInAcceptableRange(Position $position): Price
+    {
+        $actualStopsRange = CheckLiquidationParametersHelper::actualStopsRange($position);
+        $someDelta = Percent::string('2%')->of($position->liquidationDistance());
+
+        return $position->isShort() ? $actualStopsRange->to()->sub($someDelta) : $actualStopsRange->from()->add($someDelta);
     }
 
     private static int $nextStopId = 1;
@@ -246,6 +260,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             CheckLiquidationParametersHelper::additionalStopTriggerDelta($position->symbol),
             $position->symbol,
             $position->side,
+            [
+                Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
+            ],
         );
     }
 
@@ -254,7 +271,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $delayedStopsPositionSizePart = self::positionNotCoveredSizePart((new StopsCollection(...$delayedStops))->totalVolume(), $mainPosition);
         $activeConditionalOrdersSizePart = self::positionNotCoveredSizePart(
             array_sum(array_map(static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->volume, $activeExchangeStops)),
-            $mainPosition
+            $mainPosition,
         );
 
         $needToCoverPercent = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
@@ -266,7 +283,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             $delayedStopsPositionSizePart + $activeConditionalOrdersSizePart,
             $needToCoverPercent,
             $expectedStop->getVolume(),
-            $expectedStop->getPrice()
+            $expectedStop->getPrice(),
         );
     }
 

@@ -7,7 +7,6 @@ namespace App\Messenger\SchedulerTransport;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\RemoveStaleStops\RemoveStaleStops;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
@@ -111,14 +110,12 @@ final class SchedulerFactory
 
             # position liquidation
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new RemoveStaleStops(Symbol::BTCUSDT))),
         ];
 
         # release other symbols orders
         foreach (AppContext::getOpenedPositions() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
-            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT20S', AsyncMessage::for(new CheckPositionIsUnderLiquidation($symbol, 300, 100)));
-            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new RemoveStaleStops($symbol)));
+            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
+            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(symbol: $symbol)));
         }
 
         return $items;
@@ -135,11 +132,6 @@ final class SchedulerFactory
             $start = $start->add(self::interval(sprintf('%d milliseconds', $procNum * self::TICKERS_CACHE['delay'])));
         } // else {// $ttl = '6 seconds'; $interval = 'PT5S';}
 
-        /**
-         * @todo хотел ещё добавить по порогу на inf
-         *       \Symfony\Component\Messenger\Worker::handleMessage
-         *       -> shouldHandle
-         */
         return [
             /**
              * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
