@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Helper;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -32,9 +33,9 @@ class CheckLiquidationParametersHelper
     /**
      * @see CheckPositionIsUnderLiquidationHandler::additionalStopDistanceWithLiquidation
      */
-    public static function additionalStopDistanceWithLiquidation(Ticker $ticker): float
+    public static function additionalStopDistanceWithLiquidation(Position $position): float
     {
-        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, $ticker->indexPrice), 0.1);
+        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, $position->liquidationPrice()), 0.1);
     }
 
     /**

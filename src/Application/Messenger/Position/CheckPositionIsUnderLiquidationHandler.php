@@ -115,7 +115,7 @@ final class CheckPositionIsUnderLiquidationHandler
             }
         }
 
-        $checkStopsOnDistance = self::checkStopsDistance($ticker);
+        $checkStopsOnDistance = self::checkStopsDistance($ticker, $message);
         if ($distanceWithLiquidation <= $checkStopsOnDistance) {
             $notCoveredSize = $position->getNotCoveredSize();
             $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
@@ -134,7 +134,7 @@ final class CheckPositionIsUnderLiquidationHandler
                 if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan) {
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
-                    $stopPriceDistance = self::additionalStopDistanceWithLiquidation($ticker);
+                    $stopPriceDistance = self::additionalStopDistanceWithLiquidation($position, $message);
                     $triggerDelta = self::additionalStopTriggerDelta($symbol);
 //                    if ($decreaseStopDistance) {
 //                        $stopPriceDistance = $stopPriceDistance * 0.5;
@@ -246,14 +246,18 @@ final class CheckPositionIsUnderLiquidationHandler
         return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
     }
 
-    private static function checkStopsDistance(Ticker $ticker): float
+    private static function checkStopsDistance(Ticker $ticker, CheckPositionIsUnderLiquidation $message): float
     {
-        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CHECK_STOPS_ON_DISTANCE, $ticker->indexPrice), 0.1);
+        $distancePnl = $message->checkStopsOnPnlPercent ?? self::CHECK_STOPS_ON_DISTANCE;
+
+        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $ticker->indexPrice), 0.1);
     }
 
-    private static function additionalStopDistanceWithLiquidation(Ticker $ticker): float
+    private static function additionalStopDistanceWithLiquidation(Position $position, CheckPositionIsUnderLiquidation $message): float
     {
-        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION, $ticker->indexPrice), 0.1);
+        $distancePnl = $message->additionalStopPnlPercentWithLiquidation ?? self::ADDITIONAL_STOP_DISTANCE_WITH_LIQUIDATION;
+
+        return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $position->liquidationPrice()), 0.1);
     }
 
     private static function additionalStopTriggerDelta(Symbol $symbol): float

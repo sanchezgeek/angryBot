@@ -154,7 +154,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             ->method('closeByMarket')
             ->with(
                 $position,
-                (new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size),
+                $symbol->roundVolumeUp((new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size)),
             )
         ;
 

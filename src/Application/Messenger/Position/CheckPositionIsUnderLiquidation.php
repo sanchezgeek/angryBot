@@ -11,5 +11,11 @@ use App\Bot\Domain\ValueObject\Symbol;
  */
 final readonly class CheckPositionIsUnderLiquidation
 {
-    public function __construct(public Symbol $symbol) {}
+    public function __construct(
+        public Symbol $symbol,
+        public ?int $checkStopsOnPnlPercent = null,
+        public ?int $additionalStopPnlPercentWithLiquidation = null,
+    ) {
+
+    }
 }

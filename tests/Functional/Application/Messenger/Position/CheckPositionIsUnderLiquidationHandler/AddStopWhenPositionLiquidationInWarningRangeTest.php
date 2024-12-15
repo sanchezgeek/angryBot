@@ -236,7 +236,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         }
 
         $expectedStopSize = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION - Percent::fromPart($stopped / $size)->value();
-        $distanceWithLiquidation = CheckLiquidationParametersHelper::additionalStopDistanceWithLiquidation($ticker);
+        $distanceWithLiquidation = CheckLiquidationParametersHelper::additionalStopDistanceWithLiquidation($position);
 //        $additionalStopTriggerDelta = $additionalStopDistanceWithLiquidation > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 
         return new Stop(
