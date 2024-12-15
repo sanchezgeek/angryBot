@@ -142,7 +142,9 @@ final class CheckPositionIsUnderLiquidationHandler
 
                     $stopPriceDistance = FloatHelper::modify($stopPriceDistance, 0.15, 0.05);
                     $stopPrice = $position->isShort() ? $position->liquidationPrice()->sub($stopPriceDistance) : $position->liquidationPrice()->add($stopPriceDistance);
-                    $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta);
+                    $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta, [
+                        Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true
+                    ]);
                 }
             }
         } elseif (

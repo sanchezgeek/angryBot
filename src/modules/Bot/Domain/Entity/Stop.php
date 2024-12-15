@@ -34,6 +34,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 {
     public const IS_TP_CONTEXT = 'isTakeProfit';
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
+    public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
+
     public const TP_TRIGGER_DELTA = 50;
 
     use HasVolume;
@@ -200,6 +202,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function isCloseByMarketContextSet(): bool
     {
         return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
+    }
+
+    public function isAdditionalStopFromLiquidationHandler(): bool
+    {
+        return ($this->context[self::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER] ?? null) === true;
     }
 
     public function setIsCloseByMarketContext(): self
