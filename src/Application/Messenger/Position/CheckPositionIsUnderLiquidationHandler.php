@@ -50,10 +50,10 @@ final class CheckPositionIsUnderLiquidationHandler
     public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # Additional stop
-    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 30;
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 25;
 
     # To check stopped position volume
-    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 7;
+    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 20;
 
     public const ACCEPTABLE_STOPPED_PART = 8;
