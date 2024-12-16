@@ -57,6 +57,8 @@ class PlaceOrderCommand extends AbstractCommand
 
     public const VOLUME_ARGUMENT = 'volume';
 
+    public const WITHOUT_CONFIRMATION_OPTION = 'y';
+
     protected function configure(): void
     {
         $this
@@ -65,6 +67,7 @@ class PlaceOrderCommand extends AbstractCommand
             ->addOption(self::TYPE_OPTION, '-k', InputOption::VALUE_REQUIRED, 'Type (' . implode(', ', self::TYPES) . ')')
             ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%. Use [`from` + `to` + `step`], if you need place orders in price range (actual for `limitTP` and `delayedTP` modes)')
             ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `from` + `to`)')
+            ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
             ->configurePriceRangeArgs()
         ;
     }
@@ -101,7 +104,7 @@ class PlaceOrderCommand extends AbstractCommand
                 $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbols[0]->value, $side->title());
             }
 
-            if (!$this->io->confirm($msg)) {
+            if (!$this->isWithoutConfirm() && !$this->io->confirm($msg)) {
                 return Command::FAILURE;
             }
 
@@ -191,7 +194,7 @@ class PlaceOrderCommand extends AbstractCommand
     {
         if ($mode === 'ofPosition' && !$volume instanceof Percent) {
             throw new InvalidArgumentException(
-                sprintf('Invalid usage: when selected `%s` mode, $volume argument must be of type Percent', $mode)
+                sprintf('Invalid usage: when selected `%s` mode, $volume argument must be of type Percent', $mode),
             );
         }
 
@@ -219,7 +222,7 @@ class PlaceOrderCommand extends AbstractCommand
         if ($orders) {
             foreach ($orders as $order) {
                 if ($order->getProvidedVolume() !== $order->getVolume()) {
-                    if (!$this->io->confirm(
+                    if (!$this->isWithoutConfirm() && !$this->io->confirm(
                         sprintf(
                             'Calculated volume for "%s" not equals initially provided one. Calculated: %s, initial: %s. Are you sure you want to buy %s on %s %s?',
                             $order->getSymbol()->value,
@@ -227,8 +230,8 @@ class PlaceOrderCommand extends AbstractCommand
                             $order->getProvidedVolume(),
                             $order->getVolume(),
                             $order->getSymbol()->value,
-                            $positionSide->title()
-                        )
+                            $positionSide->title(),
+                        ),
                     )) {
                         throw new Exception('OK!');
                     }
@@ -283,6 +286,11 @@ class PlaceOrderCommand extends AbstractCommand
                 return null;
             }
         }
+    }
+
+    private function isWithoutConfirm(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::WITHOUT_CONFIRMATION_OPTION);
     }
 
     public function __construct(
