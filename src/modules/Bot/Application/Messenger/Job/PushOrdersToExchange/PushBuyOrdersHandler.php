@@ -202,10 +202,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $orders = $this->findOrdersNearTicker($side, $ticker, $position);
 
-        if ($ticker->symbol !== Symbol::BTCUSDT && $orders) {
-            var_dump(array_map(static fn(BuyOrder $order) => $order->info(), $orders));
-        }
-
         $ignoreBuy = null;
         if ($this->useIsLastPriceOverIndexPriceCheck && $position && $ticker->isLastPriceOverIndexPrice($side) && $last->deltaWith($index) >= 100) {
             $ignoreBuy = '~isLastPriceOverIndexPrice~ more than 100';
