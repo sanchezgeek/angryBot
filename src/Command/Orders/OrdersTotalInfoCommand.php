@@ -34,7 +34,6 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
-use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
@@ -124,6 +123,12 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $this->currentTicker = $this->exchangeService->ticker($this->getSymbol());
         $this->lastPriceDiff = $this->currentTicker->indexPrice->value() - $this->currentTicker->lastPrice->value();
         $this->useLastPriceAsEstimatedForExec = $this->paramFetcher->getBoolOption(self::USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC);
+        if ($this->useLastPriceAsEstimatedForExec) {
+            $pp10 = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $this->currentTicker->indexPrice);
+            if ($this->currentTicker->indexPrice->differenceWith($this->currentTicker->lastPrice)->absDelta() < $pp10) {
+                $this->useLastPriceAsEstimatedForExec = false;
+            }
+        }
     }
 
     private function createSandbox(): TradingSandbox
