@@ -150,7 +150,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         }
     }
 
-    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto
+    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
     {
         $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
         $data = $this->sendRequest($request)->data();

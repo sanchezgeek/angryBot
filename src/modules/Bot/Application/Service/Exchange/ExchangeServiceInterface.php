@@ -21,5 +21,5 @@ interface ExchangeServiceInterface
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void;
 
-    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto;
+    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto;
 }

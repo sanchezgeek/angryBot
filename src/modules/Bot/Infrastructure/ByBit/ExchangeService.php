@@ -241,7 +241,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 //
 //        return $this->tickersHotCache[$symbol->value]->get();
 //    }
-    public function getInstrumentInfo(Symbol $symbol): InstrumentInfoDto
+    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
     {
         throw new Exception('RIP');
     }
