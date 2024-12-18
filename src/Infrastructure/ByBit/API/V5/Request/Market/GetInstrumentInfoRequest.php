@@ -33,10 +33,13 @@ final readonly class GetInstrumentInfoRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        return ['category' => $this->category->value, 'symbol' => $this->symbol->value];
+        return [
+            'category' => $this->category->value,
+            'symbol' => $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol,
+        ];
     }
 
-    public function __construct(private AssetCategory $category, private Symbol $symbol)
+    public function __construct(private AssetCategory $category, private Symbol|string $symbol)
     {
     }
 }

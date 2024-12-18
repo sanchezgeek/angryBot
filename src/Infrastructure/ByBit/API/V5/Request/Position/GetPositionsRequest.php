@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Position\GetPositionsRequestTest
+ *
+ * @see https://bybit-exchange.github.io/docs/v5/position
  */
 final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 {
@@ -26,10 +28,18 @@ final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        return ['category' => $this->category->value, 'symbol' => $this->symbol->value];
+        $data = ['category' => $this->category->value];
+
+        if ($this->symbol) {
+            $data['symbol'] = $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol;
+        } else {
+            $data['settleCoin'] = Symbol::BTCUSDT->associatedCoin()->value;
+        }
+
+        return $data;
     }
 
-    public function __construct(private AssetCategory $category, private Symbol $symbol)
+    public function __construct(private AssetCategory $category, private Symbol|string|null $symbol)
     {
     }
 }

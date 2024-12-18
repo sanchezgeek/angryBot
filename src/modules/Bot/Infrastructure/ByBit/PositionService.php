@@ -170,4 +170,9 @@ final class PositionService implements PositionServiceInterface
     {
         return [];
     }
+
+    public function getOpenedPositionsRawSymbols(): array
+    {
+        return [];
+    }
 }

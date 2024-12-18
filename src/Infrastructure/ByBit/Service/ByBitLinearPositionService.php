@@ -29,6 +29,8 @@ use LogicException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+use function array_unique;
+use function count;
 use function end;
 use function in_array;
 use function is_array;
@@ -84,7 +86,37 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function getOpenedPositionsSymbols(): array
     {
-        return $this->openedPositionsSymbols;
+        $symbolsRaw = $this->getOpenedPositionsRawSymbols();
+
+        $symbols = [];
+        foreach ($symbolsRaw as $rawItem) {
+            if ($symbol = Symbol::tryFrom($rawItem)) {
+                $symbols[] = $symbol;
+            }
+        }
+
+        return $symbols;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getOpenedPositionsRawSymbols(): array
+    {
+        $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
+
+        $data = $this->sendRequest($request)->data();
+
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $items = [];
+        foreach ($list as $item) {
+            $items[] = $item['symbol'];
+        }
+
+        return array_unique($items);
     }
 
     /**

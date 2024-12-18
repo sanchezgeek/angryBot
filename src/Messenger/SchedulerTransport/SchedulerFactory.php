@@ -7,6 +7,7 @@ namespace App\Messenger\SchedulerTransport;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsDefinedMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
@@ -117,6 +118,9 @@ final class SchedulerFactory
 
             # position liquidation
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
+
+            # symbols
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(new CheckOpenedPositionsSymbolsDefinedMessage())),
         ];
 
         # release other symbols orders

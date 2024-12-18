@@ -31,6 +31,7 @@ framework:
 
             # position
             App\Application\Messenger\Position\CheckPositionIsUnderLiquidation: async_critical
+            App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsDefinedMessage: async
 
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async

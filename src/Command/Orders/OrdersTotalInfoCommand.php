@@ -143,6 +143,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getOpenedPositionsSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
         $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings);
