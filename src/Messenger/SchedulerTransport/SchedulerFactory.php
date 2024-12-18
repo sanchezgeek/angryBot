@@ -76,10 +76,17 @@ final class SchedulerFactory
 
     private static function long(): array
     {
-        return [
+        $items = [
             PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::CONF['long.sl']), new PushStops(Symbol::BTCUSDT, Side::Buy)),
             PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::CONF['long.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Buy))),
         ];
+
+        foreach (AppContext::getOpenedPositions() as $symbol) {
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Buy));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
+        }
+
+        return $items;
     }
 
     private static function utils(): array
