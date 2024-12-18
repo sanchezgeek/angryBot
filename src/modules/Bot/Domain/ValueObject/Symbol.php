@@ -8,6 +8,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use ValueError;
 
 use function ceil;
 use function pow;
@@ -217,5 +218,16 @@ enum Symbol: string
         }
 
         return $value;
+    }
+
+    public static function fromShortName(string $name): self
+    {
+        try {
+            $symbol = self::from($name);
+        } catch (ValueError) {
+            $symbol = self::from($name . 'USDT');
+        }
+
+        return $symbol;
     }
 }

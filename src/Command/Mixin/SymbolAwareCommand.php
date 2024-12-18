@@ -7,10 +7,10 @@ use App\Worker\AppContext;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
-
 use Throwable;
 
 use function sprintf;
+use function str_contains;
 
 trait SymbolAwareCommand
 {
@@ -24,12 +24,7 @@ trait SymbolAwareCommand
     protected function getSymbol(): Symbol
     {
         if ($this->symbolOptionName) {
-            $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
-            try {
-                $symbol = $this->trySymbolFromValue($providedSymbolValue);
-            } catch (InvalidArgumentException) {
-                $symbol = $this->trySymbolFromValue($providedSymbolValue . 'USDT');
-            }
+            $symbol = Symbol::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
         } else {
             $symbol = self::DEFAULT_SYMBOL;
         }
@@ -39,16 +34,23 @@ trait SymbolAwareCommand
 
     /**
      * @return Symbol[]
-     * @throws Exception
+     * @throws Throwable
      */
     private function getSymbols(): array
     {
         try {
             $symbol = $this->getSymbol();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
             if ($providedSymbolValue === 'all') {
                 return AppContext::getOpenedPositions();
+            } elseif (str_contains($providedSymbolValue, ',')) {
+                $rawItems = explode(',', $providedSymbolValue);
+                $symbols = [];
+                foreach ($rawItems as $rawItem) {
+                    $symbols[] = Symbol::fromShortName($rawItem);
+                }
+                return $symbols;
             }
             throw $e;
         }

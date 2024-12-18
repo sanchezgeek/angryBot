@@ -30,9 +30,13 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
+use function array_merge;
+use function count;
 use function implode;
 use function in_array;
 use function is_float;
+use function random_int;
+use function round;
 use function sprintf;
 use function str_contains;
 use function str_replace;
