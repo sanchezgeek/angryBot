@@ -31,6 +31,8 @@ enum Symbol: string
     case AAVEUSDT = 'AAVEUSDT';
     case AVAXUSDT = 'AVAXUSDT';
     case LTCUSDT = 'LTCUSDT';
+    case BNBUSDT = 'BNBUSDT';
+    case ENSUSDT = 'ENSUSDT';
 
     private const ASSOCIATED_COINS = [
         self::BTCUSDT->value => Coin::USDT,
@@ -48,6 +50,8 @@ enum Symbol: string
         self::AAVEUSDT->value => Coin::USDT,
         self::AVAXUSDT->value => Coin::USDT,
         self::LTCUSDT->value => Coin::USDT,
+        self::BNBUSDT->value => Coin::USDT,
+        self::ENSUSDT->value => Coin::USDT,
     ];
 
     private const ASSOCIATED_CATEGORIES = [
@@ -66,6 +70,8 @@ enum Symbol: string
         self::AAVEUSDT->value => AssetCategory::linear,
         self::AVAXUSDT->value => AssetCategory::linear,
         self::LTCUSDT->value => AssetCategory::linear,
+        self::BNBUSDT->value => AssetCategory::linear,
+        self::ENSUSDT->value => AssetCategory::linear,
     ];
 
     private const TRADING_PRICE_PRECISION = [
@@ -84,6 +90,8 @@ enum Symbol: string
         self::AAVEUSDT->value => 2,
         self::AVAXUSDT->value => 2,
         self::LTCUSDT->value => 2,
+        self::BNBUSDT->value => 2,
+        self::ENSUSDT->value => 3,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -102,6 +110,8 @@ enum Symbol: string
         self::AAVEUSDT->value => 0.01,
         self::AVAXUSDT->value => 0.1,
         self::LTCUSDT->value => 0.01,
+        self::BNBUSDT->value => 0.01,
+        self::ENSUSDT->value => 0.1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
@@ -120,6 +130,8 @@ enum Symbol: string
         self::AAVEUSDT->value => 5,
         self::AVAXUSDT->value => 5,
         self::LTCUSDT->value => 5,
+        self::BNBUSDT->value => 5,
+        self::ENSUSDT->value => 5,
     ];
 
     private const STOP_TRIGGER_DELTA = [

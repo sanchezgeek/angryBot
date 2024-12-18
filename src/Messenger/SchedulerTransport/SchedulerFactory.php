@@ -120,7 +120,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
 
             # symbols
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(new CheckOpenedPositionsSymbolsDefinedMessage())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsDefinedMessage())),
         ];
 
         # release other symbols orders
