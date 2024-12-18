@@ -31,7 +31,7 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         parent::__construct($value);
     }
 
-    public static function string(string $percent): self
+    public static function string(string $percent, bool $strict = true): self
     {
         if (
             !str_ends_with($percent, '%')
@@ -44,7 +44,7 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
         $value = (float)$value;
 
-        return new self($value);
+        return new self($value, $strict);
     }
 
     public static function fromPart(float $part, bool $strict = true): self

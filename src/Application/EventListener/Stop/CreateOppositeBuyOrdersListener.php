@@ -27,8 +27,8 @@ final class CreateOppositeBuyOrdersListener
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly AppSettingsProvider $settings,
     ) {
-        $this->longOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition));
-        $this->shortOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition));
+        $this->longOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false);
+        $this->shortOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false);
     }
 
     public function __invoke(StopPushedToExchange $event): void

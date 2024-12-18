@@ -459,8 +459,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     {
         if (null === self::$oppositeBuyOrderPnlDistances) {
             self::$oppositeBuyOrderPnlDistances = [
-                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)),
-                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)),
+                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false),
+                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false),
             ];
         }
 
