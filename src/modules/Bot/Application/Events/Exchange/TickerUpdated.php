@@ -19,6 +19,6 @@ final class TickerUpdated extends LoggableEvent
         if (AppContext::isTest()) {
             return null;
         }
-        return \sprintf('%s: %s', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
+        return \sprintf('%9s: %s', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
     }
 }
