@@ -87,8 +87,9 @@ class CreateBuyGridCommand extends AbstractCommand
 
             $output = [
                 sprintf(
-                    './bin/console buy:edit%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"',
+                    './bin/console buy:edit%s --symbol=%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"',
                     $this->io->isQuiet() ? ' --' . EditBuyOrdersCommand::WITHOUT_CONFIRMATION_OPTION : '', // to also quiet remove orders
+                    $symbol->value,
                     $side->value,
                     $uniqueId
                 )
