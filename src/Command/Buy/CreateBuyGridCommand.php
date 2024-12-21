@@ -11,6 +11,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -42,17 +43,16 @@ class CreateBuyGridCommand extends AbstractCommand
     }
     use AdditionalBuyOrderContextAwareCommand;
     use PriceRangeAwareCommand;
-
-    const STOP_DISTANCE_OPTION = 'stopDistance';
+    use OppositeOrdersDistanceAwareCommand;
 
     protected function configure(): void
     {
         $this
             ->configurePositionArgs()
             ->configurePriceRangeArgs()
+            ->configureOppositeOrdersDistanceOption(alias: 's')
             ->addArgument('volume', InputArgument::REQUIRED, 'Buy volume')
             ->addArgument('step', InputArgument::REQUIRED, 'Step')
-            ->addOption(self::STOP_DISTANCE_OPTION, 'd', InputOption::VALUE_REQUIRED, 'SL distance (abs. or %)')
             ->configureBuyOrderAdditionalContexts()
         ;
     }
@@ -60,6 +60,7 @@ class CreateBuyGridCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
+            $symbol = $this->getSymbol();
             $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
             $step = $this->paramFetcher->getFloatArgument('step');
@@ -71,7 +72,7 @@ class CreateBuyGridCommand extends AbstractCommand
             }
 
             // @todo | calc real distance for each order in handler (or maybe in cmd, but for each BO)
-            if ($stopDistance = $this->getStopDistanceOption()) {
+            if ($stopDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
                 $context[BuyOrder::STOP_DISTANCE_CONTEXT] = $stopDistance;
             }
 
@@ -80,7 +81,7 @@ class CreateBuyGridCommand extends AbstractCommand
                 $rand = random_int(-$modifier, $modifier);
 
                 $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($this->getSymbol(), $side, $volume, $price->add($rand)->value(), $context)
+                    new CreateBuyOrderEntryDto($symbol, $side, $volume, $price->add($rand)->value(), $context)
                 );
             }
 
@@ -105,35 +106,6 @@ class CreateBuyGridCommand extends AbstractCommand
             $this->io->error($e->getMessage());
 
             return Command::FAILURE;
-        }
-    }
-
-    /**
-     * @throws Throwable
-     */
-    protected function getStopDistanceOption(): ?float
-    {
-        $symbol = $this->getSymbol();
-        $name = self::STOP_DISTANCE_OPTION;
-
-        try {
-            $pnlValue = $this->paramFetcher->requiredPercentOption($name);
-
-            try {
-                $basedOnPrice = $this->exchangeService->ticker($this->getSymbol())->indexPrice;
-            } catch (\Throwable $e) {
-                if (!$this->io->confirm(sprintf('Got "%s" error while do `ticker` request. Want to use price from specified price range?', $e->getMessage()), true)) {
-                    throw $e;
-                }
-                $basedOnPrice = $this->getPriceRange()->getMiddlePrice();
-            }
-
-            // @todo | can calc with existed helpers?
-            $pp100 = $basedOnPrice->value() / 100;
-
-            return $symbol->makePrice((new Percent($pnlValue, false))->of($pp100))->value();
-        } catch (InvalidArgumentException) {
-            return $this->paramFetcher->floatOption($name);
         }
     }
 

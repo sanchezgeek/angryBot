@@ -43,8 +43,11 @@ final class CreateOppositeBuyOrdersListener
         $stopVolume = $stop->getVolume();
         $stopPrice = $symbol->makePrice($stop->getPrice()); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
-        $pnlDistance = $side->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
-        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $stopPrice), 0.1, 0.2);
+        if (($distance = $stop->getOppositeBuyOrderDistance()) === null) {
+            $pnlDistance = $side->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
+            $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $stopPrice), 0.1, 0.2);
+        }
+
         $triggerPrice = $side->isShort() ? $stopPrice->sub($distance) : $stopPrice->add($distance);
         $triggerPrice = $triggerPrice->value();
 

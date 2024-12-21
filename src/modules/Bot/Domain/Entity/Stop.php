@@ -34,6 +34,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 {
     public const IS_TP_CONTEXT = 'isTakeProfit';
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
+    public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
     public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
 
     public const TP_TRIGGER_DELTA = 50;
@@ -73,12 +74,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
     {
-        $price = $symbol->makePrice($price)->value();
-        $volume = $symbol->roundVolume($volume);
-
         $this->id = $id;
-        $this->price = $price;
-        $this->volume = $volume;
+        $this->price = $symbol->makePrice($price)->value();
+        $this->volume = $symbol->roundVolume($volume);
         $this->triggerDelta = $triggerDelta ?? $symbol->stopDefaultTriggerDelta();
         $this->positionSide = $positionSide;
         $this->context = $context;
@@ -295,5 +293,17 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function isOrderPushedToExchange(): bool
     {
         return $this->getExchangeOrderId() !== null;
+    }
+
+    public function getOppositeBuyOrderDistance(): ?float
+    {
+        return $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] ?? null;
+    }
+
+    public function setOppositeOrdersDistanceContext(float $distance): self
+    {
+        $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $distance;
+
+        return $this;
     }
 }
