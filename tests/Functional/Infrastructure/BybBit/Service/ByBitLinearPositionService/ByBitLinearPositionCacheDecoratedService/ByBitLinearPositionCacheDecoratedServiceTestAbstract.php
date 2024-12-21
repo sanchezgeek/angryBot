@@ -8,7 +8,6 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
@@ -20,19 +19,16 @@ abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends Kern
 
     protected ArrayAdapter $cache;
     protected PositionServiceInterface $innerService;
-    protected EventDispatcherInterface $eventDispatcherMock;
 
     protected ByBitLinearPositionCacheDecoratedService $service;
 
     protected function setUp(): void
     {
         $this->innerService = $this->createMock(PositionServiceInterface::class);
-        $this->eventDispatcherMock = $this->createMock(EventDispatcherInterface::class);
         $this->cache = new ArrayAdapter();
 
         $this->service = new ByBitLinearPositionCacheDecoratedService(
             $this->innerService,
-            $this->eventDispatcherMock,
             $this->cache
         );
     }

@@ -27,14 +27,14 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use InvalidArgumentException;
 use LogicException;
 use Psr\Log\LoggerInterface;
-use Throwable;
 
+use function array_filter;
 use function array_unique;
+use function array_values;
 use function count;
 use function end;
 use function in_array;
 use function is_array;
-use function json_decode;
 use function preg_match;
 use function print_r;
 use function sleep;
@@ -53,26 +53,11 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
-    /** @var string[] */
-    private array $openedPositionsSymbols;
-
     public function __construct(
         ByBitApiClientInterface $apiClient,
         private readonly LoggerInterface $appErrorLogger,
-        string $openedPositionsRaw,
     ) {
         $this->apiClient = $apiClient;
-
-        $symbols = [];
-        foreach (json_decode($openedPositionsRaw) as $item) {
-            try {
-                $symbols[] = Symbol::from($item);
-            } catch (Throwable $e) {
-                $this->appErrorLogger->critical(sprintf('Error "%s" while create Symbol from string "%s"', $e->getMessage(), $item));
-            }
-        }
-
-        $this->openedPositionsSymbols = $symbols;
     }
 
     public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
@@ -84,7 +69,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     /**
      * @return Symbol[]
      */
-    public function getOpenedPositionsSymbols(): array
+    public function getOpenedPositionsSymbols(array $except = []): array
     {
         $symbolsRaw = $this->getOpenedPositionsRawSymbols();
 
@@ -95,7 +80,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             }
         }
 
-        return $symbols;
+        return array_values(
+            array_filter($symbols, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
+        );
     }
 
     /**

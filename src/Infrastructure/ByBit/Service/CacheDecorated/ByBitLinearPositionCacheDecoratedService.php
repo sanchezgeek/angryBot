@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
-use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -19,11 +18,10 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderT
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use DateInterval;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
-use function array_map;
+use function array_filter;
 use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface, PositionsCache
@@ -32,20 +30,30 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     /** @todo | inject into service? */
     private const POSITION_TTL = '12 seconds';
+    private const OPENED_POSITIONS_SYMBOLS_TTL = '1 minute';
 
     /**
      * @param ByBitLinearPositionService $positionService
      */
     public function __construct(
         private PositionServiceInterface $positionService,
-        private EventDispatcherInterface $events,
         private CacheInterface $cache,
     ) {
     }
 
-    public function getOpenedPositionsSymbols(): array
+    public function getOpenedPositionsSymbols(array $except = []): array
     {
-        return $this->positionService->getOpenedPositionsSymbols();
+        $key = sprintf('api_%s_opened_positions_symbols', self::ASSET_CATEGORY->value);;
+
+        $all = $this->cache->get($key, function (ItemInterface $item) {
+            $item->expiresAfter(DateInterval::createFromDateString(self::OPENED_POSITIONS_SYMBOLS_TTL));
+
+            return $this->positionService->getOpenedPositionsSymbols([]);
+        });
+
+        return array_values(
+            array_filter($all, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
+        );
     }
 
     public function getOpenedPositionsRawSymbols(): array

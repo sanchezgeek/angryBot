@@ -76,19 +76,4 @@ final class AppContext
     {
         return self::$debug;
     }
-
-    /**
-     * @return Symbol[]
-     */
-    public static function getOpenedPositions(): array
-    {
-        $items = json_decode($_ENV['OPENED_POSITIONS'] ?? '[]');
-
-        $symbols = [];
-        foreach ($items as $item) {
-            $symbols[] = Symbol::from($item);
-        }
-
-        return $symbols;
-    }
 }

@@ -14,6 +14,7 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
@@ -47,27 +48,32 @@ final class SchedulerFactory
 //    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
 //    private const TICKERS_CACHE = ['interval' => 'PT10S', 'delay' => 3300];
 
-    public static function createScheduler(ClockInterface $clock): Scheduler
+    public function __construct(
+        private readonly PositionServiceInterface $positionService,
+    ) {
+    }
+
+    public function createScheduler(ClockInterface $clock): Scheduler
     {
         $jobSchedules = match (AppContext::runningWorker()) {
-            RunningWorker::SHORT => self::short(),
-            RunningWorker::LONG  => self::long(),
-            RunningWorker::UTILS => self::utils(),
-            RunningWorker::CACHE => self::cache(),
+            RunningWorker::SHORT => $this->short(),
+            RunningWorker::LONG  => $this->long(),
+            RunningWorker::UTILS => $this->utils(),
+            RunningWorker::CACHE => $this->cache(),
             default => [],
         };
 
         return new Scheduler($clock, $jobSchedules);
     }
 
-    private static function short(): array
+    private function short(): array
     {
         $items = [
             PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::CONF['short.sl']), new PushStops(Symbol::BTCUSDT, Side::Sell)),
             PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['short.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Sell))),
         ];
 
-        foreach (AppContext::getOpenedPositions() as $symbol) {
+        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Sell));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
@@ -75,14 +81,14 @@ final class SchedulerFactory
         return $items;
     }
 
-    private static function long(): array
+    private function long(): array
     {
         $items = [
             PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::CONF['long.sl']), new PushStops(Symbol::BTCUSDT, Side::Buy)),
             PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::CONF['long.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Buy))),
         ];
 
-        foreach (AppContext::getOpenedPositions() as $symbol) {
+        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Buy));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
         }
@@ -90,15 +96,15 @@ final class SchedulerFactory
         return $items;
     }
 
-    private static function utils(): array
+    private function utils(): array
     {
         $cleanupPeriod = '45S';
 
         $items = [
             PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
-            //            PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
+            // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
             PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
-            //            PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
+            // PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # position
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
@@ -124,7 +130,7 @@ final class SchedulerFactory
         ];
 
         # release other symbols orders
-        foreach (AppContext::getOpenedPositions() as $symbol) {
+        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
             $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(symbol: $symbol)));
         }
@@ -132,7 +138,7 @@ final class SchedulerFactory
         return $items;
     }
 
-    private static function cache(): array
+    private function cache(): array
     {
         $start = new DateTimeImmutable('2023-09-25T00:00:01.11Z');
         $ttl = '2 seconds';
@@ -157,7 +163,11 @@ final class SchedulerFactory
         return DateInterval::createFromDateString($datetime);
     }
 
-    private function __construct()
+    /**
+     * @return Symbol[]
+     */
+    private function getOtherOpenedPositionsSymbols(): array
     {
+        return $this->positionService->getOpenedPositionsSymbols([Symbol::BTCUSDT]);
     }
 }

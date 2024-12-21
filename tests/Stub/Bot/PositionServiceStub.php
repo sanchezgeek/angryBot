@@ -100,7 +100,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this;
     }
 
-    public function getOpenedPositionsSymbols(): array
+    public function getOpenedPositionsSymbols(array $except = []): array
     {
         throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
     }

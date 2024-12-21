@@ -22,7 +22,6 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
         $this->service = new ByBitLinearPositionService(
             $this->initializeApiClient(),
             self::getTestAppErrorsLogger(),
-            '[]',
         );
     }
 }

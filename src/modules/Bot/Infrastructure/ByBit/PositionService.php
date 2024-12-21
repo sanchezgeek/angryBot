@@ -166,7 +166,7 @@ final class PositionService implements PositionServiceInterface
         return $result['result']['order_id'];
     }
 
-    public function getOpenedPositionsSymbols(): array
+    public function getOpenedPositionsSymbols(array $except = []): array
     {
         return [];
     }

@@ -3,13 +3,9 @@
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Worker\AppContext;
-use Exception;
-use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
-use function sprintf;
 use function str_contains;
 
 trait SymbolAwareCommand
@@ -43,7 +39,7 @@ trait SymbolAwareCommand
         } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
             if ($providedSymbolValue === 'all') {
-                return AppContext::getOpenedPositions();
+                return $this->positionService->getOpenedPositionsSymbols();
             } elseif (str_contains($providedSymbolValue, ',')) {
                 $rawItems = explode(',', $providedSymbolValue);
                 $symbols = [];
@@ -56,17 +52,6 @@ trait SymbolAwareCommand
         }
 
         return [$symbol];
-    }
-
-    private function trySymbolFromValue(string $symbolName): Symbol
-    {
-        if (!$symbol = Symbol::tryFrom($symbolName)) {
-            throw new InvalidArgumentException(
-                sprintf('Invalid $%s provided ("%s" given)', $this->symbolOptionName, $symbolName),
-            );
-        }
-
-        return $symbol;
     }
 
     protected function configureSymbolArgs(string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME): static

@@ -30,7 +30,7 @@ interface PositionServiceInterface
     /**
      * @return Symbol[]
      */
-    public function getOpenedPositionsSymbols(): array;
+    public function getOpenedPositionsSymbols(array $except): array;
 
     /**
      * @return string[]
