@@ -22,8 +22,11 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use Closure;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 use function debug_backtrace;
+use function sprintf;
 
 final class ByBitOrderService implements OrderServiceInterface
 {
@@ -33,9 +36,18 @@ final class ByBitOrderService implements OrderServiceInterface
 
     public function __construct(
         ByBitApiClientInterface $apiClient,
-        private readonly PositionsCache $positionsCache
+        private readonly PositionsCache $positionsCache,
+        private ?LoggerInterface $appErrorLogger,
     ) {
         $this->apiClient = $apiClient;
+    }
+
+    /**
+     * @internal For disable logging in tests
+     */
+    public function unsetLogger(): void
+    {
+        $this->appErrorLogger = null;
     }
 
     /**
@@ -51,19 +63,26 @@ final class ByBitOrderService implements OrderServiceInterface
      */
     public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string
     {
-        $exchangeOrderId = $this->sendPlaceOrderRequest(
-            PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
-            static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
-                match ($error->code()) {
-                    ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
-                        $symbol,
-                        $positionSide,
-                        $qty,
-                    ),
-                    default => null
-                };
+        try {
+            $exchangeOrderId = $this->sendPlaceOrderRequest(
+                PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
+                static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
+                    match ($error->code()) {
+                        ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
+                            $symbol,
+                            $positionSide,
+                            $qty,
+                        ),
+                        default => null
+                    };
+                },
+            );
+        } catch (Throwable $e) {
+            if ($this->appErrorLogger) {
+                $this->appErrorLogger->critical(sprintf('Got "%s" while try to buy %s %s', $e->getMessage(), $qty, $symbol->value));
             }
-        );
+            throw $e;
+        }
 
         $this->positionsCache->clearPositionsCache($symbol);
 

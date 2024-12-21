@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerC
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
+use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -15,6 +16,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -41,6 +43,10 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
         $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
         $marketBuyHandler->setSafeLiquidationPriceDistance(500);
+
+        # disable logging
+        $orderService = self::getContainer()->get(OrderServiceInterface::class); /** @var ByBitOrderService $orderService */
+        $orderService->unsetLogger();
     }
 
     /**

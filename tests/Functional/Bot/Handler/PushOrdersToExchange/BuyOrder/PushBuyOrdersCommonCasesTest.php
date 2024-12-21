@@ -33,6 +33,8 @@ use function uuid_create;
  *
  * @todo | string "@ MarketBuyHandler: got "Call to a member function isMainPosition on null" exception while make `buyIsSafe` check"
  * * x3
+ *
+ * @group buy-orders
  */
 final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 {
@@ -152,7 +154,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
     {
         $stopDistance = StopCreate::getDefaultStrategyStopOrderDistance($buyOrder->getVolume());
 
-        return $buyOrder->getPrice() + $stopDistance;
+        return $buyOrder->getPrice() + ($buyOrder->getPositionSide()->isShort() ? $stopDistance : -$stopDistance);
     }
 
     public function testDummy(): void

@@ -22,6 +22,8 @@ use function uuid_create;
 
 /**
  * @covers \App\Infrastructure\ByBit\Service\Trade\ByBitOrderService::marketBuy
+ *
+ * @group market-buy
  */
 final class MarketBuyTest extends ByBitOrderServiceTestAbstract
 {

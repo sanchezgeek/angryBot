@@ -13,6 +13,7 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\ExchangeOrder;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
@@ -31,11 +32,16 @@ class MarketBuyHandler
      */
     public function handle(MarketBuyEntryDto $dto): string
     {
-        if ($dto->symbol === Symbol::BTCUSDT) {
+        $symbol = $dto->symbol;
+
+        if ($symbol === Symbol::BTCUSDT) {
             $this->makeChecks($dto);
         }
 
-        return $this->orderService->marketBuy($dto->symbol, $dto->positionSide, $dto->volume);
+        $ticker = $this->exchangeService->ticker($symbol);
+        $exchangeOrder = new ExchangeOrder($symbol, $dto->volume, $ticker->lastPrice, true);
+
+        return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
     }
 
     /**
