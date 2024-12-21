@@ -59,11 +59,13 @@ final class CreateOppositeBuyOrdersListener
             BuyOrder::FORCE_BUY_CONTEXT => true,
         ];
 
+        $bigStopVolume = $symbol->roundVolume($symbol->minOrderQty() * 6);
+
         $orders = [
-            ['volume' => $stopVolume >= 0.006 ? $symbol->roundVolume($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
+            ['volume' => $stopVolume >= $bigStopVolume ? $symbol->roundVolume($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
         ];
 
-        if ($stopVolume >= 0.006) {
+        if ($stopVolume >= $bigStopVolume) {
             $orders[] = [
                 'volume' => $symbol->roundVolume($stopVolume / 4.5),
                 'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8)->value(),

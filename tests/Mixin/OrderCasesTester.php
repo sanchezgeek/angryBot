@@ -19,7 +19,7 @@ trait OrderCasesTester
     {
         $descriptions = [];
         foreach ($orders as $order) {
-            $descriptions[] = sprintf('%.1f (%.3f)', $order->getPrice(), $order->getVolume());
+            $descriptions[] = sprintf('%s (%s)', $order->getPrice(), $order->getVolume());
         }
         return implode(', ', $descriptions);
     }

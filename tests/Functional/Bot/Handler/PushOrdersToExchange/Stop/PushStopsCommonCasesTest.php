@@ -21,6 +21,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Factory\Entity\StopBuilder;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
@@ -35,6 +36,7 @@ use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function array_map;
+use function sprintf;
 
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
@@ -275,7 +277,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stops = [
             1 => StopBuilder::short(1, 3.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
             5 => StopBuilder::short(5, 3.684, 11, $symbol)->withTD($defaultTd)->build()->setIsWithoutOppositeOrder(), # before ticker => push | without oppositeBuy
-            10 => StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build(), # by tD | with oppositeBuy
+            10 => StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()->setOppositeOrdersDistanceContext(0.06), # by tD | with oppositeBuy
             15 => StopBuilder::short(15, 3.696, 12, $symbol)->withTD($defaultTd)->build(),
             // @todo takeProfit order
         ];
@@ -296,7 +298,9 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                     ->setExchangeOrderId($exchangeOrderIds[0]),
 
                 # just push
-                StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($exchangeOrderIds[1]),
+                StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()
+                    ->setOppositeOrdersDistanceContext(0.06)
+                    ->setExchangeOrderId($exchangeOrderIds[1]),
 
                 ### unchanged ###
                 StopBuilder::short(1, 3.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId),
@@ -349,18 +353,21 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         $exchangeOrderIds = [];
-        yield '[BTCUSDT SHORT] Small order => One opposite' => [
+        $stops = [
+            StopBuilder::short(10, 29060, 0.001)->withTD(10)->build(),
+            StopBuilder::short(20, 29055, 0.005)->withTD(10)->build(),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($ticker->symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[0]),
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[1])
+        ];
+        yield sprintf('[BTCUSDT SHORT] Small order => One opposite: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
             '$position' => $position,
             '$ticker' => $ticker,
-            '$stops' => $stops = [
-                StopBuilder::short(10, 29060, 0.001)->withTD(10)->build(),
-                StopBuilder::short(20, 29055, 0.005)->withTD(10)->build(),
-            ],
-            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
-            'buyOrdersExpectedAfterHandle' => [
-                ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[0]),
-                ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[1])
-            ],
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
         ];
 
         $stops = [StopBuilder::short(20, 29055, 0.006)->withTD(10)->build()];
@@ -391,18 +398,21 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         $exchangeOrderIds = [];
-        yield '[BTCUSDT LONG] Small order => One opposite' => [
+        $stops = [
+            StopBuilder::long(10, 29045, 0.001)->withTD(10)->build(),
+            StopBuilder::long(20, 29040, 0.005)->withTD(10)->build(),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]),
+            ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[1])
+        ];
+        yield sprintf('[BTCUSDT LONG] Small order => One opposite: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
             '$position' => $position,
             '$ticker' => $ticker,
-            '$stops' => $stops = [
-                StopBuilder::long(10, 29045, 0.001)->withTD(10)->build(),
-                StopBuilder::long(20, 29040, 0.005)->withTD(10)->build(),
-            ],
-            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds),
-            'buyOrdersExpectedAfterHandle' => [
-                ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]),
-                ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[1])
-            ],
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
         ];
 
         $exchangeOrderIds = [];
@@ -410,6 +420,131 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($ticker->symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
         $oppositeOrders = $this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]);
         yield \sprintf('[BTCUSDT LONG] Big order => Partial opposites: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        # AAVEUSDT SHORT
+        $symbol = Symbol::AAVEUSDT;
+        $position = PositionFactory::short($symbol, 391.1, 45); $ticker = TickerFactory::create($symbol, 391.2);
+
+        $exchangeOrderIds = [];
+        yield '[AAVEUSDT SHORT] No opposite' => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
+                StopBuilder::short(10, 391.22, 0.01, $symbol)->build()->setIsWithoutOppositeOrder(),
+                StopBuilder::short(20, 391.21, 0.05, $symbol)->build()->setIsWithoutOppositeOrder(),
+            ],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
+            'buyOrdersExpectedAfterHandle' => [],
+        ];
+
+        $exchangeOrderIds = [];
+        $stops = [
+            StopBuilder::short(10, 391.22, 0.01, $symbol)->build(),
+            StopBuilder::short(20, 391.21, 0.05, $symbol)->build(),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[0]),
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[1])
+        ];
+        yield sprintf('[AAVEUSDT SHORT] Small order => One opposite: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        $stops = [StopBuilder::short(10, 391.22, 0.06, $symbol)->build()];
+        $exchangeOrderIds = [];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]);
+        yield \sprintf('[AAVEUSDT SHORT] Big order => Partial opposites: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        # custom opposite orders distance
+        $exchangeOrderIds = [];
+        $stops = [
+            StopBuilder::short(10, 391.22, 0.01, $symbol)->build()->setOppositeOrdersDistanceContext(10),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0])
+        ];
+        yield sprintf('[AAVEUSDT SHORT] Custom opposite orders distance: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        # AAVEUSDT LONG
+        $position = PositionBuilder::long()->symbol($symbol)->entry(391.1)->size(45)->build(); $ticker = TickerFactory::create($symbol, 391.2);
+
+        $exchangeOrderIds = [];
+        yield '[AAVEUSDT LONG] No opposite' => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops = [
+                StopBuilder::long(10, 391.18, 0.01, $symbol)->build()->setIsWithoutOppositeOrder(),
+                StopBuilder::long(20, 391.19, 0.05, $symbol)->build()->setIsWithoutOppositeOrder(),
+            ],
+            'expectedStopAddApiCalls' => self::successConditionalStopApiCallExpectations($symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds),
+            'buyOrdersExpectedAfterHandle' => [],
+        ];
+
+        $exchangeOrderIds = [];
+        $stops = [
+            StopBuilder::long(10, 391.18, 0.01, $symbol)->build(),
+            StopBuilder::long(20, 391.19, 0.05, $symbol)->build(),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[1], $stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[1], $exchangeOrderIds[0]),
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[1])
+        ];
+        yield sprintf('[AAVEUSDT LONG] Small order => One opposite: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        $stops = [StopBuilder::long(10, 391.19, 0.06, $symbol)->build()];
+        $exchangeOrderIds = [];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, $stops, TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = $this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0]);
+        yield \sprintf('[AAVEUSDT LONG] Big order => Partial opposites: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
+            '$position' => $position,
+            '$ticker' => $ticker,
+            '$stops' => $stops,
+            'expectedStopAddApiCalls' => $expectedStopAddApiCalls,
+            'buyOrdersExpectedAfterHandle' => $oppositeOrders,
+        ];
+
+        # custom opposite orders distance
+        $exchangeOrderIds = [];
+        $stops = [
+            StopBuilder::long(20, 391.19, 0.05, $symbol)->build()->setOppositeOrdersDistanceContext(10),
+        ];
+        $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
+        $oppositeOrders = [
+            ...$this->expectedOppositeOrders($stops[0], $exchangeOrderIds[0])
+        ];
+        yield sprintf('[AAVEUSDT LONG] Custom opposite orders distance: %s => %s', self::ordersDesc(...$stops), self::ordersDesc(...$oppositeOrders)) => [
             '$position' => $position,
             '$ticker' => $ticker,
             '$stops' => $stops,
@@ -428,12 +563,14 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stop->getSymbol()->makePrice($stopPrice)), 0.1, 0.2);
+        $defaultDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stop->getSymbol()->makePrice($stopPrice));
+        $distance = $stop->getOppositeBuyOrderDistance() ?? FloatHelper::modify($defaultDistance, 0.1, 0.2);
 
         $priceModifier = $side->isLong() ? $distance : -$distance;
         $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
 
-        if ($stopVolume >= 0.006) {
+        $bigStopVolume = $symbol->roundVolume($symbol->minOrderQty() * 6);
+        if ($stopVolume >= $bigStopVolume) {
             $orders = [
                 new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier)->value(), $symbol->roundVolume($stopVolume / 3), $symbol, $side),
                 new BuyOrder($fromId++, $symbol->makePrice($stopPrice + $priceModifier + $priceModifier / 3.8)->value(), $symbol->roundVolume($stopVolume / 4.5), $symbol, $side),
