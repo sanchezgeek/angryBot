@@ -7,7 +7,7 @@ namespace App\Application\Messenger\Position\SyncPositions;
 /**
  * @codeCoverageIgnore
  */
-final readonly class CheckOpenedPositionsSymbolsDefinedMessage
+final readonly class CheckOpenedPositionsSymbolsMessage
 {
     public function __construct()
     {
