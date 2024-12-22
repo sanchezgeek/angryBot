@@ -7,6 +7,7 @@ namespace App\Infrastructure\ByBit\API\V5\Request\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Worker\AppContext;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -28,7 +29,11 @@ final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        $data = ['category' => $this->category->value, 'limit' => 200];
+        $data = ['category' => $this->category->value];
+
+        if (!AppContext::isTest()) {
+            $data['limit'] = 200;
+        }
 
         if ($this->symbol) {
             $data['symbol'] = $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol;
