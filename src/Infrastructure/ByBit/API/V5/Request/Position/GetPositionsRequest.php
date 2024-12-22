@@ -28,7 +28,7 @@ final readonly class GetPositionsRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        $data = ['category' => $this->category->value];
+        $data = ['category' => $this->category->value, 'limit' => 200];
 
         if ($this->symbol) {
             $data['symbol'] = $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol;
