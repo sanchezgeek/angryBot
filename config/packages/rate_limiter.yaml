@@ -8,4 +8,4 @@ framework:
         connection_errors_log_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '2 seconds'
+            interval: '5 seconds'
