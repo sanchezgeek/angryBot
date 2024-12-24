@@ -83,8 +83,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     private const RESERVED_BALANCE = 0;
     public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
 
-    private ?DateTimeImmutable $lastCannotAffordAt = null;
-    private ?float $lastCannotAffordAtPrice = null;
+    private array $lastCannotAffordAt = [];
+    private array $lastCannotAffordAtPrice = [];
 
     private readonly LimiterInterface $ignoreBuyThrottlingLimiter;
 
@@ -339,8 +339,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
-            $this->lastCannotAffordAtPrice = $index->value();
-            $this->lastCannotAffordAt = $this->clock->now();
+            $this->lastCannotAffordAtPrice[$symbol->name] = $index->value();
+            $this->lastCannotAffordAt[$symbol->name] = $this->clock->now();
         }
     }
 
@@ -501,18 +501,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $modifier = $ticker->indexPrice->value() * 0.0005;
 
         $refreshSeconds = 8;
+        $lastCannotAffordAt = $this->lastCannotAffordAt[$ticker->symbol->name] ?? null;
+        $lastCannotAffordAtPrice = $this->lastCannotAffordAtPrice[$ticker->symbol->name] ?? null;
+
         $canBuy =
-            ($this->lastCannotAffordAt === null && $this->lastCannotAffordAtPrice === null)
-            || ($this->lastCannotAffordAt !== null && ($this->clock->now()->getTimestamp() - $this->lastCannotAffordAt->getTimestamp()) >= $refreshSeconds)
+            ($lastCannotAffordAt === null && $lastCannotAffordAtPrice === null)
+            || ($lastCannotAffordAt !== null && ($this->clock->now()->getTimestamp() - $lastCannotAffordAt->getTimestamp()) >= $refreshSeconds)
             || (
-                $this->lastCannotAffordAtPrice !== null
+                $lastCannotAffordAtPrice !== null
                 && !$ticker->indexPrice->isPriceInRange(
-                    PriceRange::create($this->lastCannotAffordAtPrice - $modifier, $this->lastCannotAffordAtPrice + $modifier, $ticker->symbol),
+                    PriceRange::create($lastCannotAffordAtPrice - $modifier, $lastCannotAffordAtPrice + $modifier, $ticker->symbol),
                 )
             );
 
         if ($canBuy) {
-            $this->lastCannotAffordAt = $this->lastCannotAffordAtPrice = null;
+            $this->lastCannotAffordAt[$ticker->symbol->name] = $this->lastCannotAffordAtPrice[$ticker->symbol->name] = null;
         }
 
         return $canBuy;
