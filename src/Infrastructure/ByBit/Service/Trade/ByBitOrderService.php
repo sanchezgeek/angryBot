@@ -63,26 +63,19 @@ final class ByBitOrderService implements OrderServiceInterface
      */
     public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string
     {
-        try {
-            $exchangeOrderId = $this->sendPlaceOrderRequest(
-                PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
-                static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
-                    match ($error->code()) {
-                        ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
-                            $symbol,
-                            $positionSide,
-                            $qty,
-                        ),
-                        default => null
-                    };
-                },
-            );
-        } catch (Throwable $e) {
-            if ($this->appErrorLogger) {
-                $this->appErrorLogger->critical(sprintf('Got "%s" while try to buy %s %s', $e->getMessage(), $qty, $symbol->value));
-            }
-            throw $e;
-        }
+        $exchangeOrderId = $this->sendPlaceOrderRequest(
+            PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
+            static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
+                match ($error->code()) {
+                    ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
+                        $symbol,
+                        $positionSide,
+                        $qty,
+                    ),
+                    default => null
+                };
+            },
+        );
 
         $this->positionsCache->clearPositionsCache($symbol);
 
