@@ -56,8 +56,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
     {
         if ($this->externalCache) {
             $itemFromExternal = $this->getTickerCacheItemFromExternalCache($symbol);
-            if ($itemFromExternal->isHit()) {
-                $cachedTickerDto = $itemFromExternal->get(); /** @var CachedTickerDto $cachedTickerDto */
+            if (
+                $itemFromExternal->isHit()
+                && ($cachedTickerDto = $itemFromExternal->get())
+                && $cachedTickerDto->updatedByAccName !== self::thisAccName()
+            ) {
+                /** @var CachedTickerDto $cachedTickerDto */
+                $this->events->dispatch(new TickerUpdateSkipped($cachedTickerDto));
                 return $cachedTickerDto->ticker;
             }
         }
@@ -98,7 +103,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
                     && $itemFromExternalCacheValue->updatedByAccName === self::thisAccName()
                 )
             ) {
-                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('5 seconds'));
+                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('3 seconds'));
                 $this->externalCache->save($item);
             }
         }
@@ -124,7 +129,6 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
             ($itemFromExternalCacheValue = $itemFromExternalCache->get())
             && $itemFromExternalCacheValue->updatedByAccName !== self::thisAccName()
         ) {
-            // update ticker if previous cache was created by this instance
             $this->events->dispatch(new TickerUpdateSkipped($itemFromExternalCacheValue));
             return;
         }

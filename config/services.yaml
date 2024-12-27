@@ -51,7 +51,7 @@ services:
         class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
         arguments:
             $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
-#            $externalCache: '@tickers.cache'
+            $externalCache: '@tickers.cache'
 
     App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService:
         class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
