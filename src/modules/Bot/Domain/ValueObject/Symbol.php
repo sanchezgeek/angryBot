@@ -11,7 +11,10 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use ValueError;
 
 use function ceil;
+use function explode;
+use function is_int;
 use function pow;
+use function round;
 use function strlen;
 
 enum Symbol: string
@@ -38,54 +41,15 @@ enum Symbol: string
     case ZENUSDT = 'ZENUSDT';
     case HYPEUSDT = 'HYPEUSDT';
     case MNTUSDT = 'MNTUSDT';
-
-    private const ASSOCIATED_COINS = [
-        self::BTCUSDT->value => Coin::USDT,
-        self::BTCUSD->value => Coin::BTC,
-        self::ETHUSDT->value => Coin::USDT,
-        self::TONUSDT->value => Coin::USDT,
-        self::XRPUSDT->value => Coin::USDT,
-        self::SOLUSDT->value => Coin::USDT,
-        self::ADAUSDT->value => Coin::USDT,
-        self::LINKUSDT->value => Coin::USDT,
-        self::WIFUSDT->value => Coin::USDT,
-        self::OPUSDT->value => Coin::USDT,
-        self::DOGEUSDT->value => Coin::USDT,
-        self::SUIUSDT->value => Coin::USDT,
-        self::AAVEUSDT->value => Coin::USDT,
-        self::AVAXUSDT->value => Coin::USDT,
-        self::LTCUSDT->value => Coin::USDT,
-        self::BNBUSDT->value => Coin::USDT,
-        self::ENSUSDT->value => Coin::USDT,
-        self::MOVEUSDT->value => Coin::USDT,
-        self::ZENUSDT->value => Coin::USDT,
-        self::HYPEUSDT->value => Coin::USDT,
-        self::MNTUSDT->value => Coin::USDT,
-    ];
-
-    private const ASSOCIATED_CATEGORIES = [
-        self::BTCUSDT->value => AssetCategory::linear,
-        self::BTCUSD->value => AssetCategory::inverse,
-        self::ETHUSDT->value => AssetCategory::linear,
-        self::XRPUSDT->value => AssetCategory::linear,
-        self::TONUSDT->value => AssetCategory::linear,
-        self::SOLUSDT->value => AssetCategory::linear,
-        self::ADAUSDT->value => AssetCategory::linear,
-        self::LINKUSDT->value => AssetCategory::linear,
-        self::WIFUSDT->value => AssetCategory::linear,
-        self::OPUSDT->value => AssetCategory::linear,
-        self::DOGEUSDT->value => AssetCategory::linear,
-        self::SUIUSDT->value => AssetCategory::linear,
-        self::AAVEUSDT->value => AssetCategory::linear,
-        self::AVAXUSDT->value => AssetCategory::linear,
-        self::LTCUSDT->value => AssetCategory::linear,
-        self::BNBUSDT->value => AssetCategory::linear,
-        self::ENSUSDT->value => AssetCategory::linear,
-        self::MOVEUSDT->value => AssetCategory::linear,
-        self::ZENUSDT->value => AssetCategory::linear,
-        self::HYPEUSDT->value => AssetCategory::linear,
-        self::MNTUSDT->value => AssetCategory::linear,
-    ];
+    case VIRTUALUSDT = 'VIRTUALUSDT';
+    case GNOUSDT = 'GNOUSDT';
+    case ZECUSDT = 'ZECUSDT';
+    case PHAUSDT = 'PHAUSDT';
+    case A8USDT = 'A8USDT';
+    case NSUSDT = 'NSUSDT';
+    case VELOUSDT = 'VELOUSDT';
+    case DEXEUSDT = 'DEXEUSDT';
+    case ATAUSDT = 'ATAUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -109,6 +73,15 @@ enum Symbol: string
         self::ZENUSDT->value => 3,
         self::HYPEUSDT->value => 3,
         self::MNTUSDT->value => 5,
+        self::VIRTUALUSDT->value => 4,
+        self::GNOUSDT->value => 2,
+        self::ZECUSDT->value => 2,
+        self::PHAUSDT->value => 5,
+        self::A8USDT->value => 5,
+        self::NSUSDT->value => 4,
+        self::VELOUSDT->value => 6,
+        self::DEXEUSDT->value => 3,
+        self::ATAUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -133,32 +106,24 @@ enum Symbol: string
         self::ZENUSDT->value => 0.1,
         self::HYPEUSDT->value => 0.01,
         self::MNTUSDT->value => 1,
+        self::VIRTUALUSDT->value => 1,
+        self::GNOUSDT->value => 0.001,
+        self::ZECUSDT->value => 0.01,
+        self::PHAUSDT->value => 1,
+        self::A8USDT->value => 1,
+        self::NSUSDT->value => 1,
+        self::VELOUSDT->value => 1,
+        self::DEXEUSDT->value => 0.1,
+        self::ATAUSDT->value => 10,
     ];
 
-    private const MIN_NOTIONAL_ORDER_VALUE = [
-        self::BTCUSDT->value => 5,
-        self::BTCUSD->value => 5,
-        self::LINKUSDT->value => 5,
-        self::ADAUSDT->value => 5,
-        self::TONUSDT->value => 5,
-        self::ETHUSDT->value => 5,
-        self::XRPUSDT->value => 5,
-        self::SOLUSDT->value => 5,
-        self::WIFUSDT->value => 5,
-        self::OPUSDT->value => 5,
-        self::DOGEUSDT->value => 5,
-        self::SUIUSDT->value => 5,
-        self::AAVEUSDT->value => 5,
-        self::AVAXUSDT->value => 5,
-        self::LTCUSDT->value => 5,
-        self::BNBUSDT->value => 5,
-        self::ENSUSDT->value => 5,
-        self::MOVEUSDT->value => 5,
-        self::ZENUSDT->value => 5,
-        self::HYPEUSDT->value => 5,
-        self::MNTUSDT->value => 5,
+    private const MIN_NOTIONAL_ORDER_VALUE = [];
+    private const ASSOCIATED_COINS = [
+        self::BTCUSD->value => Coin::BTC,
     ];
-
+    private const ASSOCIATED_CATEGORIES = [
+        self::BTCUSD->value => AssetCategory::inverse
+    ];
     private const STOP_TRIGGER_DELTA = [
         self::BTCUSDT->value => 25,
         self::BTCUSD->value => 25,
@@ -166,12 +131,12 @@ enum Symbol: string
 
     public function associatedCoin(): Coin
     {
-        return self::ASSOCIATED_COINS[$this->value];
+        return self::ASSOCIATED_COINS[$this->value] ?? Coin::USDT;
     }
 
     public function associatedCategory(): AssetCategory
     {
-        return self::ASSOCIATED_CATEGORIES[$this->value];
+        return self::ASSOCIATED_CATEGORIES[$this->value] ?? AssetCategory::linear;
     }
 
     public function pricePrecision(): int
@@ -204,7 +169,7 @@ enum Symbol: string
 
     public function minNotionalOrderValue(): float|int
     {
-        return self::MIN_NOTIONAL_ORDER_VALUE[$this->value];
+        return self::MIN_NOTIONAL_ORDER_VALUE[$this->value] ?? 5;
     }
 
     public function contractSizePrecision(): ?int
