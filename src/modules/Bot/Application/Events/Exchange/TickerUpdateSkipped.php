@@ -16,7 +16,10 @@ final class TickerUpdateSkipped extends LoggableEvent
 
     public function getLog(): ?string
     {
-        if (AppContext::isTest()) {
+        if (
+            AppContext::isTest()
+            || !AppContext::runningWorker() // only in worker runtime
+        ) {
             return null;
         }
 

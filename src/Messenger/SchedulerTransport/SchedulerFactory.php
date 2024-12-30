@@ -38,6 +38,7 @@ final class SchedulerFactory
     private const MEDIUM = '1200 milliseconds';
     private const SLOW = '2 seconds';
     private const VERY_SLOW = '5 seconds';
+    private const VERY_VERY_SLOW = '10 seconds';
 
     private const CONF = [
         'short.sl'  => self::VERY_FAST, 'short.buy' => self::FAST,
@@ -74,7 +75,7 @@ final class SchedulerFactory
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Sell));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_VERY_SLOW), new PushStops($symbol, Side::Sell));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
 
@@ -89,7 +90,7 @@ final class SchedulerFactory
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_SLOW), new PushStops($symbol, Side::Buy));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::VERY_VERY_SLOW), new PushStops($symbol, Side::Buy));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::VERY_SLOW), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
         }
 

@@ -9,3 +9,11 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '5 seconds'
+        ticker_updated_log_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '10 seconds'
+        btcusdt_ticker_updated_log_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '3 seconds'
