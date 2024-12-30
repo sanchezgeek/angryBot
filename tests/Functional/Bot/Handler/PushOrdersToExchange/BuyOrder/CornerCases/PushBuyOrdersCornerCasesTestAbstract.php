@@ -21,6 +21,7 @@ use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -35,6 +36,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     use ByBitV5ApiRequestsMocker;
     use TestWithDbFixtures;
     use StopsTester;
+    use SettingsAwareTest;
 
     protected const SYMBOL = Symbol::BTCUSDT;
 

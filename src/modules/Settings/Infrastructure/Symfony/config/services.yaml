@@ -27,3 +27,7 @@ services:
                 # push BuyOrder
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
+
+                # other
+                trading.takeProfitWhenBalanceIsInsufficient.enabled: false
+                trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170

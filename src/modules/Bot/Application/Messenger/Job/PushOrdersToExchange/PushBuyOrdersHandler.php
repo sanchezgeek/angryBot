@@ -19,6 +19,7 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Application\Settings\PushBuyOrderSettings;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -72,7 +73,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
     public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
     public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
-    public const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT = 170;
     public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
     public const FIX_SUPPORT_ENABLED = false;
@@ -147,11 +147,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
-        if (!self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT) {
+        if ($this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled) !== true) {
             return false;
         }
+
         $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-        $minLastPricePnlPercentToTakeProfit = $position->isSupportPosition() ? self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT / 1.3 : self::USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT;
+        $minLastPricePnlPercentToTakeProfit = $this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent);
 
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }

@@ -10,8 +10,13 @@ enum TradingSettings: string implements SettingKeyAware
 {
     case MarketBuy_SafePriceDistance = 'trading.marketBuy.safePriceDistance';
 
+    # Opposite BuyOrders (after SL executed)
     case Opposite_BuyOrder_PnlDistance_ForLongPosition = 'trading.opposite.BuyOrder.pnlDistance.forLongPosition';
     case Opposite_BuyOrder_PnlDistance_ForShortPosition = 'trading.opposite.BuyOrder.pnlDistance.forShortPosition';
+
+    # Other
+    case TakeProfit_InCaseOf_Insufficient_Balance_Enabled = 'trading.takeProfitWhenBalanceIsInsufficient.enabled';
+    case TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent = 'trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent';
 
     public function getSettingKey(): string
     {
