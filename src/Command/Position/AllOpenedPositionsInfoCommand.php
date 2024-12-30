@@ -11,16 +11,23 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
+use App\Output\Table\Dto\Style\CellStyle;
+use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 use function array_merge;
 use function sprintf;
@@ -32,9 +39,50 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
+    const WITH_SAVED_SORT_OPTION = 'sorted';
+    const SAVE_SORT_OPTION = 'save-sort';
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
+            ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
+        ;
+    }
+
+    private function getSymbolsSort(): ?array
+    {
+        $key = self::sortCacheKey();
+        $item = $this->cache->getItem($key);
+
+        if ($item->isHit()) {
+            return $item->get();
+        }
+
+        return null;
+    }
+
+    private static function sortCacheKey(): string
+    {
+        return 'opened_positions_sort';
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $symbols = $this->positionService->getOpenedPositionsSymbols();
+
+        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
+            $sort = $this->getSymbolsSort();
+            if ($sort === null) {
+                OutputHelper::print('Saved sort not found');
+            } else {
+                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
+                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
+                $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
+                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
+            }
+        }
 
         $unrealised = 0;
         $rows = [];
@@ -50,10 +98,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->withHeader([
                 'symbol',
                 'entry / size',
-                'liq.price',
-                'liq.price - entry',
+                'liq',
+                'liq - entry',
                 '=> % of entry',
-                'liq.price - markPrice',
+                'liq - markPrice',
                 '=> % of markPrice',
                 'unrealized PNL',
             ])
@@ -61,6 +109,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->build()
             ->setStyle('box-double')
             ->render();
+
+        if ($this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
+            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+            $item = $this->cache->getItem(self::sortCacheKey())->set($currentSymbolsSort)->expiresAfter(null);
+            $this->cache->save($item);
+        }
 
         return Command::SUCCESS;
     }
@@ -85,15 +139,30 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $liquidationDistance = $main->liquidationDistance();
         $distanceWithLiquidation = $main->priceDistanceWithLiquidation($ticker);
 
+        $percentOfEntry = Percent::fromPart($liquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+        $percentOfMarkPrice = Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+
+        $liqDiffColor = null;
+        if ($percentOfMarkPrice->value() < $percentOfEntry->value()) {
+            $diff = $percentOfEntry->value() - $percentOfMarkPrice->value();
+
+            $liqDiffColor = match (true) {
+                $diff > 5 => Color::YELLOW,
+                $diff > 15 => Color::BRIGHT_RED,
+                $diff > 30 => Color::RED,
+                default => null
+            };
+        }
+
         $result[] = DataRow::default([
             sprintf('%10s: %8s | %8s | %8s', $symbol->value, $ticker->lastPrice->value(), $ticker->markPrice, $ticker->indexPrice),
             sprintf('%5s: %9s   | %6s', $main->side->title(), $main->entryPrice(), $main->size),
-            $main->liquidationPrice(),
+            Cell::default($main->liquidationPrice()),
             $liquidationDistance,
-            (string)Percent::fromPart($liquidationDistance / $main->entryPrice, false),
+            (string)$percentOfEntry,
             $distanceWithLiquidation,
-            (string)Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false),
-            $main->unrealizedPnl,
+            new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
+            new Cell((string)(new CoinAmount($main->symbol->associatedCoin(), $main->unrealizedPnl)), $main->unrealizedPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
         ]);
 
         $unrealized += $main->unrealizedPnl;
@@ -107,7 +176,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 '',
                 '',
                 '',
-                $support->unrealizedPnl
+                new CoinAmount($main->symbol->associatedCoin(), $support->unrealizedPnl),
             ]);
             $unrealized += $support->unrealizedPnl;
         }
@@ -126,6 +195,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
         private readonly PositionsCache $positionsCache,
         PositionServiceInterface $positionService,
+        private CacheInterface $cache,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

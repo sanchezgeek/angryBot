@@ -22,8 +22,12 @@ use function substr;
  */
 final class Percent extends AbstractFloat implements Stringable, JsonSerializable
 {
-    public function __construct(float $value, bool $strict = true, private ?int $outputDecimalsPrecision = null)
-    {
+    public function __construct(
+        float $value,
+        bool $strict = true,
+        private ?int $outputDecimalsPrecision = null,
+        private ?int $outputFloatPrecision = null,
+    ) {
         if ($strict && ($value <= 0 || $value > 100)) {
             throw new DomainException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $value));
         }
@@ -72,11 +76,13 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
     public function __toString(): string
     {
+        $floatPrecision = $this->outputFloatPrecision ?? 3;
+
         if ($this->outputDecimalsPrecision) {
-            return sprintf('% ' . $this->outputDecimalsPrecision . '.3f%%', $this->value());
+            return sprintf('% ' . $this->outputDecimalsPrecision . '.' . $floatPrecision . 'f%%', $this->value());
         }
 
-        return sprintf('%.3f%%', $this->value());
+        return sprintf('%.' . $floatPrecision . 'f%%', $this->value());
     }
 
     public function jsonSerialize(): string
@@ -87,6 +93,13 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
     public function setOutputDecimalsPrecision(int $outputDecimalsPrecision): self
     {
         $this->outputDecimalsPrecision = $outputDecimalsPrecision;
+
+        return $this;
+    }
+
+    public function setOutputFloatPrecision(int $outputFloatPrecision): self
+    {
+        $this->outputFloatPrecision = $outputFloatPrecision;
 
         return $this;
     }
