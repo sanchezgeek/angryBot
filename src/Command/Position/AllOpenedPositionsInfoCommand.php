@@ -50,6 +50,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const SAVE_SORT_OPTION = 'save-sort';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
+    private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
 
     private array $cacheCollector = [];
 
@@ -59,6 +60,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
+            ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
         ;
     }
 
@@ -95,9 +97,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 }
                 $savedDataKey = $savedKeys[array_key_last($savedKeys)];
             }
+
             if (!($item = $this->cache->getItem($savedDataKey))->isHit()) {
                 throw new Exception(sprintf('Cannot find cache for "%s"', $savedDataKey));
             }
+
+            if ($this->paramFetcher->getBoolOption(self::REMOVE_PREVIOUS_CACHE_OPTION)) {
+                $this->removeSavedDataCacheBefore($savedDataKey);
+            }
+
             $cache = $item->get();
         }
 
@@ -254,6 +262,29 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private function addSavedDataCacheKey(string $cacheKey): void
     {
         $savedDataKeys = $this->getSavedDataCacheKeys();
+        $savedDataKeys[] = $cacheKey;
+
+        $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
+    }
+
+    private function removeSavedDataCacheBefore(string $cacheKey): void
+    {
+        $savedDataKeys = $this->getSavedDataCacheKeys();
+
+        $removeFromKey = null;
+        foreach ($savedDataKeys as $key => $savedCacheKey) {
+            if ($savedCacheKey === $cacheKey) {
+                break;
+            }
+
+            $this->cache->delete($savedCacheKey);
+            $removeFromKey = $key;
+        }
+
+        if ($removeFromKey !== null) {
+            $savedDataKeys = array_slice($savedDataKeys, $removeFromKey + 1);
+        }
+
         $savedDataKeys[] = $cacheKey;
 
         $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
