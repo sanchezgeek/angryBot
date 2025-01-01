@@ -69,11 +69,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
 
-        $savedCachedDataItem = $this->cache->getItem(self::SavedDataKeysCacheKey);
-        if ($savedCachedDataItem->isHit()) {
-            OutputHelper::block('saved cache:', $savedCachedDataItem->get());
-        }
-
         $symbols = $this->positionService->getOpenedPositionsSymbols();
 
         if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
@@ -119,6 +114,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
         $rows[] = DataRow::default([self::formatChangedValue($unrealisedTotal, $cache['unrealizedTotal'] ?? null)]);
+
+        $savedCachedDataItem = $this->cache->getItem(self::SavedDataKeysCacheKey);
+        if ($savedCachedDataItem->isHit()) {
+            OutputHelper::block('saved cache:', $savedCachedDataItem->get());
+        }
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader([
