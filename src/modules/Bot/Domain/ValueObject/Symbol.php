@@ -228,4 +228,13 @@ enum Symbol: string
 
         return $symbol;
     }
+
+    public function shortName(): string
+    {
+        if (str_contains($this->name, 'USDT')) {
+            return str_replace('USDT', '', $this->name);
+        }
+
+        return $this->name;
+    }
 }
