@@ -127,10 +127,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         # save data for further compare
-        $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+        $onDate = $this->clock->now()->format('Y-m-d_H-i-s');
+        $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $onDate);
         $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
         $this->cache->save($item);
         $this->addSavedDataCacheKey($cachedDataCacheKey);
+        OutputHelper::print(sprintf('On %s', $onDate));
 
         return Command::SUCCESS;
     }
@@ -213,12 +215,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function formatChangedValue($diff, $prevValue, callable $formatter = null): string
+    private static function formatChangedValue(int|float $diff, int|float|null $prevValue = null, callable $formatter = null): string
     {
         $formatter = $formatter ?? static fn ($value) => (string)$diff;
         $result = $formatter($diff);
 
-        if ($diff !== $prevValue) {
+        if ($prevValue !== null && $diff !== $prevValue) {
             $diff = $diff - $prevValue;
             [$sign, $wrapper] = match (true) {
                 $diff > 0 => ['+', 'green-text'],
