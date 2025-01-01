@@ -109,15 +109,16 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cache = $item->get();
         }
 
-        $unrealised = 0;
+        $unrealisedTotal = 0;
         $rows = [];
         foreach ($symbols as $symbol) {
-            if ($symbolRows = $this->posInfo($symbol, $unrealised, $cache ?? [])) {
+            if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $cache ?? [])) {
                 $rows = array_merge($rows, $symbolRows);
             }
         }
 
-        $rows[] = DataRow::default([$unrealised]);
+        $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
+        $rows[] = DataRow::default([self::formatChangedValue($unrealisedTotal, $cache['unrealizedTotal'] ?? null)]);
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader([
@@ -229,13 +230,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function formatChangedValue(int|float $diff, int|float|null $prevValue = null, callable $formatter = null): string
+    private static function formatChangedValue(int|float $value, int|float|null $prevValue = null, callable $formatter = null): string
     {
-        $formatter = $formatter ?? static fn ($value) => (string)$diff;
-        $result = $formatter($diff);
+        $formatter = $formatter ?? static fn ($val) => (string)$val;
+        $result = $formatter($value);
 
-        if ($prevValue !== null && $diff !== $prevValue) {
-            $diff = $diff - $prevValue;
+        if ($prevValue !== null && $value !== $prevValue) {
+            $diff = $value - $prevValue;
+
             [$sign, $wrapper] = match (true) {
                 $diff > 0 => ['+', 'green-text'],
                 $diff < 0 => ['', 'red-text'],
