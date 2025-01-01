@@ -88,6 +88,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         if ($savedDataKey = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false)) {
+            if ($savedDataKey === 'last') {
+                if (!$savedKeys = $this->getSavedDataCacheKeys()) {
+                    $this->io->error('Saved cache not found');
+                    return Command::FAILURE;
+                }
+                $savedDataKey = $savedKeys[array_key_last($savedKeys)];
+            }
             if (!($item = $this->cache->getItem($savedDataKey))->isHit()) {
                 throw new Exception(sprintf('Cannot find cache for "%s"', $savedDataKey));
             }
@@ -127,12 +134,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         # save data for further compare
-        $onDate = $this->clock->now()->format('Y-m-d_H-i-s');
-        $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $onDate);
+        $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
         $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
         $this->cache->save($item);
         $this->addSavedDataCacheKey($cachedDataCacheKey);
-        OutputHelper::print(sprintf('On %s', $onDate));
+        OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
 
         return Command::SUCCESS;
     }
@@ -238,14 +244,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
     private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
 
+    private function getSavedDataCacheKeys(): array
+    {
+        $cacheItem = $this->cache->getItem(self::SavedDataKeysCacheKey);
+
+        return $cacheItem->isHit() ? $cacheItem->get() : [];
+    }
+
     private function addSavedDataCacheKey(string $cacheKey): void
     {
-        $cacheItem = $this->cache->getItem($key = self::SavedDataKeysCacheKey);
-
-        $savedDataKeys = $cacheItem->isHit() ? $cacheItem->get() : [];
+        $savedDataKeys = $this->getSavedDataCacheKeys();
         $savedDataKeys[] = $cacheKey;
 
-        $this->cache->save($this->cache->getItem($key)->set($savedDataKeys)->expiresAfter(null));
+        $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
     }
 
     /**

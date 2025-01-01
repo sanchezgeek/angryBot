@@ -79,7 +79,7 @@ class OutputHelper
 
     public static function ordersDebug(array $orders): void
     {
-        var_dump(array_map(static fn(Stop|BuyOrder $order) => $order->getPrice(), $orders));
+        var_dump(array_map(static fn(Stop|BuyOrder $order) => sprintf('%s | %s%s', $order->getPrice(), $order instanceof Stop ? 's.' : 'b.', $order->getId()), $orders));
     }
 
     public static function shortClassName(string $className): string
