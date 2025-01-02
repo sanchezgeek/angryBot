@@ -280,7 +280,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $liquidationRecalculated = $this->positionLiquidationCalculator->handle($position, $fundsAvailableForLiquidation)->estimatedLiquidationPrice()->value();
         if (($diff = abs($position->liquidationPrice - $liquidationRecalculated)) > 1) {
             $msg = sprintf('ByBitExchangeAccountService::calcFreeContractBalance: recalculated liquidationPrice is not equals real one (diff: %s).', $diff);
-            $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
+//            $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
             OutputHelper::warning($msg);
         }
     }
