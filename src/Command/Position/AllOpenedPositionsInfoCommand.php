@@ -198,7 +198,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $result[] = DataRow::default([
             sprintf('%8s: %8s | %8s | %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
-            sprintf('%5s: %9s   | %6s', $main->side->title(), $main->entryPrice(), $main->size),
+            sprintf('%5s: %9s   | %6s', $main->side->title(), $main->entryPrice(), self::formatChangedValue($main->size, ($cache[self::positionCacheKey($main)] ?? null)?->size)),
             Cell::default($main->liquidationPrice()),
             $liquidationDistance,
             (string)$percentOfEntry,
@@ -219,7 +219,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 '',
                 '',
                 '',
-                self::formatChangedValue($supportPnl, ($cache[self::positionCacheKey($support)] ?? null)?->unrealizedPnl, static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value()),
+                self::formatChangedValue($supportPnl, ($cache[self::positionCacheKey($support)] ?? null)?->unrealizedPnl, static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value(), true),
             ]);
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[self::positionCacheKey($support)] = $support;
@@ -230,7 +230,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function formatChangedValue(int|float $value, int|float|null $prevValue = null, callable $formatter = null): string
+    private static function formatChangedValue(int|float $value, int|float|null $prevValue = null, callable $formatter = null, ?bool $withoutColor = null): string
     {
         $formatter = $formatter ?? static fn ($val) => (string)$val;
         $result = $formatter($value);
@@ -244,8 +244,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 default => [null, null]
             };
 
+            if ($withoutColor === true) {
+                $wrapper = null;
+            }
+
             $diff = $formatter($diff);
-            $result .= sprintf(' (%s%s%s)', $sign !== null ? sprintf('<%s>%s', $wrapper, $sign) : '', $diff, $wrapper !== null ? sprintf('</%s>', $wrapper) : '');
+            $result .= sprintf(
+                ' (%s%s%s%s)',
+                $wrapper !== null ? sprintf('<%s>', $wrapper) : '',
+                $sign !== null ? sprintf('%s', $sign) : '',
+                $diff,
+                $wrapper !== null ? sprintf('</%s>', $wrapper) : ''
+            );
         }
 
         return $result;
