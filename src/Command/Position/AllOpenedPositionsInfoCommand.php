@@ -51,6 +51,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_SORT_OPTION = 'save-sort';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
+    private const UPDATE_OPTION = 'update';
 
     private array $cacheCollector = [];
 
@@ -61,6 +62,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
+            ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?')
         ;
     }
 
@@ -69,6 +71,23 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
 
+        $update = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
+
+        do {
+            $res = $this->doOut();
+            if ($res !== null) {
+                return $res;
+            }
+            if ($update) {
+                sleep(30);
+            }
+        } while ($update);
+
+        return Command::SUCCESS;
+    }
+
+    public function doOut(): ?int
+    {
         $symbols = $this->positionService->getOpenedPositionsSymbols();
 
         if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
@@ -149,7 +168,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->addSavedDataCacheKey($cachedDataCacheKey);
         OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
 
-        return Command::SUCCESS;
+        return null;
     }
 
     /**
@@ -213,7 +232,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $supportPnl = $support->unrealizedPnl;
             $result[] = DataRow::default([
                 '',
-                sprintf(' sup.: %9s   | %6s', $support->entryPrice(), $support->size),
+                sprintf(' sup.: %9s   | %6s', $support->entryPrice(), self::formatChangedValue($support->size, ($cache[self::positionCacheKey($support)] ?? null)?->size)),
                 '',
                 '',
                 '',
