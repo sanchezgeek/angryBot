@@ -14,11 +14,13 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\ExchangeOrder;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Settings\Application\Service\AppSettingsProvider;
+use Throwable;
 
 class MarketBuyHandler
 {
@@ -41,7 +43,14 @@ class MarketBuyHandler
         $ticker = $this->exchangeService->ticker($symbol);
         $exchangeOrder = new ExchangeOrder($symbol, $dto->volume, $ticker->lastPrice, true);
 
-        return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
+        try {
+            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
+        } catch (CannotAffordOrderCostException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            OutputHelper::print(sprintf('%s while try to buy %s on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $symbol->value, $dto->positionSide->value));
+            throw $e;
+        }
     }
 
     /**
