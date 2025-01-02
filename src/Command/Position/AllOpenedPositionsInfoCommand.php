@@ -79,7 +79,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 return $res;
             }
             if ($update) {
-                sleep(30);
+                sleep(15);
             }
         } while ($update);
 
