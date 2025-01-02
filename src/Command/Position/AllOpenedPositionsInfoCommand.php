@@ -44,6 +44,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
+    private const DEFAULT_UPDATE_INTERVAL = '15';
+    private const DEFAULT_SAVE_CACHE_INTERVAL = '5';
+
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
 
@@ -51,7 +54,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_SORT_OPTION = 'save-sort';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
+    private const SHOW_CACHE_OPTION = 'show-cache';
     private const UPDATE_OPTION = 'update';
+    private const UPDATE_INTERVAL_OPTION = 'every';
+    private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-every';
 
     private array $cacheCollector = [];
 
@@ -63,6 +69,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
             ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?')
+            ->addOption(self::UPDATE_INTERVAL_OPTION, null, InputOption::VALUE_REQUIRED, 'Update interval', self::DEFAULT_UPDATE_INTERVAL)
+            ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
+            ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
         ;
     }
 
@@ -71,25 +80,42 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
 
-        $update = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
+        if ($this->paramFetcher->getBoolOption(self::SHOW_CACHE_OPTION)) {
+            if (!$savedKeys = $this->getSavedDataCacheKeys()) {
+                $this->io->error('Saved cache records not found'); return Command::FAILURE;
+            }
+            OutputHelper::block('Saved cache records:', $savedKeys); return Command::SUCCESS;
+        }
 
+        $previousIterationCache = null;
+        $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
+        $iteration = 0;
         do {
-            $res = $this->doOut();
-            if ($res !== null) {
-                return $res;
+            $iteration++;
+            $this->cacheCollector = [];
+
+            $cache = $this->getCacheRecordToShowDiffWith($previousIterationCache);
+            $this->doOut($cache);
+
+            $saveCurrentState = !$updateEnabled || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
+            if ($saveCurrentState) {
+                $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+                $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
+                $this->cache->save($item);
+                $this->addSavedDataCacheKey($cachedDataCacheKey);
+                OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
             }
-            if ($update) {
-                sleep(15);
-            }
-        } while ($update);
+            $previousIterationCache = $this->cacheCollector;
+
+            $updateEnabled && sleep($this->paramFetcher->getIntOption(self::UPDATE_INTERVAL_OPTION));
+        } while ($updateEnabled);
 
         return Command::SUCCESS;
     }
 
-    public function doOut(): ?int
+    public function doOut(?array $cache): ?int
     {
         $symbols = $this->positionService->getOpenedPositionsSymbols();
-
         if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
             $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
             if ($sort === null) {
@@ -103,26 +129,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
-        if ($savedDataKey = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false)) {
-            if ($savedDataKey === 'last') {
-                if (!$savedKeys = $this->getSavedDataCacheKeys()) {
-                    $this->io->error('Saved cache not found');
-                    return Command::FAILURE;
-                }
-                $savedDataKey = $savedKeys[array_key_last($savedKeys)];
-            }
-
-            if (!($item = $this->cache->getItem($savedDataKey))->isHit()) {
-                throw new Exception(sprintf('Cannot find cache for "%s"', $savedDataKey));
-            }
-
-            if ($this->paramFetcher->getBoolOption(self::REMOVE_PREVIOUS_CACHE_OPTION)) {
-                $this->removeSavedDataCacheBefore($savedDataKey);
-            }
-
-            $cache = $item->get();
-        }
-
         $unrealisedTotal = 0;
         $rows = [];
         foreach ($symbols as $symbol) {
@@ -133,11 +139,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
         $rows[] = DataRow::default([self::formatChangedValue($unrealisedTotal, $cache['unrealizedTotal'] ?? null)]);
-
-        $savedCachedDataItem = $this->cache->getItem(self::SavedDataKeysCacheKey);
-        if ($savedCachedDataItem->isHit()) {
-            OutputHelper::block('saved cache:', $savedCachedDataItem->get());
-        }
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader([
@@ -161,18 +162,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $this->cache->save($item);
         }
 
-        # save data for further compare
-        $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
-        $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
-        $this->cache->save($item);
-        $this->addSavedDataCacheKey($cachedDataCacheKey);
-        OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
-
         return null;
     }
 
     /**
-     * @return DataRow|SeparatorRow[]
+     * @return array<DataRow|SeparatorRow>
      */
     private function posInfo(Symbol $symbol, float &$unrealizedTotal, array $cache = []): array
     {
@@ -247,6 +241,37 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $result[] = new SeparatorRow();
 
         return $result;
+    }
+
+    private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
+    {
+        $cache = null;
+        $selectedOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
+        if ($selectedOption) {
+            $selectedDataKey = $selectedOption;
+            if ($selectedDataKey === 'last') {
+                if ($lastCache) {
+                    # in case of update enabled
+                    return $lastCache;
+                }
+
+                assert($savedKeys = $this->getSavedDataCacheKeys(), new Exception('Saved cache not found'));
+                $selectedDataKey = $savedKeys[array_key_last($savedKeys)];
+            }
+
+            assert(($cacheItem = $this->cache->getItem($selectedDataKey))->isHit(), new Exception(sprintf('Cannot find cache for "%s"', $selectedDataKey)));
+
+            if ($this->paramFetcher->getBoolOption(self::REMOVE_PREVIOUS_CACHE_OPTION)) {
+                $doRemove = $selectedOption !== 'last' || $this->io->confirm('"last" selected as cache. Are you sure that you want to remove all cache saved before it?', false);
+                if ($doRemove) {
+                    $this->removeSavedDataCacheBefore($selectedDataKey);
+                }
+            }
+
+            $cache = $cacheItem->get();
+        }
+
+        return $cache;
     }
 
     private static function formatChangedValue(int|float $value, int|float|null $prevValue = null, callable $formatter = null, ?bool $withoutColor = null): string
