@@ -61,3 +61,13 @@ __________________________
  ... don't forget to remove stale stops before it ... Может добавить какой-то асинхрон, который проверит это и сам удалить стопы?
 
 --------------
+
+
+/**
+ * Интересная идея про idle / active в зависимости от цены создания + TickerUpdatedEvent
+ * + какой-то порог на активацию
+ */
+
+------
+symbols_wip_from_main_before_new_m
+   main_msg_with_critical_context.patch / Тут пытался делать что-то по поводу скипа сообщений PushOrders
