@@ -60,6 +60,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-every';
 
     private array $cacheCollector = [];
+    private string $showDiffWithOption;
 
     protected function configure(): void
     {
@@ -73,6 +74,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
             ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
         ;
+    }
+
+    protected function initialize(InputInterface $input, OutputInterface $output): void
+    {
+        parent::initialize($input, $output);
+
+        $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -95,7 +103,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $this->cacheCollector = [];
 
             $cache = $this->getCacheRecordToShowDiffWith($previousIterationCache);
-            $this->doOut($cache);
+
+            $prevCache = null;
+            if ($this->showDiffWithOption !== 'last') {
+                $prevCache = $previousIterationCache;
+            }
+
+            $this->doOut($cache, $prevCache);
 
             $saveCurrentState = !$updateEnabled || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
             if ($saveCurrentState) {
@@ -113,7 +127,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    public function doOut(?array $cache): ?int
+    public function doOut(?array $selectedCache, ?array $prevCache): ?int
     {
         $symbols = $this->positionService->getOpenedPositionsSymbols();
         if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
@@ -132,25 +146,35 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $unrealisedTotal = 0;
         $rows = [];
         foreach ($symbols as $symbol) {
-            if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $cache ?? [])) {
+            if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $selectedCache ?? [], $prevCache ?? [])) {
                 $rows = array_merge($rows, $symbolRows);
             }
         }
 
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
-        $rows[] = DataRow::default([self::formatChangedValue($unrealisedTotal, $cache['unrealizedTotal'] ?? null)]);
+        $rows[] = DataRow::default([self::formatChangedValue(value: $unrealisedTotal, specifiedCacheValue: $selectedCache['unrealizedTotal'] ?? null)]);
+
+        $headerColumns = [
+            'symbol',
+            'entry / size',
+            'liq',
+            'liq - entry',
+            '=> % of entry',
+            'liq - markPrice',
+            '=> % of markPrice',
+            'unrealized PNL',
+        ];
+
+        if ($selectedCache) {
+            $headerColumns[] = 'Δ (cache)';
+        }
+
+        if ($prevCache) {
+            $headerColumns[] = 'Δ (prev.)';
+        }
 
         ConsoleTableBuilder::withOutput($this->output)
-            ->withHeader([
-                'symbol',
-                'entry / size',
-                'liq',
-                'liq - entry',
-                '=> % of entry',
-                'liq - markPrice',
-                '=> % of markPrice',
-                'unrealized PNL',
-            ])
+            ->withHeader($headerColumns)
             ->withRows(...$rows)
             ->build()
             ->setStyle('box-double')
@@ -168,7 +192,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /**
      * @return array<DataRow|SeparatorRow>
      */
-    private function posInfo(Symbol $symbol, float &$unrealizedTotal, array $cache = []): array
+    private function posInfo(Symbol $symbol, float &$unrealizedTotal, array $specifiedCache = [], array $prevCache = []): array
     {
         $result = [];
 
@@ -182,7 +206,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $hedge = $positions[0]->getHedge();
         $main = $hedge?->mainPosition ?? $positions[0];
-        $this->cacheCollector[self::positionCacheKey($main)] = $main;
+
+        $mainPositionCacheKey = self::positionCacheKey($main);
+        $this->cacheCollector[$mainPositionCacheKey] = $main;
 
         $liquidationDistance = $main->liquidationDistance();
         $distanceWithLiquidation = $main->priceDistanceWithLiquidation($ticker);
@@ -203,22 +229,32 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $mainPositionPnl = $main->unrealizedPnl;
 
-        $mainPositionPnlContent = self::formatChangedValue(
-            $mainPositionPnl,
-            ($cache[self::positionCacheKey($main)] ?? null)?->unrealizedPnl,
-            static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value()
-        );
-
-        $result[] = DataRow::default([
+        $cells = [
             sprintf('%8s: %8s | %8s | %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
-            sprintf('%5s: %9s   | %6s', $main->side->title(), $main->entryPrice(), self::formatChangedValue($main->size, ($cache[self::positionCacheKey($main)] ?? null)?->size)),
+            sprintf(
+                '%5s: %9s   | %6s',
+                $main->side->title(),
+                $main->entryPrice(),
+                self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size))
+            ),
             Cell::default($main->liquidationPrice()),
             $liquidationDistance,
             (string)$percentOfEntry,
             $distanceWithLiquidation,
             new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
-            new Cell(($mainPositionPnlContent), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
-        ]);
+            new Cell(new CoinAmount($main->symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
+        ];
+
+        $pnlFormatter = static fn(float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value();
+        if ($specifiedCache) {
+            $cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
+            $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
+        }
+        if ($prevCache) {
+            $cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
+            $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
+        }
+        $result[] = DataRow::default($cells);
 
         $unrealizedTotal += $mainPositionPnl;
 
@@ -226,13 +262,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $supportPnl = $support->unrealizedPnl;
             $result[] = DataRow::default([
                 '',
-                sprintf(' sup.: %9s   | %6s', $support->entryPrice(), self::formatChangedValue($support->size, ($cache[self::positionCacheKey($support)] ?? null)?->size)),
+                sprintf(' sup.: %9s   | %6s', $support->entryPrice(), self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[self::positionCacheKey($support)] ?? null)?->size))),
                 '',
                 '',
                 '',
                 '',
                 '',
-                self::formatChangedValue($supportPnl, ($cache[self::positionCacheKey($support)] ?? null)?->unrealizedPnl, static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value(), true),
+                self::formatChangedValue(
+                    value: $supportPnl,
+                    specifiedCacheValue: (($specifiedCache[self::positionCacheKey($support)] ?? null)?->unrealizedPnl),
+                    formatter: static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value(),
+                    withoutColor: true
+                ),
             ]);
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[self::positionCacheKey($support)] = $support;
@@ -246,9 +287,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
     {
         $cache = null;
-        $selectedOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
-        if ($selectedOption) {
-            $selectedDataKey = $selectedOption;
+        if ($this->showDiffWithOption) {
+            $selectedDataKey = $this->showDiffWithOption;
             if ($selectedDataKey === 'last') {
                 if ($lastCache) {
                     # in case of update enabled
@@ -262,7 +302,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             assert(($cacheItem = $this->cache->getItem($selectedDataKey))->isHit(), new Exception(sprintf('Cannot find cache for "%s"', $selectedDataKey)));
 
             if ($this->paramFetcher->getBoolOption(self::REMOVE_PREVIOUS_CACHE_OPTION)) {
-                $doRemove = $selectedOption !== 'last' || $this->io->confirm('"last" selected as cache. Are you sure that you want to remove all cache saved before it?', false);
+                $doRemove = $this->showDiffWithOption !== 'last' || $this->io->confirm('"last" selected as cache. Are you sure that you want to remove all cache saved before it?', false);
                 if ($doRemove) {
                     $this->removeSavedDataCacheBefore($selectedDataKey);
                 }
@@ -274,35 +314,62 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $cache;
     }
 
-    private static function formatChangedValue(int|float $value, int|float|null $prevValue = null, callable $formatter = null, ?bool $withoutColor = null): string
-    {
+    private static function formatChangedValue(
+        int|float $value,
+        int|float|null $specifiedCacheValue = null,
+        int|float|null $prevIterationValue = null,
+        callable $formatter = null,
+        ?bool $withoutColor = null
+    ): string {
         $formatter = $formatter ?? static fn ($val) => (string)$val;
         $result = $formatter($value);
 
-        if ($prevValue !== null && $value !== $prevValue) {
-            $diff = $value - $prevValue;
+        $items = [];
 
-            [$sign, $wrapper] = match (true) {
-                $diff > 0 => ['+', 'green-text'],
-                $diff < 0 => ['', 'red-text'],
-                default => [null, null]
-            };
+        if ($specifiedCacheValue !== null && $value !== $specifiedCacheValue) {
+            $items[] = self::getFormattedDiff($value, $specifiedCacheValue, $withoutColor, $formatter) ?? 0;
+        }
 
-            if ($withoutColor === true) {
-                $wrapper = null;
-            }
+        if (
+            $prevIterationValue
+            && ($diff = self::getFormattedDiff($value, $prevIterationValue, $withoutColor, $formatter)) !== null
+        ) {
+            $items[] = sprintf('%s', $diff);
+        }
 
-            $diff = $formatter($diff);
-            $result .= sprintf(
-                ' (%s%s%s%s)',
-                $wrapper !== null ? sprintf('<%s>', $wrapper) : '',
-                $sign !== null ? sprintf('%s', $sign) : '',
-                $diff,
-                $wrapper !== null ? sprintf('</%s>', $wrapper) : ''
-            );
+        if ($items) {
+            $result .= sprintf(' (%s)', implode(' | ', $items));
         }
 
         return $result;
+    }
+
+    private static function getFormattedDiff(int|float $a, int|float $b, ?bool $withoutColor = null, ?callable $formatter = null): ?string
+    {
+        $diff = $a - $b;
+
+        if ($diff === 0.00 || $diff === 0) {
+            return '-';
+        }
+
+        [$sign, $wrapper] = match (true) {
+            $diff > 0 => ['+', 'green-text'],
+            $diff < 0 => ['', 'red-text'],
+            default => [null, null]
+        };
+
+        if ($withoutColor === true) {
+            $wrapper = null;
+        }
+
+        $diff = $formatter($diff);
+        return sprintf(
+            '%s%s%s%s',
+            $wrapper !== null ? sprintf('<%s>', $wrapper) : '',
+            $sign !== null ? sprintf('%s', $sign) : '',
+            $diff,
+            $wrapper !== null ? sprintf('</%s>', $wrapper) : '',
+        );
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
