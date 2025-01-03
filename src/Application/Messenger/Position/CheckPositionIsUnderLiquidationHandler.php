@@ -86,11 +86,17 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
+        ### remove stale ###
+        foreach ($this->getStaleStops($position) as $stop) {
+            $this->stopRepository->remove($stop);
+        }
+
+        ### add new ###
         $ticker = $this->exchangeService->ticker($symbol);
-        $lastRunMarketPrice = $this->getLastRunAt($position);
+        $lastRunMarketPrice = $this->getLastRunMarkPrice($position);
 
         if (!$lastRunMarketPrice) {
-            $this->setLastRunAt($position, $ticker);
+            $this->setLastRunMarkPrice($position, $ticker);
             return;
         }
 
@@ -99,14 +105,6 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
-        $this->setLastRunAt($position, $ticker);
-
-        ### remove stale ###
-        foreach ($this->getStaleStops($position) as $stop) {
-            $this->stopRepository->remove($stop);
-        }
-
-        ### add new ###
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
 //        $this->switchPositionService($ticker, $distanceWithLiquidation);
@@ -188,6 +186,8 @@ final class CheckPositionIsUnderLiquidationHandler
         ) {
             $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
         }
+
+        $this->setLastRunMarkPrice($position, $ticker);
     }
 
     private function getStopsVolumeBeforeLiquidation(Position $position, Ticker $ticker): float
@@ -325,9 +325,9 @@ final class CheckPositionIsUnderLiquidationHandler
 //        );
     }
 
-    private function getLastRunAt(Position $position): ?Price
+    private function getLastRunMarkPrice(Position $position): ?Price
     {
-        $cacheItem = $this->cache->getItem(self::lastRunCacheKey($position));
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position));
         if ($cacheItem->isHit()) {
             return $cacheItem->get();
         }
@@ -335,14 +335,14 @@ final class CheckPositionIsUnderLiquidationHandler
         return null;
     }
 
-    private function setLastRunAt(Position $position, Ticker $ticker): void
+    private function setLastRunMarkPrice(Position $position, Ticker $ticker): void
     {
-        $cacheItem = $this->cache->getItem(self::lastRunCacheKey($position))->set($ticker->markPrice)->expiresAfter(null);
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(null);
 
         $this->cache->save($cacheItem);
     }
 
-    private static function lastRunCacheKey(Position $position): string
+    private static function lastRunMarkPriceCacheKey(Position $position): string
     {
         return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->name, $position->side->value);
     }
