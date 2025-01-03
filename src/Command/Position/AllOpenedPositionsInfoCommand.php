@@ -61,6 +61,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private array $cacheCollector = [];
     private string $showDiffWithOption;
+    /** @var Symbol[] */
+    private array $symbols;
 
     protected function configure(): void
     {
@@ -81,6 +83,21 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         parent::initialize($input, $output);
 
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
+
+        $symbols = $this->positionService->getOpenedPositionsSymbols();
+        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
+            $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
+            if ($sort === null) {
+                OutputHelper::print('Saved sort not found');
+            } else {
+                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
+                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
+                $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
+                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
+            }
+        }
+        $this->symbols = $symbols;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -127,32 +144,42 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    public function doOut(?array $selectedCache, ?array $prevCache): ?int
+    public function doOut(?array $selectedCache, ?array $prevCache): void
     {
-        $symbols = $this->positionService->getOpenedPositionsSymbols();
-        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
-            $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
-            if ($sort === null) {
-                OutputHelper::print('Saved sort not found');
-            } else {
-                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
-                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
-                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
-                $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
-                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
-            }
-        }
-
         $unrealisedTotal = 0;
         $rows = [];
-        foreach ($symbols as $symbol) {
+        foreach ($this->symbols as $symbol) {
             if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $selectedCache ?? [], $prevCache ?? [])) {
                 $rows = array_merge($rows, $symbolRows);
             }
         }
 
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
-        $rows[] = DataRow::default([self::formatChangedValue(value: $unrealisedTotal, specifiedCacheValue: $selectedCache['unrealizedTotal'] ?? null)]);
+        ### bottom START ###
+        $coin = null;
+        foreach ($this->symbols as $symbol) {
+            if ($coin !== null && $symbol->associatedCoin() !== $coin) {
+                $coin = null; break;
+            }
+            $coin = $symbol->associatedCoin();
+        }
+        $pnlFormatter = $coin ? static fn(float $pnl) => new CoinAmount($coin, $pnl) : static fn($pnl) => (string)$pnl;
+        $bottomCells = [
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            $pnlFormatter($unrealisedTotal),
+        ];
+
+        $pnlFormatter = $coin ? static fn(float $pnl) => (new CoinAmount($coin, $pnl))->value() : static fn($pnl) => (string)$pnl;
+        $selectedCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter);
+        $prevCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter);
+        $rows[] = DataRow::default($bottomCells);
+        ### bottom END ###
 
         $headerColumns = [
             'symbol',
@@ -181,12 +208,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->render();
 
         if ($this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
-            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $this->symbols);
             $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
             $this->cache->save($item);
         }
-
-        return null;
     }
 
     /**
