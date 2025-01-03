@@ -16,7 +16,9 @@ use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
@@ -28,6 +30,7 @@ use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Cache\CacheInterface;
 use Throwable;
 
 use function array_filter;
@@ -83,19 +86,32 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
+        $ticker = $this->exchangeService->ticker($symbol);
+        $lastRunMarketPrice = $this->getLastRunAt($position);
+
+        if (!$lastRunMarketPrice) {
+            $this->setLastRunAt($position, $ticker);
+            return;
+        }
+
+        $marketPriceMovement = PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice);
+        if (!$marketPriceMovement->isLossFor($position->side)) {
+            return;
+        }
+
+        $this->setLastRunAt($position, $ticker);
+
         ### remove stale ###
         foreach ($this->getStaleStops($position) as $stop) {
             $this->stopRepository->remove($stop);
         }
 
         ### add new ###
-        $ticker = $this->exchangeService->ticker($symbol);
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
 //        $this->switchPositionService($ticker, $distanceWithLiquidation);
 
         $decreaseStopDistance = false;
-
         $transferFromSpotOnDistance = $this->transferFromSpotOnDistance($ticker);
         if ($distanceWithLiquidation <= $transferFromSpotOnDistance) {
             try {
@@ -309,6 +325,28 @@ final class CheckPositionIsUnderLiquidationHandler
 //        );
     }
 
+    private function getLastRunAt(Position $position): ?Price
+    {
+        $cacheItem = $this->cache->getItem(self::lastRunCacheKey($position));
+        if ($cacheItem->isHit()) {
+            return $cacheItem->get();
+        }
+
+        return null;
+    }
+
+    private function setLastRunAt(Position $position, Ticker $ticker): void
+    {
+        $cacheItem = $this->cache->getItem(self::lastRunCacheKey($position))->set($ticker->markPrice)->expiresAfter(null);
+
+        $this->cache->save($cacheItem);
+    }
+
+    private static function lastRunCacheKey(Position $position): string
+    {
+        return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->name, $position->side->value);
+    }
+
     /**
      * @param ByBitLinearExchangeCacheDecoratedService $exchangeService
      */
@@ -321,6 +359,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly StopServiceInterface $stopService,
         private readonly StopRepositoryInterface $stopRepository,
         private readonly LoggerInterface $appErrorLogger,
+        private CacheInterface $cache,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {
         $this->selectedPositionService = $this->positionService;
