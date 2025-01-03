@@ -50,13 +50,13 @@ final class CheckPositionIsUnderLiquidationHandler
     public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # Additional stop
-    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 40;
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 60;
 
     # To check stopped position volume
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 20;
 
-    public const ACCEPTABLE_STOPPED_PART = 8;
+    public const ACCEPTABLE_STOPPED_PART = 7;
     private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
 
     const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
@@ -145,7 +145,10 @@ final class CheckPositionIsUnderLiquidationHandler
                     $triggerDelta = $this->additionalStopTriggerDelta($symbol);
                     $stopPrice = $this->getAdditionalStopPrice($position);
 
-                    $context = [Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true];
+                    $context = [
+                        Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
+                        Stop::CLOSE_BY_MARKET_CONTEXT => true
+                    ];
                     if (!AppContext::isTest()) {
                         $context['when'] = [
                             'position.liquidation' => $position->liquidationPrice,
