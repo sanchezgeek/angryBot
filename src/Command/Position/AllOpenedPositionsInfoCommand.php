@@ -56,8 +56,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
     private const SHOW_CACHE_OPTION = 'show-cache';
     private const UPDATE_OPTION = 'update';
-    private const UPDATE_INTERVAL_OPTION = 'every';
-    private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-every';
+    private const UPDATE_INTERVAL_OPTION = 'update-interval';
+    private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
 
     private array $cacheCollector = [];
     private string $showDiffWithOption;

@@ -248,7 +248,7 @@ class PlaceOrderCommand extends AbstractCommand
             }
             OutputHelper::print('');
 
-            if (!$this->isWithoutConfirm() && !$this->io->confirm('Sure?', false)) {
+            if (!$this->isWithoutConfirm() && !$this->io->confirm('Sure?')) {
                 throw new Exception('OK!');
             }
 
