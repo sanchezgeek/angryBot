@@ -94,15 +94,11 @@ final class CheckPositionIsUnderLiquidationHandler
         ### add new ###
         $ticker = $this->exchangeService->ticker($symbol);
         $lastRunMarketPrice = $this->getLastRunMarkPrice($position);
-
-        if (!$lastRunMarketPrice) {
-            $this->setLastRunMarkPrice($position, $ticker);
-            return;
-        }
-
-        $marketPriceMovement = PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice);
-        if (!$marketPriceMovement->isLossFor($position->side)) {
-            return;
+        if ($lastRunMarketPrice !== null) {
+            $marketPriceMovement = PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice);
+            if (!$marketPriceMovement->isLossFor($position->side)) {
+                return;
+            }
         }
 
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
@@ -163,14 +159,14 @@ final class CheckPositionIsUnderLiquidationHandler
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                         Stop::CLOSE_BY_MARKET_CONTEXT => true
                     ];
-                    if (!AppContext::isTest()) {
-                        $context['when'] = [
-                            'position.liquidation' => $position->liquidationPrice,
-                            '$checkStopsOnDistance' => $checkStopsOnDistance,
-                            '$distanceWithLiquidation' => $distanceWithLiquidation,
-                            '$stopPriceDistance' => $position->isShort() ? $position->liquidationPrice - $stopPrice->value() : $stopPrice->value() - $position->liquidationPrice,
-                        ];
-                    }
+//                    if (!AppContext::isTest()) {
+//                        $context['when'] = [
+//                            'position.liquidation' => $position->liquidationPrice,
+//                            '$checkStopsOnDistance' => $checkStopsOnDistance,
+//                            '$distanceWithLiquidation' => $distanceWithLiquidation,
+//                            '$stopPriceDistance' => $position->isShort() ? $position->liquidationPrice - $stopPrice->value() : $stopPrice->value() - $position->liquidationPrice,
+//                        ];
+//                    }
 
                     $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta, $context);
                 }
