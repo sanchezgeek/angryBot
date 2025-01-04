@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Helper;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -26,6 +27,14 @@ class CheckLiquidationParametersHelper
     private static function transferFromSpotOnDistance(Ticker $ticker): float
     {
         return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
+    }
+
+    /**
+     * @see CheckPositionIsUnderLiquidationHandler::acceptableStoppedPart
+     */
+    public static function acceptableStoppedPart(CheckPositionIsUnderLiquidation $message): float
+    {
+        return $message->acceptableStoppedPart ?? CheckPositionIsUnderLiquidationHandler::ACCEPTABLE_STOPPED_PART;
     }
 
     /**

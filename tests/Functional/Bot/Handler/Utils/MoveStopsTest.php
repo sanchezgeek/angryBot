@@ -33,7 +33,6 @@ final class MoveStopsTest extends KernelTestCase
     private const SYMBOL = Symbol::BTCUSDT;
 
     protected PositionServiceInterface $positionServiceStub;
-    protected ExchangeServiceInterface $exchangeServiceMock;
 
     private MoveStopsHandler $handler;
 
@@ -46,10 +45,9 @@ final class MoveStopsTest extends KernelTestCase
     {
         parent::setUp();
 
-        $this->exchangeServiceMock = $this->createMock(ExchangeServiceInterface::class);
         $this->positionServiceStub = new PositionServiceStub();
 
-        $this->handler = new MoveStopsHandler(self::getStopRepository(), $this->exchangeServiceMock, $this->positionServiceStub);
+        $this->handler = new MoveStopsHandler(self::getStopRepository(), $this->positionServiceStub);
 
         self::ensureTableIsEmpty(Stop::class);
     }
@@ -66,7 +64,6 @@ final class MoveStopsTest extends KernelTestCase
         array $stopsExpectedAfterHandle,
     ): void {
         // Arrange
-        $this->haveTicker(TickerFactory::create(self::SYMBOL, 29050));
         $this->positionServiceStub->havePosition(
             $position = PositionFactory::short(self::SYMBOL, $initialPositionEntryPrice)
         );
@@ -148,11 +145,6 @@ final class MoveStopsTest extends KernelTestCase
             ],
             '$stopsExpectedAfterHandle' => $initialStops,
         ];
-    }
-
-    protected function haveTicker(Ticker $ticker): void
-    {
-        $this->exchangeServiceMock->method('ticker')->with($ticker->symbol)->willReturn($ticker);
     }
 
     /**

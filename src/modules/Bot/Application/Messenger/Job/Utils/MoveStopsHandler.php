@@ -25,7 +25,6 @@ final class MoveStopsHandler
 
     public function __construct(
         private readonly StopRepository $stopRepository,
-        private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService,
     ) {
     }
@@ -39,8 +38,6 @@ final class MoveStopsHandler
         $symbol = $message->symbol;
 
         $lastRun = $this->getLastRunAt($side);
-
-        $ticker = $this->exchangeService->ticker($symbol);
         $position = $this->positionService->getPosition($symbol, $side);
 
         if (!$position) {

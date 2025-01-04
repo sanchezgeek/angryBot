@@ -15,6 +15,7 @@ final readonly class CheckPositionIsUnderLiquidation
         public Symbol $symbol,
         public ?int $checkStopsOnPnlPercent = null,
         public ?int $percentOfLiquidationDistanceToAddStop = null,
+        public ?int $acceptableStoppedPart = null,
     ) {
     }
 }

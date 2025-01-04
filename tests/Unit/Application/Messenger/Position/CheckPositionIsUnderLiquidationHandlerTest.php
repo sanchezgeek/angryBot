@@ -77,6 +77,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopService,
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
+            null,
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }

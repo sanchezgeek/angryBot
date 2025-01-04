@@ -135,10 +135,12 @@ final class CheckPositionIsUnderLiquidationHandler
         $checkStopsOnDistance = $this->checkStopsOnDistance($position, $ticker);
         if ($distanceWithLiquidation <= $checkStopsOnDistance) {
             $notCoveredSize = $position->getNotCoveredSize();
-            $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify(self::ACCEPTABLE_STOPPED_PART, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
+            $acceptableStoppedPart = $this->acceptableStoppedPart();
+            $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPart, self::ACCEPTABLE_STOPPED_PART_MODIFIER);
             // @todo | maybe need also check that hedge has positive distance (...&& $hedge->isProfitableHedge()...)
             if ($position->getHedge()?->getSupportRate()->value() > 25) {
-                $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - self::ACCEPTABLE_STOPPED_PART / 2.2, 0.05);
+                // @todo | Need to be covered with tests
+                $acceptableStoppedPartBeforeLiquidation = FloatHelper::modify($acceptableStoppedPartBeforeLiquidation - $acceptableStoppedPart / 2.2, 0.05);
             }
 
             $stopsBeforeLiquidationVolume = $this->getStopsVolumeBeforeLiquidation($position, $ticker);
@@ -157,7 +159,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
-                        Stop::CLOSE_BY_MARKET_CONTEXT => true
+                        Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
                     ];
 //                    if (!AppContext::isTest()) {
 //                        $context['when'] = [
@@ -234,6 +236,11 @@ final class CheckPositionIsUnderLiquidationHandler
                 ? $position->liquidationPrice()->sub($additionalStopDistanceWithLiquidation)
                 : $position->liquidationPrice()->add($additionalStopDistanceWithLiquidation)
         );
+    }
+
+    public function acceptableStoppedPart(): int
+    {
+        return $this->handledMessage->acceptableStoppedPart ?? self::ACCEPTABLE_STOPPED_PART;
     }
 
     public function getAmountToTransfer(Position $position): CoinAmount
@@ -323,6 +330,10 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private function getLastRunMarkPrice(Position $position): ?Price
     {
+        if ($this->cache === null) {
+            return null;
+        }
+
         $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position));
         if ($cacheItem->isHit()) {
             return $cacheItem->get();
@@ -333,6 +344,10 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private function setLastRunMarkPrice(Position $position, Ticker $ticker): void
     {
+        if ($this->cache === null) {
+            return;
+        }
+
         $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(300);
 
         $this->cache->save($cacheItem);
@@ -355,7 +370,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly StopServiceInterface $stopService,
         private readonly StopRepositoryInterface $stopRepository,
         private readonly LoggerInterface $appErrorLogger,
-        private CacheInterface $cache,
+        private readonly ?CacheInterface $cache,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {
         $this->selectedPositionService = $this->positionService;
