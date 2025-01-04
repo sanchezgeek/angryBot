@@ -38,11 +38,11 @@ class CheckLiquidationParametersHelper
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationHandler::checkStopsOnDistance()
+     * @see CheckPositionIsUnderLiquidationHandler::checkStopsOnDistance
      */
     public static function checkStopsOnDistance(Position $position): float
     {
-        return self::additionalStopDistanceWithLiquidation($position) * 2;
+        return self::additionalStopDistanceWithLiquidation($position) * 1.5;
     }
 
     /**

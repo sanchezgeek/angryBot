@@ -277,7 +277,7 @@ final class CheckPositionIsUnderLiquidationHandler
             return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->indexPrice), 0.1);
         }
 
-        return $this->additionalStopDistanceWithLiquidation($position) * 2;
+        return $this->additionalStopDistanceWithLiquidation($position) * 1.5;
     }
 
     private function additionalStopDistanceWithLiquidation(Position $position): float
