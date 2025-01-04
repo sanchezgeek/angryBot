@@ -23,10 +23,16 @@ use Doctrine\Persistence\ManagerRegistry;
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
+    private string $isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
 
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Stop::class);
+    }
+
+    public function getNextId(): int
+    {
+        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
     }
 
     public function save(Stop $stop): void
@@ -172,8 +178,13 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return $qb->getQuery()->getResult();
     }
 
-    public function getNextId(): int
+    public function findActiveCreatedByLiquidationHandler(): array
     {
-        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->isAdditionalStopFromLiquidationHandler', 'true') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
     }
 }

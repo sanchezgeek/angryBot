@@ -6,7 +6,9 @@ use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLi
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
@@ -15,6 +17,8 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Price\PriceRange;
+use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
@@ -61,8 +65,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private array $cacheCollector = [];
     private string $showDiffWithOption;
+
     /** @var Symbol[] */
     private array $symbols;
+
+    /** @var Stop[] */
+    private array $stops;
 
     protected function configure(): void
     {
@@ -146,6 +154,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
+        $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
+
         $unrealisedTotal = 0;
         $rows = [];
         foreach ($this->symbols as $symbol) {
@@ -172,6 +182,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             '',
             '',
             '',
+            '',
             $pnlFormatter($unrealisedTotal),
         ];
 
@@ -184,6 +195,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $headerColumns = [
             'symbol',
             'entry / size',
+            'stops',
             'liq',
             'liq - entry',
             '=> % of entry',
@@ -254,6 +266,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $mainPositionPnl = $main->unrealizedPnl;
 
+        $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol) {
+            $modifier = Percent::string('20%')->of($main->liquidationDistance());
+            $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
+
+            return
+                $stop->getPositionSide() === $main->side
+                && $stop->getSymbol() === $symbol
+                && $stop->getExchangeOrderId() === null
+                && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($main->entryPrice(), $bound, $symbol))
+            ;
+        });
+        $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
+
         $cells = [
             sprintf('%8s: %8s | %8s | %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
             sprintf(
@@ -262,6 +287,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $main->entryPrice(),
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size))
             ),
+            new Percent($stoppedVolume, false),
             Cell::default($main->liquidationPrice()),
             $liquidationDistance,
             (string)$percentOfEntry,
@@ -288,6 +314,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $result[] = DataRow::default([
                 '',
                 sprintf(' sup.: %9s   | %6s', $support->entryPrice(), self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[self::positionCacheKey($support)] ?? null)?->size))),
+                '',
                 '',
                 '',
                 '',
@@ -449,6 +476,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         PositionServiceInterface $positionService,
         private readonly CacheInterface $cache,
         private readonly ClockInterface $clock,
+        private readonly StopRepository $stopRepository,
         string $name = null,
     ) {
         $this->withPositionService($positionService);
