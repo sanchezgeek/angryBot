@@ -41,17 +41,25 @@ trait SymbolAwareCommand
             if ($providedSymbolValue === 'all') {
                 return $this->positionService->getOpenedPositionsSymbols();
             } elseif (str_contains($providedSymbolValue, ',')) {
-                $rawItems = explode(',', $providedSymbolValue);
-                $symbols = [];
-                foreach ($rawItems as $rawItem) {
-                    $symbols[] = Symbol::fromShortName($rawItem);
-                }
-                return $symbols;
+                return self::parseProvidedSymbols($providedSymbolValue);
             }
             throw $e;
         }
 
         return [$symbol];
+    }
+
+    /**
+     * @return Symbol[]
+     */
+    protected static function parseProvidedSymbols(string $providedStringArray): array
+    {
+        $rawItems = explode(',', $providedStringArray);
+        $symbols = [];
+        foreach ($rawItems as $rawItem) {
+            $symbols[] = Symbol::fromShortName($rawItem);
+        }
+        return $symbols;
     }
 
     protected function configureSymbolArgs(string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME): static

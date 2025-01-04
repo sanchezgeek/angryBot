@@ -56,6 +56,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const SAVE_SORT_OPTION = 'save-sort';
+    private const MOVE_UP_OPTION = 'move-up';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
     private const SHOW_CACHE_OPTION = 'show-cache';
@@ -77,6 +78,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
+            ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
             ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?')
@@ -105,6 +107,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
             }
         }
+
+        if ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false)) {
+            $providedItems = self::parseProvidedSymbols($moveUpOption);
+            if ($providedItems) {
+                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+                $providedItems = array_intersect($providedItems, $symbolsRaw);
+                if ($providedItems) {
+                    $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
+                    $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
+                }
+            }
+        }
+
         $this->symbols = $symbols;
     }
 
