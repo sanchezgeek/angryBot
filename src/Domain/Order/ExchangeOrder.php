@@ -18,7 +18,7 @@ final class ExchangeOrder // implements OrderInterface
     private float $providedVolume;
     private Price $price;
 
-    public function __construct(Symbol $symbol, float $volume, Price|float $price, bool $roundValueToMinNotional = false)
+    public function __construct(Symbol $symbol, float $volume, Price|float $price, bool $roundToMin = false)
     {
         $this->symbol = $symbol;
         $this->price = $symbol->makePrice(Price::toFloat($price));
@@ -26,9 +26,14 @@ final class ExchangeOrder // implements OrderInterface
 
         /** @todo tests */
         $value = $volume * $this->price->value();
-        if ($roundValueToMinNotional && $value < ($minNotionalValue = $symbol->minNotionalOrderValue())) {
+        if ($roundToMin && $value < ($minNotionalValue = $symbol->minNotionalOrderValue())) {
             $volumeCalculated = $minNotionalValue / $this->price->value();
             $volume = $symbol->roundVolumeUp($volumeCalculated);
+        }
+
+        $minQty = $symbol->minOrderQty();
+        if ($roundToMin && is_int($minQty) && ($volume % $minQty !== 0)) {
+            $volume = ceil($volume / $minQty) * $minQty;
         }
 
         $this->volume = $volume;
