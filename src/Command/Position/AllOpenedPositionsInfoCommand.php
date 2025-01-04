@@ -64,7 +64,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
 
     private array $cacheCollector = [];
-    private string $showDiffWithOption;
+    private ?string $showDiffWithOption;
 
     /** @var Symbol[] */
     private array $symbols;
