@@ -287,7 +287,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $main->entryPrice(),
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size))
             ),
-            new Percent($stoppedVolume, false),
+            $stoppedVolume ? new Percent($stoppedVolume, false) : '',
             Cell::default($main->liquidationPrice()),
             $liquidationDistance,
             (string)$percentOfEntry,
