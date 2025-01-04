@@ -333,7 +333,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private function setLastRunMarkPrice(Position $position, Ticker $ticker): void
     {
-        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(1800);
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(300);
 
         $this->cache->save($cacheItem);
     }
