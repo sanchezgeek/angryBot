@@ -54,6 +54,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
     # Additional stop
     public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 50;
+    public const WARNING_PNL_DISTANCE = 60;
 
     # To check stopped position volume
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
@@ -67,19 +68,25 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private PositionServiceInterface $selectedPositionService;
 
+    private ?float $warningDistance = null;
     private ?float $additionalStopDistanceWithLiquidation = null;
     private ?Price $additionalStopPrice = null;
     private ?PriceRange $actualStopsPriceRange = null;
+
     private ?CheckPositionIsUnderLiquidation $handledMessage = null;
+    private ?Ticker $ticker = null;
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
+        $this->warningDistance = null;
         $this->additionalStopDistanceWithLiquidation = null;
         $this->additionalStopPrice = null;
         $this->actualStopsPriceRange = null;
-        $this->handledMessage = $message;
 
+        $this->handledMessage = $message;
         $symbol = $message->symbol;
+
+        $this->ticker = $ticker = $this->exchangeService->ticker($symbol);
         $coin = $symbol->associatedCoin();
 
         if (!($position = $this->getPosition($symbol))) {
@@ -92,16 +99,14 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         ### add new ###
-        $ticker = $this->exchangeService->ticker($symbol);
-        $lastRunMarketPrice = $this->getLastRunMarkPrice($position);
-        if ($lastRunMarketPrice !== null) {
-            $marketPriceMovement = PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice);
-            if (!$marketPriceMovement->isLossFor($position->side)) {
-                return;
-            }
-        }
-
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+        if (
+            $distanceWithLiquidation > $this->warningDistance()
+            && ($lastRunMarketPrice = $this->getLastRunMarkPrice($position)) !== null
+            && PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice)->isProfitFor($position->side)
+        ) {
+            return; # skip checks if price didn't move to position loss direction AND liquidation is not in warning range
+        }
 
 //        $this->switchPositionService($ticker, $distanceWithLiquidation);
 
@@ -270,6 +275,15 @@ final class CheckPositionIsUnderLiquidationHandler
         return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
     }
 
+    private function warningDistance(): float
+    {
+        if ($this->warningDistance === null) {
+            $this->warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE, $this->ticker->indexPrice), 0.1);
+        }
+
+        return $this->warningDistance;
+    }
+
     private function checkStopsOnDistance(Position $position, Ticker $ticker): float
     {
         $message = $this->handledMessage;
@@ -285,6 +299,8 @@ final class CheckPositionIsUnderLiquidationHandler
         if ($this->additionalStopDistanceWithLiquidation === null) {
             $distancePnl = $this->handledMessage->percentOfLiquidationDistanceToAddStop ?? self::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE;
             $this->additionalStopDistanceWithLiquidation = FloatHelper::modify((new Percent($distancePnl))->of($position->liquidationDistance()), 0.15, 0.05);
+
+            $this->additionalStopDistanceWithLiquidation = max($this->additionalStopDistanceWithLiquidation, $this->warningDistance());
         }
 
         return $this->additionalStopDistanceWithLiquidation;
