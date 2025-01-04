@@ -266,7 +266,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $mainPositionPnl = $main->unrealizedPnl;
 
-        $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol) {
+        $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $ticker) {
             $modifier = Percent::string('20%')->of($main->liquidationDistance());
             $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
 
@@ -274,7 +274,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $stop->getPositionSide() === $main->side
                 && $stop->getSymbol() === $symbol
                 && $stop->getExchangeOrderId() === null
-                && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($main->entryPrice(), $bound, $symbol))
+                && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($ticker->markPrice, $bound, $symbol))
             ;
         });
         $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
