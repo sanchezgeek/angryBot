@@ -55,9 +55,14 @@ final class CreateOppositeBuyOrdersListener
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
             BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
             BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
-            BuyOrder::STOP_DISTANCE_CONTEXT => FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1),
             BuyOrder::FORCE_BUY_CONTEXT => true,
         ];
+
+         if ($stop->isAdditionalStopFromLiquidationHandler()) {
+             $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+         } else {
+             $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
+         }
 
         $bigStopVolume = $symbol->roundVolume($symbol->minOrderQty() * 6);
 
