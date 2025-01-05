@@ -93,35 +93,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         parent::initialize($input, $output);
 
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
-
-        $symbols = $this->positionService->getOpenedPositionsSymbols();
-        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
-            $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
-            if ($sort === null) {
-                OutputHelper::print('Saved sort not found');
-            } else {
-                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
-                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
-                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
-                $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
-                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
-            }
-        }
-
-        if ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false)) {
-            $providedItems = self::parseProvidedSymbols($moveUpOption);
-            if ($providedItems) {
-                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
-                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
-                $providedItems = array_intersect($providedItems, $symbolsRaw);
-                if ($providedItems) {
-                    $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
-                    $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
-                }
-            }
-        }
-
-        $this->symbols = $symbols;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -171,10 +142,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
         $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
+        $symbols = $this->getOpenedPositionsSymbols();
 
         $unrealisedTotal = 0;
         $rows = [];
-        foreach ($this->symbols as $symbol) {
+        foreach ($symbols as $symbol) {
             if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $selectedCache ?? [], $prevCache ?? [])) {
                 $rows = array_merge($rows, $symbolRows);
             }
@@ -183,7 +155,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
         ### bottom START ###
         $coin = null;
-        foreach ($this->symbols as $symbol) {
+        foreach ($symbols as $symbol) {
             if ($coin !== null && $symbol->associatedCoin() !== $coin) {
                 $coin = null; break;
             }
@@ -236,7 +208,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->render();
 
         if ($this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
-            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $this->symbols);
+            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
             $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
             $this->cache->save($item);
         }
@@ -350,6 +322,38 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $result[] = new SeparatorRow();
 
         return $result;
+    }
+
+    private function getOpenedPositionsSymbols(): array
+    {
+        $symbols = $this->positionService->getOpenedPositionsSymbols();
+        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
+            $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
+            if ($sort === null) {
+                OutputHelper::print('Saved sort not found');
+            } else {
+                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
+                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
+                $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
+                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
+            }
+        }
+
+        if ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false)) {
+            $providedItems = self::parseProvidedSymbols($moveUpOption);
+            if ($providedItems) {
+                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+                $providedItems = array_intersect($providedItems, $symbolsRaw);
+                if ($providedItems) {
+                    $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
+                    $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
+                }
+            }
+        }
+
+        return $symbols;
     }
 
     private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
