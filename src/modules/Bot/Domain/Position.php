@@ -209,4 +209,12 @@ final class Position implements Stringable
     {
         $this->hedge = false;
     }
+
+    public function isLiquidationPlacedBeforeEntry(): bool
+    {
+        return $this->isShort()
+            ? $this->liquidationPrice()->lessThan($this->entryPrice())
+            : $this->liquidationPrice()->greaterThan($this->entryPrice())
+        ;
+    }
 }
