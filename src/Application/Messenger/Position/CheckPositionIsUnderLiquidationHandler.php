@@ -55,7 +55,7 @@ final class CheckPositionIsUnderLiquidationHandler
     # Additional stop
     public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 50;
     public const WARNING_PNL_DISTANCE = 60;
-    public const WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY = 80;
+    public const WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY = self::WARNING_PNL_DISTANCE;
 
     # To check stopped position volume
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
@@ -287,7 +287,7 @@ final class CheckPositionIsUnderLiquidationHandler
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal scenario
                 $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE, $this->ticker->indexPrice), 0.1);
                 $this->warningDistance = max($warningDistance, FloatHelper::modify((new Percent(30))->of($this->position->liquidationDistance()), 0.15, 0.05));
-            } else {
+            } else { # bad scenario
                 $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY, $this->ticker->indexPrice), 0.1);
                 $this->warningDistance = $warningDistance;
             }
@@ -314,7 +314,9 @@ final class CheckPositionIsUnderLiquidationHandler
                 $this->additionalStopDistanceWithLiquidation = FloatHelper::modify((new Percent($distancePnl))->of($position->liquidationDistance()), 0.15, 0.05);
 
                 $this->additionalStopDistanceWithLiquidation = max($this->additionalStopDistanceWithLiquidation, $this->warningDistance());
-            } else {
+            } else { # bad scenario
+                // in this case using big position liquidationDistance may lead to add unnecessary stops
+                // so just use some "warningDistance"
                 $this->additionalStopDistanceWithLiquidation = $this->warningDistance();
             }
         }
