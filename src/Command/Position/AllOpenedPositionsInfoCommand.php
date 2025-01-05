@@ -281,10 +281,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             (string)$percentOfEntry,
             $distanceWithLiquidation,
             new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
-            new Cell(new CoinAmount($main->symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
+            new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
         ];
 
-        $pnlFormatter = static fn(float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value();
+        $pnlFormatter = static fn(float $pnl) => (new CoinAmount($symbol->associatedCoin(), $pnl))->value();
         if ($specifiedCache) {
             $cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
             $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
@@ -299,24 +299,30 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($support = $main->getHedge()?->supportPosition) {
             $supportPnl = $support->unrealizedPnl;
-            $result[] = DataRow::default([
+            $supportPositionCacheKey = self::positionCacheKey($support);
+            $cells = [
                 '',
-                sprintf(' sup.: %9s   | %6s', $support->entryPrice(), self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[self::positionCacheKey($support)] ?? null)?->size))),
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                self::formatChangedValue(
-                    value: $supportPnl,
-                    specifiedCacheValue: (($specifiedCache[self::positionCacheKey($support)] ?? null)?->unrealizedPnl),
-                    formatter: static fn (float $pnl) => (new CoinAmount($main->symbol->associatedCoin(), $pnl))->value(),
-                    withoutColor: true
+                sprintf(
+                    ' sup.: %9s   | %6s',
+                    $support->entryPrice(),
+                    self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size))
                 ),
-            ]);
+                '', '', '', '', '', '',
+                new Cell(new CoinAmount($symbol->associatedCoin(), $supportPnl)),
+            ];
+
+            if ($specifiedCache) {
+                $cachedValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+                $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
+            }
+            if ($prevCache) {
+                $cachedValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+                $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
+            }
+            $result[] = DataRow::default($cells);
+
             $unrealizedTotal += $supportPnl;
-            $this->cacheCollector[self::positionCacheKey($support)] = $support;
+            $this->cacheCollector[$supportPositionCacheKey] = $support;
         }
 
         $result[] = new SeparatorRow();
