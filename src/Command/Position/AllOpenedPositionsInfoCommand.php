@@ -123,7 +123,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             $this->doOut($cache, $prevCache);
 
-            $saveCurrentState = !$updateEnabled || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
+            $saveCurrentState =
+                !$updateEnabled
+                || $iteration === 1
+                || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
+
             if ($saveCurrentState) {
                 $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
                 $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
