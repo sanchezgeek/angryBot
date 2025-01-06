@@ -21,6 +21,7 @@ use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Output\Table\Dto\Cell;
@@ -166,9 +167,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $coin = $symbol->associatedCoin();
         }
         $pnlFormatter = $coin ? static fn(float $pnl) => new CoinAmount($coin, $pnl) : static fn($pnl) => (string)$pnl;
-        $bottomCells = [
-            '',
-            '',
+
+        $balanceCells = ['', ''];
+        if ($coin) {
+            $balance = $this->exchangeAccountService->getContractWalletBalance($coin);
+            $balanceCells = [
+                new Cell(
+                    sprintf('%s availForTrade | %s available | %s free | %s total', $balance->availableForTrade->value(), $balance->available->value(), $balance->free->value(), $balance->total->value()),
+                    new CellStyle(colspan: 2)
+                )
+            ];
+        }
+
+        $bottomCells = array_merge($balanceCells, [
             '',
             '',
             '',
@@ -176,7 +187,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             '',
             '',
             $pnlFormatter($unrealisedTotal),
-        ];
+        ]);
 
         $pnlFormatter = $coin ? static fn(float $pnl) => (new CoinAmount($coin, $pnl))->value() : static fn($pnl) => (string)$pnl;
         $selectedCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter);
@@ -208,7 +219,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->withHeader($headerColumns)
             ->withRows(...$rows)
             ->build()
-            ->setStyle('box-double')
+            ->setStyle('box')
             ->render();
 
         if ($this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {

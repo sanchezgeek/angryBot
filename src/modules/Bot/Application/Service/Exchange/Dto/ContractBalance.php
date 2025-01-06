@@ -23,6 +23,7 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
     public CoinAmount $available;
     public CoinAmount $free;
     public CoinAmount $freeForLiquidation;
+    public CoinAmount $availableForTrade;
 
     public function __construct(
         public Coin        $assetCoin,
@@ -30,11 +31,13 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
         CoinAmount|float $available,
         CoinAmount|float $free,
         CoinAmount|float $freeForLiquidation,
+        CoinAmount|float $availableForTrade = null,
     ) {
         $this->total = new CoinAmount($this->assetCoin, $total);
         $this->available = new CoinAmount($this->assetCoin, $available);
         $this->free = new CoinAmount($this->assetCoin, $free);
         $this->freeForLiquidation = new CoinAmount($this->assetCoin, $freeForLiquidation);
+        $this->availableForTrade = new CoinAmount($this->assetCoin, $availableForTrade ?? $available);
     }
 
     public function total(): float
@@ -52,9 +55,14 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
         return $this->free->value();
     }
 
+    public function availableForTrade(): float
+    {
+        return $this->availableForTrade->value();
+    }
+
     public function __toString(): string
     {
-        return sprintf('%s: %s available | %s free | %s free liq | %s total', AccountType::UNIFIED->name, $this->available, $this->free, $this->freeForLiquidation, $this->total);
+        return sprintf('%s: %s availForTrade | %s available | %s free | %s free liq | %s total', AccountType::UNIFIED->name, $this->availableForTrade, $this->available, $this->free, $this->freeForLiquidation, $this->total);
     }
 
     public function jsonSerialize(): string

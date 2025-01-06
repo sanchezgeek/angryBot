@@ -109,6 +109,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 
                         $total = (float)$coinData['walletBalance'];
                         $free = $total - $totalPositionIM;
+                        $availableForTrade = $coinData['unrealisedPnl'] + $free;
 
                         try {
                             [$available, $freeForLiq] = $this->calcFreeContractBalance($coin, $total, $free);
@@ -120,7 +121,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                             $available = $freeForLiq = $free;
                         }
 
-                        $balance = new ContractBalance($coin, $total, $available, $free, $freeForLiq);
+                        $balance = new ContractBalance($coin, $total, $available, $free, $freeForLiq, $availableForTrade);
                     }
                 }
             }
@@ -128,7 +129,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 
         if (!$balance) {
             $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
-            return new ContractBalance($coin, 0, 0, 0, 0);
+            return new ContractBalance($coin, 0, 0, 0, 0, 0);
         }
 
         return $balance;
