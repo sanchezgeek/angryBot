@@ -190,9 +190,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             'stops',
             'liq',
             'liq - entry',
-            '=> % of entry',
-            'liq - markPrice',
-            '=> % of markPrice',
+            '% of entry',
+            'liq - mark',
+            '% of mark',
             'unrealized PNL',
         ];
 
@@ -271,6 +271,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         });
         $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
 
+        $liquidationStyle = $main->isLiquidationPlacedBeforeEntry() ? new CellStyle(fontColor: Color::YELLOW) : new CellStyle();
+
         $cells = [
             sprintf('%8s: %8s | %8s | %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
             sprintf(
@@ -280,7 +282,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size))
             ),
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
-            Cell::default($main->liquidationPrice()),
+            Cell::default($main->liquidationPrice())->addStyle($liquidationStyle),
             $liquidationDistance,
             (string)$percentOfEntry,
             $distanceWithLiquidation,
