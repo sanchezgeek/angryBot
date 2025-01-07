@@ -173,7 +173,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $balance = $this->exchangeAccountService->getContractWalletBalance($coin);
             $balanceCells = [
                 new Cell(
-                    sprintf('%s availForTrade | %s available | %s free | %s total', $balance->availableForTrade->value(), $balance->available->value(), $balance->free->value(), $balance->total->value()),
+                    sprintf('%s avail | %s free | %s total', $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
                     new CellStyle(colspan: 2)
                 )
             ];
@@ -200,11 +200,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             'entry / size',
             'stops',
             'liq',
-            'liq - entry',
-            '% of entry',
+            'liq-entry',
+            '/ entry',
             'liq - mark',
-            '% of mark',
-            'unrealized PNL',
+            '/ mark',
+            'PNL',
         ];
 
         if ($selectedCache) {
