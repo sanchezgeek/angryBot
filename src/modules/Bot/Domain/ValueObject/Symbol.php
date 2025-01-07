@@ -59,6 +59,8 @@ enum Symbol: string
     case CVXUSDT = 'CVXUSDT';
     case SPXUSDT = 'SPXUSDT';
     case GRIFFAINUSDT = 'GRIFFAINUSDT';
+    case AI16ZUSDT = 'AI16ZUSDT';
+    case SWARMSUSDT = 'SWARMSUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -100,6 +102,8 @@ enum Symbol: string
         self::CVXUSDT->value => 3,
         self::SPXUSDT->value => 4,
         self::GRIFFAINUSDT->value => 5,
+        self::AI16ZUSDT->value => 4,
+        self::SWARMSUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -142,6 +146,8 @@ enum Symbol: string
         self::CVXUSDT->value => 0.01,
         self::SPXUSDT->value => 0.001,
         self::GRIFFAINUSDT->value => 1,
+        self::AI16ZUSDT->value => 1,
+        self::SWARMSUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
