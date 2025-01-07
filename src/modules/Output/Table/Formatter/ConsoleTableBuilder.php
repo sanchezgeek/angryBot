@@ -106,6 +106,7 @@ final class ConsoleTableBuilder
             Color::BRIGHT_GREEN => 'bright-green',
             Color::BRIGHT_RED => 'bright-red',
             Color::BRIGHT_MAGENTA => 'bright-magenta',
+            Color::BRIGHT_WHITE => 'bright-white',
             default => !$color->isDefault() ? $color->name : null,
         };
     }
@@ -117,7 +118,8 @@ final class ConsoleTableBuilder
             Color::RED => 'red',
             Color::BRIGHT_GREEN => 'bright-green',
             Color::BRIGHT_RED => 'bright-red',
-            default => !$color->isDefault() ? $color : null,
+            Color::BRIGHT_WHITE => 'bright-white',
+            default => !$color->isDefault() ? $color->name : null,
         };
     }
 

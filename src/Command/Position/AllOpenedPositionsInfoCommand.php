@@ -29,6 +29,7 @@ use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
 use App\Output\Table\Dto\Style\CellStyle;
 use App\Output\Table\Dto\Style\Enum\Color;
+use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -151,8 +152,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $unrealisedTotal = 0;
         $rows = [];
-        foreach ($symbols as $symbol) {
+        foreach ($symbols as $key => $symbol) {
             if ($symbolRows = $this->posInfo($symbol, $unrealisedTotal, $selectedCache ?? [], $prevCache ?? [])) {
+                foreach ($symbolRows as $row) {
+                    if ($row instanceof SeparatorRow) {
+                        continue;
+                    }
+                    $row->addStyle(new RowStyle(fontColor: $key % 2 === 0 ? Color::BRIGHT_WHITE : Color::WHITE));
+                }
                 $rows = array_merge($rows, $symbolRows);
             }
         }
