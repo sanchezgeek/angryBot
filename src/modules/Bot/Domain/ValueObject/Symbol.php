@@ -62,6 +62,8 @@ enum Symbol: string
     case AI16ZUSDT = 'AI16ZUSDT';
     case SWARMSUSDT = 'SWARMSUSDT';
     case HIVEUSDT = 'HIVEUSDT';
+    case DEEPUSDT = 'DEEPUSDT';
+    case PENGUSDT = 'PENGUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -106,6 +108,8 @@ enum Symbol: string
         self::AI16ZUSDT->value => 4,
         self::SWARMSUSDT->value => 5,
         self::HIVEUSDT->value => 4,
+        self::DEEPUSDT->value => 5,
+        self::PENGUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -151,6 +155,8 @@ enum Symbol: string
         self::AI16ZUSDT->value => 1,
         self::SWARMSUSDT->value => 1,
         self::HIVEUSDT->value => 1,
+        self::DEEPUSDT->value => 10,
+        self::PENGUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
