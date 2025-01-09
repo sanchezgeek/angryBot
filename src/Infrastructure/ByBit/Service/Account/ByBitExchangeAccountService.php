@@ -23,6 +23,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Infrastructure\ByBit\API\V5\Request\Account\CreateSubAccountApiKeyRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
@@ -284,5 +285,13 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 //            $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
             OutputHelper::warning($msg);
         }
+    }
+
+    public function createSubAccountApiKey(int $uid, string $note): void
+    {
+        $request = new CreateSubAccountApiKeyRequest($uid, $note);
+        $result = $this->sendRequest($request);
+
+        var_dump($result->data());
     }
 }
