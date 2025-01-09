@@ -31,4 +31,9 @@ class ConsoleTableHelper
     {
         return new TableSeparator();
     }
+
+    public static function colorizeText(string $text, string $wrapper): string
+    {
+        return sprintf('<%s>%s</%s>', $wrapper, $text, $wrapper);
+    }
 }

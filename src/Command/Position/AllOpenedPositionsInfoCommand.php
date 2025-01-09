@@ -13,6 +13,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
+use App\Command\Helper\ConsoleTableHelper as CTH;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -99,6 +100,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $output->getFormatter()->setStyle('bright-red-text', new OutputFormatterStyle(foreground: 'bright-red', options: ['blink']));
         $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('yellow-text', new OutputFormatterStyle(foreground: 'yellow', options: ['bold', 'blink']));
@@ -250,15 +252,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $percentOfEntry = Percent::fromPart($liquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
         $percentOfMarkPrice = Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
-
-        $liqDiffColor = null;
         if ($percentOfMarkPrice->value() < $percentOfEntry->value()) {
             $diff = (($percentOfEntry->value() - $percentOfMarkPrice->value()) / $percentOfEntry->value()) * 100;
-            $liqDiffColor = match (true) {
-                $diff > 5 => Color::YELLOW,
-                $diff > 15 => Color::BRIGHT_RED,
-                $diff > 30 => Color::RED,
-                default => null
+            $percentOfMarkPrice = match (true) {
+                $diff > 5 => CTH::colorizeText($percentOfMarkPrice, 'yellow-text'),
+                $diff > 15 => CTH::colorizeText($percentOfMarkPrice, 'bright-red-text'),
+                $diff > 30 => CTH::colorizeText($percentOfMarkPrice, 'red-text'),
+                default => $percentOfMarkPrice,
             };
         }
 
@@ -277,13 +277,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         });
         $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
 
-        $liquidationWrapper = $main->isLiquidationPlacedBeforeEntry() ? 'yellow-text' : null;
-        $liquidationContent = sprintf(
-            '%s%s%s',
-            $liquidationWrapper !== null ? sprintf('<%s>', $liquidationWrapper) : '',
-            $main->liquidationPrice(),
-            $liquidationWrapper !== null ? sprintf('</%s>', $liquidationWrapper) : '',
-        );
+        $liquidation = !$main->isLiquidationPlacedBeforeEntry() ? $main->liquidationPrice() : CTH::colorizeText($main->liquidationPrice(), 'yellow-text');
 
         $cells = [
             sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
@@ -291,7 +285,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 '%5s: %9s    %9s     %6s',
                 $main->side->title(),
                 $main->entryPrice(),
-                $liquidationContent,
+                $liquidation,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
         ];
@@ -311,7 +305,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $liquidationDistance,
             (string)$percentOfEntry,
             $distanceWithLiquidation,
-            new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
+            $percentOfMarkPrice,
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
