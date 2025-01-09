@@ -83,7 +83,7 @@ final class GetWalletBalanceResponseBuilder implements ResponseBuilderInterface
     /**
      * @todo rename
      */
-    public function withUnifiedBalance(Coin $coin, float $totalAmount, float $totalPositionIM): self
+    public function withUnifiedBalance(Coin $coin, float $totalAmount, float $totalPositionIM, float $totalUnrealised = 0): self
     {
         $item = self::COIN_BALANCE_ITEM;
 
@@ -91,6 +91,7 @@ final class GetWalletBalanceResponseBuilder implements ResponseBuilderInterface
         $item['coin'][0]['coin'] = $coin->value;
         $item['coin'][0]['walletBalance'] = (string)$totalAmount;
         $item['coin'][0]['totalPositionIM'] = (string)$totalPositionIM;
+        $item['coin'][0]['unrealisedPnl'] = (string)$totalUnrealised;
 
         $this->listItems[] = $item;
 

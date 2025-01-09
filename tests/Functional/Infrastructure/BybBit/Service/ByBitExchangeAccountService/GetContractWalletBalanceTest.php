@@ -68,6 +68,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         $short = PositionFactory::short(Symbol::BTCUSDT, 93281.22, 0.776, 100, 115812.71);
         $total = 17875.96740505;
         $totalPositionIM = 764.57558218;
+        $totalUnrealized = 100;
     # assert
         $expectedAvailable = 16302.194542869998;
         $expectedFree = $total - $totalPositionIM;
@@ -76,10 +77,10 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         yield sprintf('[with short opened] %s UNIFIED: %s `total` | %s `totalPositionIM` => expected %s free | %s available | %s freeForLiquidation', $coin->value, $total, $totalPositionIM, $expectedFree, $expectedAvailable, $expectedFreeForLiquidation) => [
             '$coin' => $coin,
             '$positions' => [$short],
-            '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM)->build(),
-            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation),
+            '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM, $totalUnrealized)->build(),
+            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation, $totalUnrealized + $expectedFree),
             '$ticker' => $ticker,
-        ]; unset($total, $totalPositionIM, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation);
+        ]; unset($total, $totalPositionIM, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation, $totalUnrealized);
 
 // --- with hedge is opened and there is some free balance --- //
     # arrange
@@ -88,6 +89,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         $long = PositionFactory::long(Symbol::BTCUSDT, 67388.54, 0.446, 100, 0);
         $total = 2289.13194391;
         $totalPositionIM = 1240.6823246;
+        $totalUnrealized = 50;
     # assert
         $expectedAvailable = 687.2721193099999;
         $expectedFree = $total - $totalPositionIM;
@@ -96,8 +98,8 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         yield sprintf('[with hedge opened] %s UNIFIED: %s `total` | %s `totalPositionIM` => expected %s free | %s available | %s freeForLiquidation', $coin->value, $total, $totalPositionIM, $expectedFree, $expectedAvailable, $expectedFreeForLiquidation) => [
             '$coin' => $coin,
             '$positions' => [$short, $long],
-            '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM)->build(),
-            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation),
+            '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM, $totalUnrealized)->build(),
+            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation, $expectedFree + $totalUnrealized),
             '$ticker' => $ticker,
         ];
 
