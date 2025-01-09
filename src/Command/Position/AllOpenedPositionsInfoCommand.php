@@ -101,6 +101,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     {
         $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
+        $output->getFormatter()->setStyle('yellow-text', new OutputFormatterStyle(foreground: 'yellow', options: ['bold', 'blink']));
 
         if ($this->paramFetcher->getBoolOption(self::SHOW_CACHE_OPTION)) {
             if (!$savedKeys = $this->getSavedDataCacheKeys()) {
@@ -186,41 +187,28 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ];
         }
 
-        $bottomCells = array_merge($balanceCells, [
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            $pnlFormatter($unrealisedTotal),
-        ]);
+        $bottomCells = $balanceCells;
 
+        $bottomCells[] = $pnlFormatter($unrealisedTotal);
         $pnlFormatter = $coin ? static fn(float $pnl) => (new CoinAmount($coin, $pnl))->value() : static fn($pnl) => (string)$pnl;
         $selectedCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter);
         $prevCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter);
+
+        $bottomCells = array_merge($bottomCells, [
+            '',
+            '',
+            '',
+            '',
+            '',
+        ]);
+
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
-        $headerColumns = [
-            'symbol',
-            'entry / size',
-            'stops',
-            'liq',
-            'liq-entry',
-            '/ entry',
-            'liq - mark',
-            '/ mark',
-            'PNL',
-        ];
-
-        if ($selectedCache) {
-            $headerColumns[] = 'Δ (cache)';
-        }
-
-        if ($prevCache) {
-            $headerColumns[] = 'Δ (prev.)';
-        }
+        $headerColumns = ['symbol (last / mark / index)', 'entry / liq / size', 'PNL'];
+        $selectedCache && $headerColumns[] = 'Δ (cache)';
+        $prevCache && $headerColumns[] = 'Δ (prev.)';
+        $headerColumns = array_merge($headerColumns, ['liq-entry', '/ entry', 'liq - mark', '/ mark', 'stops']);
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader($headerColumns)
@@ -289,25 +277,26 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         });
         $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
 
-        $liquidationStyle = $main->isLiquidationPlacedBeforeEntry() ? new CellStyle(fontColor: Color::YELLOW) : new CellStyle();
+        $liquidationWrapper = $main->isLiquidationPlacedBeforeEntry() ? 'yellow-text' : null;
+        $liquidationContent = sprintf(
+            '%s%s%s',
+            $liquidationWrapper !== null ? sprintf('<%s>', $liquidationWrapper) : '',
+            $main->liquidationPrice(),
+            $liquidationWrapper !== null ? sprintf('</%s>', $liquidationWrapper) : '',
+        );
 
         $cells = [
-            sprintf('%8s: %8s | %8s | %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
+            sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
             sprintf(
-                '%5s: %9s   | %6s',
+                '%5s: %9s    %9s     %6s',
                 $main->side->title(),
                 $main->entryPrice(),
-                self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size))
+                $liquidationContent,
+                self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-            $stoppedVolume ? new Percent($stoppedVolume, false) : '',
-            Cell::default($main->liquidationPrice())->addStyle($liquidationStyle),
-            $liquidationDistance,
-            (string)$percentOfEntry,
-            $distanceWithLiquidation,
-            new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
-            new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null),
         ];
 
+        $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null);
         $pnlFormatter = static fn(float $pnl) => (new CoinAmount($symbol->associatedCoin(), $pnl))->value();
         if ($specifiedCache) {
             $cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
@@ -317,6 +306,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
             $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
         }
+
+        $cells = array_merge($cells, [
+            $liquidationDistance,
+            (string)$percentOfEntry,
+            $distanceWithLiquidation,
+            new Cell((string)$percentOfMarkPrice, $liqDiffColor ? new CellStyle(fontColor: $liqDiffColor) : null),
+            $stoppedVolume ? new Percent($stoppedVolume, false) : '',
+        ]);
+
         $result[] = DataRow::default($cells);
 
         $unrealizedTotal += $mainPositionPnl;
@@ -324,16 +322,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         if ($support = $main->getHedge()?->supportPosition) {
             $supportPnl = $support->unrealizedPnl;
             $supportPositionCacheKey = self::positionCacheKey($support);
+
             $cells = [
                 '',
                 sprintf(
-                    ' sup.: %9s   | %6s',
+                    ' sup.: %9s                  %6s',
                     $support->entryPrice(),
                     self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size))
                 ),
-                '', '', '', '', '', '',
-                new Cell(new CoinAmount($symbol->associatedCoin(), $supportPnl)),
             ];
+
+            $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $supportPnl));
 
             if ($specifiedCache) {
                 $cachedValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
@@ -343,6 +342,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $cachedValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
                 $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
             }
+
+            $cells = array_merge($cells, ['', '', '', '', '']);
+
             $result[] = DataRow::default($cells);
 
             $unrealizedTotal += $supportPnl;
