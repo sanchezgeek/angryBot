@@ -100,10 +100,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->getFormatter()->setStyle('bright-red-text', new OutputFormatterStyle(foreground: 'bright-red', options: ['blink']));
-        $output->getFormatter()->setStyle('red-text', new OutputFormatterStyle(foreground: 'red', options: ['bold', 'blink']));
-        $output->getFormatter()->setStyle('green-text', new OutputFormatterStyle(foreground: 'green', options: ['bold', 'blink']));
-        $output->getFormatter()->setStyle('yellow-text', new OutputFormatterStyle(foreground: 'yellow', options: ['bold', 'blink']));
+        CTH::registerColors($output);
 
         if ($this->paramFetcher->getBoolOption(self::SHOW_CACHE_OPTION)) {
             if (!$savedKeys = $this->getSavedDataCacheKeys()) {
@@ -442,7 +439,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function getFormattedDiff(int|float $a, int|float $b, ?bool $withoutColor = null, ?callable $formatter = null): ?string
+    private static function getFormattedDiff(int|float $a, int|float $b, ?bool $withoutColor = null, ?callable $formatter = null): string
     {
         $diff = $a - $b;
 
@@ -450,24 +447,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             return '-';
         }
 
-        [$sign, $wrapper] = match (true) {
+        [$sign, $color] = match (true) {
             $diff > 0 => ['+', 'green-text'],
             $diff < 0 => ['', 'red-text'],
             default => [null, null]
         };
 
         if ($withoutColor === true) {
-            $wrapper = null;
+            $color = null;
         }
 
         $diff = $formatter($diff);
-        return sprintf(
-            '%s%s%s%s',
-            $wrapper !== null ? sprintf('<%s>', $wrapper) : '',
-            $sign !== null ? sprintf('%s', $sign) : '',
-            $diff,
-            $wrapper !== null ? sprintf('</%s>', $wrapper) : '',
-        );
+        $diff = sprintf('%s%s', $sign ?? '', $diff);
+
+        return $color ? CTH::colorizeText($diff, $color) : $diff;
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
