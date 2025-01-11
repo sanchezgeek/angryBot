@@ -449,7 +449,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         [$sign, $color] = match (true) {
             $diff > 0 => ['+', 'green-text'],
-            $diff < 0 => ['', 'red-text'],
+            $diff < 0 => ['', 'bright-red-text'],
             default => [null, null]
         };
 
