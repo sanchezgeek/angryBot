@@ -457,10 +457,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $color = null;
         }
 
-        $diff = $formatter($diff);
-        $diff = sprintf('%s%s', $sign ?? '', $diff);
+        $value = $formatter(abs($diff));
+        $value = $diff < 0 ? -$value : $value;
+        $value = sprintf('%s%s', $sign ?? '', $value);
 
-        return $color ? CTH::colorizeText($diff, $color) : $diff;
+        return $color ? CTH::colorizeText($value, $color) : $value;
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
