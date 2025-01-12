@@ -207,7 +207,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $headerColumns = ['symbol (last / mark / index)', 'entry / liq / size', 'PNL'];
         $selectedCache && $headerColumns[] = 'Δ (cache)';
         $prevCache && $headerColumns[] = 'Δ (prev.)';
-        $headerColumns = array_merge($headerColumns, ['liq-entry', '/ entry', 'liq - mark', '/ mark', 'stops']);
+        $headerColumns = array_merge($headerColumns, [
+            "liq - entry(\n initial\n liq.\n distance\n)",
+            "/ entry\n  price",
+            "liq - mark(\n current\n liq.\n distance\n)",
+            "/ entry\n  price",
+            "liq.\ndistance\npassed",
+            "auto\nadded\nstops\nbefore liq."
+        ]);
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader($headerColumns)
@@ -244,18 +251,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
 
-        $liquidationDistance = $main->liquidationDistance();
-        $distanceWithLiquidation = $main->priceDistanceWithLiquidation($ticker);
+        $initialLiquidationDistance = $main->liquidationDistance();
+        $distanceBetweenLiquidationAndTicker = $main->priceDistanceWithLiquidation($ticker);
 
-        $percentOfEntry = Percent::fromPart($liquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
-        $percentOfMarkPrice = Percent::fromPart($distanceWithLiquidation / $ticker->markPrice->value(), false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
-        if ($percentOfMarkPrice->value() < $percentOfEntry->value()) {
-            $diff = (($percentOfEntry->value() - $percentOfMarkPrice->value()) / $percentOfEntry->value()) * 100;
-            $percentOfMarkPrice = match (true) {
-                $diff > 5 => CTH::colorizeText($percentOfMarkPrice, 'yellow-text'),
-                $diff > 15 => CTH::colorizeText($percentOfMarkPrice, 'bright-red-text'),
-                $diff > 30 => CTH::colorizeText($percentOfMarkPrice, 'red-text'),
-                default => $percentOfMarkPrice,
+        $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+        $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+        if ($distanceBetweenLiquidationAndTickerPercentOfEntry->value() < $initialLiquidationDistancePercentOfEntry->value()) {
+            $passedLiquidationDistancePercent = Percent::fromPart(($initialLiquidationDistancePercentOfEntry->value() - $distanceBetweenLiquidationAndTickerPercentOfEntry->value()) / $initialLiquidationDistancePercentOfEntry->value());
+            $passedLiquidationDistancePercent = match (true) {
+                $passedLiquidationDistancePercent->value() > 5 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'yellow-text'),
+                $passedLiquidationDistancePercent->value() > 15 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'bright-red-text'),
+                $passedLiquidationDistancePercent->value() > 30 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'red-text'),
+                default => $passedLiquidationDistancePercent,
             };
         }
 
@@ -299,10 +306,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         $cells = array_merge($cells, [
-            $liquidationDistance,
-            (string)$percentOfEntry,
-            $distanceWithLiquidation,
-            $percentOfMarkPrice,
+            $initialLiquidationDistance,
+            (string)$initialLiquidationDistancePercentOfEntry,
+            $distanceBetweenLiquidationAndTicker,
+            $distanceBetweenLiquidationAndTickerPercentOfEntry,
+            $passedLiquidationDistancePercent ?? '',
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
