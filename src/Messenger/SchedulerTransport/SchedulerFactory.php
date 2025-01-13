@@ -134,7 +134,7 @@ final class SchedulerFactory
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
 
-            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT20S', AsyncMessage::for(
+            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT20S', AsyncMessage::for(
                 new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
                     percentOfLiquidationDistanceToAddStop: self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null
@@ -144,6 +144,9 @@ final class SchedulerFactory
 
         return $items;
     }
+
+    private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
+    ];
 
     private const ADDITIONAL_STOP_LIQUIDATION_DISTANCE = [
     ];
