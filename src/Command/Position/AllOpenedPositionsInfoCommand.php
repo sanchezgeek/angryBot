@@ -213,6 +213,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             "liq - mark(\n current\n liq.\n distance\n)",
             "/ entry\n  price",
             "liq.\ndistance\npassed",
+            "symbol",
             "auto\nadded\nstops\nbefore liq."
         ]);
 
@@ -311,6 +312,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTicker,
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $passedLiquidationDistancePercent ?? '',
+            $symbol->shortName(),
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
@@ -342,7 +344,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
             }
 
-            $cells = array_merge($cells, ['', '', '', '', '']);
+            $cells = array_merge($cells, ['', '', '', '',  '', '']);
 
             $result[] = DataRow::default($cells);
 
