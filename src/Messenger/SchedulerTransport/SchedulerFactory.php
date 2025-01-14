@@ -134,10 +134,13 @@ final class SchedulerFactory
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
 
+            $additionalStopDistanceWithLiquidation = self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null;
+            $acceptableStoppedPart = self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
             !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(
                 new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null
+                    percentOfLiquidationDistanceToAddStop: $additionalStopDistanceWithLiquidation,
+                    acceptableStoppedPart: $acceptableStoppedPart,
                 )
             ));
         }
@@ -149,6 +152,9 @@ final class SchedulerFactory
     ];
 
     private const ADDITIONAL_STOP_LIQUIDATION_DISTANCE = [
+    ];
+
+    private const ACCEPTABLE_STOPPED_PART = [
     ];
 
     private function cache(): array
