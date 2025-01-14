@@ -213,8 +213,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             "/ entry\n  price",
             "liq - mark(\n current\n liq.\n distance\n)",
             "/ entry\n  price",
+            "symbol",
             "liq.\ndistance\npassed",
-            "auto\nadded\nstops\nbefore liq."
+            "auto-added\nstops(\n between liq.\n and entry\n)"
         ]);
 
         ConsoleTableBuilder::withOutput($this->output)
@@ -306,12 +307,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
         }
 
+        $extraSymbolCell = CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text');
         $cells = array_merge($cells, [
-            CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text'),
+            $extraSymbolCell,
             $initialLiquidationDistance,
             (string)$initialLiquidationDistancePercentOfEntry,
             $distanceBetweenLiquidationAndTicker,
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
+            $extraSymbolCell,
             $passedLiquidationDistancePercent ?? '',
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
