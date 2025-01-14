@@ -288,7 +288,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
             sprintf(
                 '%5s: %9s    %9s     %6s',
-                $main->side->title(),
+                CTH::colorizeText($main->side->title(), $main->isShort() ? 'red-text' : 'green-text'),
                 $main->entryPrice(),
                 $liquidation,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
