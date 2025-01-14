@@ -66,6 +66,7 @@ enum Symbol: string
     case PENGUSDT = 'PENGUSDT';
     case SONICUSDT = 'SONICUSDT';
     case SOLOUSDT = 'SOLOUSDT';
+    case AVAAIUSDT = 'AVAAIUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -114,6 +115,7 @@ enum Symbol: string
         self::PENGUSDT->value => 4,
         self::SONICUSDT->value => 4,
         self::SOLOUSDT->value => 4,
+        self::AVAAIUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -163,6 +165,7 @@ enum Symbol: string
         self::PENGUSDT->value => 1,
         self::SONICUSDT->value => 1,
         self::SOLOUSDT->value => 1,
+        self::AVAAIUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
