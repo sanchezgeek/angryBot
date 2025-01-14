@@ -208,12 +208,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $selectedCache && $headerColumns[] = 'Δ (cache)';
         $prevCache && $headerColumns[] = 'Δ (prev.)';
         $headerColumns = array_merge($headerColumns, [
+            "symbol",
             "liq - entry(\n initial\n liq.\n distance\n)",
             "/ entry\n  price",
             "liq - mark(\n current\n liq.\n distance\n)",
             "/ entry\n  price",
             "liq.\ndistance\npassed",
-            "symbol",
             "auto\nadded\nstops\nbefore liq."
         ]);
 
@@ -307,12 +307,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         $cells = array_merge($cells, [
+            CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text'),
             $initialLiquidationDistance,
             (string)$initialLiquidationDistancePercentOfEntry,
             $distanceBetweenLiquidationAndTicker,
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $passedLiquidationDistancePercent ?? '',
-            CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text'),
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
