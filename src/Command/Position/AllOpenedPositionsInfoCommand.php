@@ -307,7 +307,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
         }
 
-        $extraSymbolCell = CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text');
+        $extraSymbolCell = CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
         $cells = array_merge($cells, [
             $extraSymbolCell,
             $initialLiquidationDistance,
