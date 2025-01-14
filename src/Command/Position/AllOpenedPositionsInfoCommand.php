@@ -312,7 +312,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTicker,
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $passedLiquidationDistancePercent ?? '',
-            $symbol->shortName(),
+            CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'red-text' : 'green-text'),
             $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
