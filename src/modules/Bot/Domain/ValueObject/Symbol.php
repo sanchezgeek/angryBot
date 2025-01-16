@@ -69,6 +69,7 @@ enum Symbol: string
     case AVAAIUSDT = 'AVAAIUSDT';
     case RAYDIUMUSDT = 'RAYDIUMUSDT';
     case ARCUSDT = 'ARCUSDT';
+    case HBARUSDT = 'HBARUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -120,6 +121,7 @@ enum Symbol: string
         self::AVAAIUSDT->value => 5,
         self::RAYDIUMUSDT->value => 4,
         self::ARCUSDT->value => 5,
+        self::HBARUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -172,6 +174,7 @@ enum Symbol: string
         self::AVAAIUSDT->value => 1,
         self::RAYDIUMUSDT->value => 0.1,
         self::ARCUSDT->value => 1,
+        self::HBARUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
