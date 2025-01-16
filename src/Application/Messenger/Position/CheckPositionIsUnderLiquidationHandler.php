@@ -53,7 +53,7 @@ final class CheckPositionIsUnderLiquidationHandler
     public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # Additional stop
-    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 50;
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 70;
     public const WARNING_PNL_DISTANCE = 60;
     public const WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY = self::WARNING_PNL_DISTANCE;
 
@@ -61,7 +61,7 @@ final class CheckPositionIsUnderLiquidationHandler
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 20;
 
-    public const ACCEPTABLE_STOPPED_PART = 7;
+    public const ACCEPTABLE_STOPPED_PART = 3;
     private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
 
     const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
@@ -382,7 +382,7 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
-        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(300);
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(160);
 
         $this->cache->save($cacheItem);
     }
