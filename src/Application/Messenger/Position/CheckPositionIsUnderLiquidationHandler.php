@@ -269,7 +269,8 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         $position = $positions[0]->getHedge()?->mainPosition ?? $positions[0];
-        if ($position->isSupportPosition()) {
+
+        if ($position->isShort() && !$position->liquidationPrice) {
             return null;
         }
 
