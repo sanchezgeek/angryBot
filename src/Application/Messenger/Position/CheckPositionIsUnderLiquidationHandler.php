@@ -249,7 +249,7 @@ final class CheckPositionIsUnderLiquidationHandler
         );
     }
 
-    public function acceptableStoppedPart(): int
+    public function acceptableStoppedPart(): float
     {
         return $this->handledMessage->acceptableStoppedPart ?? self::ACCEPTABLE_STOPPED_PART;
     }
@@ -311,7 +311,7 @@ final class CheckPositionIsUnderLiquidationHandler
         if ($this->additionalStopDistanceWithLiquidation === null) {
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal situation
                 $distancePnl = $this->handledMessage->percentOfLiquidationDistanceToAddStop ?? self::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE;
-                $this->additionalStopDistanceWithLiquidation = FloatHelper::modify((new Percent($distancePnl))->of($position->liquidationDistance()), 0.15, 0.05);
+                $this->additionalStopDistanceWithLiquidation = FloatHelper::modify((new Percent($distancePnl, false))->of($position->liquidationDistance()), 0.15, 0.05);
 
                 $this->additionalStopDistanceWithLiquidation = max($this->additionalStopDistanceWithLiquidation, $this->warningDistance());
             } else { # bad scenario
