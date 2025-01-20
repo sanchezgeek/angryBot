@@ -70,6 +70,15 @@ enum Symbol: string
     case RAYDIUMUSDT = 'RAYDIUMUSDT';
     case ARCUSDT = 'ARCUSDT';
     case HBARUSDT = 'HBARUSDT';
+    case XCNUSDT = 'XCNUSDT';
+    case L3USDT = 'L3USDT';
+    case FIREUSDT = 'FIREUSDT';
+    case TOSHI1000USDT = '1000TOSHIUSDT';
+    case TRUMPUSDT = 'TRUMPUSDT';
+    case NCUSDT = 'NCUSDT';
+    case UROUSDT = 'UROUSDT';
+    case MOTHERUSDT = 'MOTHERUSDT';
+    case WHYUSDT10000 = '10000WHYUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -122,6 +131,15 @@ enum Symbol: string
         self::RAYDIUMUSDT->value => 4,
         self::ARCUSDT->value => 5,
         self::HBARUSDT->value => 5,
+        self::XCNUSDT->value => 7,
+        self::L3USDT->value => 5,
+        self::FIREUSDT->value => 4,
+        self::TOSHI1000USDT->value => 4,
+        self::TRUMPUSDT->value => 3,
+        self::NCUSDT->value => 5,
+        self::UROUSDT->value => 5,
+        self::MOTHERUSDT->value => 6,
+        self::WHYUSDT10000->value => 6,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -162,7 +180,7 @@ enum Symbol: string
         self::AIUSDT->value => 0.1,
         self::GRASSUSDT->value => 1,
         self::CVXUSDT->value => 0.01,
-        self::SPXUSDT->value => 0.001,
+        self::SPXUSDT->value => 1,
         self::GRIFFAINUSDT->value => 1,
         self::AI16ZUSDT->value => 1,
         self::SWARMSUSDT->value => 1,
@@ -175,6 +193,15 @@ enum Symbol: string
         self::RAYDIUMUSDT->value => 0.1,
         self::ARCUSDT->value => 1,
         self::HBARUSDT->value => 1,
+        self::XCNUSDT->value => 10,
+        self::L3USDT->value => 10,
+        self::FIREUSDT->value => 0.1,
+        self::TOSHI1000USDT->value => 1,
+        self::TRUMPUSDT->value => 0.1,
+        self::NCUSDT->value => 1,
+        self::UROUSDT->value => 10,
+        self::MOTHERUSDT->value => 10,
+        self::WHYUSDT10000->value => 100,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
