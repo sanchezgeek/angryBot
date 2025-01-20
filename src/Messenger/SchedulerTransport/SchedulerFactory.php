@@ -124,7 +124,11 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
 
             # position liquidation
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(Symbol::BTCUSDT))),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(
+                symbol: Symbol::BTCUSDT,
+                percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation(Symbol::BTCUSDT),
+                acceptableStoppedPart: self::getAcceptableStoppedPart(Symbol::BTCUSDT),
+            ))),
 
             # symbols
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
@@ -134,13 +138,11 @@ final class SchedulerFactory
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
 
-            $additionalStopDistanceWithLiquidation = self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null;
-            $acceptableStoppedPart = self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
-            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(
+            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(
                 new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: $additionalStopDistanceWithLiquidation,
-                    acceptableStoppedPart: $acceptableStoppedPart,
+                    percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation($symbol),
+                    acceptableStoppedPart: self::getAcceptableStoppedPart($symbol),
                 )
             ));
         }
@@ -151,9 +153,15 @@ final class SchedulerFactory
     private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
     ];
 
+    /**
+     * int
+     */
     private const ADDITIONAL_STOP_LIQUIDATION_DISTANCE = [
     ];
 
+    /**
+     * int|float
+     */
     private const ACCEPTABLE_STOPPED_PART = [
     ];
 
@@ -188,5 +196,15 @@ final class SchedulerFactory
     private function getOtherOpenedPositionsSymbols(): array
     {
         return $this->positionService->getOpenedPositionsSymbols([Symbol::BTCUSDT]);
+    }
+
+    private static function getAdditionalStopDistanceWithLiquidation(Symbol $symbol): int|null
+    {
+        return self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null;
+    }
+
+    private static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
+    {
+        return self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
     }
 }
