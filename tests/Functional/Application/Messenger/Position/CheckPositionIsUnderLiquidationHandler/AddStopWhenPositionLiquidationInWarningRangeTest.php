@@ -90,7 +90,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     public function addStopTestCases(): iterable
     {
-        $acceptableStoppedPart = 15;
+        $acceptableStoppedPart = 15.1;
         $delayedStopsPercent = 4;
         $pushedStopsPercent = 7;
 
