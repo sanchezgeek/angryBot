@@ -100,6 +100,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
         $items = [];
         foreach ($list as $item) {
+            if ((float)$item['avgPrice'] === 0.0) {
+                continue;
+            }
             $items[] = $item['symbol'];
         }
 
