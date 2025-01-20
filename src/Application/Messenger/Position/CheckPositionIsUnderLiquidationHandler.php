@@ -390,7 +390,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private static function lastRunMarkPriceCacheKey(Position $position): string
     {
-        return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->name, $position->side->value);
+        return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->value, $position->side->value);
     }
 
     /**

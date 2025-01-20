@@ -340,8 +340,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 return;
             }
 
-            $this->lastCannotAffordAtPrice[$symbol->name] = $index->value();
-            $this->lastCannotAffordAt[$symbol->name] = $this->clock->now();
+            $this->lastCannotAffordAtPrice[$symbol->value] = $index->value();
+            $this->lastCannotAffordAt[$symbol->value] = $this->clock->now();
         }
     }
 
@@ -502,8 +502,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $modifier = $ticker->indexPrice->value() * 0.0005;
 
         $refreshSeconds = 8;
-        $lastCannotAffordAt = $this->lastCannotAffordAt[$ticker->symbol->name] ?? null;
-        $lastCannotAffordAtPrice = $this->lastCannotAffordAtPrice[$ticker->symbol->name] ?? null;
+        $lastCannotAffordAt = $this->lastCannotAffordAt[$ticker->symbol->value] ?? null;
+        $lastCannotAffordAtPrice = $this->lastCannotAffordAtPrice[$ticker->symbol->value] ?? null;
 
         $canBuy =
             ($lastCannotAffordAt === null && $lastCannotAffordAtPrice === null)
@@ -516,7 +516,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             );
 
         if ($canBuy) {
-            $this->lastCannotAffordAt[$ticker->symbol->name] = $this->lastCannotAffordAtPrice[$ticker->symbol->name] = null;
+            $this->lastCannotAffordAt[$ticker->symbol->value] = $this->lastCannotAffordAtPrice[$ticker->symbol->value] = null;
         }
 
         return $canBuy;

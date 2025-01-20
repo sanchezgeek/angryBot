@@ -43,7 +43,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     public function getOpenedPositionsSymbols(array $except = []): array
     {
-        $key = sprintf('api_%s_opened_positions_symbols', self::ASSET_CATEGORY->value);;
+        $key = sprintf('api_%s_opened_positions_smbls', self::ASSET_CATEGORY->value);;
 
         $all = $this->cache->get($key, function (ItemInterface $item) {
             $item->expiresAfter(DateInterval::createFromDateString(self::OPENED_POSITIONS_SYMBOLS_TTL));

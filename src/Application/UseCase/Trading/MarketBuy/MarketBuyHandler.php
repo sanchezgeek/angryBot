@@ -48,7 +48,7 @@ class MarketBuyHandler
         } catch (CannotAffordOrderCostException $e) {
             throw $e;
         } catch (Throwable $e) {
-            OutputHelper::print(sprintf('%s while try to buy %s on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $symbol->value, $dto->positionSide->value));
+            OutputHelper::print(sprintf('%s while try to buy %s (%s initial) on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume, $symbol->value, $dto->positionSide->value));
             throw $e;
         }
     }

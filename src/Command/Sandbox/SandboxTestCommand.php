@@ -213,7 +213,7 @@ class SandboxTestCommand extends AbstractCommand
             $ordersPart[] = ($order instanceof BuyOrder ? '->buy' : '->close') . ' ' . $order->getVolume();
         }
 
-        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->name, $positionSide->title());
+        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->value, $positionSide->title());
     }
 
     /**

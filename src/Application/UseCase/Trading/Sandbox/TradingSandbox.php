@@ -182,7 +182,7 @@ class TradingSandbox implements TradingSandboxInterface
         // @todo | undo?
         $currentState->setLastPrice($price);
 
-        $this->notice(sprintf('__ +++ try to make buy %s on %s %s (buyOrder.price = %s) +++ __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
+        $this->notice(sprintf('__ +++ try to make buy %s on %s %s (buyOrder.price = %s) +++ __', $volume, $this->symbol->value, $positionSide->title(), $price), true);
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
         $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $this->getLeverage($positionSide), $positionSide)->value();
 
@@ -231,7 +231,7 @@ class TradingSandbox implements TradingSandboxInterface
         // @todo | undo?
         $this->currentState->setLastPrice($price);
 
-        $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name, $positionSide->title(), $price), true);
+        $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->value, $positionSide->title(), $price), true);
 
         $position = $this->currentState->getPosition($positionSide);
         if (!$position) {

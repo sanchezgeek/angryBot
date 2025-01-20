@@ -183,7 +183,7 @@ final class Position implements Stringable
     public function priceDistanceWithLiquidation(Ticker $ticker): float
     {
         if ($this->symbol !== $ticker->symbol) {
-            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name, $this->symbol->name));
+            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->value, $this->symbol->value));
         }
 
         return $this->liquidationPrice()->deltaWith($ticker->markPrice);

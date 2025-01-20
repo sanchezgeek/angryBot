@@ -227,7 +227,7 @@ final class PositionTest extends TestCase
         $ticker = TickerFactory::create(Symbol::BTCUSD, 30600,30450);
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
+        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->value, $position->symbol->value));
 
         $position->priceDistanceWithLiquidation($ticker);
     }
