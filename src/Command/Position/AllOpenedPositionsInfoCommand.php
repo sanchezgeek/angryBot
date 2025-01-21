@@ -162,12 +162,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $singleCoin = $symbol->associatedCoin();
         }
 
+        $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
+        $this->positions = $positionService->getAllPositions();
+
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
         }
-
-        $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
-        $this->positions = $positionService->getAllPositions();
 
         $unrealisedTotal = 0;
         $rows = [];

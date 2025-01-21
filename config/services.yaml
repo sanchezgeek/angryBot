@@ -109,6 +109,11 @@ services:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
+    App\Command\Position\AllOpenedPositionsInfoCommand:
+        class: App\Command\Position\AllOpenedPositionsInfoCommand
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
 ### consumers
     # for now "...ByBitLinearPositionService' # without cache" commented because CoverLossesAfterCloseByMarketConsumerDto published after ByBitOrderService::closeByMarket (and => after positions cache was already cleared after close)
     #        App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer:
