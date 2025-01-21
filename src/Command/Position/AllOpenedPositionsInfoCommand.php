@@ -24,6 +24,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
@@ -145,10 +146,28 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
+    /** @var array<Position[]> */
+    private array $positions;
+
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
         $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
         $symbols = $this->getOpenedPositionsSymbols();
+
+        $singleCoin = null;
+        foreach ($symbols as $symbol) {
+            if ($singleCoin !== null && $symbol->associatedCoin() !== $singleCoin) {
+                $singleCoin = null; break;
+            }
+            $singleCoin = $symbol->associatedCoin();
+        }
+
+        if ($singleCoin) {
+            $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
+        }
+
+        $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
+        $this->positions = $positionService->getAllPositions();
 
         $unrealisedTotal = 0;
         $rows = [];
@@ -165,19 +184,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
-        ### bottom START ###
-        $coin = null;
-        foreach ($symbols as $symbol) {
-            if ($coin !== null && $symbol->associatedCoin() !== $coin) {
-                $coin = null; break;
-            }
-            $coin = $symbol->associatedCoin();
-        }
-        $pnlFormatter = $coin ? static fn(float $pnl) => new CoinAmount($coin, $pnl) : static fn($pnl) => (string)$pnl;
 
+        ### bottom START ###
         $balanceCells = ['', ''];
-        if ($coin) {
-            $balance = $this->exchangeAccountService->getContractWalletBalance($coin);
+        if (isset($balance)) {
             $balanceCells = [
                 new Cell(
                     sprintf('%s avail | %s free | %s total', $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
@@ -185,22 +195,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 )
             ];
         }
-
         $bottomCells = $balanceCells;
 
+        $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
         $bottomCells[] = $pnlFormatter($unrealisedTotal);
-        $pnlFormatter = $coin ? static fn(float $pnl) => (new CoinAmount($coin, $pnl))->value() : static fn($pnl) => (string)$pnl;
+        $pnlFormatter = $singleCoin ? static fn(float $pnl) => (new CoinAmount($singleCoin, $pnl))->value() : static fn($pnl) => (string)$pnl;
         $selectedCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter);
         $prevCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter);
 
-        $bottomCells = array_merge($bottomCells, [
-            '',
-            '',
-            '',
-            '',
-            '',
-        ]);
-
+        $bottomCells = array_merge($bottomCells, ['', '', '', '', '']);
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
@@ -239,16 +242,16 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     {
         $result = [];
 
-        $positions = $this->positionService->getPositions($symbol);
-        $ticker = $this->exchangeService->ticker($symbol);
-        $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
-
+        $positions = $this->positions[$symbol->value];
         if (!$positions) {
             return [];
         }
 
-        $hedge = $positions[0]->getHedge();
-        $main = $hedge?->mainPosition ?? $positions[0];
+        $ticker = $this->exchangeService->ticker($symbol);
+        $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
+
+        $hedge = $positions[array_key_first($positions)]->getHedge();
+        $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
 
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;

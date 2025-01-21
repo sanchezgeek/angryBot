@@ -110,6 +110,43 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
+     * @return array<Position[]>
+     *
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     */
+    public function getAllPositions(): array
+    {
+        $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
+        $data = $this->sendRequest($request)->data();
+
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        /** @var Position[] $positions */
+        $positions = [];
+        foreach ($list as $item) {
+            $side = Side::from(strtolower($item['side']));
+            $symbol = Symbol::from($item['symbol']);
+
+            $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
+            if ((float)$item['avgPrice'] !== 0.0) {
+                $position = $this->parsePositionFromData($item);
+                if ($opposite) {
+                    $position->setOppositePosition($opposite);
+                    $opposite->setOppositePosition($position);
+                }
+                $positions[$symbol->value][$side->value] = $position;
+            }
+        }
+
+        return $positions;
+    }
+
+    /**
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
