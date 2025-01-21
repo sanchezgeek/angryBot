@@ -1,2 +1,6 @@
 # find errors
 cat var/log/dev.log | grep CRITICAL | egrep -v "Could not resolve" | egrep -v "recv_window" | egrep -v "must not be rejected" | egrep -v "TimeoutException"
+
+# opened positions (but only with orders)
+m sf c=p:opened-with-orders | sed 's/^\(.*\) \(.*\)$/m o-info side=\2 symbol=\1/' | while read line ; do newtabi "cdb && $line" ; done
+
