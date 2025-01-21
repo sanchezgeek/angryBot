@@ -79,6 +79,8 @@ enum Symbol: string
     case UROUSDT = 'UROUSDT';
     case MOTHERUSDT = 'MOTHERUSDT';
     case WHYUSDT10000 = '10000WHYUSDT';
+    case CHILLGUYUSDT = 'CHILLGUYUSDT';
+    case CLOUDUSDT = 'CLOUDUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -140,6 +142,8 @@ enum Symbol: string
         self::UROUSDT->value => 5,
         self::MOTHERUSDT->value => 6,
         self::WHYUSDT10000->value => 6,
+        self::CHILLGUYUSDT->value => 4,
+        self::CLOUDUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -202,6 +206,8 @@ enum Symbol: string
         self::UROUSDT->value => 10,
         self::MOTHERUSDT->value => 10,
         self::WHYUSDT10000->value => 100,
+        self::CHILLGUYUSDT->value => 1,
+        self::CLOUDUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
@@ -309,10 +315,10 @@ enum Symbol: string
 
     public function shortName(): string
     {
-        if (str_contains($this->name, 'USDT')) {
-            return str_replace('USDT', '', $this->name);
+        if (str_contains($this->value, 'USDT')) {
+            return str_replace('USDT', '', $this->value);
         }
 
-        return $this->name;
+        return $this->value;
     }
 }
