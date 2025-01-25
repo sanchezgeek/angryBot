@@ -31,12 +31,12 @@ final readonly class CalcPositionLiquidationPriceHandler
         $liquidationDistance = $freeBalanceLiquidationDistance + $this->getMaintenanceMarginLiquidationDistance($position);
 
         if ($position->isLong() && $liquidationDistance >= $position->entryPrice) {
-            return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float(0));
+            return new CalcPositionLiquidationPriceResult($position->entryPrice(), Price::float(0));
         }
 
-        $estimatedLiquidationPrice = Price::float($position->entryPrice)->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
+        $estimatedLiquidationPrice = $position->entryPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
 
-        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), $estimatedLiquidationPrice);
+        return new CalcPositionLiquidationPriceResult($position->entryPrice(), $estimatedLiquidationPrice);
     }
 
     /**
@@ -65,13 +65,13 @@ final readonly class CalcPositionLiquidationPriceHandler
             $liquidationPrice = 0;
         }
 
-        return new CalcPositionLiquidationPriceResult(Price::float($position->entryPrice), Price::float($liquidationPrice));
+        return new CalcPositionLiquidationPriceResult($position->entryPrice(), $position->symbol->makePrice($liquidationPrice));
     }
 
     public function getMaintenanceMarginLiquidationDistance(Position $position): float
     {
         if (AppContext::accType()->isUTA()) {
-            return $position->entryPrice / 100 / 2;
+            return $position->entryPrice / $position->leverage->value() / 2;
         }
 
         $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);

@@ -8,11 +8,15 @@ use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
 use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
+use App\Helper\OutputHelper;
 use App\Trait\LoggerTrait;
 use App\Worker\AppContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 use function sprintf;
 
@@ -22,7 +26,9 @@ final class LogLoggableEventListener implements EventSubscriberInterface
 
     public function __construct(
         ClockInterface $clock,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private readonly RateLimiterFactory $tickerUpdatedLogThrottlingLimiter,
+        private readonly RateLimiterFactory $btcusdtTickerUpdatedLogThrottlingLimiter,
     ) {
         $this->clock = $clock;
         $this->logger = $logger;
@@ -37,6 +43,14 @@ final class LogLoggableEventListener implements EventSubscriberInterface
         $message = $log;
         if ($workerHash = AppContext::workerHash()) {
             $message .= sprintf(' [%s]', $workerHash);
+        }
+
+        if ($event instanceof TickerUpdated || $event instanceof TickerUpdateSkipped) {
+            $symbol = $event instanceof TickerUpdated ? $event->ticker->symbol : $event->foundCachedTickerDto->ticker->symbol;
+            $throttlerFactory = $symbol !== Symbol::BTCUSDT ? $this->tickerUpdatedLogThrottlingLimiter : $this->btcusdtTickerUpdatedLogThrottlingLimiter;
+            if (!$throttlerFactory->create($symbol->value)->consume()->isAccepted()) {
+                return;
+            }
         }
 
         $this->info($message, $event->getContext());

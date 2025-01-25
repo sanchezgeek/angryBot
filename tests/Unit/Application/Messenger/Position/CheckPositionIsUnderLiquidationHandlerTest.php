@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Application\Messenger\Position;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -17,11 +17,13 @@ use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
+use App\Helper\FloatHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
+use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
 use PHPUnit\Framework\TestCase;
 
 use function min;
@@ -31,10 +33,13 @@ use function sprintf;
  * @group liquidation
  *
  * @covers CheckPositionIsUnderLiquidationHandler
+ *
+ * @todo functional?
  */
 final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 {
     use PositionSideAwareTest;
+    use AppErrorsLoggerTrait;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
@@ -71,6 +76,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->orderService,
             $this->stopService,
             $this->stopRepository,
+            self::getTestAppErrorsLogger(),
+            null,
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }
@@ -93,18 +100,18 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
     public function doNothingWhenPositionIsNotUnderLiquidationTestCases(): iterable
     {
-        $distance = self::TRANSFER_FROM_SPOT_ON_DISTANCE + 1;
         $markPrice = 35000;
         $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
+        $transferFromSpotOnDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
 
         yield 'SHORT' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::short()->entry(34000)->liq($markPrice + $distance)->build(),
+            '$position' => PositionBuilder::short()->entry(34000)->liq($markPrice + $transferFromSpotOnDistance + 1)->build(),
         ];
 
         yield 'LONG' => [
             '$ticker' => $ticker,
-            '$position' => PositionBuilder::long()->entry(36000)->liq($markPrice - $distance)->build(),
+            '$position' => PositionBuilder::long()->entry(36000)->liq($markPrice - $transferFromSpotOnDistance - 1)->build(),
         ];
     }
 
@@ -118,7 +125,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     ): void {
         $liquidationPrice = $position->liquidationPrice;
 
-        $markPrice = $position->isShort() ? $liquidationPrice - self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN : $liquidationPrice + self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
+        $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);
+
+        $markPrice = $position->isShort() ? $liquidationPrice - $closeByMarketIfDistanceLessThan : $liquidationPrice + $closeByMarketIfDistanceLessThan;
         $ticker = TickerFactory::withEqualPrices($position->symbol, $markPrice);
 
         $this->havePositions($position);
@@ -127,14 +136,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
-        $this->stopRepository->expects(self::once())->method('findActive')->with($position->side)->willReturn([]);
+        $this->stopRepository->method('findActive')->with($position->symbol, $position->side)->willReturn([]);
         $this->stopService->expects(self::never())->method(self::anything());
 
-        if ($spotAvailableBalance > 2) {
-            $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
-                new WalletBalance(AccountType::SPOT, $coin, $spotAvailableBalance, $spotAvailableBalance),
-            );
-        }
+        $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
+            new SpotBalance($coin, $spotAvailableBalance, $spotAvailableBalance),
+        );
 
         if ($expectedTransferAmount !== null) {
             $this->exchangeAccountService->expects(self::once())->method('interTransferFromSpotToContract')->with($coin, $expectedTransferAmount);
@@ -147,7 +154,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             ->method('closeByMarket')
             ->with(
                 $position,
-                (new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size),
+                $symbol->roundVolumeUp((new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size)),
             )
         ;
 

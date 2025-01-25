@@ -49,7 +49,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $positionSide = Side::Sell;
 
         # single
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 311.1, 100, -20);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100, -20);
         yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
@@ -57,8 +57,8 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         ];
 
         # with opposite
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 312.1, 100, -20);
-        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 199.9, 90, 100);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100, -20);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
         $position->setOppositePosition($oppositePosition);
         $oppositePosition->setOppositePosition($position);
         yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
@@ -68,7 +68,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         ];
 
         # have no position on SHORT side
-        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 211.11, 90, 100);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
         yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),
@@ -79,7 +79,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $positionSide = Side::Buy;
 
         # single
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 335.11, 100, 20);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 100, 20);
         yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
@@ -87,8 +87,8 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         ];
 
         # with opposite
-        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 332.22, 100, 20);
-        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 100.11, 90, -20);
+        $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 100, 20);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
         $position->setOppositePosition($oppositePosition);
         $oppositePosition->setOppositePosition($position);
         yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
@@ -98,7 +98,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         ];
 
         # have no position on LONG side
-        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 101.1, 90, -20);
+        $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
         yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),

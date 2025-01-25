@@ -17,8 +17,6 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
-use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -29,8 +27,6 @@ use DomainException;
 class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
     use HasWithoutOppositeContext;
-
-    public const MIN_VOLUME = 0.001;
 
     public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
@@ -61,6 +57,9 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     #[ORM\Column]
     private float $volume;
 
+    #[ORM\Column(type: 'string', enumType: Symbol::class)]
+    private Symbol $symbol;
+
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
 
@@ -72,13 +71,14 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     private bool $isOppositeStopExecuted = false;
 
-    public function __construct(int $id, Price|float $price, float $volume, Side $positionSide, array $context = [])
+    public function __construct(int $id, Price|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = FloatHelper::round(Price::toFloat($price));
-        $this->volume = $volume;
+        $this->price = $symbol->makePrice(Price::toFloat($price))->value();
+        $this->volume = $symbol->roundVolume($volume);
         $this->positionSide = $positionSide;
         $this->context = $context;
+        $this->symbol = $symbol;
     }
 
     public function getId(): int
@@ -91,7 +91,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
      */
     public function getSymbol(): Symbol
     {
-        return Symbol::BTCUSDT;
+        return $this->symbol;
     }
 
     public function getPositionSide(): Side
@@ -127,13 +127,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     {
         $restVolume = $this->volume - $value;
 
-        if (!($restVolume >= self::MIN_VOLUME)) {
+        if (!($restVolume >= $this->symbol->minOrderQty())) {
             throw new DomainException(
-                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= $symbol->minOrderQty().', $value, $restVolume)
             );
         }
 
-        $this->volume = VolumeHelper::round($restVolume);
+        $this->volume = $this->symbol->roundVolume($restVolume);
 
         return $this;
     }

@@ -6,13 +6,17 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\Position\PositionBuilder as PB;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Helper\ContractBalanceTestHelper;
+use App\Tests\Mixin\Assert\PositionsAssertions;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,24 +26,29 @@ use PHPUnit\Framework\TestCase;
  */
 class SandboxStateTest extends TestCase
 {
+    use PositionsAssertions;
+
     public function testCreate(): void
     {
         $symbol = Symbol::BTCUSDT;
         $coin = $symbol->associatedCoin();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
-        $free = new CoinAmount($coin, 98.1001);
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
         $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
+
+        $free = new CoinAmount($coin, 98.1001);
+
+        $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free->value(), [$short, $long], $ticker);
 
         $expectedAvailable = new CoinAmount($coin, 33.9768);
 
         // Act
-        $state = new SandboxState($ticker, $free, $long, $short);
+        $state = new SandboxState($ticker, $contactBalance, $long, $short);
 
         // Assert
-        self::assertEquals($short, $state->getPosition(Side::Sell));
-        self::assertEquals($long, $state->getPosition(Side::Buy));
+        self::isPositionsEqual($short, $state->getPosition(Side::Sell));
+        self::isPositionsEqual($long, $state->getPosition(Side::Buy));
         self::assertEquals($free, $state->getFreeBalance());
         self::assertEquals($expectedAvailable, $state->getAvailableBalance());
     }
@@ -49,7 +58,9 @@ class SandboxStateTest extends TestCase
      */
     public function testAllFreeAvailable(Ticker $ticker, float $free, array $positions, float $expectedAvailable): void
     {
-        $state = new SandboxState($ticker, new CoinAmount($ticker->symbol->associatedCoin(), $free), ...$positions);
+        $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free, $positions, $ticker);
+
+        $state = new SandboxState($ticker, $contactBalance, ...$positions);
 
         self::assertEquals(new CoinAmount($ticker->symbol->associatedCoin(), $expectedAvailable), $state->getAvailableBalance());
     }
@@ -101,11 +112,13 @@ class SandboxStateTest extends TestCase
         $coin = $symbol->associatedCoin();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
-        $free = new CoinAmount($coin, 98.1001);
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
         $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
 
-        $state = new SandboxState($ticker, $free, $long, $short);
+        $free = new CoinAmount($coin, 98.1001);
+        $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free->value(), [$short, $long], $ticker);
+
+        $state = new SandboxState($ticker, $contactBalance, $long, $short);
 
         // Act
         $state->setPositionAndActualizeOpposite(new ClosedPosition(Side::Sell, $symbol));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
+use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
@@ -21,7 +22,6 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
@@ -32,7 +32,6 @@ use function count;
 final class TryReleaseActiveOrdersHandler
 {
     private const MIN_LEFT_ORDERS_QNT = 3;
-    private const DEFAULT_TRIGGER_DELTA = 20;
     public const DEFAULT_RELEASE_OVER_DISTANCE = 120;
 
     /**
@@ -55,14 +54,16 @@ final class TryReleaseActiveOrdersHandler
      */
     public function __invoke(TryReleaseActiveOrders $command): void
     {
+        $symbol = $command->symbol;
         $claimedOrderVolume = $command->forVolume;
 
-        $activeOrders = $this->exchangeService->activeConditionalOrders($command->symbol);
+        $activeOrders = $this->exchangeService->activeConditionalOrders($symbol);
         if (!count($activeOrders)) {
             return;
         }
 
-        $ticker = $this->exchangeService->ticker($command->symbol);
+        $ticker = $this->exchangeService->ticker($symbol);
+        $defaultReleaseOverDistance = StopHelper::defaultReleaseStopsDistance($ticker->indexPrice);
 
         /** @var Price[] $compareWithPrices */
         $compareWithPrices = [];
@@ -76,10 +77,10 @@ final class TryReleaseActiveOrdersHandler
 
             // @todo | m.b. `...ByIds` ?
             $existedStop = $this->stopRepository->findByExchangeOrderId($order->positionSide, $order->orderId);
-            $distance = $existedStop ? $existedStop->getTriggerDelta() + 10 : self::DEFAULT_RELEASE_OVER_DISTANCE;
+            $distance = $existedStop ? $existedStop->getTriggerDelta() + StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol) : $defaultReleaseOverDistance;
 
-            if ($distance < self::DEFAULT_RELEASE_OVER_DISTANCE) {
-                $distance = self::DEFAULT_RELEASE_OVER_DISTANCE;
+            if ($distance < $defaultReleaseOverDistance) {
+                $distance = $defaultReleaseOverDistance;
             }
 
             if (
@@ -134,14 +135,19 @@ final class TryReleaseActiveOrdersHandler
     private function doRelease(ActiveStopOrder $exchangeStop, ?Stop $existedStop): void
     {
         $side = $exchangeStop->positionSide;
+        $symbol = $exchangeStop->symbol;
+
 
         if ($existedStop) {
             $existedStop->clearExchangeOrderId();
-            $existedStop->setTriggerDelta($existedStop->getTriggerDelta() + 3); // Increase triggerDelta little bit
+
+            $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+            $existedStop->increaseTriggerDelta($addTriggerDelta); // Increase triggerDelta little bit
+
             $this->stopRepository->save($existedStop);
             // @todo | stop | maybe ->setPrice(context.originalPrice) if now ticker.indexPrice above originalPrice?
         } else {
-            $this->stopService->create($side, $exchangeStop->triggerPrice, $exchangeStop->volume, self::DEFAULT_TRIGGER_DELTA, [
+            $this->stopService->create($symbol, $side, $exchangeStop->triggerPrice, $exchangeStop->volume, $exchangeStop->symbol->stopDefaultTriggerDelta(), [
                 'fromExchangeWithoutExistedStop' => true
             ]);
         }

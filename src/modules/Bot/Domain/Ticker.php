@@ -10,12 +10,19 @@ use App\Domain\Price\Price;
 
 final readonly class Ticker
 {
+    public Price $markPrice;
+    public Price $indexPrice;
+    public Price $lastPrice;
+
     public function __construct(
         public Symbol $symbol,
-        public Price $markPrice,
-        public Price $indexPrice,
-        public Price $lastPrice,
+        float|Price $markPrice,
+        float|Price $indexPrice,
+        float|Price $lastPrice,
     ) {
+        $this->lastPrice = $lastPrice instanceof Price ? $lastPrice : $this->symbol->makePrice($lastPrice);
+        $this->markPrice = $markPrice instanceof Price ? $markPrice : $this->symbol->makePrice($markPrice);
+        $this->indexPrice = $lastPrice instanceof Price ? $indexPrice : $this->symbol->makePrice($indexPrice);
     }
 
     public function isIndexAlreadyOverStop(Side $positionSide, float $price): bool

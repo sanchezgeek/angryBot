@@ -17,7 +17,7 @@ final readonly class CreateBuyOrderHandler
     {
         $id = $this->repository->getNextId();
 
-        $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, $dto->side, $dto->context);
+        $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, $dto->symbol, $dto->side, $dto->context);
         $this->repository->save($buyOrder);
 
         return new CreateBuyOrderResultDto($buyOrder);

@@ -108,6 +108,7 @@ class StopInfoCommand extends AbstractCommand
         }
 
         $stops = $this->stopRepository->findActive(
+            symbol: $symbol,
             side: $position->side,
             qbModifier: static fn (QueryBuilder $qb) => $qb->orderBy($qb->getRootAliases()[0] . '.price', $position->side->isShort() ? 'DESC' : 'ASC')
         );
@@ -230,7 +231,7 @@ class StopInfoCommand extends AbstractCommand
         bool $isCumInfo = false
     ): void {
         if (!$positionAfterRange->isSupportPosition()) { # new liquidation
-            $liquidationDiff = PriceMovement::fromToTarget($positionBeforeRange->liquidationPrice, $positionAfterRange->liquidationPrice);
+            $liquidationDiff = PriceMovement::fromToTarget($positionBeforeRange->liquidationPrice(), $positionAfterRange->liquidationPrice());
 
 //            if (!$isCumInfo) {
 //                $format .= ' | liq.price: %.2f';

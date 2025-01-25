@@ -6,11 +6,11 @@ namespace App\Domain\BuyOrder;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Domain\Price\PriceRange;
-use App\Helper\VolumeHelper;
 use IteratorAggregate;
 use LogicException;
 
 use function array_filter;
+use function array_key_first;
 use function sprintf;
 
 /**
@@ -81,7 +81,7 @@ final class BuyOrdersCollection implements IteratorAggregate
             $volume += $item->getVolume();
         }
 
-        return $volume > 0 ? VolumeHelper::round($volume) : 0;
+        return $volume > 0 ? $this->items[array_key_first($this->items)]->getSymbol()->roundVolume($volume) : 0;
     }
 
     public function grabFromRange(PriceRange $range): self

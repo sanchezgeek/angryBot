@@ -10,9 +10,7 @@ use App\EventBus\Event;
 
 final class StopPushedToExchange implements Event
 {
-    public function __construct(
-        public Stop $stop,
-        public Symbol $symbol,
-    ) {
+    public function __construct(public Stop $stop)
+    {
     }
 }

@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Helper\VolumeHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,8 +20,8 @@ class FixPositionCommand extends AbstractCommand
 {
     use PositionAwareCommand;
 
+    // @todo | symbol
     private const DEFAULT_INITIAL_VOLUME = 0.001;
-    private const DEFAULT_TRIGGER_DELTA = 1;
     private const DEFAULT_STEP = 13;
 
     protected function configure(): void
@@ -31,7 +30,7 @@ class FixPositionCommand extends AbstractCommand
             ->configurePositionArgs()
 //            ->addOption('volume', 'v', InputOption::VALUE_OPTIONAL, \sprintf('Initial volume (default: %s)', self::DEFAULT_INITIAL_VOLUME), self::DEFAULT_INITIAL_VOLUME)
             ->addOption('step', 's', InputOption::VALUE_OPTIONAL, \sprintf('Step (default: %s)', self::DEFAULT_STEP), self::DEFAULT_STEP)
-            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, \sprintf('Trigger delta (default: %s)', self::DEFAULT_TRIGGER_DELTA), self::DEFAULT_TRIGGER_DELTA)
+            ->addOption('trigger_delta', 't', InputOption::VALUE_OPTIONAL, 'Trigger delta')
             ->addOption('increment', 'i', InputOption::VALUE_OPTIONAL, 'Increment (optional; default: 0.000)')
         ;
     }
@@ -39,6 +38,8 @@ class FixPositionCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
+            $symbol = $this->getSymbol();
+
             if (!($step = (float)$input->getOption('step'))) {
                 throw new \InvalidArgumentException(
                     \sprintf('Invalid $step provided (%s)', $step),
@@ -73,13 +74,13 @@ class FixPositionCommand extends AbstractCommand
 
             if ($fromPrice > $toPrice) {
                 for ($price = $fromPrice; $price > $toPrice; $price-=$step) {
-                    $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             } else {
                 for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                    $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
-                    $volume = VolumeHelper::round($volume+$increment);
+                    $this->stopService->create($position->symbol, $position->side, $price, $volume, $triggerDelta, $context);
+                    $volume = $symbol->roundVolume($volume+$increment);
                 }
             }
 

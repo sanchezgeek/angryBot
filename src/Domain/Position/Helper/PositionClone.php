@@ -51,7 +51,7 @@ class PositionClone
         $size           = $this->size ?? $initial->size;
 
         $positionValue = $entry * $size; // @todo | only linear?
-        $positionBalance = $initialMargin = new CoinAmount($symbol->associatedCoin(), $positionValue / $initial->leverage->value());
+        $initialMargin = new CoinAmount($symbol->associatedCoin(), $positionValue / $initial->leverage->value());
 
 //        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
 //            throw new LogicException(sprintf('%s: invalid liquidation price "%s" provided (entry = "%s")', __METHOD__, $liquidation, $entry));
@@ -65,7 +65,6 @@ class PositionClone
             $positionValue,
             $liquidation,
             $initialMargin->value(),
-            $positionBalance->value(),
             $initial->leverage->value(),
 //            $initial->unrealizedPnl,
         );

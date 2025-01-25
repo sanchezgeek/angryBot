@@ -6,13 +6,14 @@ namespace App\Infrastructure\ByBit\Service\Account;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\AbstractExchangeAccountService;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
@@ -22,10 +23,11 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Request\Account\GetAllCoinsBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Account\CreateSubAccountApiKeyRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
-use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Worker\AppContext;
@@ -33,7 +35,7 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-use function in_array;
+use function abs;
 use function is_array;
 use function sprintf;
 use function uuid_create;
@@ -59,13 +61,28 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      */
-    public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): WalletBalance
+    public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): SpotBalance
     {
-        if (AppContext::accType()->isUTA()) {
-            return $this->getFundingBalance($coin);
-        } else {
-            return $this->getWalletBalance(AccountType::SPOT, $coin);
+        $request = new GetAllCoinsBalanceRequest($accountType = AccountType::FUNDING, $coin);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['balance'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
+
+        $balance = null;
+        foreach ($list as $item) {
+            if ($item['coin'] === $coin->value) {
+                $balance = new SpotBalance($coin, (float)$item['walletBalance'], (float)$item['transferBalance']);
+            }
+        }
+
+        if (!$balance) {
+            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
+            return new SpotBalance($coin, 0, 0);
+        }
+
+        return $balance;
     }
 
     /**
@@ -74,9 +91,49 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      */
-    public function getContractWalletBalance(Coin $coin): WalletBalance
+    public function getContractWalletBalance(Coin $coin): ContractBalance
     {
-        return $this->getWalletBalance(self::getContractAccountType(), $coin);
+        $request = new GetWalletBalanceRequest($accountType = AccountType::UNIFIED, $coin);
+
+        $byBitApiCallResult = $this->sendRequest($request);
+        $data = $byBitApiCallResult->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $balance = null;
+        foreach ($list as $item) {
+            if ($item['accountType'] === $accountType->value) {
+                foreach ($item['coin'] as $coinData) {
+                    if ($coinData['coin'] === $coin->value) {
+                        $totalPositionIM = (float)$coinData['totalPositionIM'];
+
+                        $total = (float)$coinData['walletBalance'];
+                        $free = $total - $totalPositionIM;
+                        $availableForTrade = $coinData['unrealisedPnl'] + $free;
+
+                        try {
+                            [$available, $freeForLiq] = $this->calcFreeContractBalance($coin, $total, $free);
+                        } catch (Throwable $e) {
+                            $message = sprintf('%s: "%s" when trying to calc free UTA balance.', __FUNCTION__, $e->getMessage());
+                            $this->appErrorLogger->critical($message, ['file' => __FILE__, 'line' => __LINE__]);
+                            OutputHelper::warning($message);
+
+                            $available = $freeForLiq = $free;
+                        }
+
+                        $balance = new ContractBalance($coin, $total, $available, $free, $freeForLiq, $availableForTrade);
+                    }
+                }
+            }
+        }
+
+        if (!$balance) {
+            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
+            return new ContractBalance($coin, 0, 0, 0, 0, 0);
+        }
+
+        return $balance;
     }
 
     public function universalTransfer(
@@ -114,7 +171,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromSpotToContract(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, self::getSpotAccountType(), self::getContractAccountType(), $amount);
+        $this->interTransfer($coin, AccountType::FUNDING, AccountType::UNIFIED, $amount);
     }
 
     /**
@@ -125,29 +182,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void
     {
-        $this->interTransfer($coin, self::getContractAccountType(), self::getSpotAccountType(), $amount);
-    }
-
-    /**
-     * @throws UnexpectedApiErrorException
-     * @throws ApiRateLimitReached
-     * @throws UnknownByBitApiErrorException
-     * @throws PermissionDeniedException
-     */
-    public function interTransferFromFundingToSpot(Coin $coin, float $amount): void
-    {
-        $this->interTransfer($coin, AccountType::FUNDING, AccountType::SPOT, $amount);
-    }
-
-    /**
-     * @throws UnexpectedApiErrorException
-     * @throws UnknownByBitApiErrorException
-     * @throws ApiRateLimitReached
-     * @throws PermissionDeniedException
-     */
-    public function interTransferFromSpotToFunding(Coin $coin, float $amount): void
-    {
-        $this->interTransfer($coin, AccountType::SPOT, AccountType::FUNDING, $amount);
+        $this->interTransfer($coin, AccountType::UNIFIED, AccountType::FUNDING, $amount);
     }
 
     /**
@@ -171,68 +206,19 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
     }
 
-    private static function interTransferFactory(Coin $coin, AccountType $from, AccountType $to, float $amount, string $transferId): CoinInterTransfer
+    private static function interTransferFactory(Coin $coin, AccountType $from, AccountType $to, float $amount, string $transferId): CoinInterTransferRequest
     {
         if (AppContext::isTest()) {
-            return CoinInterTransfer::test(new CoinAmount($coin, $amount), $from, $to);
+            return CoinInterTransferRequest::test(new CoinAmount($coin, $amount), $from, $to);
         }
 
-        return CoinInterTransfer::real(new CoinAmount($coin, $amount), $from, $to, $transferId);
-    }
-
-    /**
-     * @throws ApiRateLimitReached
-     * @throws UnexpectedApiErrorException
-     * @throws UnknownByBitApiErrorException
-     * @throws PermissionDeniedException
-     */
-    private function getWalletBalance(AccountType $accountType, Coin $coin): WalletBalance
-    {
-        $request = new GetWalletBalanceRequest($accountType, $coin);
-
-        $data = $this->sendRequest($request)->data();
-        if (!is_array($list = $data['list'] ?? null)) {
-            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
-        }
-
-        $walletBalance = null;
-        foreach ($list as $item) {
-            if ($item['accountType'] === $accountType->value) {
-                foreach ($item['coin'] as $coinData) {
-                    if ($coinData['coin'] === $coin->value) {
-                        if (in_array($accountType, [AccountType::SPOT, AccountType::FUNDING], true)) {
-                            $walletBalance = new WalletBalance($accountType, $coin, (float)$coinData['walletBalance'], (float)$coinData['free']);
-                        } elseif (in_array($accountType, [AccountType::CONTRACT, AccountType::UNIFIED], true)) {
-                            $total = (float)$coinData['walletBalance'];
-                            $available = (float)$coinData['availableToWithdraw'];
-
-                            try {
-                                $free = $this->calcFreeContractBalance($coin, $total, $available);
-                            } catch (Throwable $e) {
-                                $this->appErrorLogger->critical($e->getMessage(), ['file' => __FILE__, 'line' => __LINE__]);
-                                OutputHelper::warning(sprintf('%s: "%s" when trying to calc free contract balance.', __FUNCTION__, $e->getMessage()));
-                                $free = $available;
-                            }
-
-                            $walletBalance = new WalletBalance($accountType, $coin, $total, $available, (new CoinAmount($coin, $free))->value());
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!$walletBalance) {
-            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
-            return new WalletBalance($accountType, $coin, 0, 0);
-        }
-
-        return $walletBalance;
+        return CoinInterTransferRequest::real(new CoinAmount($coin, $amount), $from, $to, $transferId);
     }
 
     /**
      * @todo tests
      */
-    private function calcFreeContractBalance(Coin $coin, float $total, float $available): float
+    private function calcFreeContractBalance(Coin $coin, float $total, float $free): array
     {
         // @todo | Temporary solution? (only if there is only BTCUSDT position is opened)
         $symbol = null;
@@ -248,12 +234,12 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         if (!$positions) {
-            return $total;
+            return [$total, $total];
         }
 
         $hedge = $positions[0]->getHedge();
         if ($hedge && $hedge->isEquivalentHedge()) {
-            return $available;
+            return [$free, $free];
         }
 
         $positionForCalc = $hedge ? $hedge->mainPosition : $positions[0];
@@ -263,90 +249,49 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $notCoveredSize;
 
         if ($hedge?->isProfitableHedge()) {
-            $free = $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice();
-            /**
-             * Case when this is almost equivalent hedge
-             * @todo | need some normal solution
-             */
-            if ($free < 0 && $positionForCalc->liquidationPrice <= 0.00) {
-                $main = $hedge->mainPosition;
-                $support = $hedge->supportPosition;
-                if ($available === 0.0) {
-                    $free = ($main->positionBalance->value() - $main->initialMargin->value())
-                        + ($support->initialMargin->value() - $support->positionBalance->value());
-
-                    $notCoveredPartOrder = new ExchangeOrder($main->symbol, $notCoveredSize, $main->entryPrice);
-                    $free -= $this->orderCostCalculator->closeFee($notCoveredPartOrder, $main->leverage, $main->side)->value();
-                    $free -= $this->orderCostCalculator->openFee($notCoveredPartOrder)->value();
-                } else {
-                    $ticker = $this->exchangeService->ticker($positionForCalc->symbol);
-                    $priceDelta = $ticker->lastPrice->differenceWith($main->entryPrice);
-                    $isMainPositionInLoss = $priceDelta->isLossFor($main->side);
-
-                    if ($isMainPositionInLoss) {
-                        $loss = $notCoveredSize * $priceDelta->absDelta();
-                        $free = $available + $loss;
-                    } else {
-                        $free = $available;
-                    }
-                }
-            }
-        } else {
-            $free = $fundsAvailableForLiquidation;
+            $fundsAvailableForLiquidation = $fundsAvailableForLiquidation - $hedge->getSupportProfitOnMainEntryPrice();
         }
 
         # check is correct
-        if (!($positionForCalc->isShort() && !$positionForCalc->liquidationPrice)) { # but skip if this is short without liquidation
-            $liquidationRecalculated = $this->positionLiquidationCalculator->handle($positionForCalc, new CoinAmount($coin, $free))->estimatedLiquidationPrice();
-            if (($diff = abs($positionForCalc->liquidationPrice - $liquidationRecalculated->value())) > 1) {
-                OutputHelper::warning(sprintf('%s: recalculated liquidationPrice is not equals real one (diff: %s).', __FUNCTION__, $diff));
-            }
+        $this->checkCalculatedFundsForLiquidation($positionForCalc, $fundsAvailableForLiquidation);
+
+        // what if there is network problems?
+        $ticker = $this->exchangeService->ticker($symbol);
+
+        $priceDelta = $ticker->lastPrice->differenceWith($positionForCalc->entryPrice());
+        $isMainPositionInLoss = $priceDelta->isLossFor($positionForCalc->side);
+
+        $available = $free;
+        if ($isMainPositionInLoss) {
+            $loss = $notCoveredSize * $priceDelta->absDelta();
+            $available -= $loss;
         }
 
-        return $free;
+        // @todo + realAvailable?
+        return [max($available, 0), $fundsAvailableForLiquidation];
     }
 
-    /**
-     * @throws ApiRateLimitReached
-     * @throws UnexpectedApiErrorException
-     * @throws UnknownByBitApiErrorException
-     * @throws PermissionDeniedException
-     */
-    private function getFundingBalance(Coin $coin): WalletBalance
+    private function checkCalculatedFundsForLiquidation(Position $position, float $fundsAvailableForLiquidation): void
     {
-        $accountType = AccountType::FUNDING;
-        $request = new GetAllCoinsBalanceRequest($accountType, $coin);
-
-        $data = $this->sendRequest($request)->data();
-        if (!is_array($list = $data['balance'] ?? null)) {
-            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        if ($position->isShort() && !$position->liquidationPrice) { # skip if this is short without liquidation
+            return;
         }
 
-        $walletBalance = null;
-        foreach ($list as $item) {
-            if ($item['coin'] === $coin->value) {
-                $walletBalance = new WalletBalance($accountType, $coin, (float)$item['walletBalance'], (float)$item['transferBalance']);
-            }
-        }
+        $fundsAvailableForLiquidation = new CoinAmount($position->symbol->associatedCoin(), $fundsAvailableForLiquidation);
 
-        if (!$walletBalance) {
-            $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
-            return new WalletBalance($accountType, $coin, 0, 0);
+        $liquidationRecalculated = $this->positionLiquidationCalculator->handle($position, $fundsAvailableForLiquidation)->estimatedLiquidationPrice()->value();
+        if (($diff = abs($position->liquidationPrice - $liquidationRecalculated)) > 1) {
+            $msg = sprintf('ByBitExchangeAccountService::calcFreeContractBalance: recalculated liquidationPrice is not equals real one (diff: %s).', $diff);
+//            $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
+            OutputHelper::warning($msg);
         }
-
-        return $walletBalance;
     }
 
-    /**
-     * After migration to UTA only FUND account is available to store assets a-ka "SPOT".
-     */
-    private static function getSpotAccountType(): AccountType
+    public function createSubAccountApiKey(int $uid, string $note): void
     {
-        return AppContext::accType()->isUTA() ? AccountType::FUNDING : AccountType::SPOT;
-    }
+        $request = new CreateSubAccountApiKeyRequest($uid, $note);
+        $result = $this->sendRequest($request);
 
-    private static function getContractAccountType(): AccountType
-    {
-        return AppContext::accType()->isUTA() ? AccountType::UNIFIED : AccountType::CONTRACT;
+        var_dump($result->data());
     }
 }

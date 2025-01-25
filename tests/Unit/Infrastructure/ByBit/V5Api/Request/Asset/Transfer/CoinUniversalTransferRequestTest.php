@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Coin;
+namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Asset\Transfer;
 
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,7 +16,7 @@ use function sprintf;
 use function uuid_create;
 
 /**
- * @covers \App\Infrastructure\ByBit\API\V5\Request\Coin\CoinUniversalTransferRequest
+ * @covers \App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest
  */
 final class CoinUniversalTransferRequestTest extends TestCase
 {
@@ -26,8 +26,8 @@ final class CoinUniversalTransferRequestTest extends TestCase
 
         $request = new CoinUniversalTransferRequest(
             new CoinAmount($coin = Coin::USDT, $amount = 100500.1),
-            $fromAccountType = AccountType::CONTRACT,
-            $toAccountType = AccountType::SPOT,
+            $fromAccountType = AccountType::UNIFIED,
+            $toAccountType = AccountType::FUNDING,
             $fromMemberUid = 'fromMember',
             $toMemberUid = 'toMember',
             $transferId,
@@ -54,8 +54,8 @@ final class CoinUniversalTransferRequestTest extends TestCase
 
         new CoinUniversalTransferRequest(
             new CoinAmount($coin = Coin::USDT, $amount = 100500.1),
-            AccountType::CONTRACT,
-            AccountType::SPOT,
+            AccountType::UNIFIED,
+            AccountType::FUNDING,
             'fromMember',
             'fromMember',
             uuid_create(),

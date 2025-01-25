@@ -81,6 +81,9 @@ test: ## Run tests
 	@$(eval gr ?= )
 	@$(PHP_CONT) bin/phpunit --testdox $(gr)
 
+test_err:
+	@$(PHP_CONT) cat /srv/app/var/log/test/app_errors.log
+
 run: ## Run bot
 	@$(PHP_CONT) /usr/bin/supervisord
 
@@ -131,6 +134,11 @@ sl-info: ## Get position SLs info ("s=" - to specify `position_side`, "p=" - to 
 	@$(eval stp ?= )
 	@$(eval im_value ?= )
 	@$(PHP_CONT) ./bin/console sl:info $(s) -p $(p) --aggregateWith='$(a)' $(sp) $(stp) $(im_value)
+
+o-info: ## Get position orders info ("side=" and "symbol=" - to specify `positionSide` and `symbol` respectively; example: o-info side=sell symbol=XRPUSDT)
+	@$(eval symbol ?=)
+	@$(eval side ?=)
+	@$(PHP_CONT) ./bin/console o:t $(side) --symbol='$(symbol)'
 
 ## —— SHORT 🐻 ——
 s-info: ## Get SHORT-position SLs info ("p=" - to specify `pnlStep`, example: s-info p=30)

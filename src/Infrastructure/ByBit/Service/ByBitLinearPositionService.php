@@ -9,7 +9,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Helper\VolumeHelper;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -19,6 +18,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\SetLeverageRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
@@ -26,7 +26,12 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderT
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use InvalidArgumentException;
 use LogicException;
+use Psr\Log\LoggerInterface;
 
+use function array_filter;
+use function array_unique;
+use function array_values;
+use function count;
 use function end;
 use function in_array;
 use function is_array;
@@ -48,9 +53,97 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly LoggerInterface $appErrorLogger,
+    ) {
         $this->apiClient = $apiClient;
+    }
+
+    public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
+    {
+        $request = new SetLeverageRequest(self::ASSET_CATEGORY, $symbol, $forBuy, $forSell);
+        $this->sendRequest($request);
+    }
+
+    /**
+     * @return Symbol[]
+     */
+    public function getOpenedPositionsSymbols(array $except = []): array
+    {
+        $symbolsRaw = $this->getOpenedPositionsRawSymbols();
+
+        $symbols = [];
+        foreach ($symbolsRaw as $rawItem) {
+            if ($symbol = Symbol::tryFrom($rawItem)) {
+                $symbols[] = $symbol;
+            }
+        }
+
+        return array_values(
+            array_filter($symbols, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
+        );
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getOpenedPositionsRawSymbols(): array
+    {
+        $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
+
+        $data = $this->sendRequest($request)->data();
+
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $items = [];
+        foreach ($list as $item) {
+            if ((float)$item['avgPrice'] === 0.0) {
+                continue;
+            }
+            $items[] = $item['symbol'];
+        }
+
+        return array_unique($items);
+    }
+
+    /**
+     * @return array<Position[]>
+     *
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     */
+    public function getAllPositions(): array
+    {
+        $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
+        $data = $this->sendRequest($request)->data();
+
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        /** @var Position[] $positions */
+        $positions = [];
+        foreach ($list as $item) {
+            $side = Side::from(strtolower($item['side']));
+            $symbol = Symbol::from($item['symbol']);
+
+            $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
+            if ((float)$item['avgPrice'] !== 0.0) {
+                $position = $this->parsePositionFromData($item);
+                if ($opposite) {
+                    $position->setOppositePosition($opposite);
+                    $opposite->setOppositePosition($position);
+                }
+                $positions[$symbol->value][$side->value] = $position;
+            }
+        }
+
+        return $positions;
     }
 
     /**
@@ -126,12 +219,11 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         return new Position(
             Side::from(strtolower($apiData['side'])),
             Symbol::from($apiData['symbol']),
-            VolumeHelper::round((float)$apiData['avgPrice'], 2),
+            (float)$apiData['avgPrice'],
             (float)$apiData['size'],
-            VolumeHelper::round((float)$apiData['positionValue'], 2),
+            (float)$apiData['positionValue'],
             (float)$apiData['liqPrice'],
             (float)$apiData['positionIM'],
-            (float)$apiData['positionBalance'],
             (int)$apiData['leverage'],
             (float)$apiData['unrealisedPnl'],
         );
@@ -151,12 +243,15 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string
     {
+        $price = $position->symbol->makePrice($price);
+        $qty = $position->symbol->roundVolume($qty);
+
         $request = PlaceOrderRequest::stopConditionalOrder(
             self::ASSET_CATEGORY,
             $position->symbol,
             $position->side,
             $qty,
-            $price,
+            $price->value(),
             $triggerBy,
         );
 

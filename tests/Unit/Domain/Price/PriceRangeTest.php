@@ -217,13 +217,13 @@ final class PriceRangeTest extends TestCase
                 PriceRange::create(29985, 30000), 8,
                 [
                     Price::float(29985),
-                    Price::float(29986.88),
+                    Price::float(29986.875),
                     Price::float(29988.75),
-                    Price::float(29990.63),
+                    Price::float(29990.625),
                     Price::float(29992.5),
-                    Price::float(29994.38),
+                    Price::float(29994.375),
                     Price::float(29996.25),
-                    Price::float(29998.13)
+                    Price::float(29998.125)
                 ]
             ],
             [
@@ -231,14 +231,14 @@ final class PriceRangeTest extends TestCase
                 [
                     Price::float(28710),
                     Price::float(28736.1),
-                    Price::float(28762.2),
-                    Price::float(28788.3),
-                    Price::float(28814.4),
-                    Price::float(28840.5),
-                    Price::float(28866.6),
-                    Price::float(28892.7),
-                    Price::float(28918.8),
-                    Price::float(28944.9),
+                    Price::float(28762.199999999997),
+                    Price::float(28788.299999999996),
+                    Price::float(28814.399999999994),
+                    Price::float(28840.499999999993),
+                    Price::float(28866.59999999999),
+                    Price::float(28892.69999999999),
+                    Price::float(28918.79999999999),
+                    Price::float(28944.899999999987),
                 ]
             ],
         ];

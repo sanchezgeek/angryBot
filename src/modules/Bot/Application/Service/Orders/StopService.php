@@ -8,10 +8,10 @@ use App\Bot\Application\Command\CreateStop;
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
-use App\Helper\VolumeHelper;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -19,7 +19,6 @@ final class StopService implements StopServiceInterface
 {
     use DispatchCommandTrait;
 
-    // private const DEFAULT_INC = 0.001;
     private const DEFAULT_STEP = 11;
     private const DEFAULT_TRIGGER_DELTA = 3;
 
@@ -30,7 +29,7 @@ final class StopService implements StopServiceInterface
         $this->commandBus = $commandBus;
     }
 
-    public function create(Side $positionSide, Price|float $price, float $volume, float $triggerDelta, array $context = []): int
+    public function create(Symbol $symbol, Side $positionSide, Price|float $price, float $volume, ?float $triggerDelta = null, array $context = []): int
     {
         // @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         // Но не переборщить
@@ -42,6 +41,7 @@ final class StopService implements StopServiceInterface
         $this->dispatchCommand(
             new CreateStop(
                 $id,
+                $symbol,
                 $positionSide,
                 $volume,
                 $price,
@@ -53,6 +53,9 @@ final class StopService implements StopServiceInterface
         return $id;
     }
 
+    /**
+     * @todo | symbol
+     */
     public function createIncrementalToPosition(
         Position $position,
         float $volume,
@@ -60,19 +63,20 @@ final class StopService implements StopServiceInterface
         float $toPrice,
         array $context = []
     ): CreatedIncGridInfo {
+        $symbol = $position->symbol;
         $context['uniqid'] = \uniqid('inc-stop', true);
 
         $delta = abs($fromPrice - $toPrice);
         $step = self::DEFAULT_STEP;
 
         $count = \ceil($delta / $step);
-        if ($volume / $count < VolumeHelper::MIN_VOLUME) {
-            $count = $volume / VolumeHelper::MIN_VOLUME;
+        if ($volume / $count < $symbol->minOrderQty()) {
+            $count = $volume / $symbol->minOrderQty();
             $step = PriceHelper::round($delta / $count);
 
-            $stepVolume = VolumeHelper::MIN_VOLUME;
+            $stepVolume = $symbol->minOrderQty();
         } else {
-            $stepVolume = VolumeHelper::round($volume / $count);
+            $stepVolume = $symbol->roundVolume($volume / $count);
         }
 
         $price = $fromPrice;
@@ -92,6 +96,7 @@ final class StopService implements StopServiceInterface
             $price += $position->side === Side::Sell ? ($step) : (-$step);
 
             $this->create(
+                $position->symbol,
                 $position->side,
                 $price,
                 $stepVolume,

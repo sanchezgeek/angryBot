@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service;
 
+use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -18,6 +19,7 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\API\V5\Request\Market\GetInstrumentInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
@@ -25,6 +27,7 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 
+use function array_keys;
 use function is_array;
 use function sprintf;
 use function strtolower;
@@ -68,9 +71,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             if ($item['symbol'] === $symbol->value) {
                 $ticker = new Ticker(
                     $symbol,
-                    Price::float((float)$item['markPrice']),
-                    Price::float((float)$item['indexPrice']),
-                    Price::float((float)$item['lastPrice']),
+                    (float)$item['markPrice'],
+                    (float)$item['indexPrice'],
+                    (float)$item['lastPrice'],
                 );
             }
         }
@@ -145,5 +148,16 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         if ($data['orderId'] !== $order->orderId) {
             throw BadApiResponseException::common($request, sprintf('got another orderId (%s insteadof %s)', $data['orderId'], $order->orderId), __METHOD__);
         }
+    }
+
+    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
+    {
+        $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
+        $data = $this->sendRequest($request)->data();
+
+        return new InstrumentInfoDto(
+            (float)$data['list'][0]['lotSizeFilter']['minOrderQty'],
+            (float)$data['list'][0]['lotSizeFilter']['minNotionalValue'],
+        );
     }
 }

@@ -7,18 +7,15 @@ namespace App\Bot\Application\Command\Exchange;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Helper\VolumeHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
 {
-    private const MIN_VOLUME = 0.001;
     private const DEFAULT_TRIGGER_DELTA = 3;
 
     private const PRICE_STEP = 3; // To not allow to stop too much position size
@@ -78,9 +75,10 @@ final class IncreaseHedgeSupportPositionHandler extends AbstractOrdersPusher
             return;
         }
 
-        $volume = VolumeHelper::round($command->qty / 13);
+        $volume = $mainPosition->symbol->roundVolume($command->qty / 13);
 
         $this->stopService->create(
+            $mainPosition->symbol,
             $mainPosition->side,
             $triggerPrice,
             $volume,

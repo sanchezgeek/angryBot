@@ -6,6 +6,7 @@ namespace App\Tests\Factory;
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 
 final class TickerFactory
@@ -17,11 +18,21 @@ final class TickerFactory
         $markPrice = $markPrice ?? $indexPrice - 10;
         $lastPrice = $lastPrice ?? $markPrice - 10;
 
-        return new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
+        return new Ticker($symbol, $markPrice, $indexPrice, $lastPrice);
     }
 
     public static function withEqualPrices(Symbol $symbol, float $price): Ticker
     {
-        return new Ticker($symbol, Price::float($price), Price::float($price), Price::float($price));
+        return new Ticker($symbol, $price, $price, $price);
+    }
+
+    public static function withMarkSomeBigger(Symbol $symbol, float $price, Side $positionSide): Ticker
+    {
+        $modifier = $price / 3000;
+
+        return $positionSide->isShort()
+            ? new Ticker($symbol, $price, $price - $modifier, $price - $modifier)
+            : new Ticker($symbol, $price, $price + $modifier, $price + $modifier)
+        ;
     }
 }

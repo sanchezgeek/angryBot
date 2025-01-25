@@ -16,9 +16,13 @@ final class TickerUpdated extends LoggableEvent
 
     public function getLog(): ?string
     {
-        if (AppContext::isTest()) {
+        if (
+            AppContext::isTest()
+            || !AppContext::runningWorker() // only in worker runtime
+        ) {
             return null;
         }
-        return \sprintf('%s: %.2f', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
+
+        return \sprintf('%9s: %s', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
     }
 }

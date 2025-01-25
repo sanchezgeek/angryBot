@@ -7,11 +7,11 @@ namespace App\Domain\Stop;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Domain\Price\PriceRange;
-use App\Helper\VolumeHelper;
 use IteratorAggregate;
 use LogicException;
 
 use function array_filter;
+use function array_key_first;
 use function array_map;
 use function array_sum;
 use function array_values;
@@ -106,7 +106,7 @@ final class StopsCollection implements IteratorAggregate
             $volume += $item->getVolume();
         }
 
-        return $volume > 0 ? VolumeHelper::round($volume) : 0;
+        return $volume > 0 ? $this->items[array_key_first($this->items)]->getSymbol()->roundVolume($volume) : 0;
     }
 
     public function totalUsdPnL(Position $forPosition): float

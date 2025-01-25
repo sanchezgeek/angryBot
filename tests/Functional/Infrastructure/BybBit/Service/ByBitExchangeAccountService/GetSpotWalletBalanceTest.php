@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitExchangeAccountService;
 
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
-use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
-use App\Tests\Mixin\Tester\ByBitV5ApiTester;
-use App\Tests\Mock\Response\ByBitV5Api\Account\AccountBalanceResponseBuilder;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
+use App\Tests\Mock\Response\ByBitV5Api\Account\AllCoinsBalanceResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function sprintf;
@@ -26,9 +25,9 @@ final class GetSpotWalletBalanceTest extends ByBitExchangeAccountServiceTestAbst
     public function testCanGetSpotWalletBalance(
         Coin $coin,
         MockResponse $apiResponse,
-        WalletBalance $expectedSpotBalance
+        SpotBalance $expectedSpotBalance
     ): void {
-        $this->matchGet(new GetWalletBalanceRequest(AccountType::SPOT, $coin), $apiResponse);
+        $this->matchGet(new GetAllCoinsBalanceRequest(AccountType::FUNDING, $coin), $apiResponse);
 
         // Act
         $spotBalance = $this->service->getSpotWalletBalance($coin);
@@ -42,19 +41,19 @@ final class GetSpotWalletBalanceTest extends ByBitExchangeAccountServiceTestAbst
         $coin = Coin::USDT;
         $amount = 105.1;
         $coinAmount = new CoinAmount($coin, $amount);
-        yield sprintf('have %.3f on %s spot', $amount, $coin->value) => [
+        yield sprintf('have %.3f on %s fund', $amount, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build(),
-            'expectedSpotBalance' => new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
+            '$apiResponse' => AllCoinsBalanceResponseBuilder::ok()->withAvailableFundBalance($coinAmount)->build(),
+            'expectedSpotBalance' => new SpotBalance($coin, $amount, $amount),
         ];
 
         $coin = Coin::BTC;
         $amount = 0.11234543;
         $coinAmount = new CoinAmount($coin, $amount);
-        yield sprintf('have %.8f on %s spot', $amount, $coin->value) => [
+        yield sprintf('have %.8f on %s fund', $amount, $coin->value) => [
             '$coin' => $coin,
-            '$apiResponse' => AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build(),
-            'expectedSpotBalance' => new WalletBalance(AccountType::SPOT, $coin, $amount, $amount),
+            '$apiResponse' => AllCoinsBalanceResponseBuilder::ok()->withAvailableFundBalance($coinAmount)->build(),
+            'expectedSpotBalance' => new SpotBalance($coin, $amount, $amount),
         ];
     }
 }

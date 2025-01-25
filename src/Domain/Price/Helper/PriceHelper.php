@@ -15,6 +15,8 @@ final class PriceHelper
 
     /**
      * @todo | 1st priority | All method calls (as well as FloatHelper) must be replaced with round based on traded symbol precision
+     *
+     * @todo | symbol | rest use cases
      */
     public static function round(float $price, int $precision = self::DEFAULT_PRECISION): float
     {

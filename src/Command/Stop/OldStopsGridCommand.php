@@ -83,7 +83,7 @@ class OldStopsGridCommand extends AbstractCommand
             }
 
             $alreadyStopped = 0;
-            $stops = $this->stopRepository->findActive($position->side);
+            $stops = $this->stopRepository->findActive($this->getSymbol(), $position->side);
             foreach ($stops as $stop) {
                 $alreadyStopped += $stop->getVolume();
             }
@@ -103,12 +103,13 @@ class OldStopsGridCommand extends AbstractCommand
             }
 
             for ($price = $fromPrice; $price < $toPrice; $price+=$step) {
-                $this->stopService->create($position->side, $price, $volume, $triggerDelta, $context);
+                $this->stopService->create($this->getSymbol(), $position->side, $price, $volume, $triggerDelta, $context);
                 $volume = round($volume+$increment, 3);
             }
 
             $sum = 0;
             $stops = $this->stopRepository->findActive(
+                symbol: $this->getSymbol(),
                 side: $position->side,
                 qbModifier: function (QueryBuilder $qb) use ($position) {
                     $priceField = $qb->getRootAliases()[0] . '.price';

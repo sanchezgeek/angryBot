@@ -35,8 +35,10 @@ services:
     App\Messenger\SchedulerTransport\TransportFactory:
         tags: [ 'messenger.transport_factory' ]
 
+    App\Messenger\SchedulerTransport\SchedulerFactory: ~
+
     App\Messenger\SchedulerTransport\Scheduler:
-        factory: [ 'App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
+        factory: [ '@App\Messenger\SchedulerTransport\SchedulerFactory', 'createScheduler' ]
 
 ### exchange services
     App\Bot\Application\Service\Exchange\PositionServiceInterface:
@@ -104,6 +106,11 @@ services:
 ### commands
     App\Command\Position\OpenCommand:
         class: App\Command\Position\OpenCommand
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+    App\Command\Position\AllOpenedPositionsInfoCommand:
+        class: App\Command\Position\AllOpenedPositionsInfoCommand
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 

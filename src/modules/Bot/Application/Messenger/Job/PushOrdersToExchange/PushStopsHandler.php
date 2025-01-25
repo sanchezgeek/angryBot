@@ -6,6 +6,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -18,12 +19,10 @@ use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
-use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -31,6 +30,16 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
+
+
+/**
+ * @todo ! state ?
+ */
+
+
+use function abs;
+use function sprintf;
+use function var_dump;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
@@ -41,12 +50,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
     // @todo | need to review (based on other values through handling)
     public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
     public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
-
-    // @todo | need to review (based on other values through handling)
-    public const PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 15;
-    public const TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP = 7;
-
-    private const SL_DEFAULT_TRIGGER_DELTA = 25;
 
     public function __invoke(PushStops $message): void
     {
@@ -71,7 +74,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $currentPrice);
 
         foreach ($stops as $stop) {
-            ### TP
+            ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
                     $this->pushStopToExchange($ticker, $stop, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
@@ -79,38 +82,45 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 continue;
             }
 
-            ### Regular
-            $td = $this->getStopTriggerDelta($stop);
+            ### Regular ###
             $stopPrice = $stop->getPrice();
-
             $currentPriceOverStop = $currentPrice->isPriceOverStop($side, $stopPrice);
-            $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $td;
-            if ($currentPriceOverStop || $stopMustBePushedByTriggerDelta) {
-                $callback = null;
-                if ($stop->isCloseByMarketContextSet()) {
-                    $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
-                        $orderId = $orderService->closeByMarket($position, $stop->getVolume());
-                        $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), Price::float($stop->getPrice()));
 
-                        return $orderId;
-                    };
-                } elseif ($currentPriceOverStop) {
+            $callback = null;
+            if ($stop->isCloseByMarketContextSet()) {
+                if (!$currentPriceOverStop) continue;
+                $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
+                    $orderId = $orderService->closeByMarket($position, $stop->getVolume());
+                    $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), $stop->getPrice());
+
+                    return $orderId;
+                };
+            } else {
+                $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $stop->getTriggerDelta();
+                if (!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) {
+                    continue;
+                }
+
+                if ($currentPriceOverStop) {
                     if ($distanceWithLiquidation <= $liquidationCriticalDistance) {
                         $callback = static fn() => $orderService->closeByMarket($position, $stop->getVolume());
                     } else {
-                        $newPrice = $side->isShort() ? $currentPrice->value() + self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP : $currentPrice->value() - self::PRICE_MODIFIER_IF_CURRENT_PRICE_OVER_STOP;
-                        $stop->setPrice($newPrice)->setTriggerDelta($td + self::TD_MODIFIER_IF_CURRENT_PRICE_OVER_STOP);
+                        $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
+                        $priceModifierIfCurrentPriceOverStop = StopHelper::priceModifierIfCurrentPriceOverStop($currentPrice);
+
+                        $newPrice = $side->isShort() ? $currentPrice->value() + $priceModifierIfCurrentPriceOverStop : $currentPrice->value() - $priceModifierIfCurrentPriceOverStop;
+                        $stop->setPrice($newPrice)->increaseTriggerDelta($additionalTriggerDelta);
                     }
                 }
-
-                $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
-                    try {
-                        return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
-                    } catch (Throwable $e) {
-                        return $orderService->closeByMarket($position, $stop->getVolume());
-                    }
-                });
             }
+
+            $this->pushStopToExchange($ticker, $stop, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+                try {
+                    return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
+                } catch (Throwable $e) {
+                    return $orderService->closeByMarket($position, $stop->getVolume());
+                }
+            });
         }
 
         $stopsClosedByMarket && $this->processOrdersClosedByMarket($position, $stopsClosedByMarket);
@@ -119,8 +129,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private function pushStopToExchange(Ticker $ticker, Stop $stop, callable $pushStopCallback): void
     {
         try {
-            $stopOrderId = $pushStopCallback();
-            $stop->wasPushedToExchange($ticker->symbol, $stopOrderId);
+            $exchangeOrderId = $pushStopCallback();
+            $stop->wasPushedToExchange($exchangeOrderId);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -134,21 +144,13 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
     }
 
-    private function getStopTriggerDelta(Stop $stop): float
-    {
-        if ($stop->isCloseByMarketContextSet()) {
-            return 0.3;
-        }
-
-        return $stop->getTriggerDelta() ?: self::SL_DEFAULT_TRIGGER_DELTA;
-    }
-
     /**
      * @return Stop[]
      */
     private function findStops(Side $side, Symbol $symbol): array
     {
         return $this->repository->findActive(
+            symbol: $symbol,
             side: $side,
             nearTicker: $this->exchangeService->ticker($symbol),
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC'),

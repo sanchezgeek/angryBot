@@ -5,6 +5,7 @@ namespace App\Bot\Domain\Repository;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query\Expr\OrderBy;
@@ -22,10 +23,16 @@ use Doctrine\Persistence\ManagerRegistry;
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
+    private string $isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
 
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Stop::class);
+    }
+
+    public function getNextId(): int
+    {
+        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
     }
 
     public function save(Stop $stop): void
@@ -48,11 +55,12 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(Side $side, callable $qbModifier = null): array
+    public function findAllByPositionSide(Symbol $symbol, Side $side, callable $qbModifier = null): array
     {
         $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')
-            ->setParameter(':posSide', $side);
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+        ;
 
         if ($qbModifier) {
             $qbModifier($qb);
@@ -65,15 +73,17 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
      * @return Stop[]
      */
     public function findActive(
+        Symbol $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->setParameter(':posSide', $side);
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+        ;
 
         // а это тут вообще зачем? Для случая ConditionalBO?
         if ($exceptOppositeOrders) {
@@ -81,8 +91,10 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($nearTicker) {
+            $range = $nearTicker->symbol->makePrice($nearTicker->indexPrice->value() / 600)->value();
+
             $cond = $side->isShort()    ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
-            $price = $side->isShort()   ? $nearTicker->indexPrice->value() + 50  : $nearTicker->indexPrice->value() - 50;
+            $price = $side->isShort()   ? $nearTicker->indexPrice->value() + $range  : $nearTicker->indexPrice->value() - $range;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
         }
@@ -97,6 +109,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     public function findFirstStopUnderPosition(Position $position): ?Stop
     {
         $result = $this->findActive(
+            symbol: $position->symbol,
             side: $position->side,
             qbModifier: static function (QueryBuilder $qb) use ($position) {
                 $qb->andWhere(
@@ -122,6 +135,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     public function findFirstPositionStop(Position $position): ?Stop
     {
         $result = $this->findActive(
+            symbol: $position->symbol,
             side: $position->side,
             qbModifier: static function (QueryBuilder $qb) use ($position) {
                 $qb->addOrderBy(
@@ -153,18 +167,24 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findPushedToExchange(Side $side): array
+    public function findPushedToExchange(Symbol $symbol, Side $side): array
     {
         $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = true")
-            ->setParameter(':posSide', $side);
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+        ;
 
         return $qb->getQuery()->getResult();
     }
 
-    public function getNextId(): int
+    public function findActiveCreatedByLiquidationHandler(): array
     {
-        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->isAdditionalStopFromLiquidationHandler', 'true') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
     }
 }

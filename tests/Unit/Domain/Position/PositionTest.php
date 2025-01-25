@@ -48,10 +48,9 @@ final class PositionTest extends TestCase
         $value = 100005000;
         $liquidation = 200500;
         $initialMargin = 1000;
-        $balance = 1030;
         $leverage = 100;
 
-        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $balance, $leverage);
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
 
         self::assertEquals($side, $position->side);
         self::assertTrue($position->isShort());
@@ -62,7 +61,6 @@ final class PositionTest extends TestCase
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $balance), $position->positionBalance);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertNull($position->oppositePosition);
         self::assertNull($position->getHedge());
@@ -79,10 +77,9 @@ final class PositionTest extends TestCase
         $value = 100005000;
         $liquidation = 200500;
         $initialMargin = 1000;
-        $balance = 1040;
         $leverage = 100;
 
-        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $balance, $leverage);
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
         $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 2050.1, 2000050000, 300500, 100, 100, 100);
         $position->setOppositePosition($oppositePosition);
 
@@ -95,7 +92,6 @@ final class PositionTest extends TestCase
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $balance), $position->positionBalance);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertSame($oppositePosition, $position->oppositePosition);
         self::assertNotNull($position->getHedge());
@@ -112,9 +108,8 @@ final class PositionTest extends TestCase
         $value = 100005000;
         $liquidation = 90500;
         $initialMargin = 1000;
-        $balance = 1010;
         $leverage = 100;
-        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $balance, $leverage);
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
 
         self::assertEquals($side, $position->side);
         self::assertTrue($position->isLong());
@@ -125,7 +120,6 @@ final class PositionTest extends TestCase
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $balance), $position->positionBalance);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertNull($position->oppositePosition);
         self::assertNull($position->getHedge());
@@ -142,10 +136,9 @@ final class PositionTest extends TestCase
         $value = 100005000;
         $liquidation = 90500;
         $initialMargin = 1000;
-        $balance = 1010;
         $leverage = 100;
 
-        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $balance, $leverage);
+        $position = new Position($side, $symbol, $entry, $size, $value, $liquidation, $initialMargin, $leverage);
         $oppositePosition = new Position($side->getOpposite(), $symbol, 200500, 1000, 100000, 300500, 100, 100, 100);
         $position->setOppositePosition($oppositePosition);
 
@@ -158,7 +151,6 @@ final class PositionTest extends TestCase
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $balance), $position->positionBalance);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertSame($oppositePosition, $position->oppositePosition);
         self::assertNotNull($position->getHedge());
@@ -235,7 +227,7 @@ final class PositionTest extends TestCase
         $ticker = TickerFactory::create(Symbol::BTCUSD, 30600,30450);
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name, $position->symbol->name));
+        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->value, $position->symbol->value));
 
         $position->priceDistanceWithLiquidation($ticker);
     }
@@ -293,7 +285,7 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationPrice(Side $side): void
     {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 50, 100);
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 100);
 
         self::assertEquals(Price::float(51000.001), $position->liquidationPrice());
     }
@@ -303,8 +295,10 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationDistance(Side $side): void
     {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 50, 100);
+        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.01, 50, 100);
+        self::assertEquals(1000.01, $position->liquidationDistance());
 
-        self::assertEquals(1000.001, $position->liquidationDistance());
+        $position = new Position($side, Symbol::BTCUSDT, 51000.01, 0.1, 5000, 50000, 50, 100);
+        self::assertEquals(1000.01, $position->liquidationDistance());
     }
 }

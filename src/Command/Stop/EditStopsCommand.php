@@ -15,13 +15,13 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
-use App\Helper\VolumeHelper;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
 use Exception;
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -81,6 +81,7 @@ class EditStopsCommand extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $symbol = $this->getSymbol();
         $all = $this->paramFetcher->getBoolOption('all');
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
@@ -103,9 +104,10 @@ class EditStopsCommand extends AbstractCommand
         }
 
         if ($action === self::ACTION_REMOVE) {
-            $stops = $this->stopRepository->findAllByPositionSide($positionSide);
+            $stops = $this->stopRepository->findAllByPositionSide($symbol, $positionSide);
         } else {
             $stops = $this->stopRepository->findActive(
+                symbol: $symbol,
                 side: $positionSide,
                 qbModifier: static function (QueryBuilder $qb) use ($positionSide) {
                     QueryHelper::addOrder($qb, 'volume', 'ASC');
@@ -161,9 +163,9 @@ class EditStopsCommand extends AbstractCommand
                     )
                 );
             }
-            $needMoveVolume = VolumeHelper::round($filteredStops->totalVolume() * $movePart / 100);
+            $needMoveVolume = $symbol->roundVolume($filteredStops->totalVolume() * $movePart / 100);
 
-            $tD = self::DEFAULT_TRIGGER_DELTA;
+            $tD = $symbol->stopDefaultTriggerDelta();
             $movedVolume = 0;
             $removed = new StopsCollection();
             while ($needMoveVolume > 0) {
@@ -172,13 +174,17 @@ class EditStopsCommand extends AbstractCommand
                         $removed->add($stop);
                         $filteredStops->remove($stop);
                         $needMoveVolume -= $stop->getVolume();
-                        $tD = $stop->getTriggerDelta() > $tD ? $stop->getTriggerDelta() : $tD;
+                        if ($stop->getTriggerDelta() > $tD) {
+                            $tD = $stop->getTriggerDelta();
+                        }
                     } else {
                         try {
                             $stop->subVolume($needMoveVolume);
                             $movedVolume += $needMoveVolume;
                             $needMoveVolume = 0;
-                            $tD = $stop->getTriggerDelta() > $tD ? $stop->getTriggerDelta() : $tD;
+                            if ($stop->getTriggerDelta() > $tD) {
+                                $tD = $stop->getTriggerDelta();
+                            }
                             continue 2;
                         } catch (DomainException) {
                             continue;
@@ -199,6 +205,7 @@ class EditStopsCommand extends AbstractCommand
 
                 // @todo some uniqueid to context
                 $this->stopService->create(
+                    $this->getSymbol(),
                     $positionSide,
                     $price->value(),
                     $total,
@@ -211,8 +218,12 @@ class EditStopsCommand extends AbstractCommand
 
         if ($action === self::ACTION_REMOVE) {
             $exchangeOrdersIds = array_map(static fn (Stop $stop) => $stop->getExchangeOrderId(), $stops);
-            $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
-
+            try {
+                $pushedStops = $this->exchangeService->activeConditionalOrders($symbol);
+            } catch (Exception $e) {
+                $this->appErrorLogger->critical(sprintf('Error while get pushed orders: %s', $e->getMessage()));
+                $pushedStops = [];
+            }
 
             $pushedStops = array_filter($pushedStops, static fn(ActiveStopOrder $activeStopOrder) => in_array($activeStopOrder->orderId, $exchangeOrdersIds, true));
             $closeActiveCondOrder = false;
@@ -295,6 +306,7 @@ class EditStopsCommand extends AbstractCommand
         private readonly StopService $stopService,
         PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly LoggerInterface $appErrorLogger,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

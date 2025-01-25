@@ -96,7 +96,7 @@ abstract class AbstractExecStepResultTableRowBuilder
 
     protected function getLiquidationPriceDiffWithPrev(Position $positionBefore, Position $positionAfter): string
     {
-        $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice, $positionAfter->liquidationPrice);
+        $liquidationPriceMoveFromPrev = PriceMovement::fromToTarget($positionBefore->liquidationPrice(), $positionAfter->liquidationPrice());
         $liquidationPriceDiffWithPrev = $liquidationPriceMoveFromPrev->deltaForPositionLoss($positionBefore->side);
         if ($liquidationPriceDiffWithPrev === 0.00) {
             $liquidationPriceDiffWithPrev = 0;
@@ -116,7 +116,7 @@ abstract class AbstractExecStepResultTableRowBuilder
             $info[] = match (true) {
                 $sourceOrder->isTakeProfitOrder() => 'TakeProfit order',
                 $sourceOrder->isCloseByMarketContextSet() => '!by market!',
-                default => sprintf('Conditional order (td=%.2f)', $this->priceFormatter->format($sourceOrder->getTriggerDelta())),
+                default => sprintf('Conditional order (td=%.2f)', $sourceOrder->getTriggerDelta()),
             };
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without opposite BO';
             $sourceOrder->isOrderPushedToExchange() && $info[] = 'PUSHED TO EXCHANGE';

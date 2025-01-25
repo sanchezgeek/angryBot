@@ -14,7 +14,6 @@ use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Helper\FloatHelper;
-use App\Helper\VolumeHelper;
 use Exception;
 use LogicException;
 use RuntimeException;
@@ -30,7 +29,6 @@ final class Position implements Stringable
 {
     public readonly Leverage $leverage;
     public readonly CoinAmount $initialMargin;
-    public readonly CoinAmount $positionBalance;
 
     public ?Position $oppositePosition = null;
     private Hedge|null|false $hedge = false;
@@ -46,7 +44,6 @@ final class Position implements Stringable
         public readonly float $value,
         public readonly float $liquidationPrice,
         float $initialMargin,
-        float $positionBalance,
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
     ) {
@@ -54,22 +51,21 @@ final class Position implements Stringable
 
         $this->leverage = new Leverage($leverage);
         $this->initialMargin = new CoinAmount($this->symbol->associatedCoin(), $initialMargin);
-        $this->positionBalance = new CoinAmount($this->symbol->associatedCoin(), $positionBalance);
     }
 
     public function liquidationDistance(): float
     {
-        return abs(FloatHelper::round($this->entryPrice - $this->liquidationPrice));
+        return FloatHelper::round(abs($this->entryPrice - $this->liquidationPrice), $this->symbol->pricePrecision());
     }
 
     public function liquidationPrice(): Price
     {
-        return Price::toObj($this->liquidationPrice);
+        return $this->symbol->makePrice($this->liquidationPrice);
     }
 
     public function entryPrice(): Price
     {
-        return Price::toObj($this->entryPrice);
+        return $this->symbol->makePrice($this->entryPrice);
     }
 
     public function setOppositePosition(Position $oppositePosition): void
@@ -130,7 +126,7 @@ final class Position implements Stringable
             );
         }
 
-        return VolumeHelper::round($hedge->mainPosition->size - $hedge->supportPosition->size);
+        return $this->symbol->roundVolume($hedge->mainPosition->size - $hedge->supportPosition->size);
     }
 
     public function getCaption(): string
@@ -157,12 +153,12 @@ final class Position implements Stringable
 
     public function isPositionInProfit(Price|float $currentPrice): bool
     {
-        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isProfitFor($this->side);
+        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isProfitFor($this->side);
     }
 
     public function isPositionInLoss(Price|float $currentPrice): bool
     {
-        return Price::toObj($currentPrice)->differenceWith($this->entryPrice)->isLossFor($this->side);
+        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isLossFor($this->side);
     }
 
     public function getVolumePart(float $percent): float
@@ -171,7 +167,7 @@ final class Position implements Stringable
             throw new LogicException(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $percent));
         }
 
-        return VolumeHelper::round($this->size * ($percent / 100));
+        return $this->symbol->roundVolume($this->size * ($percent / 100));
     }
 
     public function isShort(): bool
@@ -187,7 +183,7 @@ final class Position implements Stringable
     public function priceDistanceWithLiquidation(Ticker $ticker): float
     {
         if ($this->symbol !== $ticker->symbol) {
-            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name, $this->symbol->name));
+            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->value, $this->symbol->value));
         }
 
         return $this->liquidationPrice()->deltaWith($ticker->markPrice);
@@ -204,5 +200,21 @@ final class Position implements Stringable
     public function __clone(): void
     {
         throw new Exception(sprintf('%s: clone denied. Use %s instead.', __METHOD__, PositionClone::class));
+    }
+
+    /**
+     * @internal Only for tests
+     */
+    public function uninitializeRuntimeCache(): void
+    {
+        $this->hedge = false;
+    }
+
+    public function isLiquidationPlacedBeforeEntry(): bool
+    {
+        return $this->isShort()
+            ? $this->liquidationPrice()->lessThan($this->entryPrice())
+            : $this->liquidationPrice()->greaterThan($this->entryPrice())
+        ;
     }
 }

@@ -34,7 +34,6 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
-use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
@@ -124,6 +123,12 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $this->currentTicker = $this->exchangeService->ticker($this->getSymbol());
         $this->lastPriceDiff = $this->currentTicker->indexPrice->value() - $this->currentTicker->lastPrice->value();
         $this->useLastPriceAsEstimatedForExec = $this->paramFetcher->getBoolOption(self::USE_LAST_PRICE_AS_ESTIMAATED_FOR_EXEC);
+        if ($this->useLastPriceAsEstimatedForExec) {
+            $pp10 = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $this->currentTicker->indexPrice);
+            if ($this->currentTicker->indexPrice->differenceWith($this->currentTicker->lastPrice)->absDelta() < $pp10) {
+                $this->useLastPriceAsEstimatedForExec = false;
+            }
+        }
     }
 
     private function createSandbox(): TradingSandbox
@@ -137,6 +142,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function getPosition(Symbol $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getOpenedPositionsSymbols(array $except = []): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
         $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings);
@@ -149,14 +156,16 @@ class OrdersTotalInfoCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $positionSide = $this->getPositionSide();
-        $pushedStops = $this->exchangeService->activeConditionalOrders($this->getSymbol());
+        $symbol = $this->getSymbol();
+
+        $pushedStops = $this->exchangeService->activeConditionalOrders($symbol);
 
         $stops = array_filter(
-            $this->stopRepository->findAllByPositionSide($positionSide),
+            $this->stopRepository->findAllByPositionSide($symbol, $positionSide),
             static fn(Stop $stop):bool => !$stop->isOrderPushedToExchange() || isset($pushedStops[$stop->getExchangeOrderId()])
         );
 
-        $buyOrders = $this->buyOrderRepository->findActive($positionSide);
+        $buyOrders = $this->buyOrderRepository->findActive($symbol, $positionSide);
         if (!$stops && !$buyOrders) {
             $this->io->block('Orders not found.'); return Command::SUCCESS;
         }
@@ -188,7 +197,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         $ordersAfterPositionProfit = [];
 
         foreach ($orders as $order) {
-            Price::float($order->getPrice())->differenceWith($this->currentTicker->indexPrice)->isLossFor($positionSide)
+            $symbol->makePrice($order->getPrice())->differenceWith($this->currentTicker->indexPrice)->isLossFor($positionSide)
                 ? $ordersAfterPositionLoss[] = $order
                 : $ordersAfterPositionProfit[] = $order;
         }
@@ -231,7 +240,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
     private function processOrdersFromInitialPositionState(TradingSandbox $sandbox, array $orders): array
     {
         $position = $this->initialSandboxState->getPosition($this->getPositionSide());
-        $entryPrice = $position->entryPrice;
+        $entryPrice = $position->entryPrice();
         $divideStep = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::DIVIDE_STEP_PNL_PERCENT, $entryPrice);
         $groups = [];
 
@@ -256,7 +265,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                     $key++;
                 }
 
-                if (!$divideByPositionEntryWasMade && ($position->isShort() && $price > $entryPrice || $position->isLong()  && $price < $entryPrice)) {
+                if (!$divideByPositionEntryWasMade && ($position->isShort() && $price > $entryPrice->value() || $position->isLong()  && $price < $entryPrice->value())) {
                     $key++; $divideByPositionEntryWasMade = true;
                 }
 
@@ -379,8 +388,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $ticker = $row->ticker;
                 $position = $row->initialSandboxState->getPosition($this->getPositionSide());
                 $cells = array_merge([
-                    Cell::colspan(4, sprintf('ticker: %s[l], %s[m], %s[i]', $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
-                    Cell::resetToDefaults('pos:'),
+                    Cell::colspan(4, sprintf('%s ticker: %s[l], %s[m], %s[i]', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
+                    Cell::resetToDefaults(sprintf('pos:%s', $position ? sprintf(' %s', $position->side->title()) : '')),
                     # probably some default table behaviour instead of $columnsCount - $tickerColspan
                 ], !$position ? [Cell::restColumnsMerged('No position found')] : [
                     $position->size,

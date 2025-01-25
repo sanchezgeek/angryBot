@@ -18,12 +18,16 @@ class TickerTest extends TestCase
 {
     public function testCreateTicker(): void
     {
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 200500, 100500, 90500);
+        $ticker = TickerFactory::create(Symbol::BTCUSDT, 200500.249, 100500.229, 90500.1);
 
         self::assertEquals(Symbol::BTCUSDT, $ticker->symbol);
-        self::assertEquals(Price::float(90500), $ticker->lastPrice);
-        self::assertEquals(Price::float(100500), $ticker->markPrice);
-        self::assertEquals(Price::float(200500), $ticker->indexPrice);
+        self::assertEquals(Price::float(90500.1), $ticker->lastPrice);
+        self::assertEquals(Price::float(100500.229), $ticker->markPrice);
+        self::assertEquals(Price::float(200500.249), $ticker->indexPrice);
+
+        self::assertEquals(90500.1, $ticker->lastPrice->value());
+        self::assertEquals(100500.23, $ticker->markPrice->value());
+        self::assertEquals(200500.25, $ticker->indexPrice->value());
     }
 
     /**

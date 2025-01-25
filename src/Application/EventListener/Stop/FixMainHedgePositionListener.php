@@ -14,6 +14,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\FloatHelper;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 use function random_int;
@@ -33,10 +35,7 @@ final class FixMainHedgePositionListener
     public const ENABLED = false;
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 180;
-    const APPLY_IF_STOP_VOLUME_GREATER_THAN = 0.001;
-
-    const SUPPLY_STOP_VOLUME = 0.001;
-    const SUPPLY_STOP_DISTANCE = 500;
+    const SUPPLY_STOP_PNL_DISTANCE = 100;
 
     public function __construct(
         private readonly OrderCostCalculator $orderCostCalculator,
@@ -54,9 +53,8 @@ final class FixMainHedgePositionListener
             return;
         }
 
-        $symbol = $event->symbol;
-
         $stop = $event->stop;
+        $symbol = $stop->getSymbol();
         $stopPrice = $stop->getPrice();
         $closedVolume = $stop->getVolume();
 
@@ -64,7 +62,7 @@ final class FixMainHedgePositionListener
             return;
         }
 
-        if (!($closedVolume >= self::APPLY_IF_STOP_VOLUME_GREATER_THAN)) {
+        if (!($closedVolume >= $symbol->minOrderQty())) {
             return;
         }
 
@@ -75,8 +73,10 @@ final class FixMainHedgePositionListener
             return;
         }
 
+        $stoppedSupportPosition = $stoppedPosition;
+
         if ($this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
-            var_dump(sprintf('%s size enough for support mainPosition => skip', $stoppedPosition->getCaption()));
+            var_dump(sprintf('%s size enough for support mainPosition => skip', $stoppedSupportPosition->getCaption()));
             return;
         }
 
@@ -90,7 +90,7 @@ final class FixMainHedgePositionListener
         }
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-        $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedPosition->leverage, $stoppedPosition->side)->value();
+        $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedSupportPosition->leverage, $stoppedSupportPosition->side)->value();
 
         if ($contractBalance->available() > $orderCost) {
             var_dump(sprintf('CONTRACT.availableBalance > %f (orderCost) => skip', $orderCost));
@@ -98,9 +98,15 @@ final class FixMainHedgePositionListener
         }
 
         $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
-        $distance = self::SUPPLY_STOP_DISTANCE + random_int(-150, 30);
-        $supplyStopPrice = $stoppedPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance;
-        $this->stopService->create($hedge->mainPosition->side, $supplyStopPrice, self::SUPPLY_STOP_VOLUME, PushBuyOrdersHandler::STOP_ORDER_TRIGGER_DELTA, $context);
+        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::SUPPLY_STOP_PNL_DISTANCE, $ticker->indexPrice), 0.1);
+        $supplyStopPrice = $stoppedSupportPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance;
+        $this->stopService->create(
+            symbol: $stoppedSupportPosition->symbol,
+            positionSide: $stoppedSupportPosition->side->getOpposite(),
+            price: $supplyStopPrice,
+            volume: $symbol->minOrderQty(),
+            context: $context
+        );
 
         var_dump('supply stop created');
     }

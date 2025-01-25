@@ -25,7 +25,6 @@ final class MoveStopsHandler
 
     public function __construct(
         private readonly StopRepository $stopRepository,
-        private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService,
     ) {
     }
@@ -36,17 +35,16 @@ final class MoveStopsHandler
     public function __invoke(MoveStops $message): void
     {
         $side = $message->positionSide;
+        $symbol = $message->symbol;
 
         $lastRun = $this->getLastRunAt($side);
-
-        $ticker = $this->exchangeService->ticker(Symbol::BTCUSDT);
-        $position = $this->positionService->getPosition($ticker->symbol, $side);
+        $position = $this->positionService->getPosition($symbol, $side);
 
         if (!$position) {
             return;
         }
 
-        $entryPrice = Price::float($position->entryPrice);
+        $entryPrice = $position->entryPrice();
 
         if (!$lastRun) {
             $this->lastRunAt[$side->value] = $entryPrice;
@@ -63,9 +61,9 @@ final class MoveStopsHandler
 
             $move = $times * self::MOVE_STEP;
 
-            $stops = $this->stopRepository->findActive($side);
+            $stops = $this->stopRepository->findActive($symbol, $side);
             foreach ($stops as $stop) {
-                $stopPrice = Price::float($stop->getPrice());
+                $stopPrice = $symbol->makePrice($stop->getPrice());
 
                 // @todo '0.025' must be calculated as part of position size
                 if ($stop->getVolume() >= 0.025) {

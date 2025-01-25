@@ -17,11 +17,13 @@ class SandboxExecStepRow implements OrdersInfoTableRowAtPriceInterface
     public function getRowUpperPrice(): Price
     {
         if ($this->stepResult->isOnlySingleItem()) {
-            return Price::float($this->stepResult->getSingleItem()->order->price);
+            $order = $this->stepResult->getSingleItem()->order;
+
+            return $order->symbol->makePrice($order->price);
         }
 
         $prices = array_map(static fn (OrderExecutionResult $executionResult) => $executionResult->order->price, $this->stepResult->getItems());
 
-        return Price::float(max($prices));
+        return $this->stepResult->getFirstItem()->order->symbol->makePrice(max($prices));
     }
 }

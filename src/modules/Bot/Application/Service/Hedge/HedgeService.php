@@ -13,7 +13,6 @@ use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\Json;
-use App\Helper\VolumeHelper;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 
@@ -70,7 +69,7 @@ final class HedgeService
 
         $applicableSupportProfit = $hedge->mainPosition->initialMargin->getPercentPart($mainPositionInitialMarginPercentForSupport);
 
-        return VolumeHelper::round($applicableSupportProfit->value() / $hedge->getPositionsDistance());
+        return $hedge->mainPosition->symbol->roundVolume($applicableSupportProfit->value() / $hedge->getPositionsDistance());
     }
 
     public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, Percent $mainPositionIMPercentToSupport = null): bool
@@ -105,7 +104,7 @@ final class HedgeService
         $stoppedMainPositionPart = $stoppedVolume / $mainPositionSize;
 
         $supportPositionSize = $supportPosition->size;
-        $stopVolume = VolumeHelper::round($supportPositionSize * $stoppedMainPositionPart);
+        $stopVolume = $supportPosition->symbol->roundVolume($supportPositionSize * $stoppedMainPositionPart);
 
         $fromPrice = $stop->getPrice();
 

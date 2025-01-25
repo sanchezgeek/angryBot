@@ -44,6 +44,7 @@ class PositionMoveInfoCommand extends AbstractCommand
         $fromPrice = $this->exchangeService->ticker($position->symbol)->indexPrice;
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback('to');
         $buyOrders = $this->buyOrderRepository->findActive(
+            symbol: $this->getSymbol(),
             side: $position->side,
             qbModifier: function (QueryBuilder $qb) use ($position) {
                 QueryHelper::addOrder($qb, 'volume', 'ASC');
@@ -51,7 +52,7 @@ class PositionMoveInfoCommand extends AbstractCommand
             }
         );
 
-        $buyOrders = (new BuyOrdersCollection(...$buyOrders))->grabFromRange(PriceRange::create($fromPrice, $toPrice));
+        $buyOrders = (new BuyOrdersCollection(...$buyOrders))->grabFromRange(PriceRange::create($fromPrice, $toPrice, $this->getSymbol()));
 
         $valueSum = $position->size * $position->entryPrice;
         $qtySum = $position->size;

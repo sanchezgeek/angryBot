@@ -37,8 +37,6 @@ class CreatePosStopCommand extends AbstractCommand
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
-    public const DEFAULT_TRIGGER_DELTA = '40';
-
     public const FOR_VOLUME_OPTION = 'forVolume';
     public const ORDERS_QNT_OPTION = 'ordersQnt';
     public const TRIGGER_DELTA_OPTION = 'triggerDelta';
@@ -52,7 +50,7 @@ class CreatePosStopCommand extends AbstractCommand
             ->configurePositionArgs()
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
             ->configureStopAdditionalContexts()
         ;
     }
@@ -61,7 +59,7 @@ class CreatePosStopCommand extends AbstractCommand
     {
         $forVolume = $this->getForVolumeParam();
         $position = $this->getPosition();
-        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
+        $triggerDelta = $this->paramFetcher->floatOption(self::TRIGGER_DELTA_OPTION);
 
         if (($forVolume > $position->size / 3) && !$this->io->confirm(sprintf('Are you sure?'))) {
             return Command::FAILURE;
@@ -89,7 +87,7 @@ class CreatePosStopCommand extends AbstractCommand
 //        $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
 
         $alreadyStopped = 0;
-        $stops = $this->stopRepository->findActive($position->side);
+        $stops = $this->stopRepository->findActive($position->symbol, $position->side);
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
         }
@@ -100,7 +98,7 @@ class CreatePosStopCommand extends AbstractCommand
             }
         }
 
-        $this->stopService->create($position->side, $price, $forVolume, $triggerDelta, $context);
+        $this->stopService->create($position->symbol, $position->side, $price, $forVolume, $triggerDelta, $context);
 
 //        foreach ($orders as $order) {
 //            $this->stopService->create($position->side, $order->price()->value(), $order->volume(), $triggerDelta, $context);

@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Bot\Application\Command;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrdersHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
@@ -75,7 +74,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
     /**
      * @dataProvider releaseActiveOrdersTestDataProvider
      */
-    public function testReleaseLongBtcUsdtActiveConditionalStops(
+    public function testReleaseBtcUsdtActiveConditionalStops(
         Ticker $ticker,
         array $stopsFixtures,
         array $buyOrdersFixtures,
@@ -144,7 +143,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
                 new ActiveStopOrder($symbol, Side::Buy, $exchangeOrderId, 0.001, $ticker->indexPrice->value() - $releaseOnDistance, 'хз')
             ],
             'stopsExpectedAfterHandle' => [
-                StopBuilder::long(1, 28500, 0.001)->withTD(13)->build()
+                StopBuilder::long(1, 28500, 0.001)->withTD(18.33)->build()
             ],
             'buyOrdersExpectedAfterHandle' => [
 

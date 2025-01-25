@@ -37,14 +37,18 @@ final readonly class LogReceivedMessageTimestampDebugListener
             $messageClass = explode('\\', get_class($message));
             $messageClass = end($messageClass);
 
-            $dispatchedAt = $message->getDispatchedDateTime();
-            $receivedAt = $this->clock->now();
+            if ($dispatchedAt = $message->getDispatchedDateTime()) {
+                $this->logger->debug(sprintf('%s created at: %s', $messageClass, $dispatchedAt->format('H:i:s.u')));
+            }
 
-            $this->logger->debug(sprintf('%s created at: %s', $messageClass, $dispatchedAt->format('H:i:s.u')));
-            $this->logger->debug(sprintf('%s handled at: %s', $messageClass, $receivedAt->format('H:i:s.u')));
+            if ($receivedAt = $this->clock->now()) {
+                $this->logger->debug(sprintf('%s handled at: %s', $messageClass, $receivedAt->format('H:i:s.u')));
+            }
 
-            $delta = (float)$receivedAt->format('U.u') - (float)$dispatchedAt->format('U.u');
-            $this->logger->debug(sprintf('% ' . strlen($messageClass . ' handled at') . 's: %s', 'delta', $delta));
+            if ($receivedAt && $dispatchedAt) {
+                $delta = (float)$receivedAt->format('U.u') - (float)$dispatchedAt->format('U.u');
+                $this->logger->debug(sprintf('% ' . strlen($messageClass . ' handled at') . 's: %s', 'delta', $delta));
+            }
         }
     }
 }

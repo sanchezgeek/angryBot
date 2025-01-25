@@ -46,7 +46,7 @@ final class PositionStopRangesCollection implements \IteratorAggregate
         $rangesStops = [];
         for ($price = $entryPrice - $minBound; $price < $entryPrice + $maxBound; $price += $priceStep) {
             $rangesStops[] = $stops->grabFromRange(
-                $ranges[] = PriceRange::create($price, $price + $priceStep)
+                $ranges[] = PriceRange::create($price, $price + $priceStep, $position->symbol)
             );
         }
 

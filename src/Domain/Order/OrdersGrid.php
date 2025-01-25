@@ -6,7 +6,6 @@ namespace App\Domain\Order;
 
 use App\Bot\Domain\Position;
 use App\Domain\Price\PriceRange;
-use App\Helper\VolumeHelper;
 use DomainException;
 use Generator;
 
@@ -56,7 +55,7 @@ final class OrdersGrid
             throw new DomainException(sprintf('$qnt must be >= 1 (calculated result: %d)', $qnt));
         }
 
-        $volume = VolumeHelper::round($forVolume / $qnt);
+        $volume = $this->getPriceRange()->getSymbol()->roundVolume($forVolume / $qnt);
 
         foreach ($this->getPriceRange()->byStepIterator($priceStep) as $price) {
             yield new Order($price, $volume);
@@ -78,10 +77,12 @@ final class OrdersGrid
             throw new DomainException(sprintf('$qnt must be >= 1 (%d given)', $qnt));
         }
 
-        $volume = VolumeHelper::round($forVolume / $qnt);
-        if ($volume === VolumeHelper::MIN_VOLUME && $volume * $qnt > $forVolume) {
-            $qnt = (int)(max(VolumeHelper::MIN_VOLUME, $forVolume) / $volume);
-            $volume = VolumeHelper::round($forVolume / $qnt);
+        $symbol = $this->getPriceRange()->getSymbol();
+
+        $volume = $symbol->roundVolume($forVolume / $qnt);
+        if ($volume === $symbol->minOrderQty() && $volume * $qnt > $forVolume) {
+            $qnt = (int)(max($symbol->minOrderQty(), $forVolume) / $volume);
+            $volume = $symbol->roundVolume($forVolume / $qnt);
         }
 
         foreach ($this->getPriceRange()->byQntIterator($qnt) as $priceItem) {

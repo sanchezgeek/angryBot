@@ -33,6 +33,8 @@ use function uuid_create;
  *
  * @todo | string "@ MarketBuyHandler: got "Call to a member function isMainPosition on null" exception while make `buyIsSafe` check"
  * * x3
+ *
+ * @group buy-orders
  */
 final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 {
@@ -41,7 +43,6 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
     use BuyOrdersTester;
     use ByBitV5ApiRequestsMocker;
 
-    private const SYMBOL = Symbol::BTCUSDT;
     private const DEFAULT_STOP_TD = 37;
 
     private PushBuyOrdersHandler $handler;
@@ -93,7 +94,9 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 
     public function pushBuyOrdersTestDataProvider(): iterable
     {
-        $ticker = TickerFactory::create($symbol = self::SYMBOL, 29050);
+        $symbol = Symbol::BTCUSDT;
+
+        $ticker = TickerFactory::create($symbol, 29050);
         $buyOrders = [
             # [2] must be pushed | with stop
             10 => BuyOrderBuilder::short(10, 29060, 0.01)->build(),
@@ -151,7 +154,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
     {
         $stopDistance = StopCreate::getDefaultStrategyStopOrderDistance($buyOrder->getVolume());
 
-        return $buyOrder->getPrice() + $stopDistance;
+        return $buyOrder->getPrice() + ($buyOrder->getPositionSide()->isShort() ? $stopDistance : -$stopDistance);
     }
 
     public function testDummy(): void

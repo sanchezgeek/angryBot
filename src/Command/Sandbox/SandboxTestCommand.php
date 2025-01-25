@@ -6,7 +6,7 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentEx
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
-use App\Bot\Application\Service\Exchange\Dto\WalletBalance;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -71,8 +71,8 @@ class SandboxTestCommand extends AbstractCommand
         foreach (explode('|', $this->paramFetcher->getStringOption(self::ORDERS_OPTION)) as $orderDefinition) {
             $type = substr($orderDefinition, 0, 1); $volume = substr($orderDefinition, 1);
             $orders[] = match ($type) {
-                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $positionSide),
-                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $positionSide),
+                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $this->getSymbol(), $positionSide),
+                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $this->getSymbol(), $positionSide),
                 default => throw new InvalidArgumentException('Invalid type provided: ' . $type . ' ("+/-" expected)')
             };
         }
@@ -121,10 +121,11 @@ class SandboxTestCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, WalletBalance $diffWithContractBalance = null): array
+    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, ContractBalance $prevContractBalance = null): array
     {
         $currentState = $sandbox->getCurrentState();
 
+        // @todo print freeForLiq
         $freeBalance = $currentState->getFreeBalance();
         $availableBalance = $currentState->getAvailableBalance();
 
@@ -141,8 +142,8 @@ class SandboxTestCommand extends AbstractCommand
         $realContractBalance = $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
         if ($printRealPositionStats) {
             OutputHelper::print(sprintf('real       contractBalance: %s', $realContractBalance));
-            if ($diffWithContractBalance) {
-                OutputHelper::print(sprintf('                                                                     current - prev : %.3f', $diffWithContractBalance->total() - $realContractBalance->total()));
+            if ($prevContractBalance) {
+                OutputHelper::print(sprintf('                                                                     prev - current : %.3f', $prevContractBalance->total() - $realContractBalance->total()));
             }
         }
         OutputHelper::print(sprintf('calculated contractBalance: %s available | %s free', $availableBalance, $freeBalance));
@@ -200,7 +201,7 @@ class SandboxTestCommand extends AbstractCommand
         return $this->paramFetcher->getBoolOption(self::DEBUG_OPTION);
     }
 
-    public function currentBalance(): WalletBalance
+    public function currentBalance(): ContractBalance
     {
         return $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
     }
@@ -212,7 +213,7 @@ class SandboxTestCommand extends AbstractCommand
             $ordersPart[] = ($order instanceof BuyOrder ? '->buy' : '->close') . ' ' . $order->getVolume();
         }
 
-        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->name, $positionSide->title());
+        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->value, $positionSide->title());
     }
 
     /**

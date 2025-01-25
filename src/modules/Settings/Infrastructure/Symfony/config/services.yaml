@@ -21,9 +21,13 @@ services:
                 trading.marketBuy.safePriceDistance: 3000
 
                 # @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
-                trading.opposite.BuyOrder.pnlDistance.forLongPosition: '70%'
-                trading.opposite.BuyOrder.pnlDistance.forShortPosition: '70%'
+                trading.opposite.BuyOrder.pnlDistance.forLongPosition: '50%'
+                trading.opposite.BuyOrder.pnlDistance.forShortPosition: '50%'
 
                 # push BuyOrder
-                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: true
-                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: true
+                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
+                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
+
+                # other
+                trading.takeProfitWhenBalanceIsInsufficient.enabled: false
+                trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170

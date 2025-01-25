@@ -26,8 +26,8 @@ final readonly class SandboxStateFactory implements SandboxStateFactoryInterface
     {
         $ticker = $this->exchangeService->ticker($symbol);
         $positions = $this->positionService->getPositions($symbol);
-        $balance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
+        $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
 
-        return new SandboxState($ticker, $balance->free, ...$positions);
+        return new SandboxState($ticker, $contractBalance, ...$positions);
     }
 }

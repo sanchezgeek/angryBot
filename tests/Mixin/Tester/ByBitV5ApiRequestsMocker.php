@@ -16,13 +16,15 @@ use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Coin\CoinInterTransfer;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
-use App\Tests\Mock\Response\ByBitV5Api\Account\AccountBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Account\AllCoinsBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Coin\CoinInterTransferResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
@@ -43,10 +45,10 @@ trait ByBitV5ApiRequestsMocker
 
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
-        $coinAmount = new CoinAmount($symbol->associatedCoin(), $amount);
+        $amount = new CoinAmount($symbol->associatedCoin(), $amount);
 
-        $expectedRequest = new GetWalletBalanceRequest(AccountType::SPOT, $symbol->associatedCoin());
-        $resultResponse = AccountBalanceResponseBuilder::ok()->withAvailableSpotBalance($coinAmount)->build();
+        $expectedRequest = new GetAllCoinsBalanceRequest(AccountType::FUNDING, $symbol->associatedCoin());
+        $resultResponse = AllCoinsBalanceResponseBuilder::ok()->withAvailableFundBalance($amount)->build();
 
         $this->matchGet($expectedRequest, $resultResponse, false);
     }
@@ -54,7 +56,7 @@ trait ByBitV5ApiRequestsMocker
     protected function expectsInterTransferFromContractToSpot(CoinAmount $coinAmount): void
     {
         $transferId = uuid_create();
-        $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::CONTRACT, AccountType::SPOT);
+        $expectedRequest = CoinInterTransferRequest::test($coinAmount, AccountType::UNIFIED, AccountType::FUNDING);
         $resultResponse = CoinInterTransferResponseBuilder::ok($transferId)->build();
 
         $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
@@ -63,7 +65,7 @@ trait ByBitV5ApiRequestsMocker
     protected function expectsInterTransferFromSpotToContract(CoinAmount $coinAmount): void
     {
         $transferId = uuid_create();
-        $expectedRequest = CoinInterTransfer::test($coinAmount, AccountType::SPOT, AccountType::CONTRACT);
+        $expectedRequest = CoinInterTransferRequest::test($coinAmount, AccountType::FUNDING, AccountType::UNIFIED);
         $resultResponse = CoinInterTransferResponseBuilder::ok($transferId)->build();
 
         $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
@@ -71,8 +73,15 @@ trait ByBitV5ApiRequestsMocker
 
     protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
     {
-        $expectedRequest = new GetWalletBalanceRequest(AccountType::CONTRACT, $symbol->associatedCoin());
-        $resultResponse = AccountBalanceResponseBuilder::ok()->withContractBalance($symbol->associatedCoin(), $total, $available)->build();
+        if ($available > $total) {
+            throw new RuntimeException('$available cannot be greater than $total');
+        }
+
+        // guess it's opened position affects available
+        $totalPositionIM = $total - $available;
+
+        $expectedRequest = new GetWalletBalanceRequest(AccountType::UNIFIED, $symbol->associatedCoin());
+        $resultResponse = GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($symbol->associatedCoin(), $total, $totalPositionIM)->build();
 
         $this->matchGet($expectedRequest, $resultResponse, false);
     }

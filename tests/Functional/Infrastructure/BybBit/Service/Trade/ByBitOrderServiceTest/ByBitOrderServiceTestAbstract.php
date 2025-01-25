@@ -6,12 +6,14 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderSer
 
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class ByBitOrderServiceTestAbstract extends KernelTestCase
 {
     use ByBitV5ApiTester;
+    use AppErrorsLoggerTrait;
 
     protected ByBitOrderService $service;
 
@@ -20,6 +22,7 @@ abstract class ByBitOrderServiceTestAbstract extends KernelTestCase
         $this->service = new ByBitOrderService(
             $this->initializeApiClient(),
             self::getContainer()->get(PositionsCache::class),
+            null // this tests not need logging
         );
     }
 }

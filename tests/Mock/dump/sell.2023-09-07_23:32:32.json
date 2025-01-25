@@ -2,6 +2,7 @@
   {
     "id": 2,
     "positionSide": "sell",
+    "symbol": "ADAUSDT",
     "price": 28922.2,
     "volume": 0.003,
     "triggerDelta": 10,
@@ -12,6 +13,7 @@
   {
     "id": 3,
     "positionSide": "sell",
+    "symbol": "ADAUSDT",
     "price": 28933.3,
     "volume": 0.002,
     "triggerDelta": 10,
@@ -22,6 +24,7 @@
   {
     "id": 4,
     "positionSide": "sell",
+    "symbol": "ADAUSDT",
     "price": 28931.1,
     "volume": 0.002,
     "triggerDelta": 10,
@@ -30,6 +33,7 @@
   {
     "id": 8,
     "positionSide": "sell",
+    "symbol": "ADAUSDT",
     "price": 28951.2,
     "volume": 0.001,
     "triggerDelta": 10,
@@ -38,6 +42,7 @@
   {
     "id": 13,
     "positionSide": "sell",
+    "symbol": "ADAUSDT",
     "price": 28972.3,
     "volume": 0.01,
     "triggerDelta": 10,

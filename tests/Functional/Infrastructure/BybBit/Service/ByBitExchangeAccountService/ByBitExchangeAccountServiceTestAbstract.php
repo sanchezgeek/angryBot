@@ -26,7 +26,7 @@ abstract class ByBitExchangeAccountServiceTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->appErrorLogger = $this->createMock(LoggerInterface::class);
+        $this->appErrorLogger = self::getContainer()->get('monolog.logger.app_error');
 
         $this->service = new ByBitExchangeAccountService(
             $this->initializeApiClient(),

@@ -17,6 +17,9 @@ framework:
                     max_retries: 0 # do not retry
 
         routing:
+            # market
+            App\Application\Messenger\Market\TransferFundingFees: async_high
+
             # buy
             # todo | Нужен отдельный воркер для BO? Возможно это должен быть просто cron + short|long BUY
             App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders: async_high
@@ -28,7 +31,7 @@ framework:
 
             # position
             App\Application\Messenger\Position\CheckPositionIsUnderLiquidation: async_critical
-            App\Application\Messenger\Market\TransferFundingFees: async_high
+            App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage: async
 
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async

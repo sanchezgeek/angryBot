@@ -53,7 +53,7 @@ class CreateBuyCommand extends AbstractCommand
             }
 
             $this->createBuyOrderHandler->handle(
-                new CreateBuyOrderEntryDto($side, $volume, $price)
+                new CreateBuyOrderEntryDto($this->getSymbol(), $side, $volume, $price)
             );
 
             return Command::SUCCESS;

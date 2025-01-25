@@ -17,6 +17,7 @@ enum StopCreate: string
 
     case AFTER_FIRST_POSITION_STOP = 'after_first_position_stop';
 
+    // @todo | symbol
     public const BIG_SL_VOLUME_STARTS_FROM = 0.006;
 
     private const REGULAR_ORDER_STOP_DISTANCE = 259;
@@ -30,6 +31,7 @@ enum StopCreate: string
 
     public static function getDefaultStrategyStopOrderDistance(float $volume): float
     {
+        // @todo | symbol
         return $volume >= 0.005 ? self::REGULAR_ORDER_STOP_DISTANCE : self::ADDITION_ORDER_STOP_DISTANCE;
     }
 }

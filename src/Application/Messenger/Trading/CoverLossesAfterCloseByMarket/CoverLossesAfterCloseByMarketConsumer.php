@@ -21,6 +21,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $closedPosition = $this->positionService->getPosition($closedPosition->symbol, $closedPosition->side); # refresh
 
+        if (!$closedPosition) {
+            return;
+        }
+
         /**
          * Don't make transfer if it's about support losses. In this case transfer will be done on demand.
          * @see PushBuyOrdersHandler::canUseSpot (...$isSupportPositionForceBuyAfterSl...)

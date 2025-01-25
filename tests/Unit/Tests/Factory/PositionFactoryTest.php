@@ -32,7 +32,7 @@ final class PositionFactoryTest extends TestCase
 
         // Assert
         self::assertEquals(
-            new Position(Side::Sell, $symbol, $entry, $size, 15000, $liquidation, $expectedMargin, $expectedMargin, $leverage),
+            new Position(Side::Sell, $symbol, $entry, $size, 15000, $liquidation, $expectedMargin, $leverage),
             $position
         );
     }
@@ -59,7 +59,6 @@ final class PositionFactoryTest extends TestCase
         self::assertEquals($expectedLiquidation, $position->liquidationPrice);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->positionBalance);
     }
 
     public function testLongFactoryWithDefaultValues(): void
@@ -84,6 +83,5 @@ final class PositionFactoryTest extends TestCase
         self::assertEquals($expectedLiquidation, $position->liquidationPrice);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->initialMargin);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedMargin), $position->positionBalance);
     }
 }

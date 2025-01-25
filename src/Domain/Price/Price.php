@@ -22,29 +22,32 @@ use function sprintf;
  *
  * @todo | ctrl-f: round(..., 2) | Need to pass precision in __construct on creation (in order to using not only in BTCUSDT context)
  */
-readonly final class Price implements Stringable
+final class Price implements Stringable
 {
     private float $value;
+    public ?int $precision = null;
 
     /**
      * @todo | Get precision on construct to further use. Maybe even external (with some getter)
      *         While accurate value must be calculated somewhere else and passed here
      */
-    private function __construct(float $value)
+    private function __construct(float $value, int $precision)
     {
         if ($value < 0) {
             throw new \DomainException('Price cannot be less than zero.');
         }
 
         $this->value = $value;
+        $this->precision = $precision;
     }
 
     /**
      * @todo | CS | rename to `fromFloat`?
      */
-    public static function float(float $value): self
+    public static function float(float $value, int $precision = null): self
     {
-        return new self($value);
+        $precision = $precision ?? 2;
+        return new self($value, $precision);
     }
 
     /**
@@ -52,17 +55,17 @@ readonly final class Price implements Stringable
      */
     public function value(): float
     {
-        return PriceHelper::round($this->value);
+        return PriceHelper::round($this->value, $this->precision ?? 2);
     }
 
     public function add(Price|float $addValue): self
     {
-        return self::float($this->value + self::toFloat($addValue));
+        return self::float($this->value + self::toFloat($addValue), $this->precision);
     }
 
     public function sub(Price|float $subValue): self
     {
-        return self::float($this->value - self::toFloat($subValue));
+        return self::float($this->value - self::toFloat($subValue), $this->precision);
     }
 
     public function eq(Price|float $otherPrice): bool
@@ -112,17 +115,17 @@ readonly final class Price implements Stringable
 
     public function isPriceOverStop(Side $positionSide, float $stopPrice): bool
     {
-        return $positionSide->isShort() ? $this->value >= $stopPrice : $this->value <= $stopPrice;
+        return $positionSide->isShort() ? $this->value > $stopPrice : $this->value < $stopPrice;
     }
 
-    public function differenceWith(Price|float $otherPrice): PriceMovement
+    public function differenceWith(Price $otherPrice): PriceMovement
     {
-        return PriceMovement::fromToTarget(self::toObj($otherPrice), $this);
+        return PriceMovement::fromToTarget($otherPrice, $this);
     }
 
     public function deltaWith(Price|float $otherPrice): float
     {
-        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)));
+        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)), $this->precision);
     }
 
     public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self
@@ -139,9 +142,9 @@ readonly final class Price implements Stringable
         return $value instanceof self ? $value->value : $value;
     }
 
-    public static function toObj(self|float $value): self
+    public static function toObj(self|float $value, int $precision = null): self
     {
-        return $value instanceof self ? $value : self::float($value);
+        return $value instanceof self ? $value : self::float($value, $precision);
     }
 
     public function __toString(): string

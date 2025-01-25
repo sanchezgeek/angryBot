@@ -85,7 +85,7 @@ final class LogWorkerExceptionEventListener
     }
 
     private const CONN_ERR_PENDING_INTERVAL = 3;
-    private const CONN_ERR_RESET_INTERVAL = 35;
+    private const CONN_ERR_RESET_INTERVAL = 20;
 
     private ?int $connErrorRecievedAt = null;
     private ?int $resetAt = null;

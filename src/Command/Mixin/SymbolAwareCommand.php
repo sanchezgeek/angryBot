@@ -3,10 +3,10 @@
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
+use Throwable;
 
-use function sprintf;
+use function str_contains;
 
 trait SymbolAwareCommand
 {
@@ -20,17 +20,46 @@ trait SymbolAwareCommand
     protected function getSymbol(): Symbol
     {
         if ($this->symbolOptionName) {
-            $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
-            if (!$symbol = Symbol::tryFrom($providedSymbolValue)) {
-                throw new InvalidArgumentException(
-                    sprintf('Invalid $%s provided ("%s" given)', $this->symbolOptionName, $providedSymbolValue),
-                );
-            }
+            $symbol = Symbol::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
         } else {
             $symbol = self::DEFAULT_SYMBOL;
         }
 
         return $symbol;
+    }
+
+    /**
+     * @return Symbol[]
+     * @throws Throwable
+     */
+    private function getSymbols(): array
+    {
+        try {
+            $symbol = $this->getSymbol();
+        } catch (Throwable $e) {
+            $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
+            if ($providedSymbolValue === 'all') {
+                return $this->positionService->getOpenedPositionsSymbols();
+            } elseif (str_contains($providedSymbolValue, ',')) {
+                return self::parseProvidedSymbols($providedSymbolValue);
+            }
+            throw $e;
+        }
+
+        return [$symbol];
+    }
+
+    /**
+     * @return Symbol[]
+     */
+    protected static function parseProvidedSymbols(string $providedStringArray): array
+    {
+        $rawItems = explode(',', $providedStringArray);
+        $symbols = [];
+        foreach ($rawItems as $rawItem) {
+            $symbols[] = Symbol::fromShortName($rawItem);
+        }
+        return $symbols;
     }
 
     protected function configureSymbolArgs(string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME): static

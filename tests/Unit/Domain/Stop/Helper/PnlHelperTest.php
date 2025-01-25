@@ -104,25 +104,27 @@ final class PnlHelperTest extends TestCase
     public function testGetTargetPriceByPnlPercent(): void
     {
         ## SHORT
-        $position = PositionFactory::short(Symbol::BTCUSDT, 100500, 1, 100);
+        $symbol = Symbol::BTCUSDT;
+        $position = PositionFactory::short($symbol, 100500, 1, 100);
+        $fromPrice = $symbol->makePrice(30000);
 
-        self::assertEquals(Price::float(30360), PnlHelper::targetPriceByPnlPercent(30000, -120, $position));
-        self::assertEquals(Price::float(30300), PnlHelper::targetPriceByPnlPercent(30000, -100, $position));
-        self::assertEquals(Price::float(30060), PnlHelper::targetPriceByPnlPercent(30000, -20, $position));
-        self::assertEquals(Price::float(30000), PnlHelper::targetPriceByPnlPercent(30000, 0, $position));
-        self::assertEquals(Price::float(29940), PnlHelper::targetPriceByPnlPercent(30000, 20, $position));
-        self::assertEquals(Price::float(29700), PnlHelper::targetPriceByPnlPercent(30000, 100, $position));
-        self::assertEquals(Price::float(29640), PnlHelper::targetPriceByPnlPercent(30000, 120, $position));
+        self::assertEquals(Price::float(30360), PnlHelper::targetPriceByPnlPercent($fromPrice, -120, $position));
+        self::assertEquals(Price::float(30300), PnlHelper::targetPriceByPnlPercent($fromPrice, -100, $position));
+        self::assertEquals(Price::float(30060), PnlHelper::targetPriceByPnlPercent($fromPrice, -20, $position));
+        self::assertEquals(Price::float(30000), PnlHelper::targetPriceByPnlPercent($fromPrice, 0, $position));
+        self::assertEquals(Price::float(29940), PnlHelper::targetPriceByPnlPercent($fromPrice, 20, $position));
+        self::assertEquals(Price::float(29700), PnlHelper::targetPriceByPnlPercent($fromPrice, 100, $position));
+        self::assertEquals(Price::float(29640), PnlHelper::targetPriceByPnlPercent($fromPrice, 120, $position));
 
         ## LONG
-        $position = PositionFactory::long(Symbol::BTCUSDT, 100500, 1, 100);
+        $position = PositionFactory::long($symbol, 100500, 1, 100);
 
-        self::assertEquals(Price::float(30360), PnlHelper::targetPriceByPnlPercent(30000, 120, $position));
-        self::assertEquals(Price::float(30300), PnlHelper::targetPriceByPnlPercent(30000, 100, $position));
-        self::assertEquals(Price::float(30060), PnlHelper::targetPriceByPnlPercent(30000, 20, $position));
-        self::assertEquals(Price::float(30000), PnlHelper::targetPriceByPnlPercent(30000, 0, $position));
-        self::assertEquals(Price::float(29940), PnlHelper::targetPriceByPnlPercent(30000, -20, $position));
-        self::assertEquals(Price::float(29700), PnlHelper::targetPriceByPnlPercent(30000, -100, $position));
-        self::assertEquals(Price::float(29640), PnlHelper::targetPriceByPnlPercent(30000, -120, $position));
+        self::assertEquals(Price::float(30360), PnlHelper::targetPriceByPnlPercent($fromPrice, 120, $position));
+        self::assertEquals(Price::float(30300), PnlHelper::targetPriceByPnlPercent($fromPrice, 100, $position));
+        self::assertEquals(Price::float(30060), PnlHelper::targetPriceByPnlPercent($fromPrice, 20, $position));
+        self::assertEquals(Price::float(30000), PnlHelper::targetPriceByPnlPercent($fromPrice, 0, $position));
+        self::assertEquals(Price::float(29940), PnlHelper::targetPriceByPnlPercent($fromPrice, -20, $position));
+        self::assertEquals(Price::float(29700), PnlHelper::targetPriceByPnlPercent($fromPrice, -100, $position));
+        self::assertEquals(Price::float(29640), PnlHelper::targetPriceByPnlPercent($fromPrice, -120, $position));
     }
 }

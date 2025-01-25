@@ -95,13 +95,13 @@ final class StopsDumpCommandTest extends KernelTestCase
         $symbol = Symbol::BTCUSDT; $side = Side::Sell;
 
         $initialStops = [
-            new Stop(1, 28891.1, 0.003, 10, $side->getOpposite()),
-            (new Stop(2, 28922.2, 0.003, 10, $side))->setExchangeOrderId(uuid_create()),
-            (new Stop(3, 28933.3, 0.002, 10, $side))->setIsWithoutOppositeOrder(),
-            (new Stop(4, 28931.1, 0.002, 10, $side)),
-            (new Stop(8, 28951.2, 0.001, 10, $side)),
-            (new Stop(13, 28972.3, 0.01, 10, $side)),
-            new Stop(14, 28972.4, 0.01, 10, $side->getOpposite()),
+            new Stop(1, 28891.1, 0.003, 10, $symbol, $side->getOpposite()),
+            (new Stop(2, 28922.2, 0.003, 10, $symbol, $side))->setExchangeOrderId(uuid_create()),
+            (new Stop(3, 28933.3, 0.002, 10, $symbol, $side))->setIsWithoutOppositeOrder(),
+            (new Stop(4, 28931.1, 0.002, 10, $symbol, $side)),
+            (new Stop(8, 28951.2, 0.001, 10, $symbol, $side)),
+            (new Stop(13, 28972.3, 0.01, 10, $symbol, $side)),
+            new Stop(14, 28972.4, 0.01, 10, $symbol, $side->getOpposite()),
         ];
 
         yield 'without deletion' => [

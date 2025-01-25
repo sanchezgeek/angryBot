@@ -20,7 +20,6 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
-use App\Helper\VolumeHelper;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -33,10 +32,11 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
-    public const MIN_VOLUME = 0.001;
-
     public const IS_TP_CONTEXT = 'isTakeProfit';
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
+    public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
+    public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
+
     public const TP_TRIGGER_DELTA = 50;
 
     use HasVolume;
@@ -58,7 +58,10 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     private float $volume;
 
     #[ORM\Column(nullable: true)]
-    private ?float $triggerDelta = null;
+    private float $triggerDelta;
+
+    #[ORM\Column(type: 'string', enumType: Symbol::class)]
+    private Symbol $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
@@ -69,14 +72,15 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Side $positionSide, array $context = [])
+    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = $price;
-        $this->volume = $volume;
-        $this->triggerDelta = $triggerDelta;
+        $this->price = $symbol->makePrice($price)->value();
+        $this->volume = $symbol->roundVolume($volume);
+        $this->triggerDelta = $triggerDelta ?? $symbol->stopDefaultTriggerDelta();
         $this->positionSide = $positionSide;
         $this->context = $context;
+        $this->symbol = $symbol;
     }
 
     public function getId(): int
@@ -89,7 +93,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
      */
     public function getSymbol(): Symbol
     {
-        return Symbol::BTCUSDT;
+        return $this->symbol;
     }
 
     public function getPrice(): float
@@ -101,6 +105,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     {
         $this->setOriginalPrice($this->price);
 
+        $price = $this->symbol->makePrice($price)->value();
+
         $this->price = $price;
 
         return $this;
@@ -108,7 +114,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function addPrice(float $value): self
     {
-        $this->price += $value;
+        $price = $this->price + $value;
+        $this->price = $this->symbol->makePrice($price)->value();
+
         return $this;
     }
 
@@ -124,13 +132,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     {
         $restVolume = $this->volume - $value;
 
-        if (!($restVolume >= self::MIN_VOLUME)) {
+        if (!($restVolume >= $this->symbol->minOrderQty())) {
             throw new DomainException(
-                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= 0.001.', $value, $restVolume)
+                sprintf('Cannot subtract %f from volume: the remaining volume (%f) must be >= $symbol->minOrderQty().', $value, $restVolume)
             );
         }
 
-        $this->volume = VolumeHelper::round($restVolume);
+        $this->volume = $this->symbol->roundVolume($restVolume);
 
         return $this;
     }
@@ -145,9 +153,16 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this->triggerDelta;
     }
 
+    public function increaseTriggerDelta(float $withValue): self
+    {
+        $this->triggerDelta = $this->symbol->makePrice($this->triggerDelta + $withValue)->value();
+
+        return $this;
+    }
+
     public function setTriggerDelta(float $triggerDelta): self
     {
-        $this->triggerDelta = $triggerDelta;
+        $this->triggerDelta = $this->symbol->makePrice($triggerDelta)->value();
 
         return $this;
     }
@@ -168,23 +183,28 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
         /**
          * @todo | пока что такой костыль, т.к. для того, чтобы PushStopsHandler нашёл этот ордер, нужна trigger_delta
-         * @see \App\Bot\Domain\Repository\StopRepository::findActive() + $nearTicker
+         * @see StopRepository::findActive() + $nearTicker
          */
-        $this->setTriggerDelta(self::TP_TRIGGER_DELTA);
+        $this->setTriggerDelta($this->getPrice() / 600);
 
         return $this;
     }
 
-    public function wasPushedToExchange(Symbol $symbol, string $exchangeOrderId): self
+    public function wasPushedToExchange(string $thisExchangeOrderId): self
     {
-        $this->recordThat(new StopPushedToExchange($this, $symbol));
+        $this->recordThat(new StopPushedToExchange($this));
 
-        return $this->setExchangeOrderId($exchangeOrderId);
+        return $this->setExchangeOrderId($thisExchangeOrderId);
     }
 
     public function isCloseByMarketContextSet(): bool
     {
         return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
+    }
+
+    public function isAdditionalStopFromLiquidationHandler(): bool
+    {
+        return ($this->context[self::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER] ?? null) === true;
     }
 
     public function setIsCloseByMarketContext(): self
@@ -227,6 +247,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return [
             'id' => $this->id,
             'positionSide' => $this->positionSide->value,
+            'symbol' => $this->symbol->value,
             'price' => $this->price,
             'volume' => $this->volume,
             'triggerDelta' => $this->triggerDelta,
@@ -241,6 +262,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
             $data['price'],
             $data['volume'],
             $data['triggerDelta'],
+            Symbol::from($data['symbol']),
             Side::from($data['positionSide']),
             $data['context']
         );
@@ -271,5 +293,17 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function isOrderPushedToExchange(): bool
     {
         return $this->getExchangeOrderId() !== null;
+    }
+
+    public function getOppositeBuyOrderDistance(): ?float
+    {
+        return $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] ?? null;
+    }
+
+    public function setOppositeOrdersDistanceContext(float $distance): self
+    {
+        $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $distance;
+
+        return $this;
     }
 }

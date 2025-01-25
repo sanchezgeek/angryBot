@@ -3,11 +3,14 @@
 namespace App\Command\Stop;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
+use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -39,8 +42,7 @@ class CreateStopsGridCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
-
-    public const DEFAULT_TRIGGER_DELTA = '37';
+    use OppositeOrdersDistanceAwareCommand;
 
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';
@@ -53,21 +55,22 @@ class CreateStopsGridCommand extends AbstractCommand
     public const FOR_VOLUME_OPTION = 'forVolume';
     public const MODE_OPTION = 'mode';
     public const ORDERS_QNT_OPTION = 'ordersQnt';
-    public const PRICE_STEP_OPTION = 'priceStep';
     public const TRIGGER_DELTA_OPTION = 'triggerDelta';
 
     private const DEFAULT_ORDERS_QNT = '10';
 
     protected function configure(): void
     {
+
+
         $this
             ->configurePositionArgs()
             ->configurePriceRangeArgs()
+            ->configureOppositeOrdersDistanceOption(alias: 'o')
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-            ->addOption(self::PRICE_STEP_OPTION, '-s', InputOption::VALUE_OPTIONAL, 'Grid PriceStep')
-            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta', self::DEFAULT_TRIGGER_DELTA)
+            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
             ->configureStopAdditionalContexts()
         ;
     }
@@ -75,10 +78,11 @@ class CreateStopsGridCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // @todo | tD ?
+        $symbol = $this->getSymbol();
         $priceRange = $this->getPriceRange();
         $forVolume = $this->getForVolumeParam();
         $mode = $this->getModeParam();
-        $triggerDelta = $this->paramFetcher->requiredFloatOption(self::TRIGGER_DELTA_OPTION);
+        $triggerDelta = $this->paramFetcher->floatOption(self::TRIGGER_DELTA_OPTION);
         $positionSide = $this->getPositionSide();
 
         $position = null;
@@ -101,6 +105,10 @@ class CreateStopsGridCommand extends AbstractCommand
             $context = array_merge($context, $additionalContext);
         }
 
+        if ($oppositeBuyOrdersDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
+            $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
+        }
+
         $stopsGrid = new OrdersGrid($priceRange);
 
         if ($mode === self::BY_ORDERS_QNT) {
@@ -119,7 +127,7 @@ class CreateStopsGridCommand extends AbstractCommand
         }
 
         $alreadyStopped = 0;
-        $stops = new StopsCollection(...$this->stopRepository->findActive($positionSide));
+        $stops = new StopsCollection(...$this->stopRepository->findActive($symbol, $positionSide));
         $stops = $stops->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
         foreach ($stops as $stop) {
             $alreadyStopped += $stop->getVolume();
@@ -132,12 +140,12 @@ class CreateStopsGridCommand extends AbstractCommand
         }
 
         foreach ($orders as $order) {
-            $this->stopService->create($positionSide, $order->price()->value(), $order->volume(), $triggerDelta, $context);
+            $this->stopService->create($symbol, $positionSide, $order->price()->value(), $order->volume(), $triggerDelta, $context);
         }
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
         $this->io->writeln(
-            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:edit %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"', $positionSide->value, $uniqueId) . PHP_EOL . PHP_EOL
+            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:edit --symbol=%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"', $symbol->value, $positionSide->value, $uniqueId) . PHP_EOL . PHP_EOL
         );
 
         return Command::SUCCESS;
@@ -172,6 +180,7 @@ class CreateStopsGridCommand extends AbstractCommand
         private readonly StopService $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

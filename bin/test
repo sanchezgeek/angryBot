@@ -1,0 +1,12 @@
+#!/bin/sh
+
+GR=${1}
+
+if [ -n "$GR" ]; then
+  GR="gr=\"--group $GR\""
+fi;
+
+docker compose --env-file=.env.local exec php rm /srv/app/var/log/test/app_errors.log
+
+bash -c "make test ${GR}"
+./bin/alarmWatch test_err

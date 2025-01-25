@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -43,7 +44,7 @@ trait PriceRangeAwareCommand
             return PnlHelper::targetPriceByPnlPercentFromPositionEntry($this->getPosition(), $pnlValue);
         } catch (InvalidArgumentException) {
             try {
-                return Price::float($this->paramFetcher->requiredFloatOption($name));
+                return $this->getSymbol()->makePrice($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
                 if ($required) {
                     throw $e;
@@ -59,7 +60,7 @@ trait PriceRangeAwareCommand
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
 
-        return PriceRange::create($fromPrice, $toPrice);
+        return PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
     }
 
     protected function getRangePretty(string $input): array

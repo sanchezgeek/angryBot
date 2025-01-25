@@ -4,6 +4,7 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -51,15 +52,16 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActive(
+        Symbol $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('bo')
-            ->andWhere('bo.positionSide = :posSide')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
-            ->setParameter(':posSide', $side)
+            ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol)
         ;
 
         if ($exceptOppositeOrders) {
@@ -84,6 +86,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActiveInRange(
+        Symbol $symbol,
         Side $side,
         float $from,
         float $to,
@@ -91,6 +94,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         callable $qbModifier = null
     ): array {
         return $this->findActive(
+            symbol: $symbol,
             side: $side,
             exceptOppositeOrders: $exceptOppositeOrders,
             qbModifier: function (QueryBuilder $qb) use ($from, $to, $qbModifier) {

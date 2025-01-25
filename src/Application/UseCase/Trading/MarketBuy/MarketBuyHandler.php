@@ -12,11 +12,15 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Settings\TradingSettings;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Order\ExchangeOrder;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Settings\Application\Service\AppSettingsProvider;
+use Throwable;
 
 class MarketBuyHandler
 {
@@ -30,9 +34,23 @@ class MarketBuyHandler
      */
     public function handle(MarketBuyEntryDto $dto): string
     {
-        $this->makeChecks($dto);
+        $symbol = $dto->symbol;
 
-        return $this->orderService->marketBuy($dto->symbol, $dto->positionSide, $dto->volume);
+        if ($symbol === Symbol::BTCUSDT) {
+            $this->makeChecks($dto);
+        }
+
+        $ticker = $this->exchangeService->ticker($symbol);
+        $exchangeOrder = new ExchangeOrder($symbol, $dto->volume, $ticker->lastPrice, true);
+
+        try {
+            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
+        } catch (CannotAffordOrderCostException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            OutputHelper::print(sprintf('%s while try to buy %s (%s initial) on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume, $symbol->value, $dto->positionSide->value));
+            throw $e;
+        }
     }
 
     /**

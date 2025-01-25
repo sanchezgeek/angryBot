@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Value\Percent\Percent;
-use App\Helper\VolumeHelper;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -87,7 +86,7 @@ final class HedgeServiceTest extends KernelTestCase
             $mainImPercentToSupport = $mainImPercentToSupport->sub(1);
         }
 
-        return VolumeHelper::round($mainPosition->initialMargin->getPercentPart($mainImPercentToSupport)->value() / $priceDistance);
+        return $mainPosition->symbol->roundVolume($mainPosition->initialMargin->getPercentPart($mainImPercentToSupport)->value() / $priceDistance);
     }
 
     /**
