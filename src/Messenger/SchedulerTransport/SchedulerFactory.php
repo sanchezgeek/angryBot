@@ -124,7 +124,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
 
             # position liquidation
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(
                 symbol: Symbol::BTCUSDT,
                 percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation(Symbol::BTCUSDT),
                 acceptableStoppedPart: self::getAcceptableStoppedPart(Symbol::BTCUSDT),
@@ -138,7 +138,7 @@ final class SchedulerFactory
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
 
-            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(
+            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(
                 new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
                     percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation($symbol),
@@ -157,12 +157,14 @@ final class SchedulerFactory
      * int
      */
     private const ADDITIONAL_STOP_LIQUIDATION_DISTANCE = [
+//        Symbol::BTCUSDT->value => 40,
     ];
 
     /**
      * int|float
      */
     private const ACCEPTABLE_STOPPED_PART = [
+//        Symbol::BTCUSDT->value => 5,
     ];
 
     private function cache(): array
