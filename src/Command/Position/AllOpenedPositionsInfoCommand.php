@@ -53,7 +53,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PriceRangeAwareCommand;
 
     private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '5';
+    private const DEFAULT_SAVE_CACHE_INTERVAL = '30';
 
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
@@ -85,7 +85,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
-            ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?')
+            ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?', true)
             ->addOption(self::UPDATE_INTERVAL_OPTION, null, InputOption::VALUE_REQUIRED, 'Update interval', self::DEFAULT_UPDATE_INTERVAL)
             ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
             ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
@@ -114,6 +114,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
         $iteration = 0;
         do {
+            echo PHP_EOL . PHP_EOL . PHP_EOL . PHP_EOL;
+
             $iteration++;
             $this->cacheCollector = [];
 
@@ -273,20 +275,25 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $mainPositionPnl = $main->unrealizedPnl;
 
-        $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $ticker) {
-            $modifier = Percent::string('20%')->of($main->liquidationDistance());
-            $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
+        if (!$main->isShortWithoutLiquidation()) {
+            $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $ticker) {
+                $modifier = Percent::string('20%')->of($main->liquidationDistance());
+                $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
 
-            return
-                $stop->getPositionSide() === $main->side
-                && $stop->getSymbol() === $symbol
-                && $stop->getExchangeOrderId() === null
-                && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($ticker->markPrice, $bound, $symbol))
-            ;
-        });
-        $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
+                return
+                    $stop->getPositionSide() === $main->side
+                    && $stop->getSymbol() === $symbol
+                    && $stop->getExchangeOrderId() === null
+                    && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($ticker->markPrice, $bound, $symbol))
+                    ;
+            });
+            $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
+        }
 
-        $liquidation = !$main->isLiquidationPlacedBeforeEntry() ? $main->liquidationPrice() : CTH::colorizeText($main->liquidationPrice(), 'yellow-text');
+        $liquidationContent = $main->isShortWithoutLiquidation() ? '-' : sprintf('%9s', $main->liquidationPrice());
+        $liquidationContent = !$main->isShortWithoutLiquidation() && $main->isLiquidationPlacedBeforeEntry()
+            ? CTH::colorizeText($liquidationContent, 'yellow-text')
+            : $liquidationContent;
 
         $cells = [
             sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
@@ -294,7 +301,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 '%s: %9s    %9s     %6s',
                 CTH::colorizeText(sprintf('%5s', $main->side->title()), $main->isShort() ? 'red-text' : 'green-text'),
                 $main->entryPrice(),
-                $liquidation,
+                $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
         ];
@@ -319,7 +326,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $extraSymbolCell,
             $passedLiquidationDistancePercent ?? '',
-            $stoppedVolume ? new Percent($stoppedVolume, false) : '',
+            isset($stoppedVolume) ? new Percent($stoppedVolume, false) : '',
         ]);
 
         $result[] = DataRow::default($cells);
