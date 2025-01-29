@@ -118,7 +118,7 @@ final readonly class ByBitV5ApiClient implements ByBitApiClientInterface
             );
         }
 
-        if (!($result = $responseBody['result'] ?? null)) {
+        if (!($result = $responseBody['result'] ?? null) === null) {
             throw BadApiResponseException::common($request, 'retCode = 0, but `result` key not found');
         }
 
