@@ -29,6 +29,9 @@ final readonly class CheckOpenedPositionsSymbolsHandler
                 );
             }
         }
+
+
+        // @todo | check minimum value and qnt: https://announcements.bybit.com/article/update-on-minimum-single-order-value-and-quantity-for-spot-and-margin-trading-pairs-blt96f1cea87db75db9/
     }
 
     /**
