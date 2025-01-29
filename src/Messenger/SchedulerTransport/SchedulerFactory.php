@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Messenger\SchedulerTransport;
 
+use App\Alarm\Application\Messenger\Job\Balance\CheckBalance;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
@@ -119,6 +120,7 @@ final class SchedulerFactory
 
             # alarm
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckAlarm())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckBalance())),
 
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
