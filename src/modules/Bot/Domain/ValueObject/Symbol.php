@@ -63,7 +63,7 @@ enum Symbol: string
     case SWARMSUSDT = 'SWARMSUSDT';
     case HIVEUSDT = 'HIVEUSDT';
     case DEEPUSDT = 'DEEPUSDT';
-    case PENGUSDT = 'PENGUSDT';
+    case PENGUUSDT = 'PENGUUSDT';
     case SONICUSDT = 'SONICUSDT';
     case SOLOUSDT = 'SOLOUSDT';
     case AVAAIUSDT = 'AVAAIUSDT';
@@ -81,6 +81,9 @@ enum Symbol: string
     case WHYUSDT10000 = '10000WHYUSDT';
     case CHILLGUYUSDT = 'CHILLGUYUSDT';
     case CLOUDUSDT = 'CLOUDUSDT';
+    case FBUSDT = 'FBUSDT';
+    case OMUSDT = 'OMUSDT';
+    case ACHUSDT = 'ACHUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -126,7 +129,7 @@ enum Symbol: string
         self::SWARMSUSDT->value => 5,
         self::HIVEUSDT->value => 4,
         self::DEEPUSDT->value => 5,
-        self::PENGUSDT->value => 4,
+        self::PENGUUSDT->value => 5,
         self::SONICUSDT->value => 4,
         self::SOLOUSDT->value => 4,
         self::AVAAIUSDT->value => 5,
@@ -144,6 +147,9 @@ enum Symbol: string
         self::WHYUSDT10000->value => 6,
         self::CHILLGUYUSDT->value => 4,
         self::CLOUDUSDT->value => 4,
+        self::FBUSDT->value => 3,
+        self::OMUSDT->value => 5,
+        self::ACHUSDT->value => 6,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -190,7 +196,7 @@ enum Symbol: string
         self::SWARMSUSDT->value => 1,
         self::HIVEUSDT->value => 1,
         self::DEEPUSDT->value => 10,
-        self::PENGUSDT->value => 1,
+        self::PENGUUSDT->value => 1,
         self::SONICUSDT->value => 1,
         self::SOLOUSDT->value => 1,
         self::AVAAIUSDT->value => 1,
@@ -208,6 +214,9 @@ enum Symbol: string
         self::WHYUSDT10000->value => 100,
         self::CHILLGUYUSDT->value => 1,
         self::CLOUDUSDT->value => 1,
+        self::FBUSDT->value => 0.1,
+        self::OMUSDT->value => 1,
+        self::ACHUSDT->value => 10,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
