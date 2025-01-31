@@ -53,15 +53,15 @@ final class CheckPositionIsUnderLiquidationHandler
     public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # Additional stop
-    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 70;
-    public const WARNING_PNL_DISTANCE = 60;
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 75;
+    public const WARNING_PNL_DISTANCE = 100;
     public const WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY = self::WARNING_PNL_DISTANCE;
 
     # To check stopped position volume
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 20;
 
-    public const ACCEPTABLE_STOPPED_PART = 3;
+    public const ACCEPTABLE_STOPPED_PART = 4;
     private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
 
     const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
@@ -77,6 +77,11 @@ final class CheckPositionIsUnderLiquidationHandler
     private ?CheckPositionIsUnderLiquidation $handledMessage = null;
     private ?Ticker $ticker = null;
     private ?Position $position = null;
+
+    public static function isDebug(): bool
+    {
+        return AppContext::isDebug() && AppContext::isTest();
+    }
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
@@ -161,7 +166,7 @@ final class CheckPositionIsUnderLiquidationHandler
                 $stopQty = $symbol->roundVolumeUp((new Percent($volumePartDelta))->of($notCoveredSize));
 
                 $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);
-                if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan) {
+                if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan && !self::isDebug()) {
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
 //                    if ($decreaseStopDistance) $stopPriceDistance = $stopPriceDistance * 0.5;
@@ -240,7 +245,7 @@ final class CheckPositionIsUnderLiquidationHandler
             return $this->additionalStopPrice;
         }
 
-        $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation($position);
+        $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation();
 
         return $this->additionalStopPrice = (
             $position->isShort()
@@ -251,7 +256,42 @@ final class CheckPositionIsUnderLiquidationHandler
 
     public function acceptableStoppedPart(): float
     {
-        return $this->handledMessage->acceptableStoppedPart ?? self::ACCEPTABLE_STOPPED_PART;
+        if ($this->handledMessage->acceptableStoppedPart) {
+            return $this->handledMessage->acceptableStoppedPart;
+        }
+
+        $ticker = $this->ticker;
+        $position = $this->position;
+
+//            if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal situation
+//            } else { # bad scenario
+//            }
+
+        if (
+            self::isDebug()
+            || (
+                $position->isPositionInLoss($ticker->markPrice) && !$position->isLiquidationPlacedBeforeEntry()
+//                && in_array($ticker->symbol, [Symbol::FBUSDT, Symbol::DEXEUSDT,    Symbol::NCUSDT, Symbol::AVAAIUSDT, Symbol::PENGUUSDT], true)
+            )
+        ) {
+//            $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation();
+//            $percentOfWholeDistance = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialLiquidationDistance);
+//            $acceptableStoppedPart = 100 - $percentOfWholeDistance->value(); // нельзя ориент. на это значение
+
+            $initialDistanceWithLiquidation = $position->liquidationDistance();
+            $currentDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+            $distanceLeftInPercent = Percent::fromPart($currentDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+            $acceptableStoppedPart = 100 - $distanceLeftInPercent;
+
+//            if (self::isDebug()) var_dump($currentDistanceWithLiquidationInPercentOfTickerPrice);die;
+
+            $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($currentDistanceWithLiquidation, $ticker->indexPrice)->value();
+            $modifier = 100 / $currentDistanceWithLiquidationInPercentOfTickerPrice;
+
+            return $acceptableStoppedPart * $modifier;
+        }
+
+        return self::ACCEPTABLE_STOPPED_PART;
     }
 
     public function getAmountToTransfer(Position $position): CoinAmount
@@ -286,10 +326,10 @@ final class CheckPositionIsUnderLiquidationHandler
     {
         if ($this->warningDistance === null) {
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal scenario
-                $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE, $this->ticker->indexPrice), 0.1);
+                $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE, $this->position->entryPrice()), 0.1);
                 $this->warningDistance = max($warningDistance, FloatHelper::modify((new Percent(30))->of($this->position->liquidationDistance()), 0.15, 0.05));
             } else { # bad scenario
-                $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY, $this->ticker->indexPrice), 0.1);
+                $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY, $this->position->entryPrice()), 0.1);
                 $this->warningDistance = $warningDistance;
             }
         }
@@ -304,11 +344,13 @@ final class CheckPositionIsUnderLiquidationHandler
             return FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->indexPrice), 0.1);
         }
 
-        return $ticker->symbol->makePrice($this->additionalStopDistanceWithLiquidation($position) * 1.5)->value();
+        return $ticker->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
     }
 
-    private function additionalStopDistanceWithLiquidation(Position $position): float
+    private function additionalStopDistanceWithLiquidation(): float
     {
+        $position = $this->position;
+
         if ($this->additionalStopDistanceWithLiquidation === null) {
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal situation
                 $distancePnl = $this->handledMessage->percentOfLiquidationDistanceToAddStop ?? self::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE;
