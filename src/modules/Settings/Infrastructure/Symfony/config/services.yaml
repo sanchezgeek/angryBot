@@ -24,6 +24,9 @@ services:
                 trading.opposite.BuyOrder.pnlDistance.forLongPosition: '50%'
                 trading.opposite.BuyOrder.pnlDistance.forShortPosition: '50%'
 
+                trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition: '100%'
+                trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition: '100%'
+
                 # push BuyOrder
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
