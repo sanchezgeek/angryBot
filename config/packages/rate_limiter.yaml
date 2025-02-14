@@ -21,3 +21,7 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '3 seconds'
+        position_in_loss_alert_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '1 minute'
