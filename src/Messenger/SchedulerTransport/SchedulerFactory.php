@@ -7,6 +7,7 @@ namespace App\Messenger\SchedulerTransport;
 use App\Alarm\Application\Messenger\Job\Balance\CheckBalance;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Market\TransferFundingFees;
+use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
@@ -133,12 +134,11 @@ final class SchedulerFactory
             ))),
 
             # symbols
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
         ];
 
-        # release other symbols orders
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT60S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
+            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
 
             !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(
                 new CheckPositionIsUnderLiquidation(
@@ -147,6 +147,8 @@ final class SchedulerFactory
                     acceptableStoppedPart: self::getAcceptableStoppedPart($symbol),
                 )
             ));
+
+            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss(symbol: $symbol)));
         }
 
         return $items;
