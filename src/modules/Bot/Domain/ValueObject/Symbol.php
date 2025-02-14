@@ -84,6 +84,7 @@ enum Symbol: string
     case FBUSDT = 'FBUSDT';
     case OMUSDT = 'OMUSDT';
     case ACHUSDT = 'ACHUSDT';
+    case RUNEUSDT = 'RUNEUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -150,6 +151,7 @@ enum Symbol: string
         self::FBUSDT->value => 3,
         self::OMUSDT->value => 5,
         self::ACHUSDT->value => 6,
+        self::RUNEUSDT->value => 3,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -217,6 +219,7 @@ enum Symbol: string
         self::FBUSDT->value => 0.1,
         self::OMUSDT->value => 1,
         self::ACHUSDT->value => 10,
+        self::RUNEUSDT->value => 0.1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
