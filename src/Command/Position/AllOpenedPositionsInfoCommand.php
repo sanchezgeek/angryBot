@@ -18,6 +18,7 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
@@ -114,8 +115,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
         $iteration = 0;
         do {
-            echo PHP_EOL . PHP_EOL . PHP_EOL . PHP_EOL;
-
             $iteration++;
             $this->cacheCollector = [];
 
@@ -273,6 +272,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             };
         }
 
+        $initialLiquidationDistancePercentOfEntry = match (true) {
+            $initialLiquidationDistancePercentOfEntry->value() < 10 => CTH::colorizeText((string)$initialLiquidationDistancePercentOfEntry, 'bright-red-text'),
+            $initialLiquidationDistancePercentOfEntry->value() < 30 => CTH::colorizeText((string)$initialLiquidationDistancePercentOfEntry, 'yellow-text'),
+            default => $initialLiquidationDistancePercentOfEntry,
+        };
+
+        $distanceBetweenLiquidationAndTickerPercentOfEntry = match (true) {
+            $distanceBetweenLiquidationAndTickerPercentOfEntry->value() < 10 => CTH::colorizeText((string)$distanceBetweenLiquidationAndTickerPercentOfEntry, 'bright-red-text'),
+            $distanceBetweenLiquidationAndTickerPercentOfEntry->value() < 30 => CTH::colorizeText((string)$distanceBetweenLiquidationAndTickerPercentOfEntry, 'yellow-text'),
+            default => $distanceBetweenLiquidationAndTickerPercentOfEntry,
+        };
+
         $mainPositionPnl = $main->unrealizedPnl;
 
         if (!$main->isShortWithoutLiquidation()) {
@@ -326,10 +337,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $extraSymbolCell,
             $passedLiquidationDistancePercent ?? '',
-            isset($stoppedVolume) ? new Percent($stoppedVolume, false) : '',
+            isset($stoppedVolume) && $stoppedVolume ? new Percent($stoppedVolume, false) : '',
         ]);
 
-        $result[] = DataRow::default($cells);
+        $result[$main->side->value] = DataRow::default($cells);
 
         $unrealizedTotal += $mainPositionPnl;
 
@@ -342,7 +353,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 sprintf(
                     ' sup.: %9s                  %6s',
                     $support->entryPrice(),
-                    self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size))
+                    self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
             ];
 
@@ -359,11 +370,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             $cells = array_merge($cells, ['', '', '', '',  '', '']);
 
-            $result[] = DataRow::default($cells);
+            $result[$support->side->value] = DataRow::default($cells);
 
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[$supportPositionCacheKey] = $support;
         }
+
+        if (count($result) > 1) {
+            $result = [
+                $result[Side::Sell->value],
+                $result[Side::Buy->value],
+            ];
+        }
+
+        $result = array_values($result);
 
         $result[] = new SeparatorRow();
 

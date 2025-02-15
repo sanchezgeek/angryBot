@@ -126,7 +126,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
             self::VOLUME_COL => function (ExecutionStepResult $step) {
                 if ($step->isOnlySingleItem()) {
                     $order = $step->getSingleItem()->order;
-                    $content = sprintf('%s %s', $order instanceof SandboxStopOrder ? '-' : '+', $order->volume);
+                    $content = sprintf('%s %s', $order instanceof SandboxStopOrder ? '-' : '+', $order->symbol->roundVolume($order->volume));
                     return self::highlightedSingleOrderCell($step, $content);
                 } else {
                     # @todo Mb get only for $this->targetPositionSide? Or do some previous check before do work on ExecutionStepResult (orders must be on one side)
@@ -135,6 +135,8 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     } else {
                         $volume = $step->getTotalVolume();
                     }
+
+                    $volume = $step->getFirstItem()->order->symbol->roundVolume($volume);
 
                     [$sign, $style] = match(true) {
                         $volume < 0 =>  ['- ', new CellStyle(fontColor: Color::BRIGHT_RED)],
@@ -161,7 +163,12 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                 if (!$step->hasOrdersExecuted()) {
                     return '';
                 }
-                return $step->getStateAfter()->getPosition($this->targetPositionSide)?->size;
+
+                if (!$position = $step->getStateAfter()->getPosition($this->targetPositionSide)) {
+                    return '';
+                }
+
+                return $step->getFirstItem()->order->symbol->roundVolume($position->size);
             },
             self::POSITION_ENTRY_COL => function (ExecutionStepResult $step) {
                 if (!$step->hasOrdersExecuted()) {
