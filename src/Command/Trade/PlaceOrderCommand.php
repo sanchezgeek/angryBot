@@ -82,7 +82,9 @@ class PlaceOrderCommand extends AbstractCommand
 
         if ($type === self::MARKET_BUY) {
             $side = $this->getPositionSide();
-            $symbols = $this->getSymbols();
+            $except = [Symbol::BTCUSDT];
+
+            $symbols = $this->getSymbols($except);
 
             $additional = null;
             try {
