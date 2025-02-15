@@ -133,12 +133,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             return true;
         }
 
-        # Skip check if "total position leverage" less than some leverage
-        # @todo | what value must be used?
-        # @todo | may be replace this check with "buyIsSafe" check (but this check probably already not passed and this scenario won't happen at all)
-        if ($this->totalPositionLeverage($position, $ticker) < 60) {
-            return true;
-        }
+//        # Skip check if "total position leverage" less than some leverage
+//        # @todo | what value must be used?
+//        # @todo | may be replace this check with "buyIsSafe" check (but this check probably already not passed and this scenario won't happen at all)
+//        if ($this->totalPositionLeverage($position, $ticker) < 60) {
+//            return true;
+//        }
 
         $indexPnlPercent = $ticker->indexPrice->getPnlPercentFor($position);
 
