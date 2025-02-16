@@ -49,7 +49,7 @@ class MarketBuyHandler
             throw $e;
         } catch (Throwable $e) {
             OutputHelper::print(sprintf('%s while try to buy %s (%s initial) on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume, $symbol->value, $dto->positionSide->value));
-            throw $e;
+            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume() + $symbol->minOrderQty() * 2);
         }
     }
 
