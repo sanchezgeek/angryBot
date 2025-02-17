@@ -19,11 +19,11 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
@@ -37,7 +37,6 @@ use App\Output\Table\Formatter\ConsoleTableBuilder;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -68,6 +67,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const UPDATE_OPTION = 'update';
     private const UPDATE_INTERVAL_OPTION = 'update-interval';
     private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
+    private const SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
 
     private array $cacheCollector = [];
     private ?string $showDiffWithOption;
@@ -77,6 +77,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     /** @var Stop[] */
     private array $stops;
+
+    /** @var array<Position[]> */
+    private array $positions;
+
+    /** @var array<string, Price> */
+    private array $lastMarkPrices;
 
     protected function configure(): void
     {
@@ -90,6 +96,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::UPDATE_INTERVAL_OPTION, null, InputOption::VALUE_REQUIRED, 'Update interval', self::DEFAULT_UPDATE_INTERVAL)
             ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
             ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
+            ->addOption(self::SHOW_FULL_TICKER_DATA_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show full ticker data?')
         ;
     }
 
@@ -147,9 +154,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    /** @var array<Position[]> */
-    private array $positions;
-
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
         $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
@@ -165,6 +169,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
+        $this->lastMarkPrices = $positionService->getLastMarkPrices();
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
@@ -208,7 +213,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
-        $headerColumns = ['symbol (last / mark / index)', 'entry / liq / size', 'PNL'];
+        $headerColumns = [
+            $this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION) ? 'symbol (last / mark / index)' : 'symbol',
+            'entry / liq / size',
+            'PNL'
+        ];
         $selectedCache && $headerColumns[] = 'Δ (cache)';
         $prevCache && $headerColumns[] = 'Δ (prev.)';
         $headerColumns = array_merge($headerColumns, [
@@ -248,8 +257,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             return [];
         }
 
-        $ticker = $this->exchangeService->ticker($symbol);
-        $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
+        $lastMarkPrices = $this->lastMarkPrices;
+        $markPrice = $lastMarkPrices[$symbol->value];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
         $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
@@ -258,7 +267,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector[$mainPositionCacheKey] = $main;
 
         $initialLiquidationDistance = $main->liquidationDistance();
-        $distanceBetweenLiquidationAndTicker = $main->priceDistanceWithLiquidation($ticker);
+        $distanceBetweenLiquidationAndTicker = $main->liquidationPrice()->deltaWith($markPrice);
 
         $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
         $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
@@ -287,7 +296,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $mainPositionPnl = $main->unrealizedPnl;
 
         if (!$main->isShortWithoutLiquidation()) {
-            $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $ticker) {
+            $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $markPrice) {
                 $modifier = Percent::string('20%')->of($main->liquidationDistance());
                 $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
 
@@ -295,7 +304,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                     $stop->getPositionSide() === $main->side
                     && $stop->getSymbol() === $symbol
                     && $stop->getExchangeOrderId() === null
-                    && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($ticker->markPrice, $bound, $symbol))
+                    && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol))
                     ;
             });
             $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
@@ -306,8 +315,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ? CTH::colorizeText($liquidationContent, 'yellow-text')
             : $liquidationContent;
 
-        $cells = [
-            sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
+        if ($this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION)) {
+            $ticker = $this->exchangeService->ticker($symbol);
+            $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
+            $cells = [sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)];
+        } else {
+            $cells = [sprintf('%8s: %8s', $symbol->shortName(), $markPrice)];
+        }
+
+        $cells = array_merge($cells, [
             sprintf(
                 '%s: %9s    %9s     %6s',
                 CTH::colorizeText(sprintf('%5s', $main->side->title()), $main->isShort() ? 'red-text' : 'green-text'),
@@ -315,7 +331,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-        ];
+        ]);
 
         $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null);
         $pnlFormatter = static fn(float $pnl) => (new CoinAmount($symbol->associatedCoin(), $pnl))->value();

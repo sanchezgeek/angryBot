@@ -9,6 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -52,6 +53,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
     private const SLEEP_INC = 5;
     protected int $lastSleep = 0;
+
+    private array $lastMarkPrices = [];
 
     public function __construct(
         ByBitApiClientInterface $apiClient,
@@ -141,9 +144,19 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                 }
                 $positions[$symbol->value][$side->value] = $position;
             }
+
+            $this->lastMarkPrices[$symbol->value] = $symbol->makePrice((float)$item['markPrice']);
         }
 
         return $positions;
+    }
+
+    /**
+     * @return array<string, Price>
+     */
+    public function getLastMarkPrices(): array
+    {
+        return $this->lastMarkPrices;
     }
 
     /**
