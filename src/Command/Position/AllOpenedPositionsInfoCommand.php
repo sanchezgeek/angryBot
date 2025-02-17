@@ -261,7 +261,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $markPrice = $lastMarkPrices[$symbol->value];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
-        $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
+        if ($hedge?->isEquivalentHedge()) {
+            $main = $positions[Side::Sell->value];
+            $support = $positions[Side::Buy->value];
+        } else {
+            $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
+            $support = $hedge?->supportPosition;
+        }
 
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
@@ -360,7 +366,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $unrealizedTotal += $mainPositionPnl;
 
-        if ($support = $main->getHedge()?->supportPosition) {
+        if ($support) {
             $supportPnl = $support->unrealizedPnl;
             $supportPositionCacheKey = self::positionCacheKey($support);
 
