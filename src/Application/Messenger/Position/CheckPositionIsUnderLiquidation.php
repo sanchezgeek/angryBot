@@ -16,6 +16,7 @@ final readonly class CheckPositionIsUnderLiquidation
         public ?int $checkStopsOnPnlPercent = null,
         public ?int $percentOfLiquidationDistanceToAddStop = null,
         public ?float $acceptableStoppedPart = null,
+        public ?float $warningPnlDistance = null,
     ) {
     }
 }

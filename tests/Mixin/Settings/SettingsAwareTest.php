@@ -16,4 +16,12 @@ trait SettingsAwareTest
 
         return $settings->get($setting);
     }
+
+    protected function overrideSetting(SettingKeyAware $setting, mixed $value): void
+    {
+        /** @var AppSettingsProvider $settingsProvider */
+        $settingsProvider = self::getContainer()->get(AppSettingsProvider::class);
+
+        $settingsProvider->set($setting, $value);
+    }
 }

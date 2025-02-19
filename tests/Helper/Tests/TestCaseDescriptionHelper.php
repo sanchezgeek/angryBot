@@ -25,7 +25,7 @@ class TestCaseDescriptionHelper
 
             return sprintf('"%s (%.2f/%.3f/liq=%.2f)" vs "%s (%.2f/%.3f)"', $mainPosition->getCaption(), $mainPosition->entryPrice, $mainPosition->size, $mainPosition->liquidationPrice, $supportPosition->getCaption(), $supportPosition->entryPrice, $supportPosition->size);
         } else {
-            return sprintf('"%s (%.2f/%.3f/liq=%.2f)', $position->getCaption(), $position->entryPrice, $position->size, $position->liquidationPrice);
+            return sprintf('"%s (%.2f/%.3f/liq=%.2f)"', $position->getCaption(), $position->entryPrice, $position->size, $position->liquidationPrice);
         }
     }
 

@@ -149,16 +149,18 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
+        $acceptableStoppedPartBeforeLiquidation = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION;
+
         $this->orderService
             ->expects(self::once())
             ->method('closeByMarket')
             ->with(
                 $position,
-                $symbol->roundVolumeUp((new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size)),
+                $symbol->roundVolumeUp((new Percent($acceptableStoppedPartBeforeLiquidation))->of($position->size)),
             )
         ;
 
-        ($this->handler)(new CheckPositionIsUnderLiquidation($symbol));
+        ($this->handler)(new CheckPositionIsUnderLiquidation(symbol: $symbol, acceptableStoppedPart: $acceptableStoppedPartBeforeLiquidation));
     }
 
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable
