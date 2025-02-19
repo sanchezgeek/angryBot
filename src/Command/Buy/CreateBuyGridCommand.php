@@ -15,6 +15,8 @@ use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Price\Price;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use Exception;
@@ -63,7 +65,7 @@ class CreateBuyGridCommand extends AbstractCommand
             $symbol = $this->getSymbol();
             $side = $this->getPositionSide();
             $volume = $this->paramFetcher->getFloatArgument('volume');
-            $step = $this->paramFetcher->getFloatArgument('step');
+            $step = $this->getStepBasedOnPnl();
             $priceRange = $this->getPriceRange();
 
             $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('buy-grid')];
@@ -76,13 +78,19 @@ class CreateBuyGridCommand extends AbstractCommand
                 $context[BuyOrder::STOP_DISTANCE_CONTEXT] = $stopDistance;
             }
 
+            $result = null;
             foreach ($priceRange->byStepIterator($step) as $price) {
                 $modifier = FloatHelper::modify($step / 7, 0.15);
                 $rand = random_int(-$modifier, $modifier);
 
-                $this->createBuyOrderHandler->handle(
+                $result = $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($symbol, $side, $volume, $price->add($rand)->value(), $context)
                 );
+            }
+
+            $createdWithVolume = $result->buyOrder->getVolume();
+            if ($createdWithVolume !== $volume) {
+                $this->io->info(sprintf('The Orders have been created with recalculated volume: %s', $createdWithVolume));
             }
 
             $output = [
@@ -107,6 +115,25 @@ class CreateBuyGridCommand extends AbstractCommand
             $this->io->error($e->getMessage());
 
             return Command::FAILURE;
+        }
+    }
+
+    protected function getStepBasedOnPnl(): float
+    {
+        $name = 'step';
+
+        try {
+            $pnlValue = $this->paramFetcher->getPercentArgument($name);
+            $ticker = $this->exchangeService->ticker($this->getSymbol());
+            $calculatedValue = PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlValue, $ticker->indexPrice);
+
+            if (!$this->io->confirm(sprintf('You\'re about to use %.' . $this->getSymbol()->pricePrecision() . 'f as step', $calculatedValue))) {
+                throw new Exception('OK!');
+            }
+
+            return $calculatedValue;
+        } catch (InvalidArgumentException) {
+            return $this->paramFetcher->getFloatArgument($name);
         }
     }
 
