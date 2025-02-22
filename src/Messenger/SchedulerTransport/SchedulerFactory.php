@@ -112,10 +112,6 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
-            # position
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
-
             # market
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(Symbol::BTCUSDT))),
 
@@ -129,15 +125,23 @@ final class SchedulerFactory
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
 
-            # position liquidation
+            # symbols
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
+
+            # !!! position !!!
+            // --- stops
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
+
+            // --- liquidation
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(
                 symbol: Symbol::BTCUSDT,
                 percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation(Symbol::BTCUSDT),
                 acceptableStoppedPart: self::getAcceptableStoppedPart(Symbol::BTCUSDT),
             ))),
 
-            # symbols
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
+            // -- main positions loss
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss())),
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
@@ -150,8 +154,6 @@ final class SchedulerFactory
                     acceptableStoppedPart: self::getAcceptableStoppedPart($symbol),
                 )
             ));
-
-            $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss(symbol: $symbol)));
         }
 
         return $items;

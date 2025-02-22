@@ -11,7 +11,7 @@ use App\Bot\Domain\ValueObject\Symbol;
  */
 final readonly class CheckPositionIsInLoss
 {
-    public function __construct(public Symbol $symbol)
+    public function __construct()
     {
     }
 }
