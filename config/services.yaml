@@ -130,3 +130,7 @@ services:
     App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLossHandler:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+    App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfitHandler:
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

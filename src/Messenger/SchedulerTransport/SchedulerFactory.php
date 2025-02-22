@@ -9,6 +9,7 @@ use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMessengerMessages;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
+use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
@@ -142,6 +143,9 @@ final class SchedulerFactory
 
             // -- main positions loss
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss())),
+
+            // -- positions profit
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckPositionIsInProfit())),
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
