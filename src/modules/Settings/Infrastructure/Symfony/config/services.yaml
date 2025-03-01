@@ -27,6 +27,9 @@ services:
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition: '200%'
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition: '200%'
 
+                # push Stop
+                push.stop.cover_loss_after_close_by_market.enabled: true
+
                 # push BuyOrder
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false

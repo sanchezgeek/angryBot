@@ -9,19 +9,21 @@ use App\Settings\Application\Service\SettingKeyAware;
 
 trait SettingsAwareTest
 {
+    protected static function getContainerSettingsProvider(): AppSettingsProvider
+    {
+        return self::getContainer()->get(AppSettingsProvider::class);
+    }
+
     protected static function getSettingValue(SettingKeyAware $setting): mixed
     {
         /** @var AppSettingsProvider $settings */
         $settings = self::getContainer()->get(AppSettingsProvider::class);
 
-        return $settings->get($setting);
+        return self::getContainerSettingsProvider()->get($setting);
     }
 
     protected function overrideSetting(SettingKeyAware $setting, mixed $value): void
     {
-        /** @var AppSettingsProvider $settingsProvider */
-        $settingsProvider = self::getContainer()->get(AppSettingsProvider::class);
-
-        $settingsProvider->set($setting, $value);
+        self::getContainerSettingsProvider()->set($setting, $value);
     }
 }
