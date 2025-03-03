@@ -8,7 +8,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -16,25 +15,26 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 #[AsMessageHandler]
 final class CheckPositionIsInProfitHandler
 {
-    private const SUPPRESS = [
-//        Symbol::AVAAIUSDT,
-//        [Symbol::XRPUSDT, Side::Sell],
-    ];
+    private const ENABLED = true;
 
-    private const SYMBOLS_ALERT__PNL_PERCENT = [
-//        Symbol::AVAAIUSDT->value => 4000,
-    ];
+    private const SUPPRESSED_FOR_SYMBOLS = CheckPositionIsInProfitParams::SUPPRESSED_FOR_SYMBOLS;
+    private const SYMBOLS_ALERT_PNL_PERCENT = CheckPositionIsInProfitParams::SYMBOLS_ALERT_PNL_PERCENT;
 
-    private const ALERT_ON_PNL_PERCENT = 150;
-    private const ALERT_ON_PNL_PERCENT_FOR_ALT_COIN = 1000;
+    /** @todo | MainSymbols DRY? */
+    private const SYMBOLS_ALERT_PNL_PERCENT_DEFAULT = [
+        Symbol::BTCUSDT->value => 150,
+        Symbol::ETHUSDT->value => 300,
+        'other' => 1000
+    ];
 
     private const ALERT_RETRY_COUNT = 5;
 
-    /** @todo | DRY? */
-    const MAIN_SYMBOLS = [Symbol::BTCUSDT, Symbol::ETHUSDT];
-
     public function __invoke(CheckPositionIsInProfit $message): void
     {
+        if (!self::ENABLED) {
+            return;
+        }
+
         /** @var $positions array<Position[]> */
         $positions = $this->positionService->getAllPositions();
 
@@ -44,8 +44,8 @@ final class CheckPositionIsInProfitHandler
                 $side = $position->side;
 
                 if (
-                    in_array($symbol, self::SUPPRESS, true)
-                    || in_array([$symbol, $side], self::SUPPRESS, true)
+                    in_array($symbol, self::SUPPRESSED_FOR_SYMBOLS, true)
+                    || in_array([$symbol, $side], self::SUPPRESSED_FOR_SYMBOLS, true)
                 ) {
                     continue;
                 }
@@ -58,11 +58,11 @@ final class CheckPositionIsInProfitHandler
                 $ticker = $this->exchangeService->ticker($symbol);
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
 
-                if (isset(self::SYMBOLS_ALERT__PNL_PERCENT[$symbol->value])) {
-                    $alertOnPnlPercent = self::SYMBOLS_ALERT__PNL_PERCENT[$symbol->value];
+                if (isset(self::SYMBOLS_ALERT_PNL_PERCENT[$symbol->value])) {
+                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT[$symbol->value];
                     $alertPercentSpecifiedManually = true;
                 } else {
-                    $alertOnPnlPercent = in_array($symbol, self::MAIN_SYMBOLS, true) ? self::ALERT_ON_PNL_PERCENT : self::ALERT_ON_PNL_PERCENT_FOR_ALT_COIN;
+                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->value] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
                     $alertPercentSpecifiedManually = false;
                 }
 
