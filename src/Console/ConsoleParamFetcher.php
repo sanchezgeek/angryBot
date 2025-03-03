@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Domain\Value\Percent\Percent;
 use App\Helper\Json;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -90,8 +91,11 @@ final class ConsoleParamFetcher
         return $this->fetchPercentValue($this->input->getArgument($name), $name, self::ARGUMENT_PARAM_CAPTION);
     }
 
-    public function requiredPercentOption(string $name, string $nullOptionErrorMessage = null): float
-    {
+    public function requiredPercentOption(
+        string $name,
+        bool $asPercent = false,
+        string $nullOptionErrorMessage = null
+    ): float|Percent {
         $value = $this->input->getOption($name);
         if ($value === null) {
             throw new InvalidArgumentException(
@@ -99,7 +103,9 @@ final class ConsoleParamFetcher
             );
         }
 
-        return $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
+        $percentValue = $this->fetchPercentValue($value, $name, self::OPTION_PARAM_CAPTION);
+
+        return $asPercent ? new Percent($percentValue) : $percentValue;
     }
 
     public function percentOption(string $name): ?float
