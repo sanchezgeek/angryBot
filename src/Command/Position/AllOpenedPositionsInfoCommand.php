@@ -196,7 +196,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         if (isset($balance)) {
             $balanceCells = [
                 new Cell(
-                    sprintf('%s avail | %s free | %s total', $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
+                    sprintf('%s UTC ... %s avail | %s free | %s total', $this->clock->now()->format('H:i:s'), $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
                     new CellStyle(colspan: 2)
                 )
             ];
