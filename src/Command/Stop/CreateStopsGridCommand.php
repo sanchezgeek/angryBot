@@ -16,6 +16,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
 use Exception;
 use InvalidArgumentException;
@@ -28,6 +29,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Throwable;
+
+use ValueError;
 
 use function array_merge;
 use function implode;
@@ -61,8 +64,6 @@ class CreateStopsGridCommand extends AbstractCommand
 
     protected function configure(): void
     {
-
-
         $this
             ->configurePositionArgs()
             ->configurePriceRangeArgs()
@@ -74,6 +75,21 @@ class CreateStopsGridCommand extends AbstractCommand
             ->configureStopAdditionalContexts()
         ;
     }
+
+//    protected function getPositionSide(): Side|string
+//    {
+//        $argName = self::POSITION_SIDE_ARGUMENT_NAME;
+//        $providedPositionSideValue = $this->paramFetcher->getStringArgument($argName);
+//        try {
+//            $positionSide = Side::from($providedPositionSideValue);
+//        } catch (ValueError $e) {
+//            if (!in_array($providedPositionSideValue, ['hedge'], true)) {
+//                throw new InvalidArgumentException($e->getMessage());
+//            }
+//        }
+//
+//        return $positionSide;
+//    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

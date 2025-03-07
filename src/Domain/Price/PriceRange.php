@@ -73,7 +73,6 @@ final readonly class PriceRange implements Stringable
     }
 
     /**
-     * @param int $step
      * @return Generator<Price>
      */
     public function byStepIterator(float $step): Generator
@@ -81,6 +80,11 @@ final readonly class PriceRange implements Stringable
         for ($price = $this->from()->value(); $price < $this->to()->value(); $price += $step) {
             yield $this->symbol->makePrice($price);
         }
+    }
+
+    public function resultCountByStep(float $step): int
+    {
+        return count(iterator_to_array($this->byStepIterator($step)));
     }
 
     /**

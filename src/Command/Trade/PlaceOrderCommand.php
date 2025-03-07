@@ -239,7 +239,7 @@ class PlaceOrderCommand extends AbstractCommand
                             $positionSide->title(),
                         ),
                     )) {
-                        throw new Exception('OK!');
+                        throw new Exception('OK.');
                     }
                 }
             }
@@ -251,7 +251,7 @@ class PlaceOrderCommand extends AbstractCommand
             OutputHelper::print('');
 
             if (!$this->isWithoutConfirm() && !$this->io->confirm('Sure?')) {
-                throw new Exception('OK!');
+                throw new Exception('OK.');
             }
 
             foreach ($orders as $order) {

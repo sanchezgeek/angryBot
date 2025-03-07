@@ -78,8 +78,21 @@ class CreateBuyGridCommand extends AbstractCommand
                 $context[BuyOrder::STOP_DISTANCE_CONTEXT] = $stopDistance;
             }
 
+            if (!$this->io->confirm(
+                sprintf(
+                    'You\'re about to buy %d orders in %s range with %s step. Sure?',
+                    $priceRange->resultCountByStep($step),
+                    $priceRange,
+                    $step
+                )
+            )) {
+                throw new Exception('OK.');
+            }
+
             $result = null;
+            $count = 0;
             foreach ($priceRange->byStepIterator($step) as $price) {
+                $count++;
                 $modifier = FloatHelper::modify($step / 7, 0.15);
                 $rand = random_int(-$modifier, $modifier);
 
@@ -87,6 +100,8 @@ class CreateBuyGridCommand extends AbstractCommand
                     new CreateBuyOrderEntryDto($symbol, $side, $volume, $price->add($rand)->value(), $context)
                 );
             }
+
+            $this->io->info(sprintf('%d orders has been created', $count));
 
             $createdWithVolume = $result->buyOrder->getVolume();
             if ($createdWithVolume !== $volume) {
@@ -128,7 +143,7 @@ class CreateBuyGridCommand extends AbstractCommand
             $calculatedValue = PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlValue, $ticker->indexPrice);
 
             if (!$this->io->confirm(sprintf('You\'re about to use %.' . $this->getSymbol()->pricePrecision() . 'f as step', $calculatedValue))) {
-                throw new Exception('OK!');
+                throw new Exception('OK.');
             }
 
             return $calculatedValue;
