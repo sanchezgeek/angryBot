@@ -55,6 +55,14 @@ final class PnlHelper
         return $sign * $delta * $volume;
     }
 
+    /**
+     * @todo | tests
+     */
+    public static function getVolumeForGetWishedProfit(float $pnlInUsdt, float $priceDelta): float
+    {
+        return $pnlInUsdt / $priceDelta;
+    }
+
     public static function targetPriceByPnlPercentFromPositionEntry(Position $position, float $percent): Price
     {
         return self::targetPriceByPnlPercent($position->entryPrice(), $percent, $position);

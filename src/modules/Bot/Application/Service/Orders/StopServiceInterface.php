@@ -17,7 +17,7 @@ interface StopServiceInterface
         Side $positionSide,
         Price|float $price,
         float $volume,
-        float $triggerDelta,
+        ?float $triggerDelta = null,
         array $context = [],
     ): int;
 
