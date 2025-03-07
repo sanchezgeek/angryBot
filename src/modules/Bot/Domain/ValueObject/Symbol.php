@@ -86,6 +86,7 @@ enum Symbol: string
     case ACHUSDT = 'ACHUSDT';
     case RUNEUSDT = 'RUNEUSDT';
     case DOTUSDT = 'DOTUSDT';
+    case GPSUSDT = 'GPSUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -154,6 +155,7 @@ enum Symbol: string
         self::ACHUSDT->value => 6,
         self::RUNEUSDT->value => 3,
         self::DOTUSDT->value => 3,
+        self::GPSUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -223,6 +225,7 @@ enum Symbol: string
         self::ACHUSDT->value => 10,
         self::RUNEUSDT->value => 0.1,
         self::DOTUSDT->value => 0.1,
+        self::GPSUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [];
