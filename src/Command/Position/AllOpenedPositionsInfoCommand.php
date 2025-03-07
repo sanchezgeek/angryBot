@@ -62,6 +62,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_SORT_OPTION = 'save-sort';
     private const MOVE_UP_OPTION = 'move-up';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
+    private const CURRENT_STATE_OPTION = 'current-state';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
     private const SHOW_CACHE_OPTION = 'show-cache';
     private const UPDATE_OPTION = 'update';
@@ -71,6 +72,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private array $cacheCollector = [];
     private ?string $showDiffWithOption;
+    private ?string $cacheKeyToUseAsCurrentState;
 
     /** @var Symbol[] */
     private array $symbols;
@@ -91,6 +93,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
+            ->addOption(self::CURRENT_STATE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Use specified cached data as current state')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
             ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?', true)
             ->addOption(self::UPDATE_INTERVAL_OPTION, null, InputOption::VALUE_REQUIRED, 'Update interval', self::DEFAULT_UPDATE_INTERVAL)
@@ -105,6 +108,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         parent::initialize($input, $output);
 
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
+        $this->cacheKeyToUseAsCurrentState = $this->paramFetcher->getStringOption(self::CURRENT_STATE_OPTION, false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -373,13 +377,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cells = [
                 '',
                 sprintf(
-                    ' sup.: %9s                  %6s',
+                    ' sup.: %9s    %s     %6s',
+//                    ' sup.: %9s                  %6s',
                     $support->entryPrice(),
+                    CTH::colorizeText(sprintf('%9s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
                     self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
             ];
 
-            $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $supportPnl));
+            $supportPnlContent = (string) (new CoinAmount($symbol->associatedCoin(), $supportPnl));
+            $supportPnlContent = $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
+            $cells[] = new Cell($supportPnlContent);
 
             if ($specifiedCache) {
                 $cachedValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
