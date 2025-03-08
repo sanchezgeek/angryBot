@@ -4,16 +4,12 @@ declare(strict_types=1);
 
 namespace App\Application\EventListener\Stop;
 
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\HedgeService;
-use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -22,9 +18,7 @@ use App\Helper\FloatHelper;
 use App\Worker\AppContext;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
-use function random_int;
 use function sprintf;
-use function var_dump;
 
 /**
  * `stop.pushedToExchange` [
@@ -38,13 +32,13 @@ final class FixMainHedgePositionListener
 {
     public const ENABLED = true;
 
-    const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN = 250;
+    const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 300;
 
     /** @todo min of hedge distance and this value */
     const SUPPLY_STOP_PNL_DISTANCES = [
         Symbol::BTCUSDT->value => 40,
         Symbol::ETHUSDT->value => 80,
-        'other' => 150
+        'other' => 200
     ];
 
     public function __construct(
@@ -53,6 +47,7 @@ final class FixMainHedgePositionListener
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService, /** @todo | MB without cache? */
         private readonly StopServiceInterface $stopService,
+        private readonly float $applyIfMainPositionPnlGreaterThan = self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT,
     ) {
     }
 
@@ -81,14 +76,14 @@ final class FixMainHedgePositionListener
             return;
         }
 //        if ($this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {
-//            var_dump(sprintf('%s size enough for support mainPosition => skip', $stoppedSupportPosition->getCaption()));
+//            self::echo(sprintf('%s size enough for support mainPosition => skip', $stoppedSupportPosition->getCaption()));
 //            return;
 //        }
-        var_dump(sprintf('FixMainHedgePositionListener: support stop closed at %f', $stopPrice));
+        self::echo(sprintf('FixMainHedgePositionListener: support stop closed at %f', $stopPrice));
 
         $oppositePositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($oppositePosition);
-        if ($oppositePositionPnlPercent < self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN) {
-            var_dump('mainPosition PNL is not enough for add supply stop => skip');
+        if ($oppositePositionPnlPercent < $this->applyIfMainPositionPnlGreaterThan) {
+            self::echo('FixMainHedgePositionListener: mainPosition PNL is not enough for add supply stop => skip');
             return;
         }
 
@@ -100,7 +95,7 @@ final class FixMainHedgePositionListener
 //        $orderCost = $this->orderCostCalculator->totalBuyCost(new ExchangeOrder($symbol, $closedVolume, $ticker->lastPrice), $stoppedSupportPosition->leverage, $stoppedSupportPosition->side)->value();
 //
 //        if ($contractBalance->available() > $orderCost) {
-//            var_dump(sprintf('CONTRACT.availableBalance > %f (orderCost) => skip', $orderCost));
+//            self::echo(sprintf('FixMainHedgePositionListener: CONTRACT.availableBalance > %f (orderCost) => skip', $orderCost));
 //            return;
 //        }
 
@@ -134,6 +129,15 @@ final class FixMainHedgePositionListener
             context: $context
         );
 
-        var_dump(sprintf('supply stop created fot %s', $stoppedPosition->getCaption()));
+        self::echo(sprintf('FixMainHedgePositionListener: supply stop created fot %s', $stoppedPosition->getCaption()));
+    }
+
+    public static function echo(string $message): void
+    {
+        if (AppContext::isTest()) {
+            return;
+        }
+
+        echo $message;
     }
 }
