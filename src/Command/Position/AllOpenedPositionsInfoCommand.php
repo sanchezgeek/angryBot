@@ -202,7 +202,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 new Cell(
                     sprintf('%s UTC ... %s avail | %s free | %s total', $this->clock->now()->format('H:i:s'), $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
                     new CellStyle(colspan: 2)
-                )
+                ),
             ];
         }
         $bottomCells = $balanceCells;
@@ -220,7 +220,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $headerColumns = [
             $this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION) ? 'symbol (last / mark / index)' : 'symbol',
             'entry / liq / size',
-            'PNL'
+            'PNL',
         ];
         $selectedCache && $headerColumns[] = 'Δ (cache)';
         $prevCache && $headerColumns[] = 'Δ (prev.)';
@@ -232,7 +232,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             "/ entry\n  price",
             "symbol",
             "liq.\ndistance\npassed",
-            "auto-added\nstops(\n between liq.\n and entry\n)"
+            "stops(\n between liq.\n and entry\n)\n[auto/manual]",
         ]);
 
         ConsoleTableBuilder::withOutput($this->output)
@@ -247,6 +247,49 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
             $this->cache->save($item);
         }
+    }
+
+    private function prepareStoppedPartContent(Position $position, $markPrice): ?string
+    {
+        $symbol = $position->symbol;
+        $positionSide = $position->side;
+
+        $stops = $this->stopRepository->findActive($symbol, $positionSide);
+        $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            if (!$position->getHedge() || $position->isMainPosition()) {
+                $modifier = Percent::string('20%')->of($position->liquidationDistance());
+                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
+                    return false;
+                }
+            }
+
+            return $stop->isAdditionalStopFromLiquidationHandler();
+        });
+        $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            if (!$position->getHedge() || $position->isMainPosition()) {
+                $modifier = Percent::string('20%')->of($position->liquidationDistance());
+                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
+                    return false;
+                }
+            }
+
+            return !$stop->isAdditionalStopFromLiquidationHandler();
+        });
+
+        $stoppedVolume = [];
+        if ($manualStops) {
+            $manualStoppedPartPct = new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false);
+            $stoppedVolume[] = sprintf('%s[%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'));
+        }
+
+        if ($autoStops) {
+            $autoStoppedPartPct = new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false);
+            $stoppedVolume[] = sprintf('%s[a]', $autoStoppedPartPct);
+        }
+
+        return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
     }
 
     /**
@@ -306,18 +349,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $mainPositionPnl = $main->unrealizedPnl;
 
         if (!$main->isShortWithoutLiquidation()) {
-            $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $markPrice) {
-                $modifier = Percent::string('20%')->of($main->liquidationDistance());
-                $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
-
-                return
-                    $stop->getPositionSide() === $main->side
-                    && $stop->getSymbol() === $symbol
-                    && $stop->getExchangeOrderId() === null
-                    && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol))
-                    ;
-            });
-            $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
+            $stoppedVolume = $this->prepareStoppedPartContent($main, $markPrice);
         }
 
         $liquidationContent = $main->isShortWithoutLiquidation() ? '-' : sprintf('%9s', $main->liquidationPrice());
@@ -363,7 +395,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $extraSymbolCell,
             $passedLiquidationDistancePercent ?? '',
-            isset($stoppedVolume) && $stoppedVolume ? new Percent($stoppedVolume, false) : '',
+            $stoppedVolume ?? '',
         ]);
 
         $result[$main->side->value] = DataRow::default($cells);
@@ -373,6 +405,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         if ($support) {
             $supportPnl = $support->unrealizedPnl;
             $supportPositionCacheKey = self::positionCacheKey($support);
+            $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
 
             $cells = [
                 '',
@@ -398,7 +431,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
             }
 
-            $cells = array_merge($cells, ['', '', '', '',  '', '']);
+            $cells = array_merge($cells, ['', '', '', '',  '', '', '', $stoppedVolume ?? '']);
 
             $result[$support->side->value] = DataRow::default($cells);
 
