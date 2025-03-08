@@ -13,6 +13,7 @@ use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsIn
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
+use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
@@ -79,7 +80,7 @@ final class SchedulerFactory
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::MEDIUM), new PushStops($symbol, Side::Sell));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Sell));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
 
@@ -94,7 +95,7 @@ final class SchedulerFactory
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::MEDIUM), new PushStops($symbol, Side::Buy));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Buy));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
         }
 
@@ -146,6 +147,9 @@ final class SchedulerFactory
 
             // -- positions profit
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckPositionIsInProfit())),
+
+            // -- active BuyOrders
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(new CheckOrdersNowIsActive())),
         ];
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
@@ -164,6 +168,7 @@ final class SchedulerFactory
     }
 
     private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
+//        Symbol::ETHUSDT,
     ];
 
     /**

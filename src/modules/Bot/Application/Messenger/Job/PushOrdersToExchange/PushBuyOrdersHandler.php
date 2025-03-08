@@ -160,23 +160,16 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     /**
      * @return BuyOrder[]
      */
-    public function findOrdersNearTicker(Side $side, Ticker $ticker, ?Position $openedPosition = null): array
+    public function findOrders(Side $side, Ticker $ticker, ?Position $openedPosition = null): array
     {
         $volumeOrdering = $openedPosition && $this->canTakeProfit($openedPosition, $ticker)
             ? 'DESC' // To get bigger orders first (to take bigger profit by their volume)
             : 'ASC'; // Buy cheapest orders first
 
-        $profitModifier = 0.0002 * $ticker->indexPrice->value();
-        $lossModifier = 0.00036 * $ticker->indexPrice->value();
-
-        $from = $side->isShort() ? $ticker->indexPrice->value() - $profitModifier : $ticker->indexPrice->value() - $lossModifier;
-        $to = $side->isShort() ? $ticker->indexPrice->value() + $lossModifier : $ticker->indexPrice->value() + $profitModifier;
-
-        return $this->buyOrderRepository->findActiveInRange(
+        return $this->buyOrderRepository->findActiveForPush(
             symbol: $ticker->symbol,
             side: $side,
-            from: $from,
-            to: $to,
+            currentPrice: $ticker->indexPrice->value(),
             qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
@@ -201,7 +194,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         $position = $this->positionService->getPosition($symbol, $side);
 
-        $orders = $this->findOrdersNearTicker($side, $ticker, $position);
+        $orders = $this->findOrders($side, $ticker, $position);
 
         $ignoreBuy = null;
         if ($this->useIsLastPriceOverIndexPriceCheck && $position && $ticker->isLastPriceOverIndexPrice($side) && $last->deltaWith($index) >= 100) {

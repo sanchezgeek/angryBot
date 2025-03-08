@@ -8,11 +8,9 @@ use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
-use function sprintf;
 use function uuid_create;
 
 /**
@@ -45,20 +43,5 @@ final class CoinUniversalTransferRequestTest extends TestCase
             'toMemberId' => $toMemberUid,
             'transferId' => $transferId,
         ], $request->data());
-    }
-
-    public function testFailCreateWithSameFromAndToMemberUids(): void
-    {
-        self::expectException(InvalidArgumentException::class);
-        self::expectExceptionMessage(sprintf('%s: `fromMemberUid` cannot be equals to `toMemberUid', CoinUniversalTransferRequest::class));
-
-        new CoinUniversalTransferRequest(
-            new CoinAmount($coin = Coin::USDT, $amount = 100500.1),
-            AccountType::UNIFIED,
-            AccountType::FUNDING,
-            'fromMember',
-            'fromMember',
-            uuid_create(),
-        );
     }
 }

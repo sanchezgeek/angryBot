@@ -109,21 +109,40 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
         ], $this->buyOrderRepository->findActive(Symbol::ETHUSDT, $side));
     }
 
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testCanFindActiveInRange(Side $side): void
+    public function testCanFindActiveInRangeForLong(): void
     {
+        $side = Side::Buy;
+
         $this->applyDbFixtures(
             new BuyOrderFixture(new BuyOrder(1, 100500, 123.123, Symbol::ADAUSDT, $side)),
             new BuyOrderFixture((new BuyOrder(100, 2050, 223.1, Symbol::ETHUSDT, $side))->setExchangeOrderId('123456')),
-            new BuyOrderFixture((new BuyOrder(101, 2050, 223.1, Symbol::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))),
-            new BuyOrderFixture(new BuyOrder(1000, 3050, 323, Symbol::ADAUSDT, $side)),
+            new BuyOrderFixture((new BuyOrder(101, 2050, 223.1, Symbol::ADAUSDT, $side))->setActive()),
+            new BuyOrderFixture((new BuyOrder(1000, 1999, 323, Symbol::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))->setActive()),
+            new BuyOrderFixture((new BuyOrder(2000, 1999, 323.1, Symbol::ADAUSDT, $side))->setIdle()),
         );
 
         self::assertEquals(
-            [new BuyOrder(101, 2050, 223.1, Symbol::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']])],
-            $this->buyOrderRepository->findActiveInRange(Symbol::ADAUSDT, $side, 2000, 3000)
+            [(new BuyOrder(1000, 1999, 323, Symbol::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))->setActive()],
+            $this->buyOrderRepository->findActiveForPush(Symbol::ADAUSDT, $side, 2000)
+        );
+    }
+
+    public function testCanFindActiveInRangeForShort(): void
+    {
+        $side = Side::Sell;
+
+        $this->applyDbFixtures(
+            new BuyOrderFixture(new BuyOrder(1, 100500, 123.123, Symbol::ADAUSDT, $side)),
+            new BuyOrderFixture((new BuyOrder(100, 2050, 223.1, Symbol::ETHUSDT, $side))->setExchangeOrderId('123456')),
+            new BuyOrderFixture((new BuyOrder(101, 2060, 221.1, Symbol::ADAUSDT, $side))),
+            new BuyOrderFixture((new BuyOrder(102, 2050, 223.1, Symbol::ADAUSDT, $side))->setActive()),
+            new BuyOrderFixture((new BuyOrder(1000, 1999, 323, Symbol::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))->setActive()),
+            new BuyOrderFixture((new BuyOrder(2000, 1999, 323.1, Symbol::ADAUSDT, $side))->setActive()),
+        );
+
+        self::assertEquals(
+            [(new BuyOrder(102, 2050, 223.1, Symbol::ADAUSDT, $side))->setActive()],
+            $this->buyOrderRepository->findActiveForPush(Symbol::ADAUSDT, $side, 2049)
         );
     }
 

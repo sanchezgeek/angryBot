@@ -69,10 +69,10 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
         $this->category = $category;
     }
 
-    public function withPosition(Position $position): self
+    public function withPosition(Position $position, ?float $lastMarkPrice = null): self
     {
         // @todo | move ucfirst to enum ?
-        $this->positionsListItems[] = array_replace(self::POSITIONS_LIST_ITEM, [
+        $item = array_replace(self::POSITIONS_LIST_ITEM, [
             'symbol' => $position->symbol->value,
             'side' => ucfirst($position->side->value),
             'avgPrice' => (string)$position->entryPrice,
@@ -83,6 +83,12 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
             'leverage' => (string)$position->leverage->value(),
             'unrealisedPnl' => (string)$position->unrealizedPnl,
         ]);
+
+        if ($lastMarkPrice !== null) {
+            $item['markPrice'] = (string)$lastMarkPrice;
+        }
+
+        $this->positionsListItems[] = $item;
 
         return $this;
     }

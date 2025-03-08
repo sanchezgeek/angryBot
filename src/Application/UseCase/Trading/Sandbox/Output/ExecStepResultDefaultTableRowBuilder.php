@@ -11,9 +11,11 @@ use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
@@ -252,6 +254,10 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         $additionalInfo[] = sprintf('won\'t be executed (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     } elseif ($orderExecutionResult->failReason?->exception instanceof SandboxInsufficientAvailableBalanceException) {
                         $additionalInfo[] =  sprintf('cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
+                    }
+
+                    if ($sourceOrder instanceof BuyOrder) {
+                        $additionalInfo[] = $sourceOrder->isOrderActive() ? 'active' : 'idle';
                     }
 
                     if ($additionalInfo) {

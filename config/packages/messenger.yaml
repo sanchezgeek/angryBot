@@ -48,6 +48,9 @@ framework:
             # connection
             App\Connection\Application\Messenger\Job\CheckConnection: async_high
 
+            # orders
+            App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
+
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 

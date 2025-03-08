@@ -13,6 +13,7 @@ use function usort;
 trait BuyOrdersTester
 {
     use TestWithDoctrineRepository;
+    use TestWithDbFixtures;
     use PositionSideAwareTest;
 
     /**

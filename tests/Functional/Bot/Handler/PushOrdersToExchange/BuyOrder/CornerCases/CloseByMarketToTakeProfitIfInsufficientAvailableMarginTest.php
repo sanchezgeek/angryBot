@@ -76,7 +76,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $this->haveTicker($ticker);
         $this->havePosition($ticker->symbol, $position);
 
-        $buyOrder = new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, Symbol::BTCUSDT, $side);
+        $buyOrder = (new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, Symbol::BTCUSDT, $side))->setActive();
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveAvailableSpotBalance($symbol, $availableSpotBalance);
@@ -185,7 +185,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side),
+            'buyOrder' => (new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side))->setActive(),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
 
@@ -194,7 +194,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
-            'buyOrder' => new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side),
+            'buyOrder' => (new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, Symbol::BTCUSDT, $position->side))->setActive(),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
     }

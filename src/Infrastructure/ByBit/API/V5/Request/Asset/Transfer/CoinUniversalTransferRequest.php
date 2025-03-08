@@ -60,10 +60,6 @@ final readonly class CoinUniversalTransferRequest extends AbstractByBitApiReques
         $this->coin = $coinAmount->coin();
         $this->amount = $coinAmount->value();
 
-        assert($this->fromMemberUid !== $this->toMemberUid, new InvalidArgumentException(
-            sprintf('%s: `fromMemberUid` cannot be equals to `toMemberUid', __CLASS__)
-        ));
-
         assert($this->transferId, new InvalidArgumentException(
             sprintf('%s: $transferId must be non-empty string (`%s` provided)', __CLASS__, $this->transferId)
         ));
