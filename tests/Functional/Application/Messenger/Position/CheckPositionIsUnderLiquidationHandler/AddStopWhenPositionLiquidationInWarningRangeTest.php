@@ -23,7 +23,6 @@ use App\Helper\FloatHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\CheckLiquidationParametersHelper;
-use App\Tests\Helper\PriceTestHelper;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -392,6 +391,95 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             'expectedAdditionalStops' => [$expectedStop],
         ];
 //// other END
+    }
+
+    /**
+     * @dataProvider addStopForMultiplePositionsTestCases
+     */
+    public function testAddStopForMultiplePositions(
+        CheckPositionIsUnderLiquidation $message,
+        array $allOpenedPositions,
+        array $delayedStops,
+        array $activeStopOrdersArr,
+        array $expectedAdditionalStops,
+        bool $debug = false
+    ): void {
+        AppContext::setIsDebug($debug);
+
+        $this->haveAllOpenedPositionsWithLastMarkPrices($allOpenedPositions);
+        $this->haveStopsInDb(...$delayedStops);
+        foreach ($activeStopOrdersArr as $symbolRaw => $activeConditionalStops) {
+            $this->haveActiveConditionalStops(Symbol::from($symbolRaw), ...$activeConditionalStops);
+        }
+
+        $symbol = $allOpenedPositions[array_key_first($allOpenedPositions)]->symbol;
+        $this->haveAvailableSpotBalance($symbol, 0.1);
+
+        // Act
+        ($this->handler)($message);
+
+        // Arrange
+        self::seeStopsInDb(...array_merge($delayedStops, $expectedAdditionalStops));
+    }
+
+    public function addStopForMultiplePositionsTestCases(): iterable
+    {
+        $percentOfLiquidationDistanceToAddStop = 70;
+        $warningPnlDistance = 100;
+
+        $acceptableStoppedPart = 15.1;
+        $delayedStopsPercent = 4;
+        $pushedStopsPercent = 7;
+
+        # BTCUSDT SHORT
+        $symbol = Symbol::BTCUSDT;
+        $message = new CheckPositionIsUnderLiquidation(
+            symbol: $symbol,
+            percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
+            acceptableStoppedPart: $acceptableStoppedPart,
+            warningPnlDistance: $warningPnlDistance
+        );
+        $btcUsdtShort = PositionBuilder::short()->entry(35000)->size(0.5)->liq(40000)->build();
+        $btcUsdtTicker = self::tickerInCheckStopsRange($message, $btcUsdtShort);
+        $existedBtcUsdtStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $btcUsdtShort);
+        $delayedBtcUsdtShortStops = [self::delayedStop($btcUsdtShort, $delayedStopsPercent, $existedBtcUsdtStopsPrice)];
+        $activeBtcUsdtShortStops = [self::activeCondOrder($btcUsdtShort, $pushedStopsPercent, $existedBtcUsdtStopsPrice)];
+
+        $expectedBtcUsdtStop = self::expectedAdditionalStop($btcUsdtShort, $btcUsdtTicker, $message, [...$delayedBtcUsdtShortStops, ...$activeBtcUsdtShortStops], 0.021, 36500);
+//        self::$nextStopId++;
+
+        # LINKUSDT LONG
+        $symbol = Symbol::LINKUSDT;
+        $message = new CheckPositionIsUnderLiquidation(
+            symbol: $symbol,
+            percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
+            acceptableStoppedPart: $acceptableStoppedPart,
+            warningPnlDistance: $warningPnlDistance
+        );
+        $linkUsdtLong = PositionBuilder::long()->symbol($symbol)->entry(20.500)->size(10.5)->liq(15.000)->build();
+        $linkUsdtTicker = self::tickerInCheckStopsRange($message, $linkUsdtLong);
+        $existedLinkUsdtStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $linkUsdtLong);
+        $delayedLinkUsdtStops = [self::delayedStop($linkUsdtLong, $delayedStopsPercent, $existedLinkUsdtStopsPrice)];
+        $activeLinkUsdtStops = [self::activeCondOrder($linkUsdtLong, $pushedStopsPercent, $existedLinkUsdtStopsPrice)];
+        $expectedLinkUsdtStop = self::expectedAdditionalStop($linkUsdtLong, $linkUsdtTicker, $message, [...$delayedLinkUsdtStops, ...$activeLinkUsdtStops], 0.5, 18.85);
+
+        $commonMessage = new CheckPositionIsUnderLiquidation(
+            symbol: null,
+            percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
+            acceptableStoppedPart: $acceptableStoppedPart,
+            warningPnlDistance: $warningPnlDistance
+        );
+
+        yield 'BTCUSDT SHORT + LINKUSDT LONG' => [
+            $commonMessage,
+            '$allOpenedPositions' => [
+                $btcUsdtTicker->markPrice->value() =>  $btcUsdtShort,
+                $linkUsdtTicker->markPrice->value() => $linkUsdtLong
+            ],
+            [...$delayedBtcUsdtShortStops, ...$delayedLinkUsdtStops],
+            [Symbol::BTCUSDT->value => $activeBtcUsdtShortStops, Symbol::LINKUSDT->value => $activeLinkUsdtStops],
+            [$expectedBtcUsdtStop, $expectedLinkUsdtStop],
+        ];
     }
 
     private static function tickerInCheckStopsRange(CheckPositionIsUnderLiquidation $message, Position $position): Ticker

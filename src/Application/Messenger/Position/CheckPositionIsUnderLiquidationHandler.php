@@ -16,6 +16,7 @@ use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
@@ -26,6 +27,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Messenger\SchedulerTransport\SchedulerFactory;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -86,26 +88,80 @@ final class CheckPositionIsUnderLiquidationHandler
         return AppContext::isDebug() && AppContext::isTest();
     }
 
+    /** @var Position[] */
+    private array $positions;
+
+    /** @var array<string, Price> */
+    private array $lastMarkPrices;
+
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
+        $this->positions = [];
+
+        if (!$message->symbol) {
+            $messages = [];
+
+            /** @var $allPositions array<Position[]> */
+            $allPositions = $this->positionService->getAllPositions();
+            $this->lastMarkPrices = $this->positionService->getLastMarkPrices();
+            foreach ($allPositions as $symbolPositions) {
+                $first = $symbolPositions[array_key_first($symbolPositions)];
+                $hedge = $first->getHedge();
+
+                if ($hedge?->isEquivalentHedge()) {
+                    continue;
+                }
+
+                $main = $hedge?->mainPosition ?? $first;
+                if ($main->isShort() && !$main->liquidationPrice) {
+                    continue;
+                }
+
+                if ($main->getHedge()?->isEquivalentHedge()) {
+                    continue;
+                }
+
+                $symbol = $main->symbol;
+                $messages[] = new CheckPositionIsUnderLiquidation(
+                    symbol: $symbol,
+                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop ?? SchedulerFactory::getAdditionalStopDistanceWithLiquidation($symbol),
+                    acceptableStoppedPart: $message->acceptableStoppedPart ?? SchedulerFactory::getAcceptableStoppedPart($symbol),
+                    warningPnlDistance: $message->warningPnlDistance,
+                );
+                $this->positions[$symbol->value] = $main;
+            }
+        } else {
+            if (!($position = $this->getPositionOld($message->symbol))) {
+                return;
+            }
+            $symbol = $position->symbol;
+
+            $messages = [$message];
+            $this->positions[$symbol->value] = $position;
+            $this->lastMarkPrices[$symbol->value] = $this->exchangeService->ticker($symbol)->markPrice;
+        }
+
+        foreach ($messages as $message) {
+            $this->handleMessage($message);
+        }
+    }
+
+    public function handleMessage(CheckPositionIsUnderLiquidation $message): void
+    {
+        $this->handledMessage = $message;
+
         $this->warningDistance = null;
         $this->additionalStopDistanceWithLiquidation = null;
         $this->additionalStopPrice = null;
         $this->actualStopsPriceRange = null;
         $this->ticker = null;
-        $this->position = null;
 
-        $this->handledMessage = $message;
         $symbol = $message->symbol;
+        $this->position = $position = $this->positions[$symbol->value];
 
-        $this->ticker = $ticker = $this->exchangeService->ticker($symbol);
+        $markPrice = $this->lastMarkPrices[$symbol->value];
+        $this->ticker = $ticker = new Ticker($symbol, $markPrice, $markPrice, $markPrice);
         $coin = $symbol->associatedCoin();
-
-        if (!($position = $this->getPosition($symbol))) {
-            return;
-        }
-
-        $this->position = $position;
 
         ### remove stale ###
         foreach ($this->getStaleStops($position) as $stop) {
@@ -314,7 +370,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return (new CoinAmount($position->symbol->associatedCoin(), min($amountCalcByDistance, self::MAX_TRANSFER_AMOUNT)));
     }
 
-    private function getPosition(Symbol $symbol): ?Position
+    private function getPositionOld(Symbol $symbol): ?Position
     {
         if (!($positions = $this->selectedPositionService->getPositions($symbol))) {
             return null;
@@ -369,7 +425,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $ticker = $this->ticker;
 
         if ($message->checkStopsOnPnlPercent !== null) {
-            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->indexPrice);
+            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->markPrice);
         }
 
         return $ticker->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();

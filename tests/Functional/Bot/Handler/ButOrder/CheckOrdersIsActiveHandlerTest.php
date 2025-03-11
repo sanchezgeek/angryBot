@@ -40,10 +40,10 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
      */
     public function testIdleOrdersBecameActive(
         array $buyOrdersFixtures,
-        array $expectedMarketBuyApiCalls,
+        array $positions,
         array $buyOrdersExpectedAfterHandle,
     ): void {
-        $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
+        $this->haveAllOpenedPositionsWithLastMarkPrices($positions);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
         ($this->handler)(new CheckOrdersNowIsActive());
@@ -72,18 +72,9 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
             BuyOrderBuilder::long(80, 2139, 0.11, Symbol::ETHUSDT)->build(),
         ];
 
-        $assetCategory = AssetCategory::linear;
-        $expectedRequest = new GetPositionsRequest($assetCategory, null);
-
-        $resultResponse = new PositionResponseBuilder($assetCategory);
-        foreach ($positions as $lastMarkPrice => $position) {
-            $resultResponse->withPosition($position, $lastMarkPrice);
-        }
-        $positionsApiCallExpectation = new ByBitApiCallExpectation($expectedRequest, $resultResponse->build());
-
         yield [
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
-            'expectedMarketBuyCalls' => [$positionsApiCallExpectation],
+            '$positions' => $positions,
             'buyOrdersExpectedAfterHandle' => [
                 BuyOrderBuilder::short(10, 30001, 0.01)->build()->setIdle(),
                 BuyOrderBuilder::short(20, 29999, 0.011)->build()->setActive(),

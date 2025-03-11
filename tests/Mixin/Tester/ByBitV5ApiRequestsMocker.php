@@ -12,6 +12,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -43,6 +44,9 @@ trait ByBitV5ApiRequestsMocker
 {
     use ByBitV5ApiTester;
 
+    /**
+     * @doto pass coin instead
+     */
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $amount = new CoinAmount($symbol->associatedCoin(), $amount);
@@ -221,6 +225,27 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);
     }
 
+    /**
+     * @param array<float, Position> $data
+     */
+    protected function haveAllOpenedPositionsWithLastMarkPrices(array $data): void
+    {
+        $category = $data[array_key_first($data)]->symbol->associatedCategory();
+        $assetCategory = AssetCategory::linear;
+        $expectedRequest = new GetPositionsRequest($assetCategory, null);
+
+        $resultResponse = new PositionResponseBuilder($assetCategory);
+        foreach ($data as $lastMarkPrice => $position) {
+            if ($category !== $position->symbol->associatedCategory()) {
+                throw new RuntimeException('Only for same AssetCategory');
+            }
+            $resultResponse->withPosition($position, $lastMarkPrice);
+        }
+        $positionsApiCallExpectation = new ByBitApiCallExpectation($expectedRequest, $resultResponse->build());
+//        $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
+        $this->expectsToMakeApiCalls($positionsApiCallExpectation);
+    }
+
     private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
     {
         $category = $symbol->associatedCategory();
@@ -240,4 +265,32 @@ trait ByBitV5ApiRequestsMocker
             new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
         );
     }
+//
+//    private function haveActiveConditionalStopsOnMultipleSymbols(array ...$activeStopOrdersArr): void
+//    {
+//        $category = AssetCategory::linear;
+//        $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
+//
+//        foreach ($activeStopOrdersArr as $symbolRaw => $activeStopOrders) {
+//            $symbol = Symbol::from($symbolRaw);
+//            if ($symbol->associatedCategory() !== $category) {
+//                throw new RuntimeException('Only for same category');
+//            }
+//
+//            foreach ($activeStopOrders as $activeStopOrder) {
+//                $apiResponseBuilder->withActiveConditionalStop(
+//                    $symbol,
+//                    $activeStopOrder->positionSide,
+//                    uuid_create(),
+//                    $activeStopOrder->triggerPrice,
+//                    $activeStopOrder->volume,
+//                );
+//            }
+//
+//            $this->expectsToMakeApiCalls(
+//                new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
+//            );
+//        }
+//
+//    }
 }
