@@ -46,8 +46,8 @@ final class SchedulerFactory
     private const VERY_VERY_SLOW = '10 seconds';
 
     private const CONF = [
-        'short.sl'  => self::VERY_FAST, 'short.buy' => self::FAST,
-        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::FAST,
+        'short.sl'  => self::VERY_FAST, 'short.buy' => self::SLOW,
+        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::SLOW,
     ];
 
     private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
@@ -66,10 +66,18 @@ final class SchedulerFactory
             RunningWorker::LONG  => $this->long(),
             RunningWorker::UTILS => $this->utils(),
             RunningWorker::CACHE => $this->cache(),
+            RunningWorker::CRITICAL => $this->critical(),
             default => [],
         };
 
         return new Scheduler($clock, $jobSchedules);
+    }
+
+    private function critical(): array
+    {
+        return [
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', new CheckPositionIsUnderLiquidation()),
+        ];
     }
 
     private function short(): array
@@ -81,7 +89,7 @@ final class SchedulerFactory
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['short.buy']), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
         }
 
         return $items;
@@ -96,7 +104,7 @@ final class SchedulerFactory
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Buy));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::MEDIUM), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['long.buy']), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
         }
 
         return $items;
@@ -135,13 +143,6 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
             PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
 
-            // --- liquidation
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(new CheckPositionIsUnderLiquidation(
-                symbol: Symbol::BTCUSDT,
-                percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation(Symbol::BTCUSDT),
-                acceptableStoppedPart: self::getAcceptableStoppedPart(Symbol::BTCUSDT),
-            ))),
-
             // -- main positions loss
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss())),
 
@@ -154,14 +155,6 @@ final class SchedulerFactory
 
         foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
-
-            !in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS) && $items[] = PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT4S', AsyncMessage::for(
-                new CheckPositionIsUnderLiquidation(
-                    symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: self::getAdditionalStopDistanceWithLiquidation($symbol),
-                    acceptableStoppedPart: self::getAcceptableStoppedPart($symbol),
-                )
-            ));
         }
 
         return $items;
@@ -218,12 +211,12 @@ final class SchedulerFactory
         return $this->positionService->getOpenedPositionsSymbols([Symbol::BTCUSDT]);
     }
 
-    private static function getAdditionalStopDistanceWithLiquidation(Symbol $symbol): int|null
+    public static function getAdditionalStopDistanceWithLiquidation(Symbol $symbol): int|null
     {
         return self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null;
     }
 
-    private static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
+    public static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
     {
         return self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
     }

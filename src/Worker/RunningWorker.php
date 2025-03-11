@@ -17,4 +17,6 @@ enum RunningWorker: string
 
     case UTILS = 'utils';
     case CACHE = 'cache';
+
+    case CRITICAL = 'critical';
 }
