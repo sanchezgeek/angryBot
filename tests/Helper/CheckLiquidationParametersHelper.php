@@ -64,15 +64,27 @@ class CheckLiquidationParametersHelper
         return $additionalStopDistanceWithLiquidation;
     }
 
+    public static function warningDistancePnl(CheckPositionIsUnderLiquidation $message): float
+    {
+        if ($message->warningPnlDistance) {
+            $distance = $message->warningPnlDistance;
+        } else {
+            $symbol = $message->symbol;
+            $distance = CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCES[$symbol->value] ?? CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCE_DEFAULT;
+        }
+
+        return $distance;
+    }
+
     private static function warningDistance(CheckPositionIsUnderLiquidation $message, Position $position): float
     {
+        $distancePnl = self::warningDistancePnl($message);
+
         if (!$position->isLiquidationPlacedBeforeEntry()) { # normal scenario
-            $pnlDistance = $message->warningPnlDistance ?? CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCE;
-            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $position->entryPrice()), 0.1);
+            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $position->entryPrice()), 0.1);
             $warningDistance = max($warningDistance, FloatHelper::modify((new Percent(30))->of($position->liquidationDistance()), 0.15, 0.05));
         } else { # bad scenario
-            $pnlDistance = $message->warningPnlDistance ?? CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY;
-            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $position->entryPrice()), 0.1);
+            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $position->entryPrice()), 0.1);
         }
 
         return $warningDistance;

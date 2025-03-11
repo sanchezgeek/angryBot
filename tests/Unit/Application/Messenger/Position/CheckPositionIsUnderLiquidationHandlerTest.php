@@ -136,7 +136,11 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
-        $this->stopRepository->method('findActive')->with($position->symbol, $position->side)->willReturn([]);
+        $this->stopRepository->method('findActive')->withConsecutive(
+            [$position->symbol, $position->side],
+            [$position->symbol, $position->side->getOpposite()],
+        )->willReturn([]);
+
         $this->stopService->expects(self::never())->method(self::anything());
 
         $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(

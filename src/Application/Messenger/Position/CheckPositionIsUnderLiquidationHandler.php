@@ -53,16 +53,18 @@ final class CheckPositionIsUnderLiquidationHandler
     public const TRANSFER_AMOUNT_MODIFIER = 0.2;
 
     # Additional stop
-    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 70;
-    public const WARNING_PNL_DISTANCE = 120;
-    public const ALTCOIN_WARNING_PNL_DISTANCE = 350;
-    public const WARNING_PNL_DISTANCE_IF_LIQ_PLACED_BEFORE_ENTRY = self::WARNING_PNL_DISTANCE;
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 90;
+    public const WARNING_PNL_DISTANCES = [
+        Symbol::BTCUSDT->value => 120,
+        Symbol::ETHUSDT->value => 250,
+    ];
+    public const WARNING_PNL_DISTANCE_DEFAULT = 400;
 
     # To check stopped position volume
-    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 6;
-    public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 20;
+    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 10;
+    public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
 
-    public const ACCEPTABLE_STOPPED_PART = 4;
+    public const ACCEPTABLE_STOPPED_PART = 5;
     private const ACCEPTABLE_STOPPED_PART_MODIFIER = 0.2;
 
     const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
@@ -167,7 +169,7 @@ final class CheckPositionIsUnderLiquidationHandler
                 $stopQty = $symbol->roundVolumeUp((new Percent($volumePartDelta))->of($notCoveredSize));
 
                 $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);
-                if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan && !self::isDebug()) {
+                if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan) {
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
 //                    if ($decreaseStopDistance) $stopPriceDistance = $stopPriceDistance * 0.5;
@@ -285,6 +287,7 @@ final class CheckPositionIsUnderLiquidationHandler
             }
 
             return ($acceptableStoppedPart / 3) * $modifier;
+//            return ($acceptableStoppedPart / 1.5) * $modifier;
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
             $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $initialDistanceWithLiquidation = $this->warningDistance();
@@ -340,14 +343,8 @@ final class CheckPositionIsUnderLiquidationHandler
         if ($this->handledMessage->warningPnlDistance) {
             $distance = $this->handledMessage->warningPnlDistance;
         } else {
-            $distance = self::WARNING_PNL_DISTANCE;
-
-            if (!in_array($this->handledMessage->symbol, [
-                Symbol::BTCUSDT,
-                Symbol::ETHUSDT
-            ], true)) {
-                $distance = self::ALTCOIN_WARNING_PNL_DISTANCE;
-            }
+            $symbol = $this->handledMessage->symbol;
+            $distance = self::WARNING_PNL_DISTANCES[$symbol->value] ?? self::WARNING_PNL_DISTANCE_DEFAULT;
         }
 
         // @todo | calc must be based on $this->ticker->indexPrice
@@ -420,8 +417,10 @@ final class CheckPositionIsUnderLiquidationHandler
             $qb->setParameter(':upperPrice', $range->to()->value());
             $qb->setParameter(':lowerPrice', $range->from()->value());
         });
+        # if opposite position previously was main
+        $oppositePositionStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side->getOpposite());
 
-        return (new StopsCollection(...$stops))->filterWithCallback(static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+        return (new StopsCollection(...$stops, ...$oppositePositionStops))->filterWithCallback(static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
     }
 
     public function getActualStopsRange(Position $position): PriceRange
@@ -463,7 +462,7 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
-        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(230);
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(130);
 
         $this->cache->save($cacheItem);
     }
