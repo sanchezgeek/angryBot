@@ -31,6 +31,7 @@ use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
 use App\Output\Table\Dto\Style\CellStyle;
+use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
@@ -53,13 +54,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PriceRangeAwareCommand;
 
     private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '30';
+    private const DEFAULT_SAVE_CACHE_INTERVAL = '100';
 
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
 
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const SAVE_SORT_OPTION = 'save-sort';
+    private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
     private const MOVE_UP_OPTION = 'move-up';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
     private const CURRENT_STATE_OPTION = 'current-state';
@@ -93,6 +95,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
+            ->addOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, 'c', InputOption::VALUE_OPTIONAL, 'Comment on first cache save')
             ->addOption(self::CURRENT_STATE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Use specified cached data as current state')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
             ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?', true)
@@ -145,6 +148,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             if ($saveCurrentState) {
                 $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+                if ($iteration === 1) {
+                    $cachedDataCacheKey .= '_manual';
+                    if ($comment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false)) {
+                        $cachedDataCacheKey .= '_' . $comment;
+                    }
+                }
                 $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
                 $this->cache->save($item);
                 $this->addSavedDataCacheKey($cachedDataCacheKey);
@@ -196,16 +205,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
-        $balanceCells = ['', ''];
-        if (isset($balance)) {
-            $balanceCells = [
-                new Cell(
-                    sprintf('%s UTC ... %s avail | %s free | %s total', $this->clock->now()->format('H:i:s'), $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
-                    new CellStyle(colspan: 2)
-                ),
-            ];
-        }
-        $bottomCells = $balanceCells;
+        $bottomCells = [Cell::default($this->clock->now()->format('H:i:s'))->setAlign(CellAlign::CENTER)];
+        $bottomCells[] = isset($balance)
+            ? sprintf('%s avail | %s free | %s total' , $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value())
+            : '';
+        $bottomCells[] = '';
 
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
         $bottomCells[] = $pnlFormatter($unrealisedTotal);
@@ -220,6 +224,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $headerColumns = [
             $this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION) ? 'symbol (last / mark / index)' : 'symbol',
             'entry / liq / size',
+            'PNL%',
             'PNL',
         ];
         $selectedCache && $headerColumns[] = 'Δ (cache)';
@@ -375,6 +380,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ),
         ]);
 
+        $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($main), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
         $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null);
         $pnlFormatter = static fn(float $pnl) => (new CoinAmount($symbol->associatedCoin(), $pnl))->value();
         if ($specifiedCache) {
@@ -418,6 +424,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 ),
             ];
 
+            $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
             $supportPnlContent = (string) (new CoinAmount($symbol->associatedCoin(), $supportPnl));
             $supportPnlContent = $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
             $cells[] = new Cell($supportPnlContent);
