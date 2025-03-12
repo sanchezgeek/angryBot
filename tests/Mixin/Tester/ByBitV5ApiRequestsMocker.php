@@ -265,32 +265,29 @@ trait ByBitV5ApiRequestsMocker
             new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
         );
     }
-//
-//    private function haveActiveConditionalStopsOnMultipleSymbols(array ...$activeStopOrdersArr): void
-//    {
-//        $category = AssetCategory::linear;
-//        $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
-//
-//        foreach ($activeStopOrdersArr as $symbolRaw => $activeStopOrders) {
-//            $symbol = Symbol::from($symbolRaw);
-//            if ($symbol->associatedCategory() !== $category) {
-//                throw new RuntimeException('Only for same category');
-//            }
-//
-//            foreach ($activeStopOrders as $activeStopOrder) {
-//                $apiResponseBuilder->withActiveConditionalStop(
-//                    $symbol,
-//                    $activeStopOrder->positionSide,
-//                    uuid_create(),
-//                    $activeStopOrder->triggerPrice,
-//                    $activeStopOrder->volume,
-//                );
-//            }
-//
-//            $this->expectsToMakeApiCalls(
-//                new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
-//            );
-//        }
-//
-//    }
+
+    private function haveActiveConditionalStopsOnMultipleSymbols(ActiveStopOrder ...$activeStopOrdersArr): void
+    {
+        $category = AssetCategory::linear;
+        $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
+
+        foreach ($activeStopOrdersArr as $activeStopOrder) {
+            $symbol = $activeStopOrder->symbol;
+            if ($symbol->associatedCategory() !== $category) {
+                throw new RuntimeException('Only for same category');
+            }
+            $apiResponseBuilder->withActiveConditionalStop(
+                $symbol,
+                $activeStopOrder->positionSide,
+                uuid_create(),
+                $activeStopOrder->triggerPrice,
+                $activeStopOrder->volume,
+            );
+        }
+
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, null), $apiResponseBuilder->build())
+        );
+
+    }
 }

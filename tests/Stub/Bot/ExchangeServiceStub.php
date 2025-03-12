@@ -27,7 +27,7 @@ final class ExchangeServiceStub implements ExchangeServiceInterface, TickersCach
         throw new Exception(sprintf('%s::updateTicker not supported', ExchangeServiceInterface::class));
     }
 
-    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
     {
         throw new Exception(sprintf('%s::activeConditionalOrders not supported', ExchangeServiceInterface::class));
     }

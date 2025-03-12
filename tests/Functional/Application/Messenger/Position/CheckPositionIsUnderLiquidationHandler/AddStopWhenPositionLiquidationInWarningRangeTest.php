@@ -83,7 +83,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $this->haveAvailableSpotBalance($symbol, 0.1);
 
         $this->haveStopsInDb(...$delayedStops);
-        $this->haveActiveConditionalStops($symbol, ...$activeConditionalStops);
+        $this->haveActiveConditionalStopsOnMultipleSymbols(...$activeConditionalStops);
 
         // Act
         ($this->handler)($message);
@@ -400,7 +400,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         CheckPositionIsUnderLiquidation $message,
         array $allOpenedPositions,
         array $delayedStops,
-        array $activeStopOrdersArr,
+        array $activeStopOrders,
         array $expectedAdditionalStops,
         bool $debug = false
     ): void {
@@ -408,9 +408,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         $this->haveAllOpenedPositionsWithLastMarkPrices($allOpenedPositions);
         $this->haveStopsInDb(...$delayedStops);
-        foreach ($activeStopOrdersArr as $symbolRaw => $activeConditionalStops) {
-            $this->haveActiveConditionalStops(Symbol::from($symbolRaw), ...$activeConditionalStops);
-        }
+        $this->haveActiveConditionalStopsOnMultipleSymbols(...$activeStopOrders);
 
         $symbol = $allOpenedPositions[array_key_first($allOpenedPositions)]->symbol;
         $this->haveAvailableSpotBalance($symbol, 0.1);
@@ -477,7 +475,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
                 $linkUsdtTicker->markPrice->value() => $linkUsdtLong
             ],
             [...$delayedBtcUsdtShortStops, ...$delayedLinkUsdtStops],
-            [Symbol::BTCUSDT->value => $activeBtcUsdtShortStops, Symbol::LINKUSDT->value => $activeLinkUsdtStops],
+            [...$activeBtcUsdtShortStops, ...$activeLinkUsdtStops],
             [$expectedBtcUsdtStop, $expectedLinkUsdtStop],
         ];
     }

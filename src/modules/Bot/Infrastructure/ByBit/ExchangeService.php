@@ -127,7 +127,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         }
     }
 
-    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
     {
         $params = [
             'symbol' => $symbol->value,

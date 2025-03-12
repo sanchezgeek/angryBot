@@ -94,8 +94,11 @@ final class CheckPositionIsUnderLiquidationHandler
     /** @var array<string, Price> */
     private array $lastMarkPrices;
 
+    private array $activeConditionalStopOrders;
+
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
+        $this->activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
         $this->positions = [];
 
         if (!$message->symbol) {
@@ -235,6 +238,7 @@ final class CheckPositionIsUnderLiquidationHandler
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                         Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
+//                        Stop::FIX_HEDGE_ON_LOSS => true, // @todo | settings
                     ];
 //                    if (!AppContext::isTest()) {
 //                        $context['when'] = [
@@ -283,17 +287,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
         /** @todo | переделать isPriceInRange? */
         $delayedStops = (new StopsCollection(...$delayedStops))->filterWithCallback(static fn (Stop $stop) => !$stop->isTakeProfitOrder());
-
-        if (AppContext::isTest()) {
-            $activeConditionalStops = array_filter(
-                // @todo | cache? | yes: because there are might be some problems with connection | no: because results from cache might be not actual
-                $this->exchangeService->activeConditionalOrders($position->symbol, $priceRangeToFindExistedStops),
-                static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->positionSide === $positionSide,
-            );
-        } else {
-            // @todo | Fetch orders for calc.
-            $activeConditionalStops = [];
-        }
+        $activeConditionalStops = $this->findActivePositionStopOrders($position->symbol, $positionSide, $priceRangeToFindExistedStops);
 
         $activeConditionalStopsVolume = 0;
         foreach ($activeConditionalStops as $activeConditionalStop) {
@@ -301,6 +295,18 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         return $delayedStops->totalVolume() + $activeConditionalStopsVolume;
+    }
+
+    private function findActivePositionStopOrders(Symbol $symbol, Side $positionSide, PriceRange $priceRange): array
+    {
+        $symbolStops = array_filter(
+            $this->activeConditionalStopOrders,
+            static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->symbol === $symbol && $activeStopOrder->positionSide === $positionSide,
+        );
+
+        return array_filter($symbolStops, static function(ActiveStopOrder $order) use ($priceRange) {
+            return $priceRange->isPriceInRange($order->triggerPrice);
+        });
     }
 
     public function getAdditionalStopPrice(): Price

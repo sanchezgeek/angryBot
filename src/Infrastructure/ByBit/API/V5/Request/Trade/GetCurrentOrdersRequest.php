@@ -39,23 +39,30 @@ final readonly class GetCurrentOrdersRequest extends AbstractByBitApiRequest
         return self::URL;
     }
 
-    public static function openOnly(AssetCategory $category, Symbol $symbol): self
+    public static function openOnly(AssetCategory $category, ?Symbol $symbol): self
     {
         return new self($category, $symbol, self::OPEN_ONLY_PARAM_OPTION);
     }
 
     public function data(): array
     {
-        return [
+        $data = [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
             'openOnly' => $this->openOnlyParam,
         ];
+
+        if ($this->symbol) {
+            $data['symbol'] = $this->symbol->value;
+        } else {
+            $data['settleCoin'] = Symbol::BTCUSDT->associatedCoin()->value;
+        }
+
+        return $data;
     }
 
     private function __construct(
         private AssetCategory $category,
-        private Symbol $symbol,
+        private ?Symbol $symbol,
         private string $openOnlyParam
     ) {
         assert(
