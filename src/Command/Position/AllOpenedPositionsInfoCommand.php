@@ -299,15 +299,21 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         if ($manualStops) {
             $manualStoppedPartPct = (new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
             $firstManualStop = $manualStops[array_key_first($manualStops)];
-            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($entryPrice->deltaWith($firstManualStop->getPrice()), $entryPrice);
-            $stoppedVolume[] = sprintf('%s[%s.-%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+                $entryPrice->differenceWith($symbol->makePrice($firstManualStop->getPrice()))->deltaForPositionLoss($positionSide),
+                $entryPrice
+            );
+            $stoppedVolume[] = sprintf('%s[%s.%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         if ($autoStops) {
             $autoStoppedPartPct = (new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
             $firstAutoStop = $autoStops[array_key_first($autoStops)];
-            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($entryPrice->deltaWith($firstAutoStop->getPrice()), $entryPrice);
-            $stoppedVolume[] = sprintf('%s[a.-%s]', $autoStoppedPartPct, $distancePnlPct->setOutputFloatPrecision(1));
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+                $entryPrice->differenceWith($symbol->makePrice($firstAutoStop->getPrice()))->deltaForPositionLoss($positionSide),
+                $entryPrice
+            );
+            $stoppedVolume[] = sprintf('%s[a.%s]', $autoStoppedPartPct, $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
