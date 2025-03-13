@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
@@ -50,10 +51,7 @@ trait OppositeOrdersDistanceAwareCommand
                 $basedOnPrice = $this->getPriceRange()->getMiddlePrice();
             }
 
-            // @todo | can calc with existed helpers?
-            $pp100 = $basedOnPrice->value() / 100;
-
-            return $symbol->makePrice((new Percent($pnlValue, false))->of($pp100))->value();
+            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlValue, $basedOnPrice);
         } catch (InvalidArgumentException) {
             return $this->paramFetcher->floatOption($name);
         }

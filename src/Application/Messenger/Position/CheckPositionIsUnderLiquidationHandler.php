@@ -27,7 +27,6 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
-use App\Messenger\SchedulerTransport\SchedulerFactory;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -125,10 +124,15 @@ final class CheckPositionIsUnderLiquidationHandler
                 }
 
                 $symbol = $main->symbol;
+
+                if (CheckPositionIsUnderLiquidationParams::isSymbolIgnored($symbol)) {
+                    continue;
+                }
+
                 $messages[] = new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop ?? SchedulerFactory::getAdditionalStopDistanceWithLiquidation($symbol),
-                    acceptableStoppedPart: $message->acceptableStoppedPart ?? SchedulerFactory::getAcceptableStoppedPart($symbol),
+                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop ?? CheckPositionIsUnderLiquidationParams::getAdditionalStopDistanceWithLiquidation($symbol),
+                    acceptableStoppedPart: $message->acceptableStoppedPart ?? CheckPositionIsUnderLiquidationParams::getAcceptableStoppedPart($symbol),
                     warningPnlDistance: $message->warningPnlDistance,
                 );
                 $this->positions[$symbol->value] = $main;
@@ -240,6 +244,11 @@ final class CheckPositionIsUnderLiquidationHandler
                         Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
 //                        Stop::FIX_HEDGE_ON_LOSS => true, // @todo | settings
                     ];
+
+                    if (CheckPositionIsUnderLiquidationParams::isSymbolWithoutOppositeBuyOrders($symbol)) {
+                        $context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+                    }
+
 //                    if (!AppContext::isTest()) {
 //                        $context['when'] = [
 //                            'position.liquidation' => $position->liquidationPrice,

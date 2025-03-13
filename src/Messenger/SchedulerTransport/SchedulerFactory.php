@@ -160,24 +160,6 @@ final class SchedulerFactory
         return $items;
     }
 
-    private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
-//        Symbol::ETHUSDT,
-    ];
-
-    /**
-     * int
-     */
-    private const ADDITIONAL_STOP_LIQUIDATION_DISTANCE = [
-//        Symbol::BTCUSDT->value => 40,
-    ];
-
-    /**
-     * int|float
-     */
-    private const ACCEPTABLE_STOPPED_PART = [
-//        Symbol::BTCUSDT->value => 5,
-    ];
-
     private function cache(): array
     {
         $start = new DateTimeImmutable('2023-09-25T00:00:01.11Z');
@@ -209,15 +191,5 @@ final class SchedulerFactory
     private function getOtherOpenedPositionsSymbols(): array
     {
         return $this->positionService->getOpenedPositionsSymbols([Symbol::BTCUSDT]);
-    }
-
-    public static function getAdditionalStopDistanceWithLiquidation(Symbol $symbol): int|null
-    {
-        return self::ADDITIONAL_STOP_LIQUIDATION_DISTANCE[$symbol->value] ?? null;
-    }
-
-    public static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
-    {
-        return self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
     }
 }
