@@ -91,7 +91,7 @@ class CreateBuyGridCommand extends AbstractCommand
 
             $result = null;
             $count = 0;
-            foreach ($priceRange->byStepIterator($step) as $price) {
+            foreach ($priceRange->byStepIterator($step, $side) as $price) {
                 $count++;
                 $modifier = FloatHelper::modify($step / 7, 0.15);
                 $rand = random_int(-$modifier, $modifier);

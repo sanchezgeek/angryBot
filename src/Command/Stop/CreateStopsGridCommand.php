@@ -6,7 +6,6 @@ use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
@@ -16,9 +15,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
-use Exception;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -27,10 +24,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-
 use Throwable;
-
-use ValueError;
 
 use function array_merge;
 use function implode;
@@ -125,7 +119,7 @@ class CreateStopsGridCommand extends AbstractCommand
             $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
         }
 
-        $stopsGrid = new OrdersGrid($priceRange);
+        $stopsGrid = new OrdersGrid($priceRange, $positionSide);
 
         if ($mode === self::BY_ORDERS_QNT) {
             $qnt = $this->paramFetcher->getIntOption(

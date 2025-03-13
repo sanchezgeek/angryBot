@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Order;
 
 use App\Bot\Domain\Position;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
 use DomainException;
 use Generator;
@@ -17,10 +18,12 @@ use function sprintf;
 final class OrdersGrid
 {
     private PriceRange $priceRange;
+    private Side $positionSide;
 
-    public function __construct(PriceRange $priceRange)
+    public function __construct(PriceRange $priceRange, ?Side $side = Side::Sell)
     {
         $this->priceRange = $priceRange;
+        $this->positionSide = $side;
     }
 
     /**
@@ -28,7 +31,10 @@ final class OrdersGrid
      */
     public static function byPositionPnlRange(Position $position, int $fromPnl, int $toPnl): self
     {
-        return new self(PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl));
+        return new self(
+            PriceRange::byPositionPnlRange($position, $fromPnl, $toPnl),
+            $position->side
+        );
     }
 
     public function getPriceRange(): PriceRange
@@ -57,7 +63,7 @@ final class OrdersGrid
 
         $volume = $this->getPriceRange()->getSymbol()->roundVolume($forVolume / $qnt);
 
-        foreach ($this->getPriceRange()->byStepIterator($priceStep) as $price) {
+        foreach ($this->getPriceRange()->byStepIterator($priceStep, $this->positionSide) as $price) {
             yield new Order($price, $volume);
         }
     }
@@ -85,7 +91,7 @@ final class OrdersGrid
             $volume = $symbol->roundVolume($forVolume / $qnt);
         }
 
-        foreach ($this->getPriceRange()->byQntIterator($qnt) as $priceItem) {
+        foreach ($this->getPriceRange()->byQntIterator($qnt, $this->positionSide) as $priceItem) {
             yield new Order($priceItem, $volume);
         }
     }
