@@ -76,7 +76,7 @@ final class SchedulerFactory
     private function critical(): array
     {
         return [
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', new CheckPositionIsUnderLiquidation()),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT3S', new CheckPositionIsUnderLiquidation()),
         ];
     }
 
