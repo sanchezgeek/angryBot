@@ -21,12 +21,14 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
@@ -35,6 +37,7 @@ use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
+use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -42,6 +45,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Cache\CacheInterface;
+
+use Throwable;
 
 use function array_merge;
 use function sprintf;
@@ -259,7 +264,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $symbol = $position->symbol;
         $positionSide = $position->side;
 
-        $stops = $this->stopRepository->findActive($symbol, $positionSide);
+        $stops = $this->stopRepository->findActive(
+            symbol: $symbol,
+            side: $positionSide,
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
+        );
+        /** @var Stop[] $autoStops */
         $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
             if (!$position->getHedge() || $position->isMainPosition()) {
                 $modifier = Percent::string('20%')->of($position->liquidationDistance());
@@ -271,6 +281,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             return $stop->isAdditionalStopFromLiquidationHandler();
         });
+        /** @var Stop[] $manualStops */
         $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
             if (!$position->getHedge() || $position->isMainPosition()) {
                 $modifier = Percent::string('20%')->of($position->liquidationDistance());
@@ -284,14 +295,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         });
 
         $stoppedVolume = [];
+        $entryPrice = $position->entryPrice();
         if ($manualStops) {
-            $manualStoppedPartPct = new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false);
-            $stoppedVolume[] = sprintf('%s[%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'));
+            $manualStoppedPartPct = (new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+            $firstManualStop = $manualStops[array_key_first($manualStops)];
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($entryPrice->deltaWith($firstManualStop->getPrice()), $entryPrice);
+            $stoppedVolume[] = sprintf('%s[%s.-%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         if ($autoStops) {
-            $autoStoppedPartPct = new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false);
-            $stoppedVolume[] = sprintf('%s[a]', $autoStoppedPartPct);
+            $autoStoppedPartPct = (new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+            $firstAutoStop = $autoStops[array_key_first($autoStops)];
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($entryPrice->deltaWith($firstAutoStop->getPrice()), $entryPrice);
+            $stoppedVolume[] = sprintf('%s[a.-%s]', $autoStoppedPartPct, $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
