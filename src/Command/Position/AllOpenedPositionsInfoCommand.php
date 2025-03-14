@@ -210,7 +210,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
-        $bottomCells = [Cell::default($this->clock->now()->format('H:i:s'))->setAlign(CellAlign::CENTER)];
+        $bottomCells = [Cell::default($this->clock->now()->format('D, d M H:i:s'))->setAlign(CellAlign::CENTER)];
         $bottomCells[] = isset($balance)
             ? sprintf('%s avail | %s free | %s total' , $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value())
             : '';
@@ -389,7 +389,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
             $cells = [sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)];
         } else {
-            $cells = [sprintf('%8s: %8s', $symbol->shortName(), $markPrice)];
+            $cells = [sprintf('%8s: %10s', $symbol->shortName(), $markPrice)];
         }
 
         $cells = array_merge($cells, [
