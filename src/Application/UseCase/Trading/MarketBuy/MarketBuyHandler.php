@@ -54,14 +54,6 @@ class MarketBuyHandler
     }
 
     /**
-     * @internal For now only for tests
-     */
-    public function setSafeLiquidationPriceDistance(float $distance): void
-    {
-        $this->safePriceDistance = $distance;
-    }
-
-    /**
      * @throws BuyIsNotSafeException
      */
     private function makeChecks(MarketBuyEntryDto $dto): void
@@ -89,7 +81,7 @@ class MarketBuyHandler
             order: $dto,
             ticker: $ticker,
             currentSandboxState: $currentState,
-            safePriceDistance: $this->safePriceDistance,
+            safePriceDistance: $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance),
         );
     }
 
@@ -102,8 +94,6 @@ class MarketBuyHandler
         private readonly ExchangeServiceInterface     $exchangeService,
         private readonly SandboxStateFactoryInterface $sandboxStateFactory,
         private readonly AppSettingsProvider          $settings,
-        private ?float                                $safePriceDistance = null
     ) {
-        $this->safePriceDistance = $this->safePriceDistance ?? $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }
 }

@@ -21,12 +21,15 @@ use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
  */
 final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends PushBuyOrdersCornerCasesTestAbstract
 {
+    use SettingsAwareTest;
+
     private const USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
     private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 150;
     private const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
@@ -42,8 +45,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
 
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
-        $marketBuyHandler->setSafeLiquidationPriceDistance(500);
+        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 500);
 
         # disable logging
         $orderService = self::getContainer()->get(OrderServiceInterface::class); /** @var ByBitOrderService $orderService */

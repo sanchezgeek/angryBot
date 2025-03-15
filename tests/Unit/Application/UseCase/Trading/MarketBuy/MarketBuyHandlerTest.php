@@ -18,6 +18,7 @@ use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -28,6 +29,7 @@ use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\ContractBalanceTestHelper;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\PHPUnit\Assertions;
 use App\Tests\PHPUnit\TestLogger;
@@ -37,14 +39,16 @@ use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Throwable;
 
+/**
+ * @group market-buy
+ */
 class MarketBuyHandlerTest extends KernelTestCase
 {
     use ByBitV5ApiRequestsMocker;
+    use SettingsAwareTest;
 
     private const SAFE_PRICE_DISTANCE = 2000;
 
-    private OrderCostCalculator $orderCostCalculator;
-    private CalcPositionLiquidationPriceHandler $liquidationCalculator;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingSandboxFactoryInterface|MockObject $executionSandboxFactory;
     private LoggerInterface $logger;
@@ -53,14 +57,11 @@ class MarketBuyHandlerTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
-        $this->liquidationCalculator = self::getContainer()->get(CalcPositionLiquidationPriceHandler::class);
-
         $this->sandboxStateFactory = $this->createMock(SandboxStateFactoryInterface::class);
-
         $this->executionSandboxFactory = $this->createMock(TradingSandboxFactoryInterface::class);
-
         $this->logger = new TestLogger();
+
+        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, self::SAFE_PRICE_DISTANCE);
 
         $settings = self::getContainer()->get(AppSettingsProvider::class);
 
@@ -77,7 +78,6 @@ class MarketBuyHandlerTest extends KernelTestCase
             self::getContainer()->get(ExchangeServiceInterface::class),
             $this->sandboxStateFactory,
             $settings,
-            self::SAFE_PRICE_DISTANCE
         );
     }
 
@@ -238,12 +238,12 @@ class MarketBuyHandlerTest extends KernelTestCase
         ];
     }
 
-    public function allSuccessTestCases(): iterable
-    {
-        foreach ([...$this->safeBuySuccessTestCases(), ...$this->notSafeButForceOrderSuccessTestCases()] as $key => $case) {
-            yield $key => $case;
-        }
-    }
+//    public function allSuccessTestCases(): iterable
+//    {
+//        foreach ([...$this->safeBuySuccessTestCases(), ...$this->notSafeButForceOrderSuccessTestCases()] as $key => $case) {
+//            yield $key => $case;
+//        }
+//    }
 
     private static function simpleBuyDto(Symbol $symbol, Side $side): MarketBuyEntryDto
     {

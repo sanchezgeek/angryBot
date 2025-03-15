@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
@@ -19,6 +20,7 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\OrderCasesTester;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -42,6 +44,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
     use StopsTester;
     use BuyOrdersTester;
     use ByBitV5ApiRequestsMocker;
+    use SettingsAwareTest;
 
     private const DEFAULT_STOP_TD = 37;
 
@@ -57,8 +60,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
 
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class); /** @var MarketBuyHandler $marketBuyHandler */
-        $marketBuyHandler->setSafeLiquidationPriceDistance(100);
+        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 100);
     }
 
     /**
