@@ -231,16 +231,25 @@ enum Symbol: string
         self::LAIUSDT->value => 1,
     ];
 
-    private const MIN_NOTIONAL_ORDER_VALUE = [];
+    private const MIN_NOTIONAL_ORDER_VALUE = [
+
+    ];
+
     private const ASSOCIATED_COINS = [
         self::BTCUSD->value => Coin::BTC,
     ];
+
     private const ASSOCIATED_CATEGORIES = [
         self::BTCUSD->value => AssetCategory::inverse
     ];
+
     private const STOP_TRIGGER_DELTA = [
         self::BTCUSDT->value => 25,
         self::BTCUSD->value => 25,
+    ];
+
+    private const VERY_SHORT_NAMES = [
+
     ];
 
     public function associatedCoin(): Coin
@@ -341,5 +350,10 @@ enum Symbol: string
         }
 
         return $this->value;
+    }
+
+    public function veryShortName(): string
+    {
+        return substr(self::VERY_SHORT_NAMES[$this->value] ?? $this->shortName(), 0, 3);
     }
 }
