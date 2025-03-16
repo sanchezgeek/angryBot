@@ -47,5 +47,6 @@ class ConsoleTableHelper
         $output->getFormatter()->setStyle('yellow-text', new OutputFormatterStyle(foreground: 'yellow', options: ['bold', 'blink']));
         $output->getFormatter()->setStyle('light-yellow-text', new OutputFormatterStyle(foreground: 'yellow', options: ['blink']));
         $output->getFormatter()->setStyle('gray-text', new OutputFormatterStyle(foreground: 'gray', options: ['bold', 'blink']));
+        $output->getFormatter()->setStyle('bright-white-text', new OutputFormatterStyle(foreground: 'bright-white'));
     }
 }
