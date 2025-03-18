@@ -24,7 +24,9 @@ use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Account\CreateSubAccountApiKeyRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Account\GetApiKeyInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Account\ModifyMasterApiKeyRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
@@ -293,5 +295,19 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         $result = $this->sendRequest($request);
 
         var_dump($result->data());
+    }
+
+    public function getApiKeyInfo(): array
+    {
+        $result = $this->sendRequest(new GetApiKeyInfoRequest());
+
+        return $result->data();
+    }
+
+    public function refreshApiKey(): array
+    {
+        $result = $this->sendRequest(ModifyMasterApiKeyRequest::justRefresh());
+
+        return $result->data();
     }
 }

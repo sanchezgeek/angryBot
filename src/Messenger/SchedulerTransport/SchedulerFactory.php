@@ -6,6 +6,7 @@ namespace App\Messenger\SchedulerTransport;
 
 use App\Alarm\Application\Messenger\Job\Balance\CheckBalance;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
+use App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay;
 use App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMessengerMessages;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
@@ -116,6 +117,7 @@ final class SchedulerFactory
 
         $items = [
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', AsyncMessage::for(new CheckMessengerMessages())),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', AsyncMessage::for(new CheckApiKeyDeadlineDay())),
 
             PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
