@@ -27,6 +27,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Account\CreateSubAccountApiKeyReques
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetApiKeyInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Account\ModifyMasterApiKeyRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Account\ModifySubAccApiKeyRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
@@ -306,7 +307,9 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 
     public function refreshApiKey(): array
     {
-        $result = $this->sendRequest(ModifyMasterApiKeyRequest::justRefresh());
+        $request = AppContext::isMasterAccount() ? ModifyMasterApiKeyRequest::justRefresh() : ModifySubAccApiKeyRequest::justRefresh();
+
+        $result = $this->sendRequest($request);
 
         return $result->data();
     }
