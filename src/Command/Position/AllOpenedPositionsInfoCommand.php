@@ -210,18 +210,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         ### bottom START ###
         $bottomCells = [Cell::default($this->clock->now()->format('D, d M H:i:s'))->setAlign(CellAlign::CENTER)];
-        $bottomCells[] = isset($balance)
-            ? sprintf('%s avail | %s free | %s total' , $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value())
+        $balanceContent = isset($balance)
+            ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->availableForTrade)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
             : '';
+        $bottomCells[] = sprintf('% 48s', $balanceContent);
         $bottomCells[] = '';
 
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
         $bottomCells[] = Cell::default($pnlFormatter($unrealisedTotal))->setAlign(CellAlign::RIGHT);
+        $bottomCells[] = '';
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => (new CoinAmount($singleCoin, $pnl))->value() : static fn($pnl) => (string)$pnl;
         $selectedCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
         $prevCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
 
-        $bottomCells = array_merge($bottomCells, ['', '', '', '', '']);
+        $bottomCells = array_merge($bottomCells, ['', '', '', '']);
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
@@ -231,13 +233,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             'PNL%',
             'PNL',
         ];
+        $headerColumns[] = 'smb';
         $selectedCache && $headerColumns[] = 'cache';
         $prevCache && $headerColumns[] = 'prev';
         $headerColumns = array_merge($headerColumns, [
-            "smb",
-            "liq - entry(\n initial\n liq.\n distance\n)",
+            'smb',
+            "liq-ent.(\ninitial\n liq.\n distance\n)",
             "/ entry\n  price",
-            "liq - mark(\n current\n liq.\n distance\n)",
+            "liq-mark(\n current\n liq.\n distance\n)",
             "/ entry\n  price",
             "smb",
             "liq.\ndistance\npassed",
@@ -342,6 +345,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $support = $hedge?->supportPosition;
         }
 
+        if ($support) {
+            $supportPnl = $support->unrealizedPnl;
+            $supportPositionCacheKey = self::positionCacheKey($support);
+
+            if ($specifiedCache) {
+                $supportPnlSpecifiedCacheValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+            }
+            if ($prevCache) {
+                $supportPnlPrevCacheValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+            }
+        }
+
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
 
@@ -402,33 +417,46 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         ]);
 
         # PNL%
-        $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($main), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
+        $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($main), false))->setOutputFloatPrecision(1)->setOutputDecimalsPrecision(7))->setAlign(CellAlign::RIGHT);
         # PNL value
         $mainPositionPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl));
+        $mainPositionPnlContent = $mainPositionPnl < 0 ? CTH::colorizeText($mainPositionPnlContent, 'red-text') : $mainPositionPnlContent;
         if (!$support) {
-            $mainPositionPnlContent = '        ' . $mainPositionPnlContent;
+            $mainPositionPnlContent = '         ' . $mainPositionPnlContent;
+        } else {
+            # result PNL
+            $resultPnl = $mainPositionPnl + $support->unrealizedPnl;
+            $resultPnlContent = (string)self::formatPnl(new CoinAmount($symbol->associatedCoin(), $resultPnl));
+            $resultPnlContent = CTH::colorizeText($resultPnlContent, $resultPnl < 0 ? 'red-text' : 'bright-white-text');
+            $mainPositionPnlContent .= ' /' . $resultPnlContent;
         }
-        $mainPositionPnlStyle = $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : new CellStyle(fontColor: Color::BRIGHT_WHITE);
-        $cells[] = new Cell($mainPositionPnlContent, $mainPositionPnlStyle);
+        $cells[] = $mainPositionPnlContent;
+
+        $extraSymbolCell = CTH::colorizeText($symbol->veryShortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
+        $cells[] = $extraSymbolCell;
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                $mainPositionPnlDiffWithSpecifiedCache = $mainPositionPnl - $cachedValue;
-                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue);
-            } else {
-                $cells[] = '';
-            }
-        }
-        if ($prevCache) {
-            if (($cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                $mainPositionPnlDiffWithPrevCache = $mainPositionPnl - $cachedValue;
-                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue);
+                if ($support && isset($supportPnlSpecifiedCacheValue)) {
+                    $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlSpecifiedCacheValue;
+                }
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithSpecifiedCache ?? null);
             } else {
                 $cells[] = '';
             }
         }
 
-        $extraSymbolCell = CTH::colorizeText($symbol->veryShortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
+        if ($prevCache) {
+            if (($cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
+                if ($support && isset($supportPnlPrevCacheValue)) {
+                    $supportPnlDiffWithPrevCache = $supportPnl - $supportPnlPrevCacheValue;
+                }
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithPrevCache ?? null);
+            } else {
+                $cells[] = '';
+            }
+        }
+
         $cells = array_merge($cells, [
             $extraSymbolCell,
             $initialLiquidationDistance,
@@ -446,7 +474,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($support) {
             $supportPnl = $support->unrealizedPnl;
-            $supportPositionCacheKey = self::positionCacheKey($support);
             $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
 
             $cells = [
@@ -463,31 +490,26 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
             $supportPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $supportPnl));
             $supportPnlContent = $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
-            # result PNL START
-            $resultPnl = $mainPositionPnl + $supportPnl;
-            $resultPnlContent = (string)self::formatPnl(new CoinAmount($symbol->associatedCoin(), $resultPnl));
-            $resultPnlContent = CTH::colorizeText($resultPnlContent, $resultPnl < 0 ? 'red-text' : 'bright-white-text');
-            $supportPnlContent .= ' /' . $resultPnlContent;
-            # result PNL END
 
             $cells[] = new Cell($supportPnlContent, new CellStyle(fontColor: Color::WHITE));
+            $cells[] = '';
 
             if ($specifiedCache) {
-                if (($cachedValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $cachedValue, fontColor: Color::WHITE, oppositePositionPnlDiffWithCache: $mainPositionPnlDiffWithSpecifiedCache ?? null);
+                if ($supportPnlSpecifiedCacheValue !== null) {
+                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlSpecifiedCacheValue, fontColor: Color::WHITE);
                 } else {
                     $cells[] = '';
                 }
             }
             if ($prevCache) {
-                if (($cachedValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $cachedValue, fontColor: Color::WHITE, oppositePositionPnlDiffWithCache: $mainPositionPnlDiffWithPrevCache ?? null);
+                if ($supportPnlPrevCacheValue !== null) {
+                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlPrevCacheValue, fontColor: Color::WHITE);
                 } else {
                     $cells[] = '';
                 }
             }
 
-            $cells = array_merge($cells, ['', '', '', '',  '', '', '', $stoppedVolume ?? '']);
+            $cells = array_merge($cells, ['', '', '',  '', '', '', $stoppedVolume ?? '']);
 
             $result[$support->side->value] = DataRow::default($cells);
 
@@ -522,8 +544,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $withoutColor = true;
         }
 
-        $reference = (new CoinAmount($symbol->associatedCoin(), 123))->setSigned(true)->setFloatPrecision(2);
-        $pnlFormatter = static fn(float $pnl) => (string) (new CoinAmount($symbol->associatedCoin(), $pnl))->setSigned(true)->setFloatPrecision(2);
+        $reference = self::formatPnl(new CoinAmount($symbol->associatedCoin(), 123))->setSigned(true);
+        $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
 
         $pnlDiffContent = self::getFormattedDiff(a: $a, b: $b, withoutColor: $withoutColor, formatter: $pnlFormatter, alreadySigned: true);
         if ($isMainWithoutSupport) {
@@ -546,7 +568,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private static function formatPnl(CoinAmount $amount): CoinAmount
     {
-        return $amount->setFloatPrecision(1);
+        return $amount->setFloatPrecision(2);
     }
 
     private function getOpenedPositionsSymbols(): array
