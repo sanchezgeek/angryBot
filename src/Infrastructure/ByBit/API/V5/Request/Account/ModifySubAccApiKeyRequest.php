@@ -26,17 +26,24 @@ final readonly class ModifySubAccApiKeyRequest extends AbstractByBitApiRequest
 
     public function data(): array
     {
-        return [
-            'readOnly' => (int) $this->readOnly
+        $data = [
+            'readOnly' => (int)$this->readOnly
         ];
+
+        if ($this->subAccApiKey) {
+            $data['apikey'] = $this->subAccApiKey;
+        }
+
+        return $data;
     }
 
-    public static function justRefresh(): self
+    public static function justRefresh(?string $subAccApiKey = null): self
     {
-        return new self(false);
+        return new self(subAccApiKey: $subAccApiKey, readOnly: false);
     }
 
     private function __construct(
+        private ?string $subAccApiKey,
         private bool $readOnly
     ) {
 

@@ -25,7 +25,7 @@ final class ConsoleParamFetcher
     {
     }
 
-    public function getStringArgument(string $name): string
+    public function getStringArgument(string $name): ?string
     {
         return $this->input->getArgument($name);
     }

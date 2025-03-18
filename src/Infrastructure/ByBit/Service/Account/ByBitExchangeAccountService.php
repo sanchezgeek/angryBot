@@ -305,9 +305,15 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         return $result->data();
     }
 
-    public function refreshApiKey(): array
+    public function refreshApiKey(?string $subAccApiKey = null): array
     {
-        $request = AppContext::isMasterAccount() ? ModifyMasterApiKeyRequest::justRefresh() : ModifySubAccApiKeyRequest::justRefresh();
+        if ($subAccApiKey) {
+            $request = ModifySubAccApiKeyRequest::justRefresh($subAccApiKey);
+        } elseif (AppContext::isMasterAccount()) {
+            $request = ModifyMasterApiKeyRequest::justRefresh();
+        } else {
+            $request = ModifySubAccApiKeyRequest::justRefresh();
+        }
 
         $result = $this->sendRequest($request);
 
