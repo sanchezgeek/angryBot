@@ -59,7 +59,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PriceRangeAwareCommand;
 
     private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '100';
+    private const DEFAULT_SAVE_CACHE_INTERVAL = '150';
 
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
@@ -427,7 +427,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             # result PNL
             $resultPnl = $mainPositionPnl + $support->unrealizedPnl;
             $resultPnlContent = (string)self::formatPnl(new CoinAmount($symbol->associatedCoin(), $resultPnl));
-            $resultPnlContent = CTH::colorizeText($resultPnlContent, $resultPnl < 0 ? 'red-text' : 'bright-white-text');
+            if ($mainPositionPnl < 0 && $resultPnl > 0) {
+                $color = 'light-yellow-text';
+            } else {
+                $color = $resultPnl < 0 ? 'red-text' : 'bright-white-text';
+            }
+            $resultPnlContent = CTH::colorizeText($resultPnlContent, $color);
             $mainPositionPnlContent .= ' /' . $resultPnlContent;
         }
         $cells[] = $mainPositionPnlContent;
@@ -509,7 +514,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 }
             }
 
-            $cells = array_merge($cells, ['', '', '',  '', '', '', $stoppedVolume ?? '']);
+            $cells = array_merge($cells, ['', '', '', '',  '', '', '', $stoppedVolume ?? '']);
 
             $result[$support->side->value] = DataRow::default($cells);
 
