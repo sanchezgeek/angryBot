@@ -21,11 +21,13 @@ use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequ
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Account\AllCoinsBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\CancelOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Coin\CoinInterTransferResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
@@ -172,6 +174,14 @@ trait ByBitV5ApiRequestsMocker
         return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
     }
 
+    protected static function successCloseActiveConditionalOrderApiCallExpectation(Symbol $symbol, ActiveStopOrder $activeStopOrder): ByBitApiCallExpectation
+    {
+        $expectedRequest = CancelOrderRequest::byOrderId($activeStopOrder->symbol->associatedCategory(), $activeStopOrder->symbol, $activeStopOrder->orderId);
+        $resultResponse = CancelOrderResponseBuilder::ok($activeStopOrder->orderId)->build();
+
+        return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
+    }
+
     protected static function tickerApiCallExpectation(Ticker $ticker): ByBitApiCallExpectation
     {
         $symbol = $ticker->symbol;
@@ -255,7 +265,7 @@ trait ByBitV5ApiRequestsMocker
             $apiResponseBuilder->withActiveConditionalStop(
                 $symbol,
                 $activeStopOrder->positionSide,
-                uuid_create(),
+                $activeStopOrder->orderId ?: uuid_create(),
                 $activeStopOrder->triggerPrice,
                 $activeStopOrder->volume,
             );

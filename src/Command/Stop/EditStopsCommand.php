@@ -16,6 +16,7 @@ use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Worker\AppContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
@@ -225,17 +226,19 @@ class EditStopsCommand extends AbstractCommand
                 $pushedStops = [];
             }
 
+            /** @var ActiveStopOrder[] $pushedStops */
             $pushedStops = array_filter($pushedStops, static fn(ActiveStopOrder $activeStopOrder) => in_array($activeStopOrder->orderId, $exchangeOrdersIds, true));
-            $closeActiveCondOrder = false;
-            if ($pushedStops) {
-                $closeActiveCondOrder = $this->io->confirm('Some orders pushed to exchange. Close?');
-            }
+            $closeActiveCondOrder = $pushedStops && $this->io->confirm('Some orders pushed to exchange. Close?');
 
+            $closedExchangeOrderIds = [];
             if ($closeActiveCondOrder) {
                 foreach ($pushedStops as $activeCondOrder) {
                     $this->exchangeService->closeActiveConditionalOrder($activeCondOrder);
+                    $closedExchangeOrderIds[] = $activeCondOrder->orderId;
                 }
             }
+
+            $filteredStops = $filteredStops->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange() || in_array($stop->getExchangeOrderId(), $closedExchangeOrderIds));
 
             $this->entityManager->wrapInTransaction(function() use ($filteredStops) {
                 foreach ($filteredStops as $stop) {
