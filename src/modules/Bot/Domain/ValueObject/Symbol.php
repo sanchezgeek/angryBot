@@ -88,6 +88,7 @@ enum Symbol: string
     case DOTUSDT = 'DOTUSDT';
     case GPSUSDT = 'GPSUSDT';
     case LAIUSDT = 'LAIUSDT';
+    case STORJUSDT = 'STORJUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -158,6 +159,7 @@ enum Symbol: string
         self::DOTUSDT->value => 3,
         self::GPSUSDT->value => 5,
         self::LAIUSDT->value => 7,
+        self::STORJUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -229,6 +231,7 @@ enum Symbol: string
         self::DOTUSDT->value => 0.1,
         self::GPSUSDT->value => 1,
         self::LAIUSDT->value => 1,
+        self::STORJUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
