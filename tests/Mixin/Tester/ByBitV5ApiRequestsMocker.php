@@ -251,9 +251,10 @@ trait ByBitV5ApiRequestsMocker
             }
             $resultResponse->withPosition($position, $lastMarkPrice);
         }
-        $positionsApiCallExpectation = new ByBitApiCallExpectation($expectedRequest, $resultResponse->build());
-//        $byBitApiCallExpectation->setNoNeedToTrackRequestCallToFurtherCheck();
-        $this->expectsToMakeApiCalls($positionsApiCallExpectation);
+
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation($expectedRequest, $resultResponse->build())
+        );
     }
 
     private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
@@ -298,6 +299,5 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls(
             new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, null), $apiResponseBuilder->build())
         );
-
     }
 }

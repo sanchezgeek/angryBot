@@ -11,7 +11,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final class CheckMessengerMessagesHandler
 {
-    const LIMIT = 120;
+    const LIMIT = 50;
 
     public function __invoke(CheckMessengerMessages $message): void
     {

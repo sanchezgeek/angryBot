@@ -199,14 +199,6 @@ final class FixMainHedgePositionListenerTest extends TestCase
         float $expectedSupplyStopVolume,
         ?string $additionalInfo = null
     ): string {
-//        $delayedStopsPositionSizePart = self::positionNotCoveredSizePart((new StopsCollection(...$delayedStops))->totalVolume(), $mainPosition);
-//        $activeConditionalOrdersSizePart = self::positionNotCoveredSizePart(
-//            array_sum(array_map(static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->volume, $activeExchangeStops)),
-//            $mainPosition,
-//        );
-//
-//        $needToCoverPercent = CheckLiquidationParametersHelper::acceptableStoppedPart($message) - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
-
         return sprintf(
             "\n[%s%s closed] / stop.price = %.2f => add %s stop on %s for %s",
             $additionalInfo ? sprintf('%s / ', $additionalInfo) : '',
