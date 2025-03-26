@@ -51,6 +51,15 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
 
+    /**
+     * @todo | DRY
+     * @see CreateOppositeBuyOrdersListener::MAIN_SYMBOLS
+     */
+    private const MAIN_SYMBOLS = [
+        Symbol::BTCUSDT,
+        Symbol::ETHUSDT
+    ];
+
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
@@ -563,7 +572,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopPrice = $stop->getPrice();
         $stopVolume = $stop->getVolume();
 
-        $defaultDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($side), $stop->getSymbol()->makePrice($stopPrice));
+        $defaultDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($stop), $stop->getSymbol()->makePrice($stopPrice));
         $distance = $stop->getOppositeBuyOrderDistance() ?? FloatHelper::modify($defaultDistance, 0.1, 0.2);
 
         $priceModifier = $side->isLong() ? $distance : -$distance;
@@ -592,7 +601,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     }
 
     private static ?array $oppositeBuyOrderPnlDistances = null;
-    private static function oppositeBuyOrderPnlDistance(Side $positionSide): Percent
+    private static ?array $oppositeBuyOrderPnlDistancesForAltCoins = null;
+    private static function oppositeBuyOrderPnlDistance(Stop $stop): Percent
     {
         if (null === self::$oppositeBuyOrderPnlDistances) {
             self::$oppositeBuyOrderPnlDistances = [
@@ -601,7 +611,18 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             ];
         }
 
-        return self::$oppositeBuyOrderPnlDistances[$positionSide->value];
+        if (null === self::$oppositeBuyOrderPnlDistancesForAltCoins) {
+            self::$oppositeBuyOrderPnlDistancesForAltCoins = [
+                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false),
+                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false),
+            ];
+        }
+
+        if (!in_array($stop->getSymbol(), self::MAIN_SYMBOLS, true)) {
+            return self::$oppositeBuyOrderPnlDistancesForAltCoins[$stop->getPositionSide()->value];
+        }
+
+        return self::$oppositeBuyOrderPnlDistances[$stop->getPositionSide()->value];
     }
 
     /**

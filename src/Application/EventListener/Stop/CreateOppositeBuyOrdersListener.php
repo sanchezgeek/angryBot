@@ -8,6 +8,9 @@ use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -20,8 +23,16 @@ final class CreateOppositeBuyOrdersListener
 {
     public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
+    private const MAIN_SYMBOLS = [
+        Symbol::BTCUSDT,
+        Symbol::ETHUSDT
+    ];
+
     private Percent $longOppositePnlDistance;
     private Percent $shortOppositePnlDistance;
+
+    private Percent $longOppositePnlDistanceForAltCoin;
+    private Percent $shortOppositePnlDistanceForAltCoin;
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
@@ -29,6 +40,9 @@ final class CreateOppositeBuyOrdersListener
     ) {
         $this->longOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false);
         $this->shortOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false);
+
+        $this->longOppositePnlDistanceForAltCoin = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false);
+        $this->shortOppositePnlDistanceForAltCoin = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false);
     }
 
     public function __invoke(StopPushedToExchange $event): void
@@ -44,7 +58,7 @@ final class CreateOppositeBuyOrdersListener
         $stopPrice = $symbol->makePrice($stop->getPrice()); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
         if (($distance = $stop->getOppositeBuyOrderDistance()) === null) {
-            $pnlDistance = $side->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
+            $pnlDistance = $this->getOppositeOrderPnlDistance($stop);
             $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $stopPrice), 0.1, 0.2);
         }
 
@@ -86,5 +100,14 @@ final class CreateOppositeBuyOrdersListener
                 new CreateBuyOrderEntryDto($symbol, $side, $order['volume'], $order['price'], $context)
             );
         }
+    }
+
+    public function getOppositeOrderPnlDistance(Stop $stop): Percent
+    {
+        if (!in_array($stop->getSymbol(), self::MAIN_SYMBOLS, true)) {
+            return $stop->getPositionSide()->isLong() ? $this->longOppositePnlDistanceForAltCoin : $this->shortOppositePnlDistanceForAltCoin;
+        }
+
+        return $stop->getPositionSide()->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
     }
 }

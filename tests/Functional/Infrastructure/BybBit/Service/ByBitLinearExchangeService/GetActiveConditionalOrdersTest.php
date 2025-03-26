@@ -41,7 +41,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
      */
     public function testCanGetActiveConditionalOrders(
         AssetCategory $category,
-        Symbol $symbol,
+        ?Symbol $symbol,
         ?PriceRange $priceRange,
         MockResponse $apiResponse,
         array $expectedActiveStopOrders
@@ -61,12 +61,10 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
     {
         $category = self::ASSET_CATEGORY;
 
-        $symbol = Symbol::BTCUSDT;
-
         $mockResponse = CurrentOrdersResponseBuilder::ok($category)
             # active LONG conditional stops
             ->withOrder(
-                $symbol,
+                Symbol::BTCUSDT,
                 Side::Sell,
                 $firstLongStopId = uuid_create(),
                 $firstLongStopTriggerPrice = 30000,
@@ -77,7 +75,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                 false,
             )
             ->withOrder(
-                $symbol,
+                Symbol::BTCUSDT,
                 Side::Sell,
                 $secondLongStopId = uuid_create(),
                 $secondLongStopTriggerPrice = 32000,
@@ -87,9 +85,9 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                 true,
                 false,
             )
-            # active SHORT conditional stops
+            # active BTCUSDT SHORT conditional stops
             ->withOrder(
-                $symbol,
+                Symbol::BTCUSDT,
                 Side::Buy,
                 $shortStopId = uuid_create(),
                 $shortStopTriggerPrice = 33000,
@@ -101,7 +99,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
             )
             # not conditional stops
             ->withOrder(
-                $symbol,
+                Symbol::BTCUSDT,
                 Side::Sell,
                 uuid_create(),
                 31000,
@@ -113,7 +111,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
             )
             # `Limit` orders
             ->withOrder(
-                $symbol,
+                Symbol::BTCUSDT,
                 Side::Sell,
                 uuid_create(),
                 31100,
@@ -122,16 +120,42 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                 ExecutionOrderType::Limit,
                 true,
                 false,
-            )->build();
+            )
+            # active VIRTUALUSDT LONG conditional stops
+            ->withOrder(
+                Symbol::VIRTUALUSDT,
+                Side::Sell,
+                $virtualLongStopId = uuid_create(),
+                $virtualLongStopTriggerPrice = 0.2,
+                $virtualLongStopQty = 10,
+                $virtualLongStopTriggerBy = TriggerBy::LastPrice,
+                ExecutionOrderType::Market,
+                true,
+                false,
+            )
+            # active VIRTUALUSDT SHORT conditional stops
+            ->withOrder(
+                Symbol::VIRTUALUSDT,
+                Side::Buy,
+                $virtualShortStopId = uuid_create(),
+                $virtualShortStopTriggerPrice = 0.7,
+                $virtualShortStopQty = 20,
+                $virtualShortStopTriggerBy = TriggerBy::LastPrice,
+                ExecutionOrderType::Market,
+                true,
+                false,
+            )
+            ->build();
 
-        yield sprintf('get active %s stops (%s) without PriceRange specified', $symbol->value, $category->value) => [
-            $category, $symbol,
+        #  with symbol
+        yield sprintf('get active %s stops (%s) without PriceRange specified', Symbol::BTCUSDT->value, $category->value) => [
+            $category, Symbol::BTCUSDT,
             '$priceRange' => null,
             '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
                 # active LONG conditional stops
                 $firstLongStopId => new ActiveStopOrder(
-                    $symbol,
+                    Symbol::BTCUSDT,
                     Side::Buy,
                     $firstLongStopId,
                     $firstLongStopQty,
@@ -139,7 +163,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                     $firstLongStopTriggerBy->value
                 ),
                 $secondLongStopId => new ActiveStopOrder(
-                    $symbol,
+                    Symbol::BTCUSDT,
                     Side::Buy,
                     $secondLongStopId,
                     $secondLongStopQty,
@@ -148,7 +172,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
                 ),
                 # active SHORT conditional stops
                 $shortStopId => new ActiveStopOrder(
-                    $symbol,
+                    Symbol::BTCUSDT,
                     Side::Sell,
                     $shortStopId,
                     $shortStopQty,
@@ -158,18 +182,112 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
             ]
         ];
 
-        yield sprintf('get active %s stops (%s) with PriceRange specified', $symbol->value, $category->value) => [
-            $category, $symbol,
-            '$priceRange' => PriceRange::create(31500, 32001, $symbol),
+        yield sprintf('get active %s stops (%s) without PriceRange specified', Symbol::VIRTUALUSDT->value, $category->value) => [
+            $category, Symbol::VIRTUALUSDT,
+            '$priceRange' => null,
+            '$apiResponse' => $mockResponse,
+            '$expectedActiveOrders' => [
+                $virtualLongStopId => new ActiveStopOrder(
+                    Symbol::VIRTUALUSDT,
+                    Side::Buy,
+                    $virtualLongStopId,
+                    $virtualLongStopQty,
+                    $virtualLongStopTriggerPrice,
+                    $virtualLongStopTriggerBy->value
+                ),
+                $virtualShortStopId => new ActiveStopOrder(
+                    Symbol::VIRTUALUSDT,
+                    Side::Sell,
+                    $virtualShortStopId,
+                    $virtualShortStopQty,
+                    $virtualShortStopTriggerPrice,
+                    $virtualShortStopTriggerBy->value
+                ),
+            ]
+        ];
+
+        # with price range specified
+        yield sprintf('get active %s stops (%s) with PriceRange specified', Symbol::BTCUSDT->value, $category->value) => [
+            $category, Symbol::BTCUSDT,
+            '$priceRange' => PriceRange::create(31500, 32001, Symbol::BTCUSDT),
             '$apiResponse' => $mockResponse,
             '$expectedActiveOrders' => [
                 $secondLongStopId => new ActiveStopOrder(
-                    $symbol,
+                    Symbol::BTCUSDT,
                     Side::Buy,
                     $secondLongStopId,
                     $secondLongStopQty,
                     $secondLongStopTriggerPrice,
                     $secondLongStopTriggerBy->value
+                ),
+            ]
+        ];
+
+        yield sprintf('get active %s stops (%s) with PriceRange specified', Symbol::VIRTUALUSDT->value, $category->value) => [
+            $category, Symbol::VIRTUALUSDT,
+            '$priceRange' => PriceRange::create(0.1, 0.3, Symbol::VIRTUALUSDT),
+            '$apiResponse' => $mockResponse,
+            '$expectedActiveOrders' => [
+                $virtualLongStopId => new ActiveStopOrder(
+                    Symbol::VIRTUALUSDT,
+                    Side::Buy,
+                    $virtualLongStopId,
+                    $virtualLongStopQty,
+                    $virtualLongStopTriggerPrice,
+                    $virtualLongStopTriggerBy->value
+                ),
+            ]
+        ];
+
+        #  without symbol
+        yield 'without symbol specified' => [
+            $category, null,
+            '$priceRange' => null,
+            '$apiResponse' => $mockResponse,
+            '$expectedActiveOrders' => [
+                # BTCUSDT
+                $firstLongStopId => new ActiveStopOrder(
+                    Symbol::BTCUSDT,
+                    Side::Buy,
+                    $firstLongStopId,
+                    $firstLongStopQty,
+                    $firstLongStopTriggerPrice,
+                    $firstLongStopTriggerBy->value
+                ),
+                $secondLongStopId => new ActiveStopOrder(
+                    Symbol::BTCUSDT,
+                    Side::Buy,
+                    $secondLongStopId,
+                    $secondLongStopQty,
+                    $secondLongStopTriggerPrice,
+                    $secondLongStopTriggerBy->value
+                ),
+                # active SHORT conditional stops
+                $shortStopId => new ActiveStopOrder(
+                    Symbol::BTCUSDT,
+                    Side::Sell,
+                    $shortStopId,
+                    $shortStopQty,
+                    $shortStopTriggerPrice,
+                    $shortStopTriggerBy->value
+                ),
+
+                # VIRTUALUSDT
+                $virtualLongStopId => new ActiveStopOrder(
+                    Symbol::VIRTUALUSDT,
+                    Side::Buy,
+                    $virtualLongStopId,
+                    $virtualLongStopQty,
+                    $virtualLongStopTriggerPrice,
+                    $virtualLongStopTriggerBy->value
+                ),
+                $virtualShortStopId => new ActiveStopOrder(
+                    Symbol::VIRTUALUSDT,
+                    Side::Sell,
+                    $virtualShortStopId,
+                    $virtualShortStopQty,
+                    $virtualShortStopTriggerPrice,
+                    $virtualShortStopTriggerBy->value
                 ),
             ]
         ];

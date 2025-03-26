@@ -136,7 +136,11 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $symbol = $position->symbol;
         $coin = $symbol->associatedCoin();
 
-        $this->stopRepository->method('findActive')->with($position->symbol, $position->side)->willReturn([]);
+        $this->stopRepository->method('findActive')->withConsecutive(
+            [$position->symbol, $position->side],
+            [$position->symbol, $position->side->getOpposite()],
+        )->willReturn([]);
+
         $this->stopService->expects(self::never())->method(self::anything());
 
         $this->exchangeAccountService->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(
@@ -149,16 +153,18 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
+        $acceptableStoppedPartBeforeLiquidation = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION;
+
         $this->orderService
             ->expects(self::once())
             ->method('closeByMarket')
             ->with(
                 $position,
-                $symbol->roundVolumeUp((new Percent(self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION))->of($position->size)),
+                $symbol->roundVolumeUp((new Percent($acceptableStoppedPartBeforeLiquidation))->of($position->size)),
             )
         ;
 
-        ($this->handler)(new CheckPositionIsUnderLiquidation($symbol));
+        ($this->handler)(new CheckPositionIsUnderLiquidation(symbol: $symbol, acceptableStoppedPart: $acceptableStoppedPartBeforeLiquidation));
     }
 
     public function makeInterTransferFromSpotAndCloseByMarketTestCases(): iterable

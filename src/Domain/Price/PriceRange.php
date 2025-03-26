@@ -6,6 +6,7 @@ namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use Generator;
 use Stringable;
@@ -73,30 +74,47 @@ final readonly class PriceRange implements Stringable
     }
 
     /**
-     * @param int $step
      * @return Generator<Price>
      */
-    public function byStepIterator(float $step): Generator
+    public function byStepIterator(float $step, ?Side $positionSide = Side::Sell): Generator
     {
-        for ($price = $this->from()->value(); $price < $this->to()->value(); $price += $step) {
-            yield $this->symbol->makePrice($price);
+        if ($positionSide === Side::Sell) {
+            for ($price = $this->from()->value(); $price < $this->to()->value(); $price += $step) {
+                yield $this->symbol->makePrice($price);
+            }
+        } else {
+            for ($price = $this->to()->value(); $price > $this->from()->value(); $price -= $step) {
+                yield $this->symbol->makePrice($price);
+            }
         }
+    }
+
+    public function resultCountByStep(float $step): int
+    {
+        return count(iterator_to_array($this->byStepIterator($step)));
     }
 
     /**
      * @param int $qnt
      * @return Generator<Price>
      */
-    public function byQntIterator(int $qnt): Generator
+    public function byQntIterator(int $qnt, ?Side $positionSide = Side::Sell): Generator
     {
         $delta = $this->to()->value() - $this->from()->value();
 
         $priceStep = $delta / $qnt;
 
         $resultQnt = 0;
-        for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
-            yield $this->symbol->makePrice($price);
-            $resultQnt++;
+        if ($positionSide === Side::Sell) {
+            for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
+                yield $this->symbol->makePrice($price);
+                $resultQnt++;
+            }
+        } else {
+            for ($price = $this->to()->value(); $price > $this->from()->value() && $resultQnt < $qnt; $price -= $priceStep) {
+                yield $this->symbol->makePrice($price);
+                $resultQnt++;
+            }
         }
     }
 

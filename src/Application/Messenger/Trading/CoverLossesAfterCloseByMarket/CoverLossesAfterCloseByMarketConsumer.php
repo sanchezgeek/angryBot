@@ -6,6 +6,8 @@ namespace App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Settings\PushStopSettings;
+use App\Settings\Application\Service\AppSettingsProvider;
 use App\Worker\AppContext;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -16,6 +18,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
+        if ($this->settingsProvider->get(PushStopSettings::Cover_Loss_After_Close_By_Market) !== true) {
+            return;
+        }
+
         $loss = $dto->loss->value();
         $closedPosition = $dto->closedPosition;
 
@@ -57,6 +63,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public function __construct(
         private ExchangeAccountServiceInterface $exchangeAccountService,
         private PositionServiceInterface $positionService,
+        private AppSettingsProvider $settingsProvider,
     ) {
     }
 }

@@ -11,7 +11,6 @@
         "doctrine/doctrine-bundle": "^2.8",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.14",
-        "easycorp/easyadmin-bundle": "^4.5",
         "guzzlehttp/guzzle": "^7.5",
         "scienta/doctrine-json-functions": "*",
         "symfony/cache": "6.2.*",
@@ -27,6 +26,7 @@
         "symfony/rate-limiter": "6.2.*",
         "symfony/runtime": "6.2.*",
         "symfony/serializer": "6.2.*",
+        "symfony/uid": "6.2.*",
         "symfony/validator": "6.2.*",
         "symfony/yaml": "6.2.*"
     },

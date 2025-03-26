@@ -18,6 +18,14 @@ class TestCaseDescriptionHelper
      */
     public static function getPositionCaption(Position $position): string
     {
+        return sprintf('"%s (%.2f/%.3f/liq=%.2f)"', $position->getCaption(), $position->entryPrice, $position->size, $position->liquidationPrice);
+    }
+
+    /**
+     * @todo | Price | trading symbol price precision
+     */
+    public static function getFullPositionCaption(Position $position): string
+    {
         $hedge = $position->getHedge();
         if ($hedge) {
             $mainPosition = $hedge->mainPosition;
@@ -25,7 +33,7 @@ class TestCaseDescriptionHelper
 
             return sprintf('"%s (%.2f/%.3f/liq=%.2f)" vs "%s (%.2f/%.3f)"', $mainPosition->getCaption(), $mainPosition->entryPrice, $mainPosition->size, $mainPosition->liquidationPrice, $supportPosition->getCaption(), $supportPosition->entryPrice, $supportPosition->size);
         } else {
-            return sprintf('"%s (%.2f/%.3f/liq=%.2f)', $position->getCaption(), $position->entryPrice, $position->size, $position->liquidationPrice);
+            return sprintf('"%s (%.2f/%.3f/liq=%.2f)"', $position->getCaption(), $position->entryPrice, $position->size, $position->liquidationPrice);
         }
     }
 
@@ -35,9 +43,9 @@ class TestCaseDescriptionHelper
         return sprintf(
             "\ninitial state: [free=%s, positions=%s] state\n            => [free=%s, positions=%s] state expected [after make %s]\n",
             $initialState->getFreeBalance(),
-            self::getPositionCaption($initialState->getMainPosition()),
+            self::getFullPositionCaption($initialState->getMainPosition()),
             $newState->getFreeBalance(),
-            self::getPositionCaption($newState->getMainPosition()),
+            self::getFullPositionCaption($newState->getMainPosition()),
             $sandboxOrder
         );
     }

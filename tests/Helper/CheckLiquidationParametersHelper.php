@@ -40,25 +40,62 @@ class CheckLiquidationParametersHelper
     /**
      * @see CheckPositionIsUnderLiquidationHandler::checkStopsOnDistance
      */
-    public static function checkStopsOnDistance(Position $position): float
+    public static function checkStopsOnDistance(CheckPositionIsUnderLiquidation $message, Position $position): float
     {
-        return self::additionalStopDistanceWithLiquidation($position) * 1.5;
+        return self::additionalStopDistanceWithLiquidation($message, $position) * 1.5;
     }
 
     /**
      * @see CheckPositionIsUnderLiquidationHandler::additionalStopDistanceWithLiquidation
      */
-    public static function additionalStopDistanceWithLiquidation(Position $position): float
+    public static function additionalStopDistanceWithLiquidation(CheckPositionIsUnderLiquidation $message, Position $position): float
     {
-        return FloatHelper::modify((new Percent(self::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP))->of($position->liquidationDistance()), 0.1);
+        if (!$position->isLiquidationPlacedBeforeEntry()) { # normal situation
+            $distancePnl = $message->percentOfLiquidationDistanceToAddStop ?? self::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP;
+            $additionalStopDistanceWithLiquidation = FloatHelper::modify((new Percent($distancePnl, false))->of($position->liquidationDistance()), 0.15, 0.05);
+
+            $additionalStopDistanceWithLiquidation = max($additionalStopDistanceWithLiquidation, self::warningDistance($message, $position));
+        } else { # bad scenario
+            // in this case using big position liquidationDistance may lead to add unnecessary stops
+            // so just use some "warningDistance"
+            $additionalStopDistanceWithLiquidation = self::warningDistance($message, $position);
+        }
+
+        return $additionalStopDistanceWithLiquidation;
+    }
+
+    public static function warningDistancePnl(CheckPositionIsUnderLiquidation $message): float
+    {
+        if ($message->warningPnlDistance) {
+            $distance = $message->warningPnlDistance;
+        } else {
+            $symbol = $message->symbol;
+            $distance = CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCES[$symbol->value] ?? CheckPositionIsUnderLiquidationHandler::WARNING_PNL_DISTANCE_DEFAULT;
+        }
+
+        return $distance;
+    }
+
+    private static function warningDistance(CheckPositionIsUnderLiquidation $message, Position $position): float
+    {
+        $distancePnl = self::warningDistancePnl($message);
+
+        if (!$position->isLiquidationPlacedBeforeEntry()) { # normal scenario
+            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $position->entryPrice()), 0.1);
+            $warningDistance = max($warningDistance, FloatHelper::modify((new Percent(30))->of($position->liquidationDistance()), 0.15, 0.05));
+        } else { # bad scenario
+            $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $position->entryPrice()), 0.1);
+        }
+
+        return $warningDistance;
     }
 
     /**
      * @see CheckPositionIsUnderLiquidationHandler::getAdditionalStopPrice
      */
-    public static function additionalStopPrice(Position $position): Price
+    public static function additionalStopPrice(CheckPositionIsUnderLiquidation $message, Position $position): Price
     {
-        $additionalStopDistanceWithLiquidation = self::additionalStopDistanceWithLiquidation($position);
+        $additionalStopDistanceWithLiquidation = self::additionalStopDistanceWithLiquidation($message, $position);
 
         return (
             $position->isShort()
@@ -70,9 +107,9 @@ class CheckLiquidationParametersHelper
     /**
      * @see CheckPositionIsUnderLiquidationHandler::getActualStopsRange
      */
-    public static function actualStopsRange(Position $position): PriceRange
+    public static function actualStopsRange(CheckPositionIsUnderLiquidation $message, Position $position): PriceRange
     {
-        $additionalStopPrice = self::additionalStopPrice($position);
+        $additionalStopPrice = self::additionalStopPrice($message, $position);
         $modifier = FloatHelper::modify((new Percent(self::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($position->liquidationDistance()), 0.1);
 
         return PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier));

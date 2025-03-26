@@ -49,16 +49,8 @@ class MarketBuyHandler
             throw $e;
         } catch (Throwable $e) {
             OutputHelper::print(sprintf('%s while try to buy %s (%s initial) on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume, $symbol->value, $dto->positionSide->value));
-            throw $e;
+            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume() + $symbol->minOrderQty() * 2);
         }
-    }
-
-    /**
-     * @internal For now only for tests
-     */
-    public function setSafeLiquidationPriceDistance(float $distance): void
-    {
-        $this->safePriceDistance = $distance;
     }
 
     /**
@@ -89,7 +81,7 @@ class MarketBuyHandler
             order: $dto,
             ticker: $ticker,
             currentSandboxState: $currentState,
-            safePriceDistance: $this->safePriceDistance,
+            safePriceDistance: $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance),
         );
     }
 
@@ -102,8 +94,6 @@ class MarketBuyHandler
         private readonly ExchangeServiceInterface     $exchangeService,
         private readonly SandboxStateFactoryInterface $sandboxStateFactory,
         private readonly AppSettingsProvider          $settings,
-        private ?float                                $safePriceDistance = null
     ) {
-        $this->safePriceDistance = $this->safePriceDistance ?? $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }
 }

@@ -79,10 +79,12 @@ class PlaceOrderCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $type = $this->getType();
+        $side = $this->getPositionSide();
 
         if ($type === self::MARKET_BUY) {
-            $side = $this->getPositionSide();
-            $symbols = $this->getSymbols();
+            $except = [Symbol::BTCUSDT];
+
+            $symbols = $this->getSymbols($except);
 
             $additional = null;
             try {
@@ -154,7 +156,7 @@ class PlaceOrderCommand extends AbstractCommand
             if (isset($priceRange)) {
                 $step = $this->paramFetcher->getIntOption(self::LIMIT_TP_PRICE_STEP_OPTION);
 
-                foreach ($priceRange->byStepIterator($step) as $price) {
+                foreach ($priceRange->byStepIterator($step, $side) as $price) {
                     $rand = round(random_int(-7, 8) * 0.4, 2);
                     $orders[] = new Order($price->sub($rand), $volume);
                 }
@@ -237,7 +239,7 @@ class PlaceOrderCommand extends AbstractCommand
                             $positionSide->title(),
                         ),
                     )) {
-                        throw new Exception('OK!');
+                        throw new Exception('OK.');
                     }
                 }
             }
@@ -249,7 +251,7 @@ class PlaceOrderCommand extends AbstractCommand
             OutputHelper::print('');
 
             if (!$this->isWithoutConfirm() && !$this->io->confirm('Sure?')) {
-                throw new Exception('OK!');
+                throw new Exception('OK.');
             }
 
             foreach ($orders as $order) {

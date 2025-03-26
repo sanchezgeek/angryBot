@@ -12,6 +12,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -20,11 +21,13 @@ use App\Infrastructure\ByBit\API\V5\Request\Asset\Balance\GetAllCoinsBalanceRequ
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Account\AllCoinsBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\CancelOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Coin\CoinInterTransferResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
@@ -43,6 +46,9 @@ trait ByBitV5ApiRequestsMocker
 {
     use ByBitV5ApiTester;
 
+    /**
+     * @doto pass coin instead
+     */
     protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
     {
         $amount = new CoinAmount($symbol->associatedCoin(), $amount);
@@ -168,6 +174,14 @@ trait ByBitV5ApiRequestsMocker
         return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
     }
 
+    protected static function successCloseActiveConditionalOrderApiCallExpectation(Symbol $symbol, ActiveStopOrder $activeStopOrder): ByBitApiCallExpectation
+    {
+        $expectedRequest = CancelOrderRequest::byOrderId($activeStopOrder->symbol->associatedCategory(), $activeStopOrder->symbol, $activeStopOrder->orderId);
+        $resultResponse = CancelOrderResponseBuilder::ok($activeStopOrder->orderId)->build();
+
+        return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
+    }
+
     protected static function tickerApiCallExpectation(Ticker $ticker): ByBitApiCallExpectation
     {
         $symbol = $ticker->symbol;
@@ -221,12 +235,58 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);
     }
 
+    /**
+     * @param array<float, Position> $data
+     */
+    protected function haveAllOpenedPositionsWithLastMarkPrices(array $data): void
+    {
+        $category = $data[array_key_first($data)]->symbol->associatedCategory();
+        $assetCategory = AssetCategory::linear;
+        $expectedRequest = new GetPositionsRequest($assetCategory, null);
+
+        $resultResponse = new PositionResponseBuilder($assetCategory);
+        foreach ($data as $lastMarkPrice => $position) {
+            if ($category !== $position->symbol->associatedCategory()) {
+                throw new RuntimeException('Only for same AssetCategory');
+            }
+            $resultResponse->withPosition($position, $lastMarkPrice);
+        }
+
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation($expectedRequest, $resultResponse->build())
+        );
+    }
+
     private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
     {
         $category = $symbol->associatedCategory();
 
         $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
         foreach ($activeStopOrders as $activeStopOrder) {
+            $apiResponseBuilder->withActiveConditionalStop(
+                $symbol,
+                $activeStopOrder->positionSide,
+                $activeStopOrder->orderId ?: uuid_create(),
+                $activeStopOrder->triggerPrice,
+                $activeStopOrder->volume,
+            );
+        }
+
+        $this->expectsToMakeApiCalls(
+            new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
+        );
+    }
+
+    private function haveActiveConditionalStopsOnMultipleSymbols(ActiveStopOrder ...$activeStopOrdersArr): void
+    {
+        $category = AssetCategory::linear;
+        $apiResponseBuilder = CurrentOrdersResponseBuilder::ok($category);
+
+        foreach ($activeStopOrdersArr as $activeStopOrder) {
+            $symbol = $activeStopOrder->symbol;
+            if ($symbol->associatedCategory() !== $category) {
+                throw new RuntimeException('Only for same category');
+            }
             $apiResponseBuilder->withActiveConditionalStop(
                 $symbol,
                 $activeStopOrder->positionSide,
@@ -237,7 +297,7 @@ trait ByBitV5ApiRequestsMocker
         }
 
         $this->expectsToMakeApiCalls(
-            new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponseBuilder->build())
+            new ByBitApiCallExpectation(GetCurrentOrdersRequest::openOnly($category, null), $apiResponseBuilder->build())
         );
     }
 }

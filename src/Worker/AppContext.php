@@ -76,4 +76,9 @@ final class AppContext
     {
         return self::$debug;
     }
+
+    public static function isMasterAccount(): bool
+    {
+        return (bool)($_ENV['IS_MASTER_ACCOUNT'] ?? null) === true;
+    }
 }

@@ -11,6 +11,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -62,6 +63,9 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
+
+    #[ORM\Column(type: 'string', enumType: BuyOrderState::class, options: ['default' => 'idle'])]
+    private BuyOrderState $state = BuyOrderState::Idle;
 
     /**
      * @var array<string, mixed>
@@ -145,7 +149,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public function mustBeExecuted(Ticker $ticker): bool
     {
-        return $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
+        return $this->isOrderActive() && $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
     }
 
     public function isWithShortStop(): bool
@@ -284,5 +288,22 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function isOppositeStopExecuted(): bool
     {
         return $this->isOppositeStopExecuted;
+    }
+
+    public function setActive(): self
+    {
+        $this->state = BuyOrderState::Active;
+        return $this;
+    }
+
+    public function setIdle(): self
+    {
+        $this->state = BuyOrderState::Idle;
+        return $this;
+    }
+
+    public function isOrderActive(): bool
+    {
+        return $this->state === BuyOrderState::Active;
     }
 }

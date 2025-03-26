@@ -27,8 +27,25 @@ final class GetCurrentOrdersRequestTest extends TestCase
         self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
-            'symbol' => $symbol->value,
             'openOnly' => '0',
+            'symbol' => $symbol->value,
+        ], $request->data());
+    }
+
+    public function testCreateGetOnlyOpenCurrentOrdersRequestWithoutSymbol(): void
+    {
+        $request = GetCurrentOrdersRequest::openOnly(
+            $category = AssetCategory::linear,
+            null
+        );
+
+        self::assertSame('/v5/order/realtime', $request->url());
+        self::assertSame(Request::METHOD_GET, $request->method());
+        self::assertTrue($request->isPrivateRequest());
+        self::assertSame([
+            'category' => $category->value,
+            'openOnly' => '0',
+            'settleCoin' => 'USDT',
         ], $request->data());
     }
 }

@@ -161,7 +161,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
     {
         return $this->exchangeService->activeConditionalOrders($symbol, $priceRange);
     }

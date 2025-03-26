@@ -84,6 +84,11 @@ enum Symbol: string
     case FBUSDT = 'FBUSDT';
     case OMUSDT = 'OMUSDT';
     case ACHUSDT = 'ACHUSDT';
+    case RUNEUSDT = 'RUNEUSDT';
+    case DOTUSDT = 'DOTUSDT';
+    case GPSUSDT = 'GPSUSDT';
+    case LAIUSDT = 'LAIUSDT';
+    case STORJUSDT = 'STORJUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -150,6 +155,11 @@ enum Symbol: string
         self::FBUSDT->value => 3,
         self::OMUSDT->value => 5,
         self::ACHUSDT->value => 6,
+        self::RUNEUSDT->value => 3,
+        self::DOTUSDT->value => 3,
+        self::GPSUSDT->value => 5,
+        self::LAIUSDT->value => 7,
+        self::STORJUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -217,18 +227,32 @@ enum Symbol: string
         self::FBUSDT->value => 0.1,
         self::OMUSDT->value => 1,
         self::ACHUSDT->value => 10,
+        self::RUNEUSDT->value => 0.1,
+        self::DOTUSDT->value => 0.1,
+        self::GPSUSDT->value => 1,
+        self::LAIUSDT->value => 1,
+        self::STORJUSDT->value => 1,
     ];
 
-    private const MIN_NOTIONAL_ORDER_VALUE = [];
+    private const MIN_NOTIONAL_ORDER_VALUE = [
+
+    ];
+
     private const ASSOCIATED_COINS = [
         self::BTCUSD->value => Coin::BTC,
     ];
+
     private const ASSOCIATED_CATEGORIES = [
         self::BTCUSD->value => AssetCategory::inverse
     ];
+
     private const STOP_TRIGGER_DELTA = [
         self::BTCUSDT->value => 25,
         self::BTCUSD->value => 25,
+    ];
+
+    private const VERY_SHORT_NAMES = [
+
     ];
 
     public function associatedCoin(): Coin
@@ -329,5 +353,10 @@ enum Symbol: string
         }
 
         return $this->value;
+    }
+
+    public function veryShortName(): string
+    {
+        return substr(self::VERY_SHORT_NAMES[$this->value] ?? $this->shortName(), 0, 3);
     }
 }

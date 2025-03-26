@@ -12,7 +12,6 @@ use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -26,8 +25,9 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use InvalidArgumentException;
+use ValueError;
 
-use function array_keys;
 use function is_array;
 use function sprintf;
 use function strtolower;
@@ -92,8 +92,12 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
     {
+        if (!$symbol && $priceRange) {
+            throw new InvalidArgumentException('Wrong usage: cannot apply priceRange when Symbol not specified');
+        }
+
         $data = $this->sendRequest($request = GetCurrentOrdersRequest::openOnly(self::ASSET_CATEGORY, $symbol))->data();
         if (!is_array($list = $data['list'] ?? null)) {
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
@@ -103,6 +107,16 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         foreach ($list as $item) {
             $reduceOnly = $item['reduceOnly'];
             $closeOnTrigger = $item['closeOnTrigger'];
+
+            try {
+                $itemSymbol = Symbol::from($item['symbol']);
+                if ($symbol && $itemSymbol !== $symbol) {
+                    continue;
+                }
+            } catch (ValueError) {
+                # in case of symbol not defined yet
+                continue;
+            }
 
             // Only orders created by bot
             if (
@@ -115,7 +129,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             $orderId = $item['orderId'];
 
             $activeOrders[$orderId] = new ActiveStopOrder(
-                $symbol,
+                $itemSymbol,
                 Side::from(strtolower($item['side']))->getOpposite(),
                 $orderId,
                 (float)$item['qty'],

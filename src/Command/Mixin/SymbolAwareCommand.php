@@ -32,14 +32,14 @@ trait SymbolAwareCommand
      * @return Symbol[]
      * @throws Throwable
      */
-    private function getSymbols(): array
+    private function getSymbols(array $exceptWhenGetAll = []): array
     {
         try {
             $symbol = $this->getSymbol();
         } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
             if ($providedSymbolValue === 'all') {
-                return $this->positionService->getOpenedPositionsSymbols();
+                return $this->positionService->getOpenedPositionsSymbols($exceptWhenGetAll);
             } elseif (str_contains($providedSymbolValue, ',')) {
                 return self::parseProvidedSymbols($providedSymbolValue);
             }

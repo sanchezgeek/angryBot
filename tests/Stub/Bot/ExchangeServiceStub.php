@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Stub\Bot;
 
+use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -26,12 +27,17 @@ final class ExchangeServiceStub implements ExchangeServiceInterface, TickersCach
         throw new Exception(sprintf('%s::updateTicker not supported', ExchangeServiceInterface::class));
     }
 
-    public function activeConditionalOrders(Symbol $symbol, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
     {
         throw new Exception(sprintf('%s::activeConditionalOrders not supported', ExchangeServiceInterface::class));
     }
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
+    {
+        throw new Exception(sprintf('%s::closeActiveConditionalOrder not supported', ExchangeServiceInterface::class));
+    }
+
+    public function getInstrumentInfo(string|Symbol $symbol): InstrumentInfoDto
     {
         throw new Exception(sprintf('%s::closeActiveConditionalOrder not supported', ExchangeServiceInterface::class));
     }

@@ -6,6 +6,8 @@ namespace App\Worker;
 
 enum RunningWorker: string
 {
+    case SERVICE = 'service';
+
     case SHORT = 'short';
     case LONG = 'long';
 
@@ -15,4 +17,6 @@ enum RunningWorker: string
 
     case UTILS = 'utils';
     case CACHE = 'cache';
+
+    case CRITICAL = 'critical';
 }

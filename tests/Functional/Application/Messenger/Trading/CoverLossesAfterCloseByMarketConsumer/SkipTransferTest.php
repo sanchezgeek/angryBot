@@ -12,20 +12,9 @@ use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Tests\Factory\Position\PositionBuilder;
-use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class SkipTransferTest extends KernelTestCase
+class SkipTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstract
 {
-    use ByBitV5ApiRequestsMocker;
-
-    private CoverLossesAfterCloseByMarketConsumer $consumer;
-
-    protected function setUp(): void
-    {
-        $this->consumer = self::getContainer()->get(CoverLossesAfterCloseByMarketConsumer::class);
-    }
-
     /**
      * @dataProvider closedPositionDataProvider
      */
@@ -76,7 +65,11 @@ class SkipTransferTest extends KernelTestCase
         $exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn(new ContractBalance($coin, 100, 0, $freeContractBalance, $freeContractBalance));
         $exchangeAccountServiceMock->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(new SpotBalance($coin, $availableSpotBalance, $availableSpotBalance));
-        $consumer = new CoverLossesAfterCloseByMarketConsumer($exchangeAccountServiceMock, self::getContainer()->get(PositionServiceInterface::class));
+        $consumer = new CoverLossesAfterCloseByMarketConsumer(
+            $exchangeAccountServiceMock,
+            self::getContainer()->get(PositionServiceInterface::class),
+            $this->settingsProvider,
+        );
 
         # assert
         $exchangeAccountServiceMock->expects(self::never())->method('interTransferFromSpotToContract');

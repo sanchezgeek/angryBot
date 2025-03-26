@@ -5,6 +5,7 @@ namespace App\Bot\Domain\Repository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -85,11 +86,10 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     /**
      * @return BuyOrder[]
      */
-    public function findActiveInRange(
+    public function findActiveForPush(
         Symbol $symbol,
         Side $side,
-        float $from,
-        float $to,
+        float $currentPrice,
         bool $exceptOppositeOrders = false,
         callable $qbModifier = null
     ): array {
@@ -97,16 +97,22 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             symbol: $symbol,
             side: $side,
             exceptOppositeOrders: $exceptOppositeOrders,
-            qbModifier: function (QueryBuilder $qb) use ($from, $to, $qbModifier) {
+            qbModifier: function (QueryBuilder $qb) use ($currentPrice, $side, $qbModifier) {
                 if ($qbModifier) {
                     $qbModifier($qb);
                 }
 
                 $priceField = $qb->getRootAliases()[0] . '.price';
-                $qb
-                    ->andWhere(\sprintf('%s > :from and %s < :to', $priceField, $priceField))
-                    ->setParameter(':from', $from)
-                    ->setParameter(':to', $to);
+                if ($side->isShort()) {
+                    $qb->andWhere(\sprintf('%s >= :currentPrice', $priceField));
+                } else {
+                    $qb->andWhere(\sprintf('%s <= :currentPrice', $priceField));
+                }
+                $qb->setParameter(':currentPrice', $currentPrice);
+
+                $stateField = $qb->getRootAliases()[0] . '.state';
+                $qb->andWhere(\sprintf('%s = :activeState', $stateField));
+                $qb->setParameter(':activeState', BuyOrderState::Active);
             }
         );
     }
@@ -119,6 +125,20 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
             ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     * @todo MB use current price to find orders?
+     */
+    public function getIdleOrders(Symbol $symbol): array
+    {
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere('b.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('b.state = :idleState')->setParameter('idleState', BuyOrderState::Idle)
         ;
 
         return $qb->getQuery()->getResult();

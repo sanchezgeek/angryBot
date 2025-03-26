@@ -18,29 +18,35 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
 use App\Output\Table\Dto\Style\CellStyle;
+use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
+use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Cache\CacheInterface;
+
+use Throwable;
 
 use function array_merge;
 use function sprintf;
@@ -53,29 +59,39 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     use PriceRangeAwareCommand;
 
     private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '30';
+    private const DEFAULT_SAVE_CACHE_INTERVAL = '150';
 
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
 
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const SAVE_SORT_OPTION = 'save-sort';
+    private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
     private const MOVE_UP_OPTION = 'move-up';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
+    private const CURRENT_STATE_OPTION = 'current-state';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
     private const SHOW_CACHE_OPTION = 'show-cache';
     private const UPDATE_OPTION = 'update';
     private const UPDATE_INTERVAL_OPTION = 'update-interval';
     private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
+    private const SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
 
     private array $cacheCollector = [];
     private ?string $showDiffWithOption;
+    private ?string $cacheKeyToUseAsCurrentState;
 
     /** @var Symbol[] */
     private array $symbols;
 
     /** @var Stop[] */
     private array $stops;
+
+    /** @var array<Position[]> */
+    private array $positions;
+
+    /** @var array<string, Price> */
+    private array $lastMarkPrices;
 
     protected function configure(): void
     {
@@ -84,11 +100,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
+            ->addOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, 'c', InputOption::VALUE_OPTIONAL, 'Comment on first cache save')
+            ->addOption(self::CURRENT_STATE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Use specified cached data as current state')
             ->addOption(self::REMOVE_PREVIOUS_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove previous cache')
             ->addOption(self::UPDATE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Update?', true)
             ->addOption(self::UPDATE_INTERVAL_OPTION, null, InputOption::VALUE_REQUIRED, 'Update interval', self::DEFAULT_UPDATE_INTERVAL)
             ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
             ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
+            ->addOption(self::SHOW_FULL_TICKER_DATA_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show full ticker data?')
         ;
     }
 
@@ -97,6 +116,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         parent::initialize($input, $output);
 
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
+        $this->cacheKeyToUseAsCurrentState = $this->paramFetcher->getStringOption(self::CURRENT_STATE_OPTION, false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -114,8 +134,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
         $iteration = 0;
         do {
-            echo PHP_EOL . PHP_EOL . PHP_EOL . PHP_EOL;
-
             $iteration++;
             $this->cacheCollector = [];
 
@@ -128,13 +146,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             $this->doOut($cache, $prevCache);
 
+            $saveCacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
+
             $saveCurrentState =
                 !$updateEnabled
-                || $iteration === 1
+                || $saveCacheComment
                 || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
 
             if ($saveCurrentState) {
-                $cachedDataCacheKey = sprintf('opened_positions_data_cache_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+                $cachedDataCacheKey = sprintf('opened_positions_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+                if ($saveCacheComment) {
+                    $cachedDataCacheKey .= '_' . $saveCacheComment;
+                }
                 $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
                 $this->cache->save($item);
                 $this->addSavedDataCacheKey($cachedDataCacheKey);
@@ -147,9 +170,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         return Command::SUCCESS;
     }
-
-    /** @var array<Position[]> */
-    private array $positions;
 
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
@@ -166,6 +186,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
+        $this->lastMarkPrices = $positionService->getLastMarkPrices();
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
@@ -188,39 +209,42 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
-        $balanceCells = ['', ''];
-        if (isset($balance)) {
-            $balanceCells = [
-                new Cell(
-                    sprintf('%s avail | %s free | %s total', $balance->availableForTrade->value(), $balance->free->value(), $balance->total->value()),
-                    new CellStyle(colspan: 2)
-                )
-            ];
-        }
-        $bottomCells = $balanceCells;
+        $bottomCells = [Cell::default($this->clock->now()->format('D, d M H:i:s'))->setAlign(CellAlign::CENTER)];
+        $balanceContent = isset($balance)
+            ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->availableForTrade)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
+            : '';
+        $bottomCells[] = sprintf('% 48s', $balanceContent);
+        $bottomCells[] = '';
 
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
-        $bottomCells[] = $pnlFormatter($unrealisedTotal);
+        $bottomCells[] = Cell::default($pnlFormatter($unrealisedTotal))->setAlign(CellAlign::RIGHT);
+        $bottomCells[] = '';
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => (new CoinAmount($singleCoin, $pnl))->value() : static fn($pnl) => (string)$pnl;
-        $selectedCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter);
-        $prevCache !== null && $bottomCells[] = self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter);
+        $selectedCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        $prevCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
 
-        $bottomCells = array_merge($bottomCells, ['', '', '', '', '']);
+        $bottomCells = array_merge($bottomCells, ['', '', '', '']);
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
-        $headerColumns = ['symbol (last / mark / index)', 'entry / liq / size', 'PNL'];
-        $selectedCache && $headerColumns[] = 'Δ (cache)';
-        $prevCache && $headerColumns[] = 'Δ (prev.)';
+        $headerColumns = [
+            $this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION) ? 'symbol (last / mark / index)' : 'symbol',
+            'entry / liq / size',
+            'PNL%',
+            'PNL',
+        ];
+        $headerColumns[] = 'smb';
+        $selectedCache && $headerColumns[] = 'cache';
+        $prevCache && $headerColumns[] = 'prev';
         $headerColumns = array_merge($headerColumns, [
-            "symbol",
-            "liq - entry(\n initial\n liq.\n distance\n)",
+            'smb',
+            "liq-ent.(\ninitial\n liq.\n distance\n)",
             "/ entry\n  price",
-            "liq - mark(\n current\n liq.\n distance\n)",
+            "liq-mark(\n current\n liq.\n distance\n)",
             "/ entry\n  price",
-            "symbol",
+            "smb",
             "liq.\ndistance\npassed",
-            "auto-added\nstops(\n between liq.\n and entry\n)"
+            "stops(\n between liq.\n and entry\n)\n[auto/manual]",
         ]);
 
         ConsoleTableBuilder::withOutput($this->output)
@@ -237,6 +261,66 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
     }
 
+    private function prepareStoppedPartContent(Position $position, $markPrice): ?string
+    {
+        $symbol = $position->symbol;
+        $positionSide = $position->side;
+
+        $stops = $this->stopRepository->findActive(
+            symbol: $symbol,
+            side: $positionSide,
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
+        );
+        /** @var Stop[] $autoStops */
+        $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            if (!$position->getHedge() || $position->isMainPosition()) {
+                $modifier = Percent::string('20%')->of($position->liquidationDistance());
+                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
+                    return false;
+                }
+            }
+
+            return $stop->isAdditionalStopFromLiquidationHandler();
+        });
+        /** @var Stop[] $manualStops */
+        $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            if (!$position->getHedge() || $position->isMainPosition()) {
+                $modifier = Percent::string('20%')->of($position->liquidationDistance());
+                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
+                    return false;
+                }
+            }
+
+            return !$stop->isAdditionalStopFromLiquidationHandler();
+        });
+
+        $stoppedVolume = [];
+        $entryPrice = $position->entryPrice();
+        if ($manualStops) {
+            $manualStoppedPartPct = (new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+            $firstManualStop = $manualStops[array_key_first($manualStops)];
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+                $entryPrice->differenceWith($symbol->makePrice($firstManualStop->getPrice()))->deltaForPositionLoss($positionSide),
+                $entryPrice
+            );
+            $stoppedVolume[] = sprintf('%s[%s.%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
+        }
+
+        if ($autoStops) {
+            $autoStoppedPartPct = (new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+            $firstAutoStop = $autoStops[array_key_first($autoStops)];
+            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+                $entryPrice->differenceWith($symbol->makePrice($firstAutoStop->getPrice()))->deltaForPositionLoss($positionSide),
+                $entryPrice
+            );
+            $stoppedVolume[] = sprintf('%s[a.%s]', $autoStoppedPartPct, $distancePnlPct->setOutputFloatPrecision(1));
+        }
+
+        return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
+    }
+
     /**
      * @return array<DataRow|SeparatorRow>
      */
@@ -249,17 +333,35 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             return [];
         }
 
-        $ticker = $this->exchangeService->ticker($symbol);
-        $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
+        $lastMarkPrices = $this->lastMarkPrices;
+        $markPrice = $lastMarkPrices[$symbol->value];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
-        $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
+        if ($hedge?->isEquivalentHedge()) {
+            $main = $positions[Side::Sell->value];
+            $support = $positions[Side::Buy->value];
+        } else {
+            $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
+            $support = $hedge?->supportPosition;
+        }
+
+        if ($support) {
+            $supportPnl = $support->unrealizedPnl;
+            $supportPositionCacheKey = self::positionCacheKey($support);
+
+            if ($specifiedCache) {
+                $supportPnlSpecifiedCacheValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+            }
+            if ($prevCache) {
+                $supportPnlPrevCacheValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+            }
+        }
 
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
 
         $initialLiquidationDistance = $main->liquidationDistance();
-        $distanceBetweenLiquidationAndTicker = $main->priceDistanceWithLiquidation($ticker);
+        $distanceBetweenLiquidationAndTicker = $main->liquidationPrice()->deltaWith($markPrice);
 
         $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
         $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
@@ -273,21 +375,22 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             };
         }
 
+        $initialLiquidationDistancePercentOfEntry = match (true) {
+            $initialLiquidationDistancePercentOfEntry->value() < 10 => CTH::colorizeText((string)$initialLiquidationDistancePercentOfEntry, 'bright-red-text'),
+            $initialLiquidationDistancePercentOfEntry->value() < 30 => CTH::colorizeText((string)$initialLiquidationDistancePercentOfEntry, 'yellow-text'),
+            default => $initialLiquidationDistancePercentOfEntry,
+        };
+
+        $distanceBetweenLiquidationAndTickerPercentOfEntry = match (true) {
+            $distanceBetweenLiquidationAndTickerPercentOfEntry->value() < 10 => CTH::colorizeText((string)$distanceBetweenLiquidationAndTickerPercentOfEntry, 'bright-red-text'),
+            $distanceBetweenLiquidationAndTickerPercentOfEntry->value() < 30 => CTH::colorizeText((string)$distanceBetweenLiquidationAndTickerPercentOfEntry, 'yellow-text'),
+            default => $distanceBetweenLiquidationAndTickerPercentOfEntry,
+        };
+
         $mainPositionPnl = $main->unrealizedPnl;
 
         if (!$main->isShortWithoutLiquidation()) {
-            $stops = array_filter($this->stops, static function(Stop $stop) use ($main, $symbol, $ticker) {
-                $modifier = Percent::string('20%')->of($main->liquidationDistance());
-                $bound = $main->isShort() ? $main->liquidationPrice()->sub($modifier) : $main->liquidationPrice()->add($modifier);
-
-                return
-                    $stop->getPositionSide() === $main->side
-                    && $stop->getSymbol() === $symbol
-                    && $stop->getExchangeOrderId() === null
-                    && $symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($ticker->markPrice, $bound, $symbol))
-                    ;
-            });
-            $stoppedVolume = (new StopsCollection(...$stops))->volumePart($main->size);
+            $stoppedVolume = $this->prepareStoppedPartContent($main, $markPrice);
         }
 
         $liquidationContent = $main->isShortWithoutLiquidation() ? '-' : sprintf('%9s', $main->liquidationPrice());
@@ -295,8 +398,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ? CTH::colorizeText($liquidationContent, 'yellow-text')
             : $liquidationContent;
 
-        $cells = [
-            sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice),
+        if ($this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION)) {
+            $ticker = $this->exchangeService->ticker($symbol);
+            $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
+            $cells = [sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)];
+        } else {
+            $cells = [sprintf('%8s: %10s', $symbol->shortName(), $markPrice)];
+        }
+
+        $cells = array_merge($cells, [
             sprintf(
                 '%s: %9s    %9s     %6s',
                 CTH::colorizeText(sprintf('%5s', $main->side->title()), $main->isShort() ? 'red-text' : 'green-text'),
@@ -304,20 +414,54 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-        ];
+        ]);
 
-        $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl), $mainPositionPnl < 0 ? new CellStyle(fontColor: Color::BRIGHT_RED) : null);
-        $pnlFormatter = static fn(float $pnl) => (new CoinAmount($symbol->associatedCoin(), $pnl))->value();
+        # PNL%
+        $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($main), false))->setOutputFloatPrecision(1)->setOutputDecimalsPrecision(7))->setAlign(CellAlign::RIGHT);
+        # PNL value
+        $mainPositionPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl));
+        $mainPositionPnlContent = $mainPositionPnl < 0 ? CTH::colorizeText($mainPositionPnlContent, 'red-text') : $mainPositionPnlContent;
+        if (!$support) {
+            $mainPositionPnlContent = '         ' . $mainPositionPnlContent;
+        } else {
+            # result PNL
+            $resultPnl = $mainPositionPnl + $support->unrealizedPnl;
+            $resultPnlContent = (string)self::formatPnl(new CoinAmount($symbol->associatedCoin(), $resultPnl));
+            if ($mainPositionPnl < 0 && $resultPnl > 0) {
+                $color = 'light-yellow-text';
+            } else {
+                $color = $resultPnl < 0 ? 'red-text' : 'bright-white-text';
+            }
+            $resultPnlContent = CTH::colorizeText($resultPnlContent, $color);
+            $mainPositionPnlContent .= ' /' . $resultPnlContent;
+        }
+        $cells[] = $mainPositionPnlContent;
+
+        $extraSymbolCell = CTH::colorizeText($symbol->veryShortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
+        $cells[] = $extraSymbolCell;
+
         if ($specifiedCache) {
-            $cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
-            $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
-        }
-        if ($prevCache) {
-            $cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl;
-            $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $mainPositionPnl, b: $cachedValue, formatter: $pnlFormatter) : '';
+            if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
+                if ($support && isset($supportPnlSpecifiedCacheValue)) {
+                    $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlSpecifiedCacheValue;
+                }
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithSpecifiedCache ?? null);
+            } else {
+                $cells[] = '';
+            }
         }
 
-        $extraSymbolCell = CTH::colorizeText($symbol->shortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
+        if ($prevCache) {
+            if (($cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
+                if ($support && isset($supportPnlPrevCacheValue)) {
+                    $supportPnlDiffWithPrevCache = $supportPnl - $supportPnlPrevCacheValue;
+                }
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithPrevCache ?? null);
+            } else {
+                $cells[] = '';
+            }
+        }
+
         $cells = array_merge($cells, [
             $extraSymbolCell,
             $initialLiquidationDistance,
@@ -326,48 +470,110 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $extraSymbolCell,
             $passedLiquidationDistancePercent ?? '',
-            isset($stoppedVolume) ? new Percent($stoppedVolume, false) : '',
+            $stoppedVolume ?? '',
         ]);
 
-        $result[] = DataRow::default($cells);
+        $result[$main->side->value] = DataRow::default($cells);
 
         $unrealizedTotal += $mainPositionPnl;
 
-        if ($support = $main->getHedge()?->supportPosition) {
+        if ($support) {
             $supportPnl = $support->unrealizedPnl;
-            $supportPositionCacheKey = self::positionCacheKey($support);
+            $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
 
             $cells = [
                 '',
                 sprintf(
-                    ' sup.: %9s                  %6s',
+                    ' sup.: %9s    %s     %6s',
+//                    ' sup.: %9s                  %6s',
                     $support->entryPrice(),
-                    self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size))
+                    CTH::colorizeText(sprintf('%9s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
+                    self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
             ];
 
-            $cells[] = new Cell(new CoinAmount($symbol->associatedCoin(), $supportPnl));
+            $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
+            $supportPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $supportPnl));
+            $supportPnlContent = $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
+
+            $cells[] = new Cell($supportPnlContent, new CellStyle(fontColor: Color::WHITE));
+            $cells[] = '';
 
             if ($specifiedCache) {
-                $cachedValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
-                $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
+                if ($supportPnlSpecifiedCacheValue !== null) {
+                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlSpecifiedCacheValue, fontColor: Color::WHITE);
+                } else {
+                    $cells[] = '';
+                }
             }
             if ($prevCache) {
-                $cachedValue = ($prevCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
-                $cells[] = $cachedValue !== null ? self::getFormattedDiff(a: $supportPnl, b: $cachedValue, withoutColor: true, formatter: $pnlFormatter) : '';
+                if ($supportPnlPrevCacheValue !== null) {
+                    $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlPrevCacheValue, fontColor: Color::WHITE);
+                } else {
+                    $cells[] = '';
+                }
             }
 
-            $cells = array_merge($cells, ['', '', '', '',  '', '']);
+            $cells = array_merge($cells, ['', '', '', '',  '', '', '', $stoppedVolume ?? '']);
 
-            $result[] = DataRow::default($cells);
+            $result[$support->side->value] = DataRow::default($cells);
 
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[$supportPositionCacheKey] = $support;
         }
 
+        if (count($result) > 1) {
+            $result = [
+                $result[Side::Sell->value],
+                $result[Side::Buy->value],
+            ];
+        }
+
+        $result = array_values($result);
+
         $result[] = new SeparatorRow();
 
         return $result;
+    }
+
+    private static function formatPnlDiffCell(
+        Symbol $symbol,
+        bool $isMainWithoutSupport,
+        float $a,
+        float $b,
+        ?bool $withoutColor = null,
+        ?Color $fontColor = null,
+        ?float $oppositePositionPnlDiffWithCache = null
+    ): Cell {
+        if ($fontColor) {
+            $withoutColor = true;
+        }
+
+        $reference = self::formatPnl(new CoinAmount($symbol->associatedCoin(), 123))->setSigned(true);
+        $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
+
+        $pnlDiffContent = self::getFormattedDiff(a: $a, b: $b, withoutColor: $withoutColor, formatter: $pnlFormatter, alreadySigned: true);
+        if ($isMainWithoutSupport) {
+            $pnlDiffContent = str_repeat(' ', $reference->getWholeLength()) . $pnlDiffContent;
+        }
+
+        if (isset($oppositePositionPnlDiffWithCache)) {
+            $currentPositionPnlDiffWithPrevCache = $a - $b;
+            $resultPnl = $oppositePositionPnlDiffWithCache + $currentPositionPnlDiffWithPrevCache;
+            $pnlDiffContent .= ' / ' . self::getFormattedDiff(a: $resultPnl, b: 0, formatter: $pnlFormatter, alreadySigned: true);
+        }
+
+        $cell = Cell::default(trim($pnlDiffContent) !== '/' ? $pnlDiffContent : '');
+        if ($fontColor) {
+            $cell->addStyle(new CellStyle(fontColor: $fontColor));
+        }
+
+        return $cell;
+    }
+
+    private static function formatPnl(CoinAmount $amount): CoinAmount
+    {
+        return $amount->setFloatPrecision(2);
     }
 
     private function getOpenedPositionsSymbols(): array
@@ -462,12 +668,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function getFormattedDiff(int|float $a, int|float $b, ?bool $withoutColor = null, ?callable $formatter = null): string
-    {
+    private static function getFormattedDiff(
+        int|float $a,
+        int|float $b,
+        ?bool $withoutColor = null,
+        ?callable $formatter = null,
+        bool $alreadySigned = false
+    ): string {
         $diff = $a - $b;
 
         if ($diff === 0.00 || $diff === 0) {
-            return '-';
+            return '';
         }
 
         [$sign, $color] = match (true) {
@@ -480,9 +691,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $color = null;
         }
 
-        $value = $formatter(abs($diff));
-        $value = $diff < 0 ? -$value : $value;
-        $value = sprintf('%s%s', $sign ?? '', $value);
+        if ($alreadySigned) {
+            $value = $formatter($diff);
+        } else {
+            $value = $formatter(abs($diff));
+            $value = $diff < 0 ? -$value : $value;
+            $value = sprintf('%s%s', $sign ?? '', $value);
+        }
+
 
         return $color ? CTH::colorizeText($value, $color) : $value;
     }
