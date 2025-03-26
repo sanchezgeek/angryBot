@@ -291,7 +291,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- ticker NOT in warn.range
         $ticker = self::tickerInCheckStopsRange($message, $long);
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.048, 30299);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30299);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. right after entry / ticker NOT in warn.range') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
@@ -327,7 +327,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- ticker NOT in warn.range
         $ticker = self::tickerInCheckStopsRange($message, $long);
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.048, 30350);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30350);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. before entry / ticker NOT in warn.range') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
@@ -549,7 +549,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         CheckPositionIsUnderLiquidation $message,
         array $existedStops,
         ?float $withVolume = null,
-        ?float $onPrice = null
+        ?float $onPrice = null,
     ): Stop {
         $size = $position->getNotCoveredSize();
 

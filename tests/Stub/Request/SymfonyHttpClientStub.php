@@ -13,9 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 use function addcslashes;
-use function array_keys;
 use function array_merge;
-use function array_unshift;
 use function explode;
 use function http_build_query;
 use function is_array;
@@ -25,7 +23,6 @@ use function parse_str;
 use function preg_match;
 use function str_contains;
 use function uuid_create;
-use function var_dump;
 
 /**
  * @see \App\Tests\Unit\Stub\SymfonyHttpClientStubTest

@@ -8,6 +8,17 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 final class CheckPositionIsUnderLiquidationParams
 {
+    public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 80;
+    public const ACCEPTABLE_STOPPED_PART_DEFAULT = 4;
+    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 8; // @todo Must be different for BTC and others
+
+    public const WARNING_PNL_DISTANCES = [
+        Symbol::BTCUSDT->value => 120,
+        Symbol::ETHUSDT->value => 200,
+        Symbol::ARCUSDT->value => 500, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+        'other' => 400
+    ];
+
     /** @var Symbol[] */
     private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
 //        Symbol::LAIUSDT,
@@ -46,5 +57,10 @@ final class CheckPositionIsUnderLiquidationParams
     public static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
     {
         return self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
+    }
+
+    public static function warningDistancePnlDefault(Symbol $symbol): int|float
+    {
+        return self::WARNING_PNL_DISTANCES[$symbol->value] ?? self::WARNING_PNL_DISTANCES['other'];
     }
 }
