@@ -21,9 +21,9 @@ readonly class MarketBuyEntryDto
     public static function fromBuyOrder(BuyOrder $buyOrder): self
     {
         $force = false;
-        if ($buyOrder->isOppositeBuyOrderAfterStopLoss()) {
-            $force = true;
-        }
+//        if ($buyOrder->isOppositeBuyOrderAfterStopLoss()) {
+//            $force = true;
+//        }
 
         if ($buyOrder->isForceBuyOrder()) {
             $force = true;

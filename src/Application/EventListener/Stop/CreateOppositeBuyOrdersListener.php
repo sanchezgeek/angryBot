@@ -69,8 +69,12 @@ final class CreateOppositeBuyOrdersListener
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
             BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
             BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
-            BuyOrder::FORCE_BUY_CONTEXT => true,
         ];
+
+        # force buy only if it's not auto stop-order CheckPositionIsUnderLiquidationHandler
+        if (!$stop->isAdditionalStopFromLiquidationHandler()) {
+            $context[BuyOrder::FORCE_BUY_CONTEXT] = true;
+        }
 
          if ($stop->isAdditionalStopFromLiquidationHandler()) {
              $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
