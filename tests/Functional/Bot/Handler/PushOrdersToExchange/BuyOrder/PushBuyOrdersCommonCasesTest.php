@@ -60,7 +60,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
 
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 100);
+        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 10);
     }
 
     /**
