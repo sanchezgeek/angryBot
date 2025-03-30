@@ -127,8 +127,34 @@ class CreateStopsGridCommand extends AbstractCommand
                 sprintf('In \'%s\' mode param "%s" is required.', $mode, self::ORDERS_QNT_OPTION)
             );
 
+            /** @todo | Context =( */
+            $stopsHasOppositeBuyOrders = ($context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false;
+            $roundVolumeToMin = $stopsHasOppositeBuyOrders;
+
             /** @var Order[] $orders */
-            $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
+            $orders = iterator_to_array(
+                $stopsGrid->ordersByQnt($forVolume, $qnt, $roundVolumeToMin)
+            );
+
+            $volumeSum = 0;
+            foreach ($orders as $order) {
+                $volumeSum += $order->volume();
+            }
+            $volumeSum = $symbol->roundVolume($volumeSum);
+
+            if ($volumeSum > $forVolume) {
+                if ($this->io->confirm(
+                    sprintf(
+                        'Result volume (%f) of all %d orders is greater than initially expected (%f). Do you wish to merge orders to fit initially expected volume?',
+                        $volumeSum, count($orders), $forVolume
+                    )
+                )) {
+                    # strict
+                    $orders = iterator_to_array(
+                        $stopsGrid->ordersByQnt($forVolume, $qnt, $roundVolumeToMin, true)
+                    );
+                }
+            }
 //            if (!$this->io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
 //                return Command::FAILURE;
 //            }
