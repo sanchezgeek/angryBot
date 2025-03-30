@@ -64,6 +64,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
 
+    private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const SAVE_SORT_OPTION = 'save-sort';
     private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
@@ -93,9 +94,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /** @var array<string, Price> */
     private array $lastMarkPrices;
 
+    private bool $currentSortSaved = false;
+
     protected function configure(): void
     {
         $this
+            ->addOption(self::MOVE_HEDGED_UP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Move fully-hedge positions up')
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
@@ -174,6 +178,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
         $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
+
+        $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
+        $this->positions = $positionService->getAllPositions();
+        $this->lastMarkPrices = $positionService->getLastMarkPrices();
         $symbols = $this->getOpenedPositionsSymbols();
 
         $singleCoin = null;
@@ -183,10 +191,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
             $singleCoin = $symbol->associatedCoin();
         }
-
-        $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
-        $this->positions = $positionService->getAllPositions();
-        $this->lastMarkPrices = $positionService->getLastMarkPrices();
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
@@ -253,12 +257,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->build()
             ->setStyle('box')
             ->render();
-
-        if ($this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
-            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
-            $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
-            $this->cache->save($item);
-        }
     }
 
     private function prepareStoppedPartContent(Position $position, $markPrice): ?string
@@ -337,7 +335,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $markPrice = $lastMarkPrices[$symbol->value];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
-        if ($hedge?->isEquivalentHedge()) {
+        $isEquivalentHedge = $hedge?->isEquivalentHedge();
+
+        if ($isEquivalentHedge) {
             $main = $positions[Side::Sell->value];
             $support = $positions[Side::Buy->value];
         } else {
@@ -437,15 +437,16 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
         $cells[] = $mainPositionPnlContent;
 
-        $extraSymbolCell = CTH::colorizeText($symbol->veryShortName(), $main->isShort() ? 'bright-red-text' : 'green-text');
+        $text = $isEquivalentHedge ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
+        $extraSymbolCell = CTH::colorizeText($text, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
         $cells[] = $extraSymbolCell;
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                if ($support && !$hedge?->isEquivalentHedge() && isset($supportPnlSpecifiedCacheValue)) {
+                if ($support && !$isEquivalentHedge && isset($supportPnlSpecifiedCacheValue)) {
                     $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlSpecifiedCacheValue;
                 }
-                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithSpecifiedCache ?? null);
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, withoutColor: $isEquivalentHedge, oppositePositionPnlDiffWithCache: $supportPnlDiffWithSpecifiedCache ?? null);
             } else {
                 $cells[] = '';
             }
@@ -453,10 +454,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($prevCache) {
             if (($cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                if ($support && !$hedge?->isEquivalentHedge() && isset($supportPnlPrevCacheValue)) {
+                if ($support && !$isEquivalentHedge && isset($supportPnlPrevCacheValue)) {
                     $supportPnlDiffWithPrevCache = $supportPnl - $supportPnlPrevCacheValue;
                 }
-                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithPrevCache ?? null);
+                $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, withoutColor: $isEquivalentHedge, oppositePositionPnlDiffWithCache: $supportPnlDiffWithPrevCache ?? null);
             } else {
                 $cells[] = '';
             }
@@ -469,7 +470,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $distanceBetweenLiquidationAndTicker,
             $distanceBetweenLiquidationAndTickerPercentOfEntry,
             $extraSymbolCell,
-            $passedLiquidationDistancePercent ?? '',
+            !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
             $stoppedVolume ?? '',
         ]);
 
@@ -494,7 +495,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
             $supportPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $supportPnl));
-            $supportPnlContent = $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
+            $supportPnlContent = !$isEquivalentHedge && $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
 
             $cells[] = new Cell($supportPnlContent, new CellStyle(fontColor: Color::WHITE));
             $cells[] = '';
@@ -578,17 +579,27 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private function getOpenedPositionsSymbols(): array
     {
-        $symbols = $this->positionService->getOpenedPositionsSymbols();
+        $moveHedgedUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
+
+        $symbolsRaw = [];
+        $equivalentHedgedSymbols = [];
+        foreach ($this->positions as $symbolRaw => $symbolPositions) {
+            $symbolsRaw[] = $symbolRaw;
+            $symbol = Symbol::from($symbolRaw);
+            if ($moveHedgedUp && $symbolPositions[array_key_first($symbolPositions)]?->getHedge()?->isEquivalentHedge()) {
+                $equivalentHedgedSymbols[] = $symbolRaw;
+            }
+        }
+
         if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
             $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
             if ($sort === null) {
                 OutputHelper::print('Saved sort not found');
             } else {
-                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
                 $newPositionsSymbols = array_diff($symbolsRaw, $sort);
                 $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
                 $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
-                $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRawSorted);
+                $symbolsRaw = $symbolsRawSorted;
             }
         }
 
@@ -596,16 +607,26 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $providedItems = self::parseProvidedSymbols($moveUpOption);
             if ($providedItems) {
                 $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
-                $symbolsRaw = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
                 $providedItems = array_intersect($providedItems, $symbolsRaw);
                 if ($providedItems) {
                     $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
-                    $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
                 }
             }
         }
 
-        return $symbols;
+        if (!$this->currentSortSaved && $this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
+            $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
+            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
+            $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
+            $this->cache->save($item);
+            $this->currentSortSaved = true;
+        }
+
+        if ($moveHedgedUp) {
+            $symbolsRaw = array_merge($equivalentHedgedSymbols, array_diff($symbolsRaw, $equivalentHedgedSymbols));
+        }
+
+        return array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
     }
 
     private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
