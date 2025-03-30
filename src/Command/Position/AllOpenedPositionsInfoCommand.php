@@ -305,7 +305,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $entryPrice->differenceWith($symbol->makePrice($firstManualStop->getPrice()))->deltaForPositionLoss($positionSide),
                 $entryPrice
             );
-            $stoppedVolume[] = sprintf('%s[%s.%s]', $manualStoppedPartPct, CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
+            $stoppedVolume[] = sprintf('%s|%d[%s.%s]', $manualStoppedPartPct, count($manualStops), CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         if ($autoStops) {
@@ -315,7 +315,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $entryPrice->differenceWith($symbol->makePrice($firstAutoStop->getPrice()))->deltaForPositionLoss($positionSide),
                 $entryPrice
             );
-            $stoppedVolume[] = sprintf('%s[a.%s]', $autoStoppedPartPct, $distancePnlPct->setOutputFloatPrecision(1));
+            $stoppedVolume[] = sprintf('%s|%d[a.%s]', $autoStoppedPartPct, count($autoStops), $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
@@ -442,7 +442,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                if ($support && isset($supportPnlSpecifiedCacheValue)) {
+                if ($support && !$hedge?->isEquivalentHedge() && isset($supportPnlSpecifiedCacheValue)) {
                     $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlSpecifiedCacheValue;
                 }
                 $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithSpecifiedCache ?? null);
@@ -453,7 +453,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($prevCache) {
             if (($cachedValue = ($prevCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
-                if ($support && isset($supportPnlPrevCacheValue)) {
+                if ($support && !$hedge?->isEquivalentHedge() && isset($supportPnlPrevCacheValue)) {
                     $supportPnlDiffWithPrevCache = $supportPnl - $supportPnlPrevCacheValue;
                 }
                 $cells[] = self::formatPnlDiffCell($symbol, !$support, $mainPositionPnl, $cachedValue, oppositePositionPnlDiffWithCache: $supportPnlDiffWithPrevCache ?? null);
