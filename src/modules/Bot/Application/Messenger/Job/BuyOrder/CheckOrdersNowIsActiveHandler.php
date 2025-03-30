@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\BuyOrder;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -30,9 +31,15 @@ final class CheckOrdersNowIsActiveHandler
         /** @var $lastMarkPrices array<string, Price> */
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
 
+        $symbols = [];
+        foreach ($positions as $symbolRaw => $symbolPositions) {
+            $symbols[] = Symbol::from($symbolRaw);
+        }
+        $idleOrders = $this->buyOrderRepository->getIdleOrders(...$symbols);
+
         foreach ($positions as $symbolRaw => $symbolPositions) {
             $symbol = Symbol::from($symbolRaw);
-            $idlePositionOrders = $this->buyOrderRepository->getIdleOrders($symbol);
+            $idlePositionOrders = array_filter($idleOrders, static fn(BuyOrder $order) => $order->getSymbol() === $symbol);
 
             foreach ($idlePositionOrders as $buyOrder) {
                 $comparator = self::getComparator($buyOrder->getPositionSide());

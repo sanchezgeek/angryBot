@@ -26,6 +26,8 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
     use BuyOrdersTester;
     use ByBitV5ApiRequestsMocker;
 
+    private CheckOrdersNowIsActiveHandler $handler;
+
     protected function setUp(): void
     {
         parent::setUp();
