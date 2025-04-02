@@ -10,6 +10,7 @@ final class CheckPositionIsUnderLiquidationParams
 {
     public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 80;
     public const ACCEPTABLE_STOPPED_PART_DEFAULT = 4;
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 8; // @todo Must be different for BTC and others
 
     public const WARNING_PNL_DISTANCES = [

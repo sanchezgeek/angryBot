@@ -149,7 +149,6 @@ final class CheckPositionIsUnderLiquidationHandler
         $this->additionalStopDistanceWithLiquidation = null;
         $this->additionalStopPrice = null;
         $this->actualStopsPriceRange = null;
-        $this->ticker = null;
 
         $symbol = $message->symbol;
         $this->position = $position = $this->positions[$symbol->value];
@@ -345,7 +344,7 @@ final class CheckPositionIsUnderLiquidationHandler
                 $modifier = 1;
             }
 
-            return ($acceptableStoppedPart / 3) * $modifier;
+            return ($acceptableStoppedPart / Params::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
 //            return ($acceptableStoppedPart / 1.5) * $modifier;
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
             $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
