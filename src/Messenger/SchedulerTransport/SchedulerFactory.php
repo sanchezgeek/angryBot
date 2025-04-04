@@ -11,7 +11,7 @@ use App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMesseng
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;

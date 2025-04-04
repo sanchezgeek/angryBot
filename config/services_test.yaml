@@ -11,10 +11,9 @@ services:
     App\Application\UniqueIdGeneratorInterface:
         class: App\Tests\Mock\UniqueIdGeneratorStub
 
-    App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler:
+    App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler:
         arguments:
             $exchangeService: '@App\Bot\Application\Service\Exchange\ExchangeServiceInterface'
-            $cachedPositionService: '@App\Bot\Application\Service\Exchange\PositionServiceInterface'
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
             $exchangeAccountService: '@App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface'
             $orderService: '@App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface'

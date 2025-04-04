@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\Messenger\Position;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationParams;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -71,7 +71,6 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
-            $this->positionService,
             $this->positionService,
             $this->exchangeAccountService,
             $this->orderService,

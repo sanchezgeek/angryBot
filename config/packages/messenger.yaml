@@ -37,7 +37,7 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\Position\CheckPositionIsUnderLiquidation: async_critical
+            App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation: async_critical
             App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage: async
             App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async_high
             App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async_high

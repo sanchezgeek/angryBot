@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -22,7 +22,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Helper\CheckLiquidationParametersHelper;
+use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -291,26 +291,26 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- ticker NOT in warn.range
         $ticker = self::tickerInCheckStopsRange($message, $long);
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30299);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30303.49);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. right after entry / ticker NOT in warn.range') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         # -- ticker IN warn.range
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('10%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.1, 30269);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.108, 30269);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. right after entry / ticker IN warn.range (1)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('20%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.2, 30239);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.207, 30239);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. right after entry / ticker IN warn.range (2)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('55%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.55, 30134.0);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.553, 30134.0);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. right after entry / ticker IN warn.range (3)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
@@ -327,28 +327,28 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- ticker NOT in warn.range
         $ticker = self::tickerInCheckStopsRange($message, $long);
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30350);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.038, 30355);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. before entry / ticker NOT in warn.range') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         # -- ticker IN warn.range
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('10%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.1, 30320);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.11, 30320);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. before entry / ticker IN warn.range (1)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         # -- ticker IN warn.range
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('20%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.2, 30290);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.208, 30290);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. before entry / ticker IN warn.range (2)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
 
         # -- ticker IN warn.range
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('55%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.55, 30185.0);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.553, 30185.0);
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, 'liq. before entry / ticker IN warn.range (3)') => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop],
         ];
@@ -404,7 +404,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         array $expectedAdditionalStops,
         bool $debug = false
     ): void {
-        AppContext::setIsDebug($debug);
+        AppContext::setIsDebug(true);
 
         $this->haveAllOpenedPositionsWithLastMarkPrices($allOpenedPositions);
         $this->haveStopsInDb(...$delayedStops);
@@ -482,25 +482,23 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     private static function tickerInCheckStopsRange(CheckPositionIsUnderLiquidation $message, Position $position): Ticker
     {
-        $checkStopsOnDistance = CheckLiquidationParametersHelper::checkStopsOnDistance($message, $position);
+        $checkStopsOnDistance = CheckLiquidationParametersBag::create($message, $position)->checkStopsOnDistance();
 
-        return TickerFactory::withMarkSomeBigger(
+        return TickerFactory::withEqualPrices(
             $position->symbol,
             $position->isShort() ? $position->liquidationPrice - $checkStopsOnDistance : $position->liquidationPrice + $checkStopsOnDistance,
-            Side::Sell
         );
     }
 
     private static function tickerInWarningRange(CheckPositionIsUnderLiquidation $message, Position $position, ?Percent $passedDistance = null): Ticker
     {
-        $distancePnl = CheckLiquidationParametersHelper::warningDistancePnl($message);
+        $distancePnl = CheckLiquidationParametersBag::create($message, $position)->warningDistancePnl();
         $pnlDistanceWithLiquidation = $distancePnl - ($passedDistance ? $passedDistance->value() : 0);
         $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistanceWithLiquidation, $position->entryPrice()), 0.1);
 
-        return TickerFactory::withMarkSomeBigger(
+        return TickerFactory::withEqualPrices(
             $position->symbol,
             $position->isShort() ? $position->liquidationPrice - $warningDistance : $position->liquidationPrice + $warningDistance,
-            Side::Sell
         );
     }
 
@@ -518,7 +516,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     private function stopPriceThatLeanInAcceptableRange(CheckPositionIsUnderLiquidation $message, Position $position): Price
     {
-        $actualStopsRange = CheckLiquidationParametersHelper::actualStopsRange($message, $position);
+        $actualStopsRange = CheckLiquidationParametersBag::create($message, $position)->actualStopsRange();
         $someDelta = Percent::string('2%')->of($position->liquidationDistance());
 
         return $position->isShort() ? $actualStopsRange->to()->sub($someDelta) : $actualStopsRange->from()->add($someDelta);
@@ -563,8 +561,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             }
         }
 
-        $expectedStopSize = CheckLiquidationParametersHelper::acceptableStoppedPart($message) - Percent::fromPart($stopped / $size, false)->value();
-        $additionalStopDistanceWithLiquidation = CheckLiquidationParametersHelper::additionalStopDistanceWithLiquidation($message, $position);
+        $checkLiquidationParametersBag = CheckLiquidationParametersBag::create($message, $position, $ticker);
+
+        $expectedStopSize = $checkLiquidationParametersBag->acceptableStoppedPart() - Percent::fromPart($stopped / $size, false)->value();
+        $additionalStopDistanceWithLiquidation = $checkLiquidationParametersBag->additionalStopDistanceWithLiquidation();
 //        $additionalStopTriggerDelta = $additionalStopDistanceWithLiquidation > 500 ? self::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA : self::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 
         // @todo | move to helper
@@ -577,7 +577,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $price = $onPrice ?? (
             ($position->isShort() ? $position->liquidationPrice()->sub($stopDistanceWithLiquidation) : $position->liquidationPrice()->add($stopDistanceWithLiquidation))->value()
         );
-        $triggerDelta = CheckLiquidationParametersHelper::additionalStopTriggerDelta($position->symbol);
+        $triggerDelta = $checkLiquidationParametersBag->additionalStopTriggerDelta();
 
         return new Stop(
             $lastId + 1,
@@ -608,7 +608,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             $mainPosition,
         );
 
-        $needToCoverPercent = CheckLiquidationParametersHelper::acceptableStoppedPart($message) - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
+        $needToCoverPercent = CheckLiquidationParametersBag::create($message, $mainPosition)->acceptableStoppedPart() - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
 
         return sprintf(
             '[%s%s] / ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%% => add %s on %s',
