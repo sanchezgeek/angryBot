@@ -15,6 +15,7 @@ use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -95,9 +96,12 @@ class CreateBuyGridCommand extends AbstractCommand
                 $count++;
                 $modifier = FloatHelper::modify($step / 7, 0.15);
                 $rand = random_int(-$modifier, $modifier);
+                $orderPrice = $price->add($rand)->value();
+
+                $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $volume, $orderPrice);
 
                 $result = $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($symbol, $side, $volume, $price->add($rand)->value(), $context)
+                    new CreateBuyOrderEntryDto($symbol, $side, $exchangeOrder->getVolume(), $orderPrice, $context)
                 );
             }
 
@@ -105,7 +109,7 @@ class CreateBuyGridCommand extends AbstractCommand
 
             $createdWithVolume = $result->buyOrder->getVolume();
             if ($createdWithVolume !== $volume) {
-                $this->io->info(sprintf('The Orders have been created with recalculated volume: %s', $createdWithVolume));
+                $this->io->info(sprintf('The Orders have been created with recalculated volume ~= %s', $createdWithVolume));
             }
 
             $output = [

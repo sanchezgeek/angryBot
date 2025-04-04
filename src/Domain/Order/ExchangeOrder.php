@@ -6,10 +6,6 @@ namespace App\Domain\Order;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Price;
-use DomainException;
-
-use function floor;
-use function var_dump;
 
 final class ExchangeOrder // implements OrderInterface
 {
@@ -18,25 +14,40 @@ final class ExchangeOrder // implements OrderInterface
     private float $providedVolume;
     private Price $price;
 
-    public function __construct(Symbol $symbol, float $volume, Price|float $price, bool $roundToMin = false)
+    public function __construct(Symbol $symbol, float $volume, Price|float $price, float $providedVolume = null)
     {
         $this->symbol = $symbol;
         $this->price = $symbol->makePrice(Price::toFloat($price));
-        $this->providedVolume = $volume;
+        $this->volume = $volume;
+        $this->providedVolume = $providedVolume ?? $volume;
+    }
 
-        /** @todo tests */
-        $value = $volume * $this->price->value();
-        if ($roundToMin && $value < ($minNotionalValue = $symbol->minNotionalOrderValue())) {
-            $volumeCalculated = $minNotionalValue / $this->price->value();
+    public static function raw(Symbol $symbol, float $volume, Price|float $price): self
+    {
+        return new self($symbol, $volume, $price);
+    }
+
+    /**
+     * @todo tests
+     */
+    public static function roundedToMin(Symbol $symbol, float $volume, Price|float $price): self
+    {
+        $providedVolume = $volume;
+        $price = Price::toFloat($price);
+
+        $minNotionalValue = $symbol->minNotionalOrderValue();
+        $value = $volume * $price;
+        if ($value < $minNotionalValue) {
+            $volumeCalculated = $minNotionalValue / $price;
             $volume = $symbol->roundVolumeUp($volumeCalculated);
         }
 
         $minQty = $symbol->minOrderQty();
-        if ($roundToMin && is_int($minQty) && ($volume % $minQty !== 0)) {
+        if (is_int($minQty) && ($volume % $minQty !== 0)) {
             $volume = ceil($volume / $minQty) * $minQty;
         }
 
-        $this->volume = $volume;
+        return new self($symbol, $volume, $price, $providedVolume);
     }
 
     public function getSymbol(): Symbol
@@ -57,15 +68,5 @@ final class ExchangeOrder // implements OrderInterface
     public function getPrice(): Price
     {
         return $this->price;
-    }
-
-    /**
-     * @throws DomainException
-     */
-    private function validateAmount(): void
-    {
-        if ($this->volume - floor($this->volume) !== 0) {
-            throw new DomainException();
-        }
     }
 }

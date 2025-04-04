@@ -41,7 +41,7 @@ class MarketBuyHandler
         }
 
         $ticker = $this->exchangeService->ticker($symbol);
-        $exchangeOrder = new ExchangeOrder($symbol, $dto->volume, $ticker->lastPrice, true);
+        $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->lastPrice);
 
         try {
             return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());

@@ -100,7 +100,7 @@ final class OrdersGrid
             }
 
             if ($roundVolumeToMin) {
-                $nominal = new ExchangeOrder($symbol, $volume, $priceItem, true);
+                $nominal = ExchangeOrder::roundedToMin($symbol, $volume, $priceItem);
                 if ($volume < ($minVolume = $nominal->getVolume())) {
                     $volume = $minVolume;
                 }

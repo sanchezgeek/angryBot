@@ -208,7 +208,7 @@ class PlaceOrderCommand extends AbstractCommand
         foreach ($symbols as $symbol) {
             $ticker = $this->exchangeService->ticker($symbol);
             if (is_float($volume)) {
-                $orders[] = new ExchangeOrder($symbol, $volume, $ticker->indexPrice, true);
+                $orders[] = ExchangeOrder::roundedToMin($symbol, $volume, $ticker->indexPrice);
             } else {
                 if ($mode === 'ofPosition') {
                     if (!($position = $this->positionService->getPosition($symbol, $positionSide))) {
@@ -218,7 +218,7 @@ class PlaceOrderCommand extends AbstractCommand
                     $qtyCalculated = $volume->of($position->size);
                     $qtyRounded = $symbol->roundVolume($qtyCalculated);
 
-                    $orders[] = new ExchangeOrder($symbol, $qtyRounded, $ticker->indexPrice, true);
+                    $orders[] = ExchangeOrder::roundedToMin($symbol, $qtyRounded, $ticker->indexPrice);
                 } else {
                     throw new InvalidArgumentException(sprintf('Unrecognized option `%s`', $mode ?? ''));
                 }
