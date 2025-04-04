@@ -16,6 +16,7 @@ use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
@@ -225,6 +226,10 @@ final class CheckPositionIsUnderLiquidationHandler
 //                    if ($decreaseStopDistance) $stopPriceDistance = $stopPriceDistance * 0.5;
                     $triggerDelta = $this->additionalStopTriggerDelta($symbol);
                     $stopPrice = $this->getAdditionalStopPrice();
+
+                    # Recalculate qty to min. Otherwise, created further BuyOrders can lead to excessive increase in position size
+                    $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $stopQty, $stopPrice);
+                    $stopQty = $exchangeOrder->getVolume();
 
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
