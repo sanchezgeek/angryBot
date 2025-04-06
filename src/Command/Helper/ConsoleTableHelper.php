@@ -36,6 +36,10 @@ class ConsoleTableHelper
 
     public static function colorizeText(string $text, string $wrapper): string
     {
+        if ($wrapper === 'none') {
+            return $text;
+        }
+
         return sprintf('<%s>%s</%s>', $wrapper, $text, $wrapper);
     }
 

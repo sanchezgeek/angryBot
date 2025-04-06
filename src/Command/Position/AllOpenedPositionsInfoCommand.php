@@ -150,7 +150,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
             $this->doOut($cache, $prevCache);
 
-            $saveCacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
+            $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
+            $saveCacheComment = $cacheComment && $iteration === 1;
 
             $saveCurrentState =
                 !$updateEnabled
@@ -160,7 +161,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             if ($saveCurrentState) {
                 $cachedDataCacheKey = sprintf('opened_positions_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
                 if ($saveCacheComment) {
-                    $cachedDataCacheKey .= '_' . $saveCacheComment;
+                    $cachedDataCacheKey .= '_' . $cacheComment;
                 }
                 $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
                 $this->cache->save($item);
