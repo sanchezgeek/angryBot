@@ -8,6 +8,8 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 final class CheckPositionIsUnderLiquidationParams
 {
+    public const CRITICAL_PART_OF_LIQUIDATION_DISTANCE = 30;
+
     public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 80;
     public const ACCEPTABLE_STOPPED_PART_DEFAULT = 4;
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
@@ -17,7 +19,16 @@ final class CheckPositionIsUnderLiquidationParams
         Symbol::BTCUSDT->value => 120,
         Symbol::ETHUSDT->value => 200,
         Symbol::ARCUSDT->value => 500, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+        Symbol::FARTCOINUSDT->value => 500, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
         'other' => 400
+    ];
+
+    public const CRITICAL_DISTANCE_PNLS = [
+        Symbol::BTCUSDT->value => 60,
+        Symbol::ETHUSDT->value => 80,
+        Symbol::ARCUSDT->value => 200, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+        Symbol::FARTCOINUSDT->value => 200, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+        'other' => 200
     ];
 
     /** @var Symbol[] */
@@ -37,7 +48,8 @@ final class CheckPositionIsUnderLiquidationParams
 
     /** @var Symbol[] */
     private const SYMBOLS_WITHOUT_OPPOSITE_ORDERS = [
-//        Symbol::BTCUSDT,
+        // @todo should be some sort of automated decisions
+//        Symbol::ARCUSDT,
     ];
 
     public static function isSymbolWithoutOppositeBuyOrders(Symbol $symbol): bool
@@ -63,5 +75,10 @@ final class CheckPositionIsUnderLiquidationParams
     public static function warningDistancePnlDefault(Symbol $symbol): int|float
     {
         return self::WARNING_PNL_DISTANCES[$symbol->value] ?? self::WARNING_PNL_DISTANCES['other'];
+    }
+
+    public static function criticalDistancePnlDefault(Symbol $symbol): int|float
+    {
+        return self::CRITICAL_DISTANCE_PNLS[$symbol->value] ?? self::CRITICAL_DISTANCE_PNLS['other'];
     }
 }

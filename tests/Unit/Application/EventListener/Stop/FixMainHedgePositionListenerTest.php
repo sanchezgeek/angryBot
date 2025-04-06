@@ -5,28 +5,23 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Application\EventListener\Stop;
 
 use App\Application\EventListener\Stop\FixMainHedgePositionListener;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Helper\CheckLiquidationParametersHelper;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use PHPUnit\Framework\TestCase;
 

@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Application\Messenger\Position;
+namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -65,8 +66,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->exchangeService = $this->createMock(ExchangeServiceInterface::class);
         $this->positionService = $this->createMock(PositionServiceInterface::class);
         $this->exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
-        $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->orderService = $this->createMock(OrderServiceInterface::class);
+        $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
@@ -78,6 +79,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
             null,
+            new LiquidationDynamicParametersFactory(),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }

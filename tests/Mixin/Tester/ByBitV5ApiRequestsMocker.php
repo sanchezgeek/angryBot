@@ -249,7 +249,7 @@ trait ByBitV5ApiRequestsMocker
             if ($category !== $position->symbol->associatedCategory()) {
                 throw new RuntimeException('Only for same AssetCategory');
             }
-            $resultResponse->withPosition($position, $lastMarkPrice);
+            $resultResponse->withPosition($position, (float)$lastMarkPrice);
         }
 
         $this->expectsToMakeApiCalls(

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationDynamicParameters as DynamicParameters;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -20,7 +21,6 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
@@ -69,7 +69,7 @@ final class CheckPositionIsUnderLiquidationHandler
     private array $activeConditionalStopOrders;
 
     ### each symbol runtime
-    private DynamicParameters $dynamicParameters;
+    private LiquidationDynamicParametersInterface $dynamicParameters;
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
@@ -144,7 +144,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $ticker = new Ticker($symbol, $markPrice, $markPrice, $markPrice); // @todo Get rid of ticker?
         $coin = $symbol->associatedCoin();
 
-        $this->dynamicParameters = new DynamicParameters($message, $position, $ticker);
+        $this->dynamicParameters = $this->liquidationDynamicParametersFactory->create($message, $position, $ticker);
 
         ### remove stale ###
         foreach ($this->getStaleStops($position) as $stop) {
@@ -388,6 +388,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly StopRepositoryInterface $stopRepository,
         private readonly LoggerInterface $appErrorLogger,
         private readonly ?CacheInterface $cache,
+        private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {
     }

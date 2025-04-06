@@ -1,0 +1,334 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
+
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Bot\Domain\Position;
+use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Price\Price;
+use App\Domain\Price\PriceRange;
+use App\Tests\Factory\Position\PositionBuilder;
+use App\Tests\Factory\TickerFactory;
+use App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest;
+use App\Tests\Helper\CheckLiquidationParametersBag;
+use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
+use App\Worker\AppContext;
+use PHPUnit\Framework\TestCase;
+use RuntimeException;
+
+/**
+ * @group liquidation
+ *
+ * @covers LiquidationDynamicParameters
+ */
+final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCase
+{
+//    /**
+//     * @dataProvider actualStopsRangeTestCases
+//     */
+//    public function testActualStopsRange(
+//        CheckPositionIsUnderLiquidation $message,
+//        Position $position,
+//        Ticker $ticker,
+//        PriceRange $expectedRangeResult,
+//        bool $debug = false
+//    ): void {
+//        $debug && AppContext::setIsDebug(true);
+//
+//        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+//
+//        $result = $dynamicParameters->actualStopsRange();
+//
+//        if (!$debug) {
+//            self::assertEquals($expectedRangeResult, $result);
+//        } else {
+//            var_dump($result);die;
+//        }
+//    }
+
+    /**
+     * @dataProvider additionalStopCases
+     */
+    public function testAddAdditionalStopCases(
+        CheckPositionIsUnderLiquidation $message,
+        Position $position,
+        Ticker $ticker,
+        PriceRange $expectedRangeResult,
+        Price $expectedStopPrice,
+        float $expectedWarningDistance,
+        float $expectedCriticalDistance,
+        float|int $expectedAcceptableStoppedPart,
+        bool $debug = false
+    ): void {
+        $debug && AppContext::setIsDebug($debug);
+
+        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+
+        $actualStopsRange = $dynamicParameters->actualStopsRange();
+        $additionalStopPrice = $dynamicParameters->additionalStopPrice();
+        $warningDistance = $dynamicParameters->warningDistance();
+        $criticalDistance = $dynamicParameters->criticalDistance();
+        $acceptableStoppedPart = $dynamicParameters->acceptableStoppedPart();
+
+        if (!$additionalStopPrice->isPriceInRange($actualStopsRange)) {
+            throw new RuntimeException('CheckPositionIsUnderLiquidationDynamicParametersTest | Something went wrong: $additionalStopPrice is not inside of $actualStopsRange');
+        }
+
+        self::assertEquals($expectedStopPrice, $additionalStopPrice);
+        self::assertEquals($expectedRangeResult, $actualStopsRange);
+        self::assertEquals($expectedCriticalDistance, $criticalDistance);
+        self::assertEquals($expectedWarningDistance, $warningDistance);
+        self::assertEquals($expectedAcceptableStoppedPart, $acceptableStoppedPart);
+    }
+
+    public function additionalStopCases(): iterable
+    {
+ // from functional
+        $source = AddStopWhenPositionLiquidationInWarningRangeTest::addStopTestCases();
+        $source = array_values(iterator_to_array($source));
+
+        foreach ($source as $key => $data) {
+            $data = array_values($data);
+            $message = $data[0];
+            $position = $data[1];
+            $ticker = $data[2];
+            $note = 'from functional|' . $key . '|' . ($data[6] ?? 'none');
+
+            /**
+             * @var CheckPositionIsUnderLiquidation $message
+             * @var Position $position
+             * @var Ticker $ticker
+             */
+            $bag = CheckLiquidationParametersBag::create($message, $position, $ticker);
+            $expectedActualStopsRange = $bag->actualStopsRange();
+            $expectedStopPrice = $bag->additionalStopPrice();
+            $expectedCriticalDistance = $bag->criticalDistance();
+            $expectedWarningDistance = $bag->warningDistance();
+            $acceptableStoppedPart = $bag->acceptableStoppedPart();
+            $caseName = self::wholeDataCaseDescription($message, $position, $ticker, $expectedActualStopsRange, $expectedStopPrice, $expectedWarningDistance, $expectedCriticalDistance, $acceptableStoppedPart, $note);
+
+            $debug = false;
+            if ($key === 18) {
+//                $expectedStopPrice = Price::float(30176.0);
+//                $expectedActualStopsRange = PriceRange::create(30169.96, 30326.88);
+//                $debug = true;
+            } else {
+//                continue;
+            }
+
+            yield $caseName => [
+                $message, $position, $ticker, $expectedActualStopsRange, $expectedStopPrice, $expectedWarningDistance, $expectedCriticalDistance, $acceptableStoppedPart, $debug,
+            ];
+        }
+
+// manual
+        #### corner cases
+        $symbol = Symbol::BTCUSDT;
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 30449);
+        $expectedActualStopsRange = PriceRange::create(30181.69, 30455.010000000002);
+        $expectedStopPrice = Price::float(30303.49);
+        $warningDistance = 304.49;
+        $criticalDistance = 182.69;
+        $acceptableStoppedPart = 4;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedActualStopsRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | corner.cases | liq. right after entry / ticker NOT in warn.range (double from functional)') => [
+            $message, $long, $ticker, $expectedActualStopsRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart
+        ];
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 30100);
+        $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
+        $expectedStopPrice = Price::float(30179.6);
+        $warningDistance = 301.0;
+        $criticalDistance = 180.6;
+        $acceptableStoppedPart = 66.4451827242525;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | corner.cases | liq. right after entry / ticker right before liquidation (in critical range)') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1);
+        $ticker = TickerFactory::withEqualPrices($symbol, 30100);
+        $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
+        $expectedStopPrice = Price::float(30179.6); /** @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS */
+        $warningDistance = 180.6;
+        $criticalDistance = 180.6;
+        $acceptableStoppedPart = 44.075304540420824;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | corner.cases | liq. right after entry / ticker right before liquidation (in critical range) + minimal allowed parameters') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        # scenario when liquidation moved up through position entry price (from previous example)
+        $long = PositionBuilder::long()->entry(30000)->size(1)->liq(30050)->build();
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1);
+        $ticker = TickerFactory::withEqualPrices($symbol, 30100);
+        $expectedPriceRange = PriceRange::create(30093.95, 30381.75);
+        $expectedStopPrice = Price::float(30230.6);
+        $warningDistance = 180.6;
+        $criticalDistance = 180.6;
+        $acceptableStoppedPart = 72.31450719822813;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, ' => manual | corner.cases | liq before entry / ticker right before liquidation (in critical range) + minimal allowed parameters') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        #### simple
+        $long = PositionBuilder::long()->entry(30000)->size(1)->liq(25000)->build();
+
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 29000);
+        $expectedPriceRange = PriceRange::create(28215.0, 28785.0);
+        $expectedStopPrice = Price::float(28500);
+        $warningDistance = 1500.0;
+        $criticalDistance = 174.0;
+        $acceptableStoppedPart = 7.434782608695653;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker NOT in range to add stop') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 27500);
+        $expectedPriceRange = PriceRange::create(27225.0, 27775.0);
+        $expectedStopPrice = Price::float(27500);
+        $warningDistance = 1500;
+        $criticalDistance = 165.0;
+        $acceptableStoppedPart = 16.73913043478261;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker already in range to add stop') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 25200);
+        $expectedPriceRange = PriceRange::create(25151.2, 25452.0);
+        $expectedStopPrice = Price::float(25200);
+        $warningDistance = 1500.0;
+        $criticalDistance = 151.2;
+        $acceptableStoppedPart = 41.73913043478261;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker IN warn.range') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        // !!!
+        $ticker = TickerFactory::withEqualPrices($symbol, 25100);
+        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997);
+        $expectedStopPrice = Price::float(25150.6);
+        $warningDistance = 1500.0;
+        $criticalDistance = 150.6;
+        $acceptableStoppedPart = 42.168695652173916; // !!!
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, '!!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 10, warningPnlDistance: 10);
+        $ticker = TickerFactory::withEqualPrices($symbol, 25100);
+        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997);
+        $expectedStopPrice = Price::float(25150.6);
+        $warningDistance = 1500.0;
+        $criticalDistance = 150.6;
+        $acceptableStoppedPart = 42.168695652173916;
+        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker right before liquidation (in critical range) + minimal allowed parameters') => [
+            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $short = PositionBuilder::short()->entry(90000)->size(1)->liq(95000)->build();
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 94700);
+        $expectedPriceRange = PriceRange::create(93959.64, 94718.89);
+        $expectedStopPrice = Price::float(94431.8);
+        $warningDistance = 1500.0;
+        $criticalDistance = 568.2;
+        $acceptableStoppedPart = 38.53739130434783;
+        yield self::wholeDataCaseDescription($message, $short, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | ticker in crit.range') => [
+            $message, $short, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
+        ];
+
+        // min allowed on 100000
+
+//        $ticker = TickerFactory::withEqualPrices($symbol, 93800);
+//        $expectedPriceRange = PriceRange::create(93000.0, 94430.0);
+//        yield self::actualStopsRangeCaseDescription($message, $short, $ticker, $expectedPriceRange, 'liq. right after entry / ticker NOT in warn.range') => [
+//            $message, $short, $ticker, $expectedPriceRange,
+//        ];
+//        $ticker = TickerFactory::withEqualPrices($symbol, 90000);
+//        $expectedPriceRange = PriceRange::create(89200.0, 90800.0);
+//        yield self::actualStopsRangeCaseDescription($message, $short, $ticker, $expectedPriceRange, 'liq. right after entry / ticker NOT in warn.range') => [
+//            $message, $short, $ticker, $expectedPriceRange,
+//        ];
+//
+//        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 30, warningPnlDistance: 30);
+//        $ticker = TickerFactory::withEqualPrices($symbol, 90000);
+//        $expectedPriceRange = PriceRange::create(91200.0, 92800.0);
+//        yield self::actualStopsRangeCaseDescription($message, $short, $ticker, $expectedPriceRange, 'liq. right after entry / ticker NOT in warn.range') => [
+//            $message, $short, $ticker, $expectedPriceRange,
+//        ];
+    }
+
+    private static function tickerInCheckStopsRange(CheckPositionIsUnderLiquidation $message, Position $position): Ticker
+    {
+        return AddStopWhenPositionLiquidationInWarningRangeTest::tickerInCheckStopsRange($message, $position);
+    }
+
+    private static function actualStopsRangeCaseDescription(
+        CheckPositionIsUnderLiquidation $message,
+        Position $position,
+        Ticker $ticker,
+        PriceRange $expectedPriceRange,
+        ?string $note = null
+    ): string {
+        return sprintf(
+            '[%s%s] / %s / ticker.markPrice = %.2f) => %s',
+            $note ? sprintf('%s / ', $note) : '',
+            TestCaseDescriptionHelper::getFullPositionCaption($position),
+            self::formatHandledMessage($message),
+            $ticker->markPrice->value(),
+            $expectedPriceRange,
+        );
+    }
+
+    private static function wholeDataCaseDescription(
+        CheckPositionIsUnderLiquidation $message,
+        Position $position,
+        Ticker $ticker,
+        PriceRange $expectedActualStopsRange,
+        Price $expectedAdditionalStopPrice,
+        float $warningDistance,
+        float $criticalDistance,
+        float|int $acceptableStoppedPart,
+        ?string $note = null
+    ): string {
+        $parameters = [
+            'actualStopsRange' => $expectedActualStopsRange,
+            'additionalStopPrice' => $expectedAdditionalStopPrice,
+            'warningDistance' => $warningDistance,
+            'criticalDistance' => $criticalDistance,
+            'acceptableStoppedPart' => $acceptableStoppedPart
+        ];
+        $parametersDesc = '';
+        foreach ($parameters as $key => $value) {
+            $parametersDesc .= sprintf("     % 25s: %s\n", $key, $value);
+        }
+
+        return sprintf(
+            "\n[%s]\n  %s\n   ticker.markPrice = %s\n    %s\n    =>\n%s",
+            $note ?? 'none',
+            TestCaseDescriptionHelper::getFullPositionCaption($position),
+            $ticker->markPrice->value(),
+            self::formatHandledMessage($message),
+            $parametersDesc,
+        );
+    }
+
+    private static function formatHandledMessage(CheckPositionIsUnderLiquidation $message): string
+    {
+        return sprintf(
+            'msg: percentOfLiquidationDistanceToAddStop: %.1f, acceptableStoppedPart: %.1f, warningPnlDistance: %.1f',
+            $message->percentOfLiquidationDistanceToAddStop ?? 'null',
+            $message->acceptableStoppedPart ?? 'null',
+            $message->warningPnlDistance ?? 'null',
+        );
+    }
+}

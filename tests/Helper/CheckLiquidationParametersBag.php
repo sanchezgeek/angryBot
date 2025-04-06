@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Helper;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationDynamicParameters;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -19,8 +21,18 @@ use RuntimeException;
 
 class CheckLiquidationParametersBag
 {
+    /**
+     * @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS
+     */
+    private const CRITICAL_DISTANCE_PNLS = [
+        Symbol::BTCUSDT->value => 60,
+        Symbol::ETHUSDT->value => 80,
+        Symbol::ARCUSDT->value => 200,
+        'other' => 200
+    ];
+
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
-    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = CheckPositionIsUnderLiquidationParams::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP;
+    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = Params::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP;
 
     private function __construct(
         private readonly CheckPositionIsUnderLiquidation $message,
@@ -47,15 +59,53 @@ class CheckLiquidationParametersBag
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::acceptableStoppedPart
+     * @see LiquidationDynamicParameters::acceptableStoppedPart
      */
     public function acceptableStoppedPart(): float
     {
-        return $this->message->acceptableStoppedPart ?? CheckPositionIsUnderLiquidationParams::ACCEPTABLE_STOPPED_PART_DEFAULT;
+        if ($this->message->acceptableStoppedPart) {
+            return $this->message->acceptableStoppedPart;
+        }
+
+        $ticker = $this->ticker;
+        if ($ticker) {
+            $position = $this->position;
+            $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+            if ($position->isPositionInLoss($ticker->markPrice)) {
+                $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
+                $initialDistanceWithLiquidation = $position->liquidationDistance();
+                $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+                $acceptableStoppedPart = 100 - $distanceLeftInPercent;
+
+                $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
+                $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $priceToCalcModifier)->value();
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                if ($modifier > 1) {
+                    $modifier = 1;
+                }
+
+                return ($acceptableStoppedPart / Params::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
+            } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
+                $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+                $initialDistanceWithLiquidation = $this->warningDistance();
+                $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+                $acceptableStoppedPart = 100 - $distanceLeftInPercent;
+
+                $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                if ($modifier > 1) {
+                    $modifier = 1;
+                }
+
+                return $acceptableStoppedPart * $modifier;
+            }
+        }
+
+        return Params::ACCEPTABLE_STOPPED_PART_DEFAULT;
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::checkStopsOnDistance
+     * @see LiquidationDynamicParameters::checkStopsOnDistance
      */
     public function checkStopsOnDistance(): float
     {
@@ -63,9 +113,9 @@ class CheckLiquidationParametersBag
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::additionalStopDistanceWithLiquidation
+     * @see LiquidationDynamicParameters::additionalStopDistanceWithLiquidation
      */
-    public function additionalStopDistanceWithLiquidation(): float
+    public function additionalStopDistanceWithLiquidation(bool $minWithTickerDistance = false): float
     {
         $position = $this->position;
         $message = $this->message;
@@ -83,6 +133,14 @@ class CheckLiquidationParametersBag
             $additionalStopDistanceWithLiquidation = $this->warningDistance();
         }
 
+        if ($minWithTickerDistance && $this->ticker) {
+            $minDistance = $this->ticker->markPrice->isPriceInRange($this->criticalRange())
+                ? $this->criticalDistance()
+                : $position->priceDistanceWithLiquidation($this->ticker);
+
+            $additionalStopDistanceWithLiquidation = min($minDistance, $additionalStopDistanceWithLiquidation);
+        }
+
         return $additionalStopDistanceWithLiquidation;
     }
 
@@ -95,10 +153,31 @@ class CheckLiquidationParametersBag
         return $this->message->warningPnlDistance;
     }
 
+    public function criticalDistancePnl(): float
+    {
+        return self::CRITICAL_DISTANCE_PNLS[$this->position->symbol->value] ?? self::CRITICAL_DISTANCE_PNLS['other'];
+    }
+
+    public function criticalDistance(): float
+    {
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->criticalDistancePnl(), $this->ticker?->markPrice ?? $this->position->liquidationPrice());
+    }
+
+    public function criticalRange(): PriceRange
+    {
+        $criticalDistance = $this->criticalDistance();
+        $liquidationPrice = $this->position->liquidationPrice();
+
+        return PriceRange::create(
+            $liquidationPrice,
+            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
+        );
+    }
+
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::warningDistance()
+     * @see LiquidationDynamicParameters::warningDistance()
      */
-    private function warningDistance(): float
+    public function warningDistance(): float
     {
         $position = $this->position;
 
@@ -117,11 +196,11 @@ class CheckLiquidationParametersBag
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::additionalStopPrice
+     * @see LiquidationDynamicParameters::additionalStopPrice
      */
     public function additionalStopPrice(): Price
     {
-        $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation();
+        $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
 
         return (
             ($position = $this->position)->isShort()
@@ -131,18 +210,48 @@ class CheckLiquidationParametersBag
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::actualStopsRange
+     * @see LiquidationDynamicParameters::actualStopsRange
      */
     public function actualStopsRange(): PriceRange
     {
-        $additionalStopPrice = $this->additionalStopPrice();
-        $modifier = (new Percent(self::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($this->position->liquidationDistance());
+        $position = $this->position;
+        $liquidationPrice = $position->liquidationPrice();
 
-        return PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier));
+        $additionalStopPrice = $this->additionalStopPrice();
+        $criticalDistance = $this->criticalDistance();
+
+        $modifier = (new Percent(self::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($position->liquidationDistance());
+
+        $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
+        $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
+        if ($modifier < $min) {
+            $modifier = $min;
+        } elseif ($modifier > $max) {
+            $modifier = $max;
+        }
+        $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
+
+        if ($position->side->isShort()) {
+            $tickerSideBound = $additionalStopPrice->sub($modifier);
+            $liquidationBound = $additionalStopPrice->add($modifier);
+            $liquidationBound = min($liquidationBound->value(), $liquidationPrice->sub($criticalDistance)->value());
+            if ($this->ticker) {
+                $liquidationBound = max($liquidationBound, $this->ticker->markPrice->value() + $variableError);
+            }
+        } else {
+            $tickerSideBound = $additionalStopPrice->add($modifier);
+            $liquidationBound = $additionalStopPrice->sub($modifier);
+            $liquidationBound = max($liquidationBound->value(), $liquidationPrice->add($criticalDistance)->value());
+            if ($this->ticker) {
+                $liquidationBound = min($liquidationBound, $this->ticker->markPrice->value() - $variableError);
+            }
+        }
+
+        return PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);
     }
 
     /**
-     * @see CheckPositionIsUnderLiquidationDynamicParameters::additionalStopTriggerDelta
+     * @see LiquidationDynamicParameters::additionalStopTriggerDelta
      */
     public function additionalStopTriggerDelta(): float
     {
