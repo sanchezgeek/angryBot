@@ -286,16 +286,20 @@ final class CheckPositionIsUnderLiquidationHandler
         return $delayedStops->totalVolume() + $activeConditionalStopsVolume;
     }
 
+    /**
+     * @return ActiveStopOrder[]
+     */
     private function findActivePositionStopOrders(Symbol $symbol, Side $positionSide, PriceRange $priceRange): array
     {
-        $symbolStops = array_filter(
+        return array_filter(
             $this->activeConditionalStopOrders,
-            static fn (ActiveStopOrder $activeStopOrder) => $activeStopOrder->symbol === $symbol && $activeStopOrder->positionSide === $positionSide,
+            static function(ActiveStopOrder $activeStopOrder) use ($symbol, $positionSide, $priceRange) {
+                return
+                    $activeStopOrder->symbol === $symbol &&
+                    $activeStopOrder->positionSide === $positionSide &&
+                    $priceRange->isPriceInRange($activeStopOrder->triggerPrice);
+            }
         );
-
-        return array_filter($symbolStops, static function(ActiveStopOrder $order) use ($priceRange) {
-            return $priceRange->isPriceInRange($order->triggerPrice);
-        });
     }
 
     public function getAmountToTransfer(Position $position): CoinAmount

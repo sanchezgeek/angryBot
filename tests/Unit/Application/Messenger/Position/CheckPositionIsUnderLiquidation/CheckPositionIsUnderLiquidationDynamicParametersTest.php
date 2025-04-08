@@ -28,28 +28,30 @@ use RuntimeException;
  */
 final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCase
 {
-//    /**
-//     * @dataProvider actualStopsRangeTestCases
-//     */
-//    public function testActualStopsRange(
-//        CheckPositionIsUnderLiquidation $message,
-//        Position $position,
-//        Ticker $ticker,
-//        PriceRange $expectedRangeResult,
-//        bool $debug = false
-//    ): void {
-//        $debug && AppContext::setIsDebug(true);
-//
-//        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
-//
-//        $result = $dynamicParameters->actualStopsRange();
-//
-//        if (!$debug) {
-//            self::assertEquals($expectedRangeResult, $result);
-//        } else {
-//            var_dump($result);die;
-//        }
-//    }
+    public function testCriticalPartOfLiquidationDistance(): void
+    {
+        $symbol = Symbol::BTCUSDT;
+        $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
+        $ticker = TickerFactory::withEqualPrices($symbol, 35000);
+
+        # without override
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+
+        self::assertEquals(
+            CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE,
+            $dynamicParameters->criticalPartOfLiquidationDistance()
+        );
+
+        # with override
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);
+        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+
+        self::assertEquals(
+            $criticalPartOfLiquidationDistance,
+            $dynamicParameters->criticalPartOfLiquidationDistance()
+        );
+    }
 
     /**
      * @dataProvider additionalStopCases
@@ -88,8 +90,9 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
 
     public function additionalStopCases(): iterable
     {
+        $criticalPartOfLiquidationDistance = 30;
  // from functional
-        $source = AddStopWhenPositionLiquidationInWarningRangeTest::addStopTestCases();
+        $source = AddStopWhenPositionLiquidationInWarningRangeTest::addStopTestCases('fromDynamicParametersTest', $criticalPartOfLiquidationDistance);
         $source = array_values(iterator_to_array($source));
 
         foreach ($source as $key => $data) {
@@ -129,7 +132,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
 // manual
         #### corner cases
         $symbol = Symbol::BTCUSDT;
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 30449);
@@ -152,7 +155,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
 
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
         $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
         $expectedStopPrice = Price::float(30179.6); /** @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS */
@@ -165,7 +168,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
 
         # scenario when liquidation moved up through position entry price (from previous example)
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(30050)->build();
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
         $expectedPriceRange = PriceRange::create(30093.95, 30381.75);
         $expectedStopPrice = Price::float(30230.6);
@@ -179,7 +182,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
         #### simple
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(25000)->build();
 
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
 
         $ticker = TickerFactory::withEqualPrices($symbol, 29000);
         $expectedPriceRange = PriceRange::create(28215.0, 28785.0);
@@ -222,7 +225,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
 
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 10, warningPnlDistance: 10);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 10, warningPnlDistance: 10, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 25100);
         $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997);
         $expectedStopPrice = Price::float(25150.6);
@@ -233,7 +236,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
 
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $short = PositionBuilder::short()->entry(90000)->size(1)->liq(95000)->build();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 94700);

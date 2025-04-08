@@ -98,13 +98,18 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             $warningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distancePnl, $priceToCalcAbsoluteDistance);
 
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal scenario
-                $this->warningDistance = max($warningDistance, (new Percent(Params::CRITICAL_PART_OF_LIQUIDATION_DISTANCE))->of($this->position->liquidationDistance()));
+                $this->warningDistance = max($warningDistance, (new Percent($this->criticalPartOfLiquidationDistance()))->of($this->position->liquidationDistance()));
             } else { # bad scenario
                 $this->warningDistance = $warningDistance;
             }
         }
 
         return $this->warningDistance;
+    }
+
+    public function criticalPartOfLiquidationDistance(): float|int
+    {
+        return $this->handledMessage->criticalPartOfLiquidationDistance ?? Params::CRITICAL_PART_OF_LIQUIDATION_DISTANCE;
     }
 
     private function additionalStopDistanceWithLiquidation(bool $minWithTickerDistance = false): float

@@ -17,6 +17,7 @@ final readonly class CheckPositionIsUnderLiquidation
         public ?int $percentOfLiquidationDistanceToAddStop = null,
         public ?float $acceptableStoppedPart = null,
         public ?float $warningPnlDistance = null,
+        public float|int|null $criticalPartOfLiquidationDistance = null, // @todo | this is not about input message
     ) {
     }
 }

@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnd
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
@@ -88,8 +89,11 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         self::seeStopsInDb(...array_merge($delayedStops, $expectedAdditionalStops));
     }
 
-    public static function addStopTestCases(): iterable
-    {
+    public static function addStopTestCases(
+        string $testName,
+        int|float|null|string $criticalPartOfLiquidationDistance = null
+    ): iterable {
+        $criticalPartOfLiquidationDistance = $criticalPartOfLiquidationDistance ?? 30;
         $percentOfLiquidationDistanceToAddStop = 70;
         $warningPnlDistance = 100;
 
@@ -104,7 +108,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
             acceptableStoppedPart: $acceptableStoppedPart,
-            warningPnlDistance: $warningPnlDistance
+            warningPnlDistance: $warningPnlDistance,
+            criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance
         );
 
         # BTCUSDT SHORT
@@ -164,7 +169,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
             acceptableStoppedPart: $acceptableStoppedPart,
-            warningPnlDistance: $warningPnlDistance
+            warningPnlDistance: $warningPnlDistance,
+            criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance
         );
 
         # LINKUSDT SHORT
@@ -228,7 +234,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $pushedStopsPercent = 0.1;
         $symbol = Symbol::BTCUSDT;
 
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $longEntry = 35000; $longLiquidation = 25000;
         $long = PositionBuilder::long()->entry($longEntry)->size(1)->liq($longLiquidation)->build();
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
@@ -286,7 +292,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
 // (3) dynamic applicableStoppedPart / liq. right after entry START
 // @todo with hedge
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry($longEntry = 30000)->size(1)->liq($longLiquidation = 29999)->build();
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
@@ -333,7 +339,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
 // (4) dynamic applicableStoppedPart / liq. before entry START
 // @todo with hedge
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry($entry = 30000)->size(1)->liq($liquidation = 30050)->build();
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
@@ -379,7 +385,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
 
 //// other START
-        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance);
+        $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
 
         # -- BTCUSDT LONG with short liq. distance (and position in loss)
         $long = PositionBuilder::long()->entry($entry = 30000)->size(1)->liq($liquidation = 28000)->build();
@@ -627,6 +633,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             [
                 Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                 Stop::CLOSE_BY_MARKET_CONTEXT => true,
+                Stop::FIX_HEDGE_ON_LOSS => Params::FIX_OPPOSITE_AFTER_STOP,
             ],
         );
     }
