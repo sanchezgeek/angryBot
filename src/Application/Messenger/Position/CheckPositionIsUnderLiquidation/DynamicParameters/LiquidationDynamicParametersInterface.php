@@ -13,7 +13,9 @@ interface LiquidationDynamicParametersInterface
     public function additionalStopTriggerDelta(): float;
     public function additionalStopPrice(): Price;
     public function warningDistance(): float;
+    public function warningRange(): PriceRange;
     public function criticalDistance(): float;
+    public function criticalRange(): PriceRange;
     public function acceptableStoppedPart(): float;
     public function actualStopsRange(): PriceRange;
 }

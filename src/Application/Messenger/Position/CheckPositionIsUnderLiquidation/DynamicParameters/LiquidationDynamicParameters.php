@@ -67,6 +67,28 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         );
     }
 
+    public function criticalDistancePnl(): float
+    {
+        return Params::criticalDistancePnlDefault($this->handledMessage->symbol);
+    }
+
+    public function criticalDistance(): float
+    {
+        // @todo | возможно надо брать position->entry при опред. обстоятельствах
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->criticalDistancePnl(), $this->ticker->markPrice);
+    }
+
+    public function criticalRange(): PriceRange
+    {
+        $criticalDistance = $this->criticalDistance();
+        $liquidationPrice = $this->position->liquidationPrice();
+
+        return PriceRange::create(
+            $liquidationPrice,
+            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
+        );
+    }
+
     public function warningRange(): PriceRange
     {
         if ($this->warningRange === null) {
@@ -250,28 +272,6 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 //            $checkStopsCriticalDeltaWithLiquidation,
 //            $markPriceDifferenceWithIndexPrice->isLossFor($position->side) ? $markPriceDifferenceWithIndexPrice->absDelta() : 0,
 //        );
-    }
-
-    public function criticalDistancePnl(): float
-    {
-        return Params::criticalDistancePnlDefault($this->handledMessage->symbol);
-    }
-
-    public function criticalDistance(): float
-    {
-        // возможно надо брать position->entry при опред. обстоятельствах
-        return PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->criticalDistancePnl(), $this->ticker->markPrice);
-    }
-
-    public function criticalRange(): PriceRange
-    {
-        $criticalDistance = $this->criticalDistance();
-        $liquidationPrice = $this->position->liquidationPrice();
-
-        return PriceRange::create(
-            $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
-        );
     }
 
     public static function isDebug(): bool

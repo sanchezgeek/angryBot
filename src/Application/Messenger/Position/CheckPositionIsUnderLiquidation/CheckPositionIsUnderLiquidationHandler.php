@@ -71,6 +71,9 @@ final class CheckPositionIsUnderLiquidationHandler
     ### each symbol runtime
     private LiquidationDynamicParametersInterface $dynamicParameters;
 
+    /** @internal for tests purposes */
+    public bool $onlyRemoveStale = false;
+
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
         $this->activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
@@ -149,6 +152,10 @@ final class CheckPositionIsUnderLiquidationHandler
         ### remove stale ###
         foreach ($this->getStaleStops($position) as $stop) {
             $this->stopRepository->remove($stop);
+        }
+
+        if ($this->onlyRemoveStale) {
+            return;
         }
 
         ### add new ###
@@ -336,18 +343,54 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private function getStaleStops(Position $position): StopsCollection
     {
-        $range = $this->dynamicParameters->actualStopsRange();
-
-        $stops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side, qbModifier: function (QueryBuilder $qb) use ($position, $range) {
-            $priceField = $qb->getRootAliases()[0] . '.price';
-            $qb->andWhere(sprintf('%s > :upperPrice OR %s < :lowerPrice', $priceField, $priceField));
-            $qb->setParameter(':upperPrice', $range->to()->value());
-            $qb->setParameter(':lowerPrice', $range->from()->value());
-        });
         # if opposite position previously was main
         $oppositePositionStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side->getOpposite());
+        $oppositePositionStops = array_filter($oppositePositionStops, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
 
-        return (new StopsCollection(...$stops, ...$oppositePositionStops))->filterWithCallback(static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+        $actualStopsRange = $this->dynamicParameters->actualStopsRange();
+        $criticalRange = $this->dynamicParameters->criticalRange();
+
+        $stopsFromOutsideTheRange = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side, qbModifier: function (QueryBuilder $qb) use ($position, $actualStopsRange) {
+            $priceField = $qb->getRootAliases()[0] . '.price';
+
+            if ($position->isShort()) {
+                $qb->andWhere(sprintf('%s < :lowerPrice', $priceField));
+                $qb->setParameter(':lowerPrice', $actualStopsRange->from()->value());
+            } else {
+                $qb->andWhere(sprintf('%s > :upperPrice', $priceField));
+                $qb->setParameter(':upperPrice', $actualStopsRange->to()->value());
+            }
+        });
+        $stopsFromOutsideTheRange = array_filter($stopsFromOutsideTheRange, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+
+        $stopsToPositionSide = $this->stopRepository->findActive(
+            symbol: $position->symbol,
+            side: $position->side,
+            qbModifier: function (QueryBuilder $qb) use ($position, $actualStopsRange) {
+                $priceField = $qb->getRootAliases()[0] . '.price';
+
+                if ($position->isShort()) {
+                    $qb->andWhere(sprintf('%s > :boundUpperPrice', $priceField));
+                    $qb->setParameter(':boundUpperPrice', $actualStopsRange->to()->value());
+                } else {
+                    $qb->andWhere(sprintf('%s < :boundLowerPrice', $priceField));
+                    $qb->setParameter(':boundLowerPrice', $actualStopsRange->from()->value());
+                }
+            }
+        );
+        $stopsToPositionSide = array_filter($stopsToPositionSide, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+
+        $result = [...$oppositePositionStops, ...$stopsFromOutsideTheRange];
+
+        $symbol = $position->symbol;
+        foreach ($stopsToPositionSide as $stop) {
+            if ($symbol->makePrice($stop->getPrice())->isPriceInRange($criticalRange)) {
+                continue;
+            }
+            $result[] = $stop;
+        }
+
+        return new StopsCollection(...$result);
     }
 
     private function getLastRunMarkPrice(Position $position): ?Price
@@ -400,6 +443,11 @@ final class CheckPositionIsUnderLiquidationHandler
     public static function isDebug(): bool
     {
         return AppContext::isDebug() && AppContext::isTest();
+    }
+
+    public function setOnlyRemoveStale(bool $value): void
+    {
+        $this->onlyRemoveStale = $value;
     }
 
 //    public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 150;
