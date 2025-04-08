@@ -8,12 +8,13 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 final class CheckPositionIsUnderLiquidationParams
 {
-    public const CRITICAL_PART_OF_LIQUIDATION_DISTANCE = 30;
+    public const CRITICAL_PART_OF_LIQUIDATION_DISTANCE = 20;
 
     public const PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE = 80;
     public const ACCEPTABLE_STOPPED_PART_DEFAULT = 4;
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 8; // @todo Must be different for BTC and others
+    public const FIX_OPPOSITE_AFTER_STOP = false;
 
     public const WARNING_PNL_DISTANCES = [
         Symbol::BTCUSDT->value => 120,
