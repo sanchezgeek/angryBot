@@ -136,19 +136,20 @@ class EditStopsCommand extends AbstractCommand
             $this->io->info(sprintf('Stops in specified range qnt: %d', $stopsInSpecifiedRange->totalCount()));
         }
 
-        $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStopsCount));
-
-        if ($position && !$this->io->confirm(
-            sprintf(
-                'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
-                $action,
-                $filteredStopsCount,
-                $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
-                $filteredStops->volumePart($stopsCollection->totalVolume()),
-                $filteredStops->volumePart($position->size)
-            )
-        )) {
-            return Command::FAILURE;
+        if ($action !== self::ACTION_REMOVE) {
+            $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStopsCount));
+            if ($position && !$this->io->confirm(
+                    sprintf(
+                        'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
+                        $action,
+                        $filteredStopsCount,
+                        $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
+                        $filteredStops->volumePart($stopsCollection->totalVolume()),
+                        $filteredStops->volumePart($position->size)
+                    )
+                )) {
+                return Command::FAILURE;
+            }
         }
 
         if ($action === self::ACTION_MOVE) {
@@ -239,6 +240,26 @@ class EditStopsCommand extends AbstractCommand
             }
 
             $filteredStops = $filteredStops->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange() || in_array($stop->getExchangeOrderId(), $closedExchangeOrderIds));
+            $filteredStopsCount = $filteredStops->totalCount();
+
+            $this->io->info(sprintf('Filtered stops qnt: %d', $filteredStopsCount));
+            if (!$filteredStopsCount) {
+                $this->io->info('Stops by specified criteria not found!');
+                return Command::SUCCESS;
+            }
+
+            if ($position && !$this->io->confirm(
+                    sprintf(
+                        'You\'re about to %s %d Stops (%.1f%% of specified range, %.1f%% of total, %.1f%% of position size). Continue?',
+                        $action,
+                        $filteredStopsCount,
+                        $filteredStops->volumePart($stopsInSpecifiedRange->totalVolume()),
+                        $filteredStops->volumePart($stopsCollection->totalVolume()),
+                        $filteredStops->volumePart($position->size)
+                    )
+                )) {
+                return Command::FAILURE;
+            }
 
             $this->entityManager->wrapInTransaction(function() use ($filteredStops) {
                 foreach ($filteredStops as $stop) {
