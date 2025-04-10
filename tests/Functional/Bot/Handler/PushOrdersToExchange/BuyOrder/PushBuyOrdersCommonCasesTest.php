@@ -106,13 +106,13 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
             # -- must not be pushed (idle) --
             20 => BuyOrderBuilder::short(20, 29155, 0.002)->build()->setIdle(),
 
-            # [1] must be pushed and removed | with stop
+            # [1] must be pushed | with stop
             30 => BuyOrderBuilder::short(30, 29060, 0.005)->build()->setActive(),
 
             # -- must not be pushed (idle) --
             40 => BuyOrderBuilder::short(40, 29105, 0.003)->build()->setIdle(),
 
-            # [0] must be pushed and removed | with stop
+            # [0] must be pushed | with stop
             50 => BuyOrderBuilder::short(50, 29060, 0.001)->build()->setActive(),
 
             # [4] must be pushed | withOUT stop
@@ -137,6 +137,8 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
             'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
+                BuyOrderBuilder::short(50, 29060, 0.001)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[0]),
+                BuyOrderBuilder::short(30, 29060, 0.005)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[1]),
                 BuyOrderBuilder::short(10, 29060, 0.01)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[2]),
                 BuyOrderBuilder::short(80, 29055, 0.03)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[3]),
                 BuyOrderBuilder::short(60, 29060, 0.035)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[4])->setIsWithoutOppositeOrder(),

@@ -351,22 +351,15 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if ($order->isWithOppositeOrder()) {
                 $this->createStop($position, $ticker, $order);
             }
-
-            if ($order->getVolume() <= 0.005) {
-                $this->buyOrderRepository->remove($order);
-                unset($order);
-            }
         } catch (BuyIsNotSafeException) {
-            OutputHelper::warning(sprintf('Skip buy %s|%s on %s.', $order->getVolume(), $order->getPrice(), $position));
+            OutputHelper::warning(sprintf('[%d] Skip buy %s|%s on %s.', $order->getId(), $order->getVolume(), $order->getPrice(), $position));
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
         } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
             $this->logCritical($e);
         } finally {
-            if (isset($order)) {
-                $this->buyOrderRepository->save($order);
-            }
+            $this->buyOrderRepository->save($order);
         }
     }
 
