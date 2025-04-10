@@ -28,6 +28,10 @@ final class CreateOppositeBuyOrdersListener
         Symbol::ETHUSDT
     ];
 
+    public const DISTANCES = [
+        Symbol::ARCUSDT->value => 400,
+    ];
+
     private Percent $longOppositePnlDistance;
     private Percent $shortOppositePnlDistance;
 
@@ -108,7 +112,12 @@ final class CreateOppositeBuyOrdersListener
 
     public function getOppositeOrderPnlDistance(Stop $stop): Percent
     {
-        if (!in_array($stop->getSymbol(), self::MAIN_SYMBOLS, true)) {
+        $symbol = $stop->getSymbol();
+        if (isset(self::DISTANCES[$symbol->value])) {
+            return new Percent(self::DISTANCES[$symbol->value]);
+        }
+
+        if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
             return $stop->getPositionSide()->isLong() ? $this->longOppositePnlDistanceForAltCoin : $this->shortOppositePnlDistanceForAltCoin;
         }
 
