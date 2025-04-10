@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
+use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -20,6 +22,7 @@ use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
@@ -29,27 +32,23 @@ use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
-
-
-/**
- * @todo ! state ?
- */
 
 
 use function abs;
 use function sprintf;
-use function var_dump;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
-/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit */
+/** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit\PushTakeProfitOrdersTest */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
     // @todo | need to review (based on other values through handling)
     public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
     public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
+    private const SAFE_LIQUIDATION_DISTANCE_FOR_MAIN_POSITION_AFTER_CLOSE_SUPPORT = 20000;
 
     public function __invoke(PushStops $message): void
     {
@@ -88,6 +87,32 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
             $callback = null;
             if ($stop->isCloseByMarketContextSet()) {
+                # @todo | move to some separated service
+                if ($position->symbol === Symbol::BTCUSDT && $position->isSupportPosition()) {
+                    if (!$this->checkCanCloseSupportWhilePushStopsThrottlingLimiter->create((string)$stop->getId())->consume()->isAccepted()) {
+                        continue;
+                    }
+                    $sandbox = $this->sandboxFactory->byCurrentState($symbol);
+                    try {
+                        $sandbox->processOrders(SandboxStopOrder::fromStop($stop));
+                    } catch (Throwable $e) {
+                        $this->logger->critical(
+                            sprintf('[PushStopsHandler] Got error "%s" when try to handle %d in sandbox', $e->getMessage(), $stop->getId())
+                        );
+                    }
+                    $newState = $sandbox->getCurrentState();
+                    $mainPosition = $newState->getPosition($position->side->getOpposite());
+                    $safePriceDistance = self::SAFE_LIQUIDATION_DISTANCE_FOR_MAIN_POSITION_AFTER_CLOSE_SUPPORT;
+                    $isLiquidationOnSafeDistance = $mainPosition->side->isShort()
+                        ? $mainPosition->liquidationPrice()->sub($safePriceDistance)->greaterOrEquals($ticker->markPrice)
+                        : $mainPosition->liquidationPrice()->add($safePriceDistance)->lessOrEquals($ticker->markPrice);
+
+                    if (!$isLiquidationOnSafeDistance) {
+                        OutputHelper::warning(sprintf('[%d] Skip stop %s|%s on %s.', $stop->getId(), $stop->getVolume(), $stop->getPrice(), $position));
+                        continue;
+                    }
+                }
+
                 if (!$currentPriceOverStop) continue;
                 $callback = static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
                     $orderId = $orderService->closeByMarket($position, $stop->getVolume());
@@ -180,6 +205,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly OrderServiceInterface $orderService,
 
         private readonly MessageBusInterface $messageBus,
+        private TradingSandboxFactoryInterface $sandboxFactory,
+        private readonly RateLimiterFactory $checkCanCloseSupportWhilePushStopsThrottlingLimiter,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $appErrorLogger,

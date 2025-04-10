@@ -12,11 +12,19 @@ TO3=${4:-1500}
 FROM4=${3:-500}
 TO4=${4:-1500}
 
+
+OPPOSITE_DISTANCE1=${5:-200}
+OPPOSITE_DISTANCE2=${6:-250}
+OPPOSITE_DISTANCE3=${7:-400}
+OPPOSITE_DISTANCE4=${8:-450}
+
+ORDERS_QNT=${9:-5}
+
 grids=(
-  "-f-${FROM1}% -t-${TO1}% 10% --bM -o200% -c3"
-  "-f-${FROM2}% -t-${TO2}% 20% --bM --fH -o250%  -c3"
-  "-f-${FROM3}% -t-${TO3}% 7% --bM -o400% -c3"
-  "-f-${FROM4}% -t-${TO4}% 13% --bM --fH -o450% -c3"
+  "-f-${FROM1}% -t-${TO1}% 10% --bM -o${OPPOSITE_DISTANCE1}% -c${ORDERS_QNT}"
+  "-f-${FROM2}% -t-${TO2}% 20% --bM --fH -o${OPPOSITE_DISTANCE2}%  -c${ORDERS_QNT}"
+  "-f-${FROM3}% -t-${TO3}% 7% --bM -o${OPPOSITE_DISTANCE3}% -c${ORDERS_QNT}"
+  "-f-${FROM4}% -t-${TO4}% 13% --bM --fH -o${OPPOSITE_DISTANCE4}% -c${ORDERS_QNT}"
 )
 
 for grid_def in "${grids[@]}"

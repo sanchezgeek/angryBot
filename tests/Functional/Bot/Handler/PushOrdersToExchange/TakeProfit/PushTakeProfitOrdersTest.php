@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit;
 
+use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -22,6 +23,7 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
+use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -41,6 +43,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
+    use RateLimiterAwareTest;
 
     private const SYMBOL = Symbol::BTCUSDT;
 
@@ -74,6 +77,8 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
             $this->stopRepository,
             $this->orderServiceMock,
             $this->messageBus,
+            $this->createMock(TradingSandboxFactoryInterface::class),
+            self::makeRateLimiterFactory(),
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

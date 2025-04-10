@@ -33,3 +33,7 @@ framework:
             policy: 'fixed_window'
             limit: 5
             interval: '1 day'
+        check_can_close_support_while_push_stops_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '20 seconds'

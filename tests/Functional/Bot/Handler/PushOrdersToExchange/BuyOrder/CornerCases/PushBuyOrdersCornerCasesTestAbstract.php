@@ -21,6 +21,7 @@ use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -37,6 +38,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use SettingsAwareTest;
+    use RateLimiterAwareTest;
 
     protected const SYMBOL = Symbol::BTCUSDT;
 
@@ -44,15 +46,6 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
-        $ignoreBuyThrottlingLimiter = new RateLimiterFactory([
-            'policy' => 'token_bucket',
-            'id' => 'test',
-            'limit' => 5,
-            'rate' => [
-                'interval' => '5 seconds',
-            ],
-        ], new InMemoryStorage());
-
         $this->handler = new PushBuyOrdersHandler(
             self::getContainer()->get(CreateBuyOrderHandler::class),
             self::getContainer()->get(HedgeService::class),
@@ -65,7 +58,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(ByBitMarketService::class),
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(MarketBuyHandler::class),
-            $ignoreBuyThrottlingLimiter,
+            self::makeRateLimiterFactory(),
             self::getContainer()->get(AppSettingsProvider::class),
 
             self::getContainer()->get(ExchangeServiceInterface::class),

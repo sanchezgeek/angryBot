@@ -215,6 +215,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return ($this->context[self::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER] ?? null) === true;
     }
 
+    public function setIsAdditionalStopFromLiquidationHandler(): self
+    {
+        $this->context[self::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER] = true;
+
+        return $this;
+    }
+
     public function isFixHedgeOnLossEnabled(): bool
     {
         return ($this->context[self::FIX_HEDGE_ON_LOSS] ?? null) === true;
