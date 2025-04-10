@@ -85,9 +85,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /** @var Symbol[] */
     private array $symbols;
 
-    /** @var Stop[] */
-    private array $stops;
-
     /** @var array<Position[]> */
     private array $positions;
 
@@ -178,8 +175,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
-        $this->stops = $this->stopRepository->findActiveCreatedByLiquidationHandler();
-
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
         $this->lastMarkPrices = $positionService->getLastMarkPrices();
@@ -304,7 +299,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $entryPrice->differenceWith($symbol->makePrice($firstManualStop->getPrice()))->deltaForPositionLoss($positionSide),
                 $entryPrice
             );
-            $stoppedVolume[] = sprintf('%s|%d[%s.%s]', $manualStoppedPartPct, count($manualStops), CTH::colorizeText('m', 'yellow-text'), $distancePnlPct->setOutputFloatPrecision(1));
+            $manualStopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
+            $stoppedVolume[] = sprintf('%s|%d[%s.%s]', $manualStoppedPartPct, count($manualStops), CTH::colorizeText('m', $manualStopsColor), $distancePnlPct->setOutputFloatPrecision(1));
         }
 
         if ($autoStops) {
