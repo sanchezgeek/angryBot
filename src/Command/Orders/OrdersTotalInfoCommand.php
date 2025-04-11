@@ -146,9 +146,9 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
-        $marketBuyCheckService = new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings);
-
-        $tradingSandbox->setMarketBuyCheckService($marketBuyCheckService);
+        $tradingSandbox->setMarketBuyCheckService(
+            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings, null)
+        );
 
         return $tradingSandbox;
     }

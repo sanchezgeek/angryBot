@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\MarketBuy\Checks;
 
+use App\Application\UseCase\Trading\MarketBuy\Checks\Exception\TooManyTriesForCheck;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
@@ -18,6 +19,7 @@ use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Service\AppSettingsProvider;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
  * @todo | Add interface to mock checks in MarketBuyHandlerTest
@@ -28,6 +30,7 @@ readonly class MarketBuyCheckService
 
     /**
      * @throws BuyIsNotSafeException
+     * @throws TooManyTriesForCheck
      */
     public function doChecks(
         MarketBuyEntryDto     $order,
@@ -36,6 +39,16 @@ readonly class MarketBuyCheckService
         Position              $currentPositionState = null,
         float                 $safePriceDistance = null
     ): void {
+        if (
+            $this->checkFurtherPositionLiquidationAfterBuyLimiter
+            && $order->sourceBuyOrder
+            && !$this->checkFurtherPositionLiquidationAfterBuyLimiter->create(
+                (string)($sourceOrderId = $order->sourceBuyOrder->getId())
+            )->consume()->isAccepted()
+        ) {
+            throw new TooManyTriesForCheck(sprintf('Too many tries for check further position liquidation for order with id = %d', $sourceOrderId));
+        }
+
         if ($order->force) {
             return;
         }
@@ -96,6 +109,7 @@ readonly class MarketBuyCheckService
         private TradingSandboxFactoryInterface $sandboxFactory,
         private LoggerInterface $appErrorLogger,
         private AppSettingsProvider $settings,
+        private ?RateLimiterFactory $checkFurtherPositionLiquidationAfterBuyLimiter,
     ) {
         $this->defaultSafePriceDistance = $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }

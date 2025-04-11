@@ -14,7 +14,8 @@ readonly class MarketBuyEntryDto
         public Symbol $symbol,
         public Side $positionSide,
         public float $volume,
-        public bool $force = false
+        public bool $force = false,
+        public ?BuyOrder $sourceBuyOrder = null,
     ) {
     }
 
@@ -29,6 +30,6 @@ readonly class MarketBuyEntryDto
             $force = true;
         }
 
-        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume(), $force);
+        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume(), $force, $buyOrder);
     }
 }

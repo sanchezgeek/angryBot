@@ -6,6 +6,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\Checks\Exception\TooManyTriesForCheck;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
@@ -47,7 +48,6 @@ use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Settings\Application\Service\AppSettingsProvider;
 use App\Worker\AppContext;
-use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -56,12 +56,10 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
 use function abs;
-use function array_map;
 use function max;
 use function min;
 use function random_int;
 use function sprintf;
-use function var_dump;
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\PushBuyOrdersCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases */
@@ -351,6 +349,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if ($order->isWithOppositeOrder()) {
                 $this->createStop($position, $ticker, $order);
             }
+        } catch (TooManyTriesForCheck $e) {
+            // do nothing
         } catch (BuyIsNotSafeException) {
             OutputHelper::warning(sprintf('[%d] Skip buy %s|%s on %s.', $order->getId(), $order->getVolume(), $order->getPrice(), $position));
         } catch (ApiRateLimitReached $e) {

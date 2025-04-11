@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\MarketBuy;
 
+use App\Application\UseCase\Trading\MarketBuy\Checks\Exception\TooManyTriesForCheck;
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
@@ -31,6 +32,7 @@ class MarketBuyHandler
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws TooManyTriesForCheck
      */
     public function handle(MarketBuyEntryDto $dto): string
     {
@@ -55,6 +57,7 @@ class MarketBuyHandler
 
     /**
      * @throws BuyIsNotSafeException
+     * @throws TooManyTriesForCheck
      */
     private function makeChecks(MarketBuyEntryDto $dto): void
     {
