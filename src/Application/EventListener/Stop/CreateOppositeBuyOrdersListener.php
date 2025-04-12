@@ -10,7 +10,10 @@ use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Position\ValueObject\Side;
+use App\Domain\Order\Collection\OrdersCollection;
+use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
+use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
+use App\Domain\Order\Order;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -67,7 +70,6 @@ final class CreateOppositeBuyOrdersListener
         }
 
         $triggerPrice = $side->isShort() ? $stopPrice->sub($distance) : $stopPrice->add($distance);
-        $triggerPrice = $triggerPrice->value();
 
         $context = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -80,32 +82,34 @@ final class CreateOppositeBuyOrdersListener
             $context[BuyOrder::FORCE_BUY_CONTEXT] = true;
         }
 
-         if ($stop->isAdditionalStopFromLiquidationHandler()) {
-             $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
-         } else {
-             $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
-         }
+        if ($stop->isAdditionalStopFromLiquidationHandler()) {
+            $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+        } else {
+            $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
+        }
 
         $bigStopVolume = $symbol->roundVolume($symbol->minOrderQty() * 6);
 
-        $orders = [
-            ['volume' => $stopVolume >= $bigStopVolume ? $symbol->roundVolume($stopVolume / 3) : $stopVolume, 'price' => $symbol->makePrice($triggerPrice)->value()]
-        ];
-
         if ($stopVolume >= $bigStopVolume) {
-            $orders[] = [
-                'volume' => $symbol->roundVolume($stopVolume / 4.5),
-                'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 3.8 : $triggerPrice + $distance / 3.8)->value(),
+            $orders = [
+                new Order($triggerPrice, $symbol->roundVolume($stopVolume / 3)),
+                new Order($side->isShort() ? $triggerPrice->sub($distance / 3.8) : $triggerPrice->add($distance / 3.8), $symbol->roundVolume($stopVolume / 4.5)),
+                new Order($side->isShort() ? $triggerPrice->sub($distance / 2)   : $triggerPrice->add($distance / 2),   $symbol->roundVolume($stopVolume / 3.5)),
             ];
-            $orders[] = [
-                'volume' => $symbol->roundVolume($stopVolume / 3.5),
-                'price' => $symbol->makePrice($side->isShort() ? $triggerPrice - $distance / 2 : $triggerPrice + $distance / 2)->value(),
+        } else {
+            $orders = [
+                new Order($triggerPrice, $symbol->roundVolume($stopVolume))
             ];
         }
 
+        $orders = new OrdersLimitedWithMaxVolume(
+            new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)),
+            $stopVolume
+        );
+
         foreach ($orders as $order) {
             $this->createBuyOrderHandler->handle(
-                new CreateBuyOrderEntryDto($symbol, $side, $order['volume'], $order['price'], $context)
+                new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $context)
             );
         }
     }
