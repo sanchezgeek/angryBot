@@ -265,8 +265,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             return [];
         }
 
-        $lastMarkPrices = $this->lastMarkPrices;
-        $markPrice = $lastMarkPrices[$symbol->value];
+        $markPrice = $this->lastMarkPrices[$symbol->value];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
         $isEquivalentHedge = $hedge?->isEquivalentHedge();
@@ -715,19 +714,22 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $stoppedVolume = [];
         if ($manualStops) {
             $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
-            $stoppedVolume[] = self::getStopsCollectionInfo($manualStops, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
-            sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('m', $stopsColor), $firstStopDistancePnlPct)
+            $stoppedVolume[] = self::getStopsCollectionInfo($manualStops, $position, $markPrice,
+                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                    sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('m', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
             );
         }
         if ($stopsAfterFixOppositeHedgePosition) {
             $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
-            $stoppedVolume[] = self::getStopsCollectionInfo($stopsAfterFixOppositeHedgePosition, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
-            sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), $firstStopDistancePnlPct)
+            $stoppedVolume[] = self::getStopsCollectionInfo($stopsAfterFixOppositeHedgePosition, $position, $markPrice,
+                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                    sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
             );
         }
         if ($autoStops) {
-            $stoppedVolume[] = self::getStopsCollectionInfo($autoStops, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
-            sprintf('%s|%d[a.%s]', $stoppedPartPct, $stopsCount, $firstStopDistancePnlPct)
+            $stoppedVolume[] = self::getStopsCollectionInfo($autoStops, $position, $markPrice,
+                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                    sprintf('%s|%d[a.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
             );
         }
 
@@ -737,6 +739,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private static function getStopsCollectionInfo(
         array $stops,
         Position $position,
+        Price $markPrice,
         callable $formatter,
     ): string {
         $symbol = $position->symbol;
@@ -751,7 +754,25 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         );
         $firstStopDistancePnlPct->setOutputFloatPrecision(1);
 
-        return $formatter($stoppedPartPct, count($stops), $firstStopDistancePnlPct);
+        $firstStopDistancePnlPctWithTicker = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+            $markPrice->differenceWith($firstStopPrice)->absDelta(),
+            $markPrice
+        );
+        $bounds = [
+            Symbol::BTCUSDT->value => 100,
+            Symbol::ETHUSDT->value => 200,
+        ];
+        $bound = $bounds[$symbol->value] ?? 300;
+        $firstStopDistanceColor = 'none';
+        if (
+            $firstStopDistancePnlPctWithTicker->value() < $bound
+            || ($position->isShort() && $firstStopPrice->lessOrEquals($markPrice))
+            || ($position->isLong() && $firstStopPrice->greaterOrEquals($markPrice))
+        ) {
+            $firstStopDistanceColor = 'red-text';
+        }
+
+        return $formatter($stoppedPartPct, count($stops), $firstStopDistancePnlPct, $firstStopDistanceColor);
     }
 
     private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, $markPrice): bool
