@@ -36,9 +36,10 @@ final class FixMainHedgePositionListener
 
     /** @todo min of hedge distance and this value */
     const SUPPLY_STOP_PNL_DISTANCES = [
-        Symbol::BTCUSDT->value => 40,
-        Symbol::ETHUSDT->value => 80,
-        'other' => 200
+        Symbol::BTCUSDT->value => 120,
+        Symbol::ETHUSDT->value => 150,
+        Symbol::FARTCOINUSDT->value => 400,
+        'other' => 300
     ];
 
     public function __construct(
@@ -99,7 +100,12 @@ final class FixMainHedgePositionListener
 //            return;
 //        }
 
-        $context = [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
+        $context = [
+            Stop::CLOSE_BY_MARKET_CONTEXT => true,
+            Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
+            Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION => true,
+        ];
+
         $percent = self::SUPPLY_STOP_PNL_DISTANCES[$symbol->value] ?? self::SUPPLY_STOP_PNL_DISTANCES['other'];
         $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($percent, $ticker->indexPrice), 0.1);
         $supplyStopPrice = $symbol->makePrice(

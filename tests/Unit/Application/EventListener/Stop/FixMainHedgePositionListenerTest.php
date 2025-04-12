@@ -86,7 +86,11 @@ final class FixMainHedgePositionListenerTest extends TestCase
             $expectedSupplyStopPrice,
             $expectedSupplyStopVolume,
             null,
-            [Stop::CLOSE_BY_MARKET_CONTEXT => true, Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]
+            [
+                Stop::CLOSE_BY_MARKET_CONTEXT => true,
+                Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
+                Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION => true,
+            ]
         );
 
         $event = new StopPushedToExchange($executedStop);

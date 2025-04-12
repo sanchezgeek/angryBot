@@ -46,8 +46,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
-use Throwable;
-
 use function array_merge;
 use function sprintf;
 
@@ -255,67 +253,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->render();
     }
 
-    private function prepareStoppedPartContent(Position $position, $markPrice): ?string
-    {
-        $symbol = $position->symbol;
-        $positionSide = $position->side;
-
-        $stops = $this->stopRepository->findActive(
-            symbol: $symbol,
-            side: $positionSide,
-            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
-        );
-        /** @var Stop[] $autoStops */
-        $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
-            if (!$position->getHedge() || $position->isMainPosition()) {
-                $modifier = Percent::string('20%')->of($position->liquidationDistance());
-                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
-                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
-                    return false;
-                }
-            }
-
-            return $stop->isAdditionalStopFromLiquidationHandler();
-        });
-        /** @var Stop[] $manualStops */
-        $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
-            if (!$position->getHedge() || $position->isMainPosition()) {
-                $modifier = Percent::string('20%')->of($position->liquidationDistance());
-                $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
-                if (!($symbol->makePrice($stop->getPrice())->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol)))) {
-                    return false;
-                }
-            }
-
-            return !$stop->isAdditionalStopFromLiquidationHandler();
-        });
-
-        $stoppedVolume = [];
-        $entryPrice = $position->entryPrice();
-        if ($manualStops) {
-            $manualStoppedPartPct = (new Percent((new StopsCollection(...$manualStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
-            $firstManualStop = $manualStops[array_key_first($manualStops)];
-            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
-                $entryPrice->differenceWith($symbol->makePrice($firstManualStop->getPrice()))->deltaForPositionLoss($positionSide),
-                $entryPrice
-            );
-            $manualStopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
-            $stoppedVolume[] = sprintf('%s|%d[%s.%s]', $manualStoppedPartPct, count($manualStops), CTH::colorizeText('m', $manualStopsColor), $distancePnlPct->setOutputFloatPrecision(1));
-        }
-
-        if ($autoStops) {
-            $autoStoppedPartPct = (new Percent((new StopsCollection(...$autoStops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
-            $firstAutoStop = $autoStops[array_key_first($autoStops)];
-            $distancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
-                $entryPrice->differenceWith($symbol->makePrice($firstAutoStop->getPrice()))->deltaForPositionLoss($positionSide),
-                $entryPrice
-            );
-            $stoppedVolume[] = sprintf('%s|%d[a.%s]', $autoStoppedPartPct, count($autoStops), $distancePnlPct->setOutputFloatPrecision(1));
-        }
-
-        return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
-    }
-
     /**
      * @return array<DataRow|SeparatorRow>
      */
@@ -498,14 +435,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $cells[] = '';
 
             if ($specifiedCache) {
-                if ($supportPnlSpecifiedCacheValue !== null) {
+                if (isset($supportPnlSpecifiedCacheValue)) {
                     $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlSpecifiedCacheValue, fontColor: Color::WHITE);
                 } else {
                     $cells[] = '';
                 }
             }
             if ($prevCache) {
-                if ($supportPnlPrevCacheValue !== null) {
+                if (isset($supportPnlPrevCacheValue)) {
                     $cells[] = self::formatPnlDiffCell($symbol, false, $supportPnl, $supportPnlPrevCacheValue, fontColor: Color::WHITE);
                 } else {
                     $cells[] = '';
@@ -656,13 +593,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $cache;
     }
 
-    private static function formatChangedValue(
-        int|float $value,
-        int|float|null $specifiedCacheValue = null,
-        int|float|null $prevIterationValue = null,
-        callable $formatter = null,
-        ?bool $withoutColor = null
-    ): string {
+    private static function formatChangedValue(int|float $value, int|float|null $specifiedCacheValue = null, int|float|null $prevIterationValue = null, callable $formatter = null, ?bool $withoutColor = null): string
+    {
         $formatter = $formatter ?? static fn ($val) => (string)$val;
         $result = $formatter($value);
 
@@ -686,13 +618,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private static function getFormattedDiff(
-        int|float $a,
-        int|float $b,
-        ?bool $withoutColor = null,
-        ?callable $formatter = null,
-        bool $alreadySigned = false
-    ): string {
+    private static function getFormattedDiff(int|float $a, int|float $b, ?bool $withoutColor = null, ?callable $formatter = null, bool $alreadySigned = false): string
+    {
         $diff = $a - $b;
 
         if ($diff === 0.00 || $diff === 0) {
@@ -722,6 +649,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
+
     private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
 
     private function getSavedDataCacheKeys(): array
@@ -738,7 +666,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
     }
-
     private function removeSavedDataCacheBefore(string $cacheKey): void
     {
         $savedDataKeys = $this->getSavedDataCacheKeys();
@@ -760,6 +687,88 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $savedDataKeys[] = $cacheKey;
 
         $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
+    }
+
+    private function prepareStoppedPartContent(Position $position, $markPrice): ?string
+    {
+        $symbol = $position->symbol;
+        $positionSide = $position->side;
+        $stops = $this->stopRepository->findActive(
+            symbol: $symbol,
+            side: $positionSide,
+            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
+        );
+
+        /** @var Stop[] $autoStops */
+        $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            return $stop->isAdditionalStopFromLiquidationHandler() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
+        });
+        /** @var Stop[] $manualStops */
+        $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            return $stop->isManuallyCreatedStop() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
+        });
+        /** @var Stop[] $stopsAfterFixOppositeHedgePosition */
+        $stopsAfterFixOppositeHedgePosition = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
+            return $stop->isStopAfterFixHedgeOppositePosition() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
+        });
+
+        $stoppedVolume = [];
+        if ($manualStops) {
+            $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
+            $stoppedVolume[] = self::getStopsCollectionInfo($manualStops, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
+            sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('m', $stopsColor), $firstStopDistancePnlPct)
+            );
+        }
+        if ($stopsAfterFixOppositeHedgePosition) {
+            $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
+            $stoppedVolume[] = self::getStopsCollectionInfo($stopsAfterFixOppositeHedgePosition, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
+            sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), $firstStopDistancePnlPct)
+            );
+        }
+        if ($autoStops) {
+            $stoppedVolume[] = self::getStopsCollectionInfo($autoStops, $position, static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct) =>
+            sprintf('%s|%d[a.%s]', $stoppedPartPct, $stopsCount, $firstStopDistancePnlPct)
+            );
+        }
+
+        return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
+    }
+
+    private static function getStopsCollectionInfo(
+        array $stops,
+        Position $position,
+        callable $formatter,
+    ): string {
+        $symbol = $position->symbol;
+        $entryPrice = $position->entryPrice();
+
+        $stoppedPartPct = (new Percent((new StopsCollection(...$stops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+        $firstStop = $stops[array_key_first($stops)];
+        $firstStopPrice = $symbol->makePrice($firstStop->getPrice());
+        $firstStopDistancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(
+            $entryPrice->differenceWith($firstStopPrice)->deltaForPositionLoss($position->side),
+            $entryPrice
+        );
+        $firstStopDistancePnlPct->setOutputFloatPrecision(1);
+
+        return $formatter($stoppedPartPct, count($stops), $firstStopDistancePnlPct);
+    }
+
+    private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, $markPrice): bool
+    {
+        if (!$position->isPositionWithoutHedge() && !$position->isMainPosition()) {
+            return false;
+        }
+        return !self::isStopLayBetweenSpecifiedPriceAndLiquidation($stop, $position, $markPrice);
+    }
+
+    private static function isStopLayBetweenSpecifiedPriceAndLiquidation(Stop $stop, Position $position, $markPrice): bool
+    {
+        $symbol = $position->symbol;
+        $modifier = Percent::string('20%')->of($position->liquidationDistance());
+        $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+        $stopPrice = $symbol->makePrice($stop->getPrice());
+        return $stopPrice->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol));
     }
 
     /**

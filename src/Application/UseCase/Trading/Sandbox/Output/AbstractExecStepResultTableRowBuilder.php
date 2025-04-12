@@ -119,6 +119,7 @@ abstract class AbstractExecStepResultTableRowBuilder
                 default => sprintf('Conditional order (td=%.2f)', $sourceOrder->getTriggerDelta()),
             };
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without opposite BO';
+            $sourceOrder->isStopAfterFixHedgeOppositePosition() && $info[] = 'after fix opposite';
             $sourceOrder->isOrderPushedToExchange() && $info[] = 'PUSHED TO EXCHANGE';
 //            $sourceOrder->getExchangeOrderId() && $info[] = sprintf('%s', $sourceOrder->getExchangeOrderId());
             // @todo | move to context

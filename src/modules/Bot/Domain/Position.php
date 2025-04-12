@@ -114,6 +114,11 @@ final class Position implements Stringable
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
     }
 
+    public function isPositionWithoutHedge(): bool
+    {
+        return $this->getHedge() === null;
+    }
+
     public function getNotCoveredSize(): ?float
     {
         if (!($hedge = $this->getHedge())) {

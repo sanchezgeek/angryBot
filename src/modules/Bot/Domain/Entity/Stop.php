@@ -37,6 +37,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
     public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
     public const FIX_HEDGE_ON_LOSS = 'fixHedgeOnLossEnabled';
+    public const CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
 
     public const TP_TRIGGER_DELTA = 50;
 
@@ -232,6 +233,16 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->context[self::FIX_HEDGE_ON_LOSS] = true;
 
         return $this;
+    }
+
+    public function isStopAfterFixHedgeOppositePosition(): bool
+    {
+        return ($this->context[self::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION] ?? null) === true;
+    }
+
+    public function isManuallyCreatedStop(): bool
+    {
+        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isStopAfterFixHedgeOppositePosition();
     }
 
     public static function getTakeProfitContext(): array
