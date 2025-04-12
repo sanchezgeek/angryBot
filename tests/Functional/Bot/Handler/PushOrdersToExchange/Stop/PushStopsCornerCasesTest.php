@@ -28,6 +28,7 @@ use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\RateLimiterAwareTest;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use Exception;
@@ -48,6 +49,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use RateLimiterAwareTest;
+    use SettingsAwareTest;
 
     private const SYMBOL = Symbol::BTCUSDT;
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
@@ -90,6 +92,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->messageBus,
             $this->createMock(TradingSandboxFactoryInterface::class),
             self::makeRateLimiterFactory(),
+            self::getContainerSettingsProvider(),
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

@@ -12,6 +12,7 @@ use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Settings\PushStopSettings;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -28,6 +29,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Settings\Application\Service\AppSettingsProvider;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -35,9 +37,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
-
 use function abs;
 use function sprintf;
+
 
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
@@ -48,7 +50,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
     // @todo | need to review (based on other values through handling)
     public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
     public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
-    private const SAFE_LIQUIDATION_DISTANCE_FOR_MAIN_POSITION_AFTER_CLOSE_SUPPORT = 20000;
+
+    private float $saveLiquidationDistanceForMainPositionAfterCloseSupport;
 
     public function __invoke(PushStops $message): void
     {
@@ -102,7 +105,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                     }
                     $newState = $sandbox->getCurrentState();
                     $mainPosition = $newState->getPosition($position->side->getOpposite());
-                    $safePriceDistance = self::SAFE_LIQUIDATION_DISTANCE_FOR_MAIN_POSITION_AFTER_CLOSE_SUPPORT;
+                    $safePriceDistance = $this->saveLiquidationDistanceForMainPositionAfterCloseSupport;
                     $isLiquidationOnSafeDistance = $mainPosition->side->isShort()
                         ? $mainPosition->liquidationPrice()->sub($safePriceDistance)->greaterOrEquals($ticker->markPrice)
                         : $mainPosition->liquidationPrice()->add($safePriceDistance)->lessOrEquals($ticker->markPrice);
@@ -207,11 +210,14 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly MessageBusInterface $messageBus,
         private TradingSandboxFactoryInterface $sandboxFactory,
         private readonly RateLimiterFactory $checkCanCloseSupportWhilePushStopsThrottlingLimiter,
+        private readonly AppSettingsProvider $settings,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $appErrorLogger,
         ClockInterface $clock,
     ) {
+        $this->saveLiquidationDistanceForMainPositionAfterCloseSupport = $this->settings->get(PushStopSettings::MainPositionSafeLiqDistance_After_PushSupportPositionStops);
+
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }

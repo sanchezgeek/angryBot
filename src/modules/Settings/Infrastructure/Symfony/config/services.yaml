@@ -29,6 +29,7 @@ services:
 
                 # push Stop
                 push.stop.cover_loss_after_close_by_market.enabled: true
+                push.stop.mainPositionSafeLiqDistance.afterPushSupportPositionStops: 5000
 
                 # push BuyOrder
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
