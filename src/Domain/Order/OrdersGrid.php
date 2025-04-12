@@ -73,7 +73,7 @@ final class OrdersGrid
      * @param int $qnt
      * @return Generator<Order>
      */
-    public function ordersByQnt(float $forVolume, int $qnt, bool $roundVolumeToMin = false, bool $strict = false): \Generator
+    public function ordersByQnt(float $forVolume, int $qnt): \Generator
     {
         if ($forVolume <= 0) {
             throw new DomainException(sprintf('$forVolume must be greater than zero ("%.2f" given).', $forVolume));
@@ -91,38 +91,8 @@ final class OrdersGrid
             $volume = $symbol->roundVolume($forVolume / $qnt);
         }
 
-        $volumeSum = 0;
-        /** @var Order[] $orders */
-        $orders = [];
         foreach ($this->getPriceRange()->byQntIterator($qnt, $this->positionSide) as $priceItem) {
-            if ($strict && $volumeSum >= $forVolume) {
-                break;
-            }
-
-            if ($roundVolumeToMin) {
-                $nominal = ExchangeOrder::roundedToMin($symbol, $volume, $priceItem);
-                if ($volume < ($minVolume = $nominal->getVolume())) {
-                    $volume = $minVolume;
-                }
-            }
-
-            if ($strict && $orders) {
-                $volumeLeft = $forVolume - $volumeSum;
-                if ($volumeLeft < $volume) {
-                    $lastOrder = $orders[array_key_last($orders)];
-
-                    $orders[array_key_last($orders)] = new Order($lastOrder->price(), $lastOrder->volume() + $volumeLeft);
-                    break;
-                }
-            }
-
-            $volumeSum += $volume;
-
-            $orders[] = new Order($priceItem, $volume);
-        }
-
-        foreach ($orders as $order) {
-            yield $order;
+            yield new Order($priceItem, $volume);
         }
     }
 }

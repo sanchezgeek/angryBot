@@ -13,6 +13,9 @@ use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Domain\Order\Collection\OrdersCollection;
+use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
+use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
@@ -131,10 +134,11 @@ class CreateStopsGridCommand extends AbstractCommand
             $stopsHasOppositeBuyOrders = ($context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false;
             $roundVolumeToMin = $stopsHasOppositeBuyOrders;
 
-            /** @var Order[] $orders */
-            $orders = iterator_to_array(
-                $stopsGrid->ordersByQnt($forVolume, $qnt, $roundVolumeToMin)
-            );
+            $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));
+            $orders = new OrdersCollection(...$orders);
+            if ($roundVolumeToMin) {
+                $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
+            }
 
             $volumeSum = 0;
             foreach ($orders as $order) {
@@ -150,9 +154,7 @@ class CreateStopsGridCommand extends AbstractCommand
                     )
                 )) {
                     # strict
-                    $orders = iterator_to_array(
-                        $stopsGrid->ordersByQnt($forVolume, $qnt, $roundVolumeToMin, true)
-                    );
+                    $orders = new OrdersLimitedWithMaxVolume($orders, $forVolume);
                 }
             }
 //            if (!$this->io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {

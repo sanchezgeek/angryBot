@@ -155,14 +155,12 @@ final class OrdersGridTest extends TestCase
         float $forVolume,
         int $qnt,
         array $expectedOrders,
-        bool $roundVolumeToMin = false,
-        bool $strict = false
     ): void {
         $priceGrid = new OrdersGrid($priceRange);
 
         // Assert
         $orders = [];
-        foreach ($priceGrid->ordersByQnt($forVolume, $qnt, $roundVolumeToMin, $strict) as $order) {
+        foreach ($priceGrid->ordersByQnt($forVolume, $qnt) as $order) {
             $orders[] = $order;
         }
 
@@ -254,66 +252,6 @@ final class OrdersGridTest extends TestCase
                     new Order(Price::float(28918.800000000003), 0.001),
 
                 ]
-            ],
-            [
-                '$priceRange' => PriceRange::create(0.04865, 0.04565, Symbol::ARCUSDT),
-                '$forVolume' => 100,
-                '$qnt' => 10,
-                'expectedOrders' => [
-                    new Order(Symbol::ARCUSDT->makePrice(0.04565), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.045950000000000005), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.046250000000000006), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.04655000000000001), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.04685000000000001), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.04715000000000001), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.04745000000000001), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.047750000000000015), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.048050000000000016), 10),
-                    new Order(Symbol::ARCUSDT->makePrice(0.04835000000000002), 10),
-                ],
-            ],
-            [
-                '$priceRange' => PriceRange::create(0.04865, 0.04565, Symbol::ARCUSDT),
-                '$forVolume' => 273,
-                '$qnt' => 3,
-                'expectedOrders' => [
-                    new Order(Symbol::ARCUSDT->makePrice(0.04565), 110),
-                    new Order(Symbol::ARCUSDT->makePrice(0.046650000000000004), 110),
-                    new Order(Symbol::ARCUSDT->makePrice(0.047650000000000005), 110),
-                ],
-                true,
-            ],
-            [
-                '$priceRange' => PriceRange::create(0.04865, 0.04565, Symbol::ARCUSDT),
-                '$forVolume' => 273,
-                '$qnt' => 10,
-                'expectedOrders' => [
-                    new Order(Symbol::ARCUSDT->makePrice(0.04565), 110),
-                    new Order(Symbol::ARCUSDT->makePrice(0.045950000000000005), 163),
-                ],
-                true,
-                true,
-            ],
-            [
-                '$priceRange' => PriceRange::create(0.04865, 0.04565, Symbol::ARCUSDT),
-                '$forVolume' => 233,
-                '$qnt' => 10,
-                'expectedOrders' => [
-                    new Order(Symbol::ARCUSDT->makePrice(0.04565), 110),
-                    new Order(Symbol::ARCUSDT->makePrice(0.045950000000000005), 123),
-                ],
-                true,
-                true,
-            ],
-            [
-                '$priceRange' => PriceRange::create(0.04865, 0.04565, Symbol::ARCUSDT),
-                '$forVolume' => 168,
-                '$qnt' => 10,
-                'expectedOrders' => [
-                    new Order(Symbol::ARCUSDT->makePrice(0.04565), 168),
-                ],
-                true,
-                true,
             ],
         ];
     }
