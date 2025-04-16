@@ -243,13 +243,15 @@ class TradingSandbox implements TradingSandboxInterface
             $volume = $position->size;
         }
 
-        $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
+        $orderDto = new ExchangeOrder($this->symbol, $volume, $position->entryPrice());
         $margin = $this->orderCostCalculator->orderMargin($orderDto, $position->leverage);
+        $closeFee = $this->orderCostCalculator->closeFee($orderDto, $position->leverage, $positionSide)->value();
 
         $expectedPnl = PnlHelper::getPnlInUsdt($position, $price, $volume);
 
         $this->notice(sprintf('modify free balance with %s (expected PNL)', $expectedPnl)); $this->currentState->modifyFreeBalance($expectedPnl);
         $this->notice(sprintf('modify free balance with %s (order margin)', $margin)); $this->currentState->modifyFreeBalance($margin);
+        $this->notice(sprintf('modify free balance with %s (close fee)', $closeFee)); $this->currentState->modifyFreeBalance(-$closeFee);
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
