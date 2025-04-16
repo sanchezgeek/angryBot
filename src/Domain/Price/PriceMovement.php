@@ -76,7 +76,7 @@ readonly class PriceMovement
         return (bool)$this->movementDirection($positionSide)?->isProfit();
     }
 
-    private function movementDirection(Side $relatedToPositionSide): ?PriceMovementDirection
+    public function movementDirection(Side $relatedToPositionSide): ?PriceMovementDirection
     {
         if ($this->toTargetPrice->greaterThan($this->fromPrice)) {
             return $relatedToPositionSide->isShort() ? PriceMovementDirection::TO_LOSS : PriceMovementDirection::TO_PROFIT;

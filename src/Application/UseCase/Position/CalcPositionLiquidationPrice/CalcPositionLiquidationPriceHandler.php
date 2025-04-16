@@ -28,7 +28,7 @@ final readonly class CalcPositionLiquidationPriceHandler
         $notCoveredSize = $position->getNotCoveredSize();
         $freeBalanceLiquidationDistance = $fundsAvailableForLiquidation / $notCoveredSize;
 //        $notCoveredPartOrderDto = new ExchangeOrder($position->symbol, $notCoveredSize, $position->entryPrice); $closeFee = $this->orderCostCalculator->openFee($notCoveredPartOrderDto, $position->leverage, $position->side); $freeBalanceLiquidationDistance -= $closeFee->value();
-        $liquidationDistance = $freeBalanceLiquidationDistance + $this->getMaintenanceMarginLiquidationDistance($position);
+        $liquidationDistance = $freeBalanceLiquidationDistance + self::getMaintenanceMarginLiquidationDistance($position);
 
         if ($position->isLong() && $liquidationDistance >= $position->entryPrice) {
             return new CalcPositionLiquidationPriceResult($position->entryPrice(), Price::float(0));
@@ -68,7 +68,10 @@ final readonly class CalcPositionLiquidationPriceHandler
         return new CalcPositionLiquidationPriceResult($position->entryPrice(), $position->symbol->makePrice($liquidationPrice));
     }
 
-    public function getMaintenanceMarginLiquidationDistance(Position $position): float
+    /**
+     * @todo | Move to some service?
+     */
+    public static function getMaintenanceMarginLiquidationDistance(Position $position): float
     {
         if (AppContext::accType()->isUTA()) {
             return $position->entryPrice / $position->leverage->value() / 2;

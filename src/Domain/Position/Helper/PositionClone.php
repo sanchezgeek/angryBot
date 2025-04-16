@@ -16,6 +16,7 @@ class PositionClone
     private ?float $liquidation = null;
     private ?float $entry = null;
     private ?float $size = null;
+    private ?CoinAmount $initialMargin = null;
 
     private function __construct(
         private readonly Position $initialPosition,
@@ -51,7 +52,7 @@ class PositionClone
         $size           = $this->size ?? $initial->size;
 
         $positionValue = $entry * $size; // @todo | only linear?
-        $initialMargin = new CoinAmount($symbol->associatedCoin(), $positionValue / $initial->leverage->value());
+        $initialMargin = $this->initialMargin ?? new CoinAmount($symbol->associatedCoin(), $positionValue / $initial->leverage->value());
 
 //        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
 //            throw new LogicException(sprintf('%s: invalid liquidation price "%s" provided (entry = "%s")', __METHOD__, $liquidation, $entry));
@@ -103,6 +104,12 @@ class PositionClone
     public function withSize(float $size): self
     {
         $this->size = $size;
+        return $this;
+    }
+
+    public function withInitialMargin(CoinAmount $value): self
+    {
+        $this->initialMargin = $value;
         return $this;
     }
 }

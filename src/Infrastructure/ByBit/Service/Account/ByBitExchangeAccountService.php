@@ -246,7 +246,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         $positionForCalc = $hedge ? $hedge->mainPosition : $positions[0];
-        $maintenanceMarginLiquidationDistance = $this->positionLiquidationCalculator->getMaintenanceMarginLiquidationDistance($positionForCalc);
+        $maintenanceMarginLiquidationDistance = CalcPositionLiquidationPriceHandler::getMaintenanceMarginLiquidationDistance($positionForCalc);
         $availableFundsLiquidationDistance = $positionForCalc->liquidationDistance() - $maintenanceMarginLiquidationDistance;
         $notCoveredSize = $positionForCalc->getNotCoveredSize();
         $fundsAvailableForLiquidation = $availableFundsLiquidationDistance * $notCoveredSize;

@@ -243,7 +243,7 @@ enum Symbol: string
     ];
 
     private const ASSOCIATED_CATEGORIES = [
-        self::BTCUSD->value => AssetCategory::inverse
+        self::BTCUSD->value => AssetCategory::inverse,
     ];
 
     private const STOP_TRIGGER_DELTA = [
@@ -314,6 +314,18 @@ enum Symbol: string
     public function roundVolume(float $volume): float
     {
         $value = round($volume, $this->contractSizePrecision());
+        if ($value < $this->minOrderQty()) {
+            $value = $this->minOrderQty();
+        }
+
+        return $value;
+    }
+
+    public function roundVolumeDown(float $volume): float
+    {
+        $precision = $this->contractSizePrecision();
+
+        $value = floor($volume*pow(10,$precision))/pow(10,$precision);
         if ($value < $this->minOrderQty()) {
             $value = $this->minOrderQty();
         }
