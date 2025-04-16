@@ -255,7 +255,7 @@ class TradingSandbox implements TradingSandboxInterface
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
-        $this->modifyPositionWithStop($position, $volume);
+        $this->modifyPositionWithStop($position, $orderDto);
 
         return $expectedPnl;
     }
@@ -277,10 +277,16 @@ class TradingSandbox implements TradingSandboxInterface
         $this->actualizePositions($position);
     }
 
-    private function modifyPositionWithStop(Position $current, float $volume): void
+    private function modifyPositionWithStop(Position $current, ExchangeOrder $exchangeStopOrder): void
     {
         try {
-            $position = PositionClone::clean($current)->withSize($current->size - $volume)->create();
+            $releasedIM = $this->orderCostCalculator->orderMargin($exchangeStopOrder, $current->leverage);
+
+            $position = PositionClone::clean($current)
+                ->withSize($current->size - $exchangeStopOrder->getVolume())
+                ->withInitialMargin($current->initialMargin->sub($releasedIM))
+                ->create();
+
         } catch (SizeCannotBeLessOrEqualsZeroException) {
             $this->notice(sprintf('!!!! %s position closed !!!!', $current->getCaption()));
             $position = new ClosedPosition($current->side, $current->symbol);
