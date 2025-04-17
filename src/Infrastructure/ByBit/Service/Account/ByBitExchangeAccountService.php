@@ -66,6 +66,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
      */
     public function getSpotWalletBalance(Coin $coin, bool $suppressUTAWarning = false): SpotBalance
     {
+        if (!AppContext::hasPermissionsToFundBalance()) {
+            return new SpotBalance($coin, 0, 0);
+        }
+
         $request = new GetAllCoinsBalanceRequest($accountType = AccountType::FUNDING, $coin);
 
         $data = $this->sendRequest($request)->data();

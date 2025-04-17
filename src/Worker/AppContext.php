@@ -81,4 +81,9 @@ final class AppContext
     {
         return (bool)($_ENV['IS_MASTER_ACCOUNT'] ?? null) === true;
     }
+
+    public static function hasPermissionsToFundBalance(): bool
+    {
+        return (bool)($_ENV['HAS_PERMISSION_TO_FUND_BALANCE'] ?? null) === true;
+    }
 }
