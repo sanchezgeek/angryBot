@@ -22,7 +22,7 @@ trait PriceRangeAwareCommand
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
 
-    protected function configurePriceRangeArgs(
+    public function configurePriceRangeArgs(
         string $fromName = 'from', string $fromAlias = 'f',
         string $toName = 'to', string $toAlias = 't',
     ): static {

@@ -16,7 +16,6 @@ use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
-use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
 use InvalidArgumentException;
@@ -67,6 +66,22 @@ class CreateStopsGridCommand extends AbstractCommand
             ->configureOppositeOrdersDistanceOption(alias: 'o')
             ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
+//            ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
+//            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
+//            ->configureStopAdditionalContexts()
+        ;
+
+        self::configureStopsArguments($this);
+    }
+
+    /**
+     * @param Command&PriceRangeAwareCommand&OppositeOrdersDistanceAwareCommand&AdditionalStopContextAwareCommand $cmd
+     */
+    public static function configureStopsArguments(Command $cmd): void
+    {
+        $cmd
+            ->configureOppositeOrdersDistanceOption(alias: 'o')
+            ->configurePriceRangeArgs()
             ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
             ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
             ->configureStopAdditionalContexts()

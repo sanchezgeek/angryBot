@@ -28,10 +28,13 @@ trait AdditionalStopContextAwareCommand
         ],
     ];
 
-    protected function configureStopAdditionalContexts(): static
+    private array $addedAdditionalStopContexts = [];
+
+    public function configureStopAdditionalContexts(): static
     {
         foreach (self::NEGATABLE_OPTIONS as $option => ['caption' => $caption]) {
             $this->addOption($option, null, InputOption::VALUE_NEGATABLE, $caption);
+            $this->addedAdditionalStopContexts[] = $option;
         }
 
         return $this;

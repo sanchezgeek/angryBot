@@ -114,7 +114,7 @@ services:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
-    App\Command\Liquidation\MakeVolumeByWishedDistanceCommand:
+    App\Command\Liquidation\MakeLiquidationWishedDistanceCommand:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 

@@ -2,6 +2,7 @@
 
 namespace App\Command\Liquidation;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationPrice\CalcPositionVolumeBasedOnLiquidationPriceEntryDto;
 use App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationPrice\CalcPositionVolumeBasedOnLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -12,29 +13,38 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'liq:volume-by-wished-distance')]
-class MakeVolumeByWishedDistanceCommand extends AbstractCommand
+#[AsCommand(name: 'liq:wish-distance')]
+class MakeLiquidationWishedDistanceCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
+    use OppositeOrdersDistanceAwareCommand;
 
     public const WISHED_LIQUIDATION_DISTANCE = 'wishedLiquidationDistance';
+
     public const WITHOUT_CONFIRMATION_OPTION = 'y';
+    public const AS_STOP_OPTION = 'as-stop';
+
+    private array $addedArguments = [];
 
     protected function configure(): void
     {
@@ -42,7 +52,10 @@ class MakeVolumeByWishedDistanceCommand extends AbstractCommand
             ->configurePositionArgs()
             ->addArgument(self::WISHED_LIQUIDATION_DISTANCE, InputArgument::REQUIRED)
             ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
+            ->addOption(self::AS_STOP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Add as stops? (alias for `sl:grid` command)')
         ;
+
+        CreateStopsGridCommand::configureStopsArguments($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -65,24 +78,47 @@ class MakeVolumeByWishedDistanceCommand extends AbstractCommand
         );
         $calculatedDiff = $result->diff;
 
-        $msg = sprintf('Need to close %s. Continue? Estimated liquidationPrice = %s', $calculatedDiff, $result->realLiquidationPrice);
+        $msg = sprintf('Need to close %s (%s). Continue? Estimated liquidationPrice = %s', $calculatedDiff, Percent::fromPart($calculatedDiff / $position->size), $result->realLiquidationPrice);
         if (!$this->isWithoutConfirm() && !$this->io->confirm($msg)) {
             return Command::SUCCESS;
         } else {
             $this->io->info($msg);
         }
 
-        $this->orderService->closeByMarket($position, $calculatedDiff);
+        if ($this->asStop()) {
+            $params = [];
+            foreach ($input->getArguments() as $name => $value) {
+                if ($name === 'command') continue;
+                $params[$name] = $value;
+            }
+            foreach ($input->getOptions() as $name => $value) {
+                if (!in_array($name, array_merge(['symbol', CreateStopsGridCommand::ORDERS_QNT_OPTION, $this->fromOptionName, $this->toOptionName], $this->addedAdditionalStopContexts))) {
+                    continue;
+                }
+                $params[sprintf('--%s', $name)] = (string)$value;
+            }
+            unset($params['wishedLiquidationDistance'], $params['--y'], $params['--as-stop'], $params['--no-interaction']);
 
-        $newPositionState = $this->getPosition();
+            $slGridInput = new ArrayInput(array_merge([
+                'command' => 'sl:grid',
+                'forVolume' => (string)$calculatedDiff,
+            ], $params));
 
-        self::printLiquidationStats('wished        ', $wishedLiquidationPrice);
-        self::printLiquidationStats('preCalculated ', $result->realLiquidationPrice);
-        self::printLiquidationStats('real          ', $newPositionState->liquidationPrice());
-        OutputHelper::print(sprintf('                      real - preCalculated : %.3f', $result->realLiquidationPrice->differenceWith($newPositionState->liquidationPrice())->deltaForPositionLoss($newPositionState->side)));
-        OutputHelper::print(sprintf('                      real - wished : %.3f', $wishedLiquidationPrice->differenceWith($newPositionState->liquidationPrice())->deltaForPositionLoss($newPositionState->side)));
+            $this->getApplication()->doRun($slGridInput, $output);
+        } else {
+            $this->orderService->closeByMarket($position, $calculatedDiff);
 
-        $this->io->info(sprintf('New position stats: size = %s, liquidation = %s', $newPositionState->size, $newPositionState->liquidationPrice()));
+            $newPositionState = $this->getPosition();
+
+            self::printLiquidationStats('wished        ', $wishedLiquidationPrice);
+            self::printLiquidationStats('preCalculated ', $result->realLiquidationPrice);
+            self::printLiquidationStats('real          ', $newPositionState->liquidationPrice());
+            OutputHelper::print(sprintf('                      real - preCalculated : %.3f', $result->realLiquidationPrice->differenceWith($newPositionState->liquidationPrice())->deltaForPositionLoss($newPositionState->side)));
+            OutputHelper::print(sprintf('                      real - wished : %.3f', $wishedLiquidationPrice->differenceWith($newPositionState->liquidationPrice())->deltaForPositionLoss($newPositionState->side)));
+
+            $this->io->info(sprintf('New position stats: size = %s, liquidation = %s', $newPositionState->size, $newPositionState->liquidationPrice()));
+        }
+
 
         return Command::SUCCESS;
     }
@@ -97,6 +133,11 @@ class MakeVolumeByWishedDistanceCommand extends AbstractCommand
         return $this->paramFetcher->getBoolOption(self::WITHOUT_CONFIRMATION_OPTION);
     }
 
+    private function asStop(): bool
+    {
+        return $this->paramFetcher->getBoolOption(self::AS_STOP_OPTION);
+    }
+
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
@@ -104,6 +145,7 @@ class MakeVolumeByWishedDistanceCommand extends AbstractCommand
         private readonly OrderServiceInterface $orderService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,
     ) {
