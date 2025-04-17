@@ -52,10 +52,10 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         # SHORT
         $sandboxStopOrder = new SandboxStopOrder($symbol, Side::Sell, 68150, 0.001);
         $longInitialCloned = PositionClone::clean($longInitial)->create();
-        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size - 0.001)->liq(75434.95)->opposite($longInitialCloned)->build();
+        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size - 0.001)->liq(75434.53)->opposite($longInitialCloned)->build();
         $positionsAfter = [$longInitialCloned, $shortAfterMake];
 
-        $expectedFree = 98.10013; $expectedAvailable = 34.5934;
+        $expectedFree = 98.0564643; $expectedAvailable = 34.5498;
         $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [
@@ -65,10 +65,10 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
         # LONG
         $sandboxStopOrder = new SandboxStopOrder($symbol, Side::Buy, 68150, 0.001);
         $longAfterMakeStop = PB::long()->entry($longInitial->entryPrice)->size($longInitial->size - 0.001)->liq($longInitial->liquidationPrice)->build();
-        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(75302.62)->opposite($longAfterMakeStop)->build();
+        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(75301.48)->opposite($longAfterMakeStop)->build();
         $positionsAfter = [$longAfterMakeStop, $shortAfterMake];
 
-        $expectedFree = 107.44014; $expectedAvailable = 42.7003;
+        $expectedFree = 107.3205056; $expectedAvailable = 42.5807;
         $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxStopOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxStopOrder, $expectedStateAfterMake) => [

@@ -29,6 +29,7 @@ use App\Settings\Application\Service\AppSettingsProvider;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\ContractBalanceTestHelper;
+use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\PHPUnit\Assertions;
@@ -46,6 +47,7 @@ class MarketBuyHandlerTest extends KernelTestCase
 {
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
+    use RateLimiterAwareTest;
 
     private const SAFE_PRICE_DISTANCE = 2000;
 
@@ -70,6 +72,7 @@ class MarketBuyHandlerTest extends KernelTestCase
             $this->executionSandboxFactory,
             $this->logger,
             $settings,
+            self::makeRateLimiterFactory()
         );
 
         $this->marketBuyHandler = new MarketBuyHandler(
