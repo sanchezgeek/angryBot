@@ -89,6 +89,12 @@ enum Symbol: string
     case GPSUSDT = 'GPSUSDT';
     case LAIUSDT = 'LAIUSDT';
     case STORJUSDT = 'STORJUSDT';
+    case BROCCOLIUSDT = 'BROCCOLIUSDT';
+    case BSWUSDT = 'BSWUSDT';
+    case RSS3USDT = 'RSS3USDT';
+    case FLMUSDT = 'FLMUSDT';
+    case FOXYUSDT = 'FOXYUSDT';
+    case TUTUSDT = 'TUTUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -160,6 +166,12 @@ enum Symbol: string
         self::GPSUSDT->value => 5,
         self::LAIUSDT->value => 7,
         self::STORJUSDT->value => 4,
+        self::BROCCOLIUSDT->value => 5,
+        self::BSWUSDT->value => 5,
+        self::RSS3USDT->value => 5,
+        self::FLMUSDT->value => 5,
+        self::FOXYUSDT->value => 6,
+        self::TUTUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -232,6 +244,12 @@ enum Symbol: string
         self::GPSUSDT->value => 1,
         self::LAIUSDT->value => 1,
         self::STORJUSDT->value => 1,
+        self::BROCCOLIUSDT->value => 1,
+        self::BSWUSDT->value => 1,
+        self::RSS3USDT->value => 1,
+        self::FLMUSDT->value => 1,
+        self::FOXYUSDT->value => 1,
+        self::TUTUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
