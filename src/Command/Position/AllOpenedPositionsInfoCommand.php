@@ -67,6 +67,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_SORT_OPTION = 'save-sort';
     private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
     private const MOVE_UP_OPTION = 'move-up';
+    private const MOVE_DOWN_OPTION = 'move-down';
     private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
     private const CURRENT_STATE_OPTION = 'current-state';
     private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
@@ -76,6 +77,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
     private const SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
 
+    private const SHOW_SYMBOLS_OPTION = 'show-symbols';
+    private const HIDE_SYMBOLS_OPTION = 'hide-symbols';
+
+    private bool $currentStateGonnaBeSaved = false;
     private array $cacheCollector = [];
     private ?string $showDiffWithOption;
     private ?string $cacheKeyToUseAsCurrentState;
@@ -98,6 +103,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
+            ->addOption(self::MOVE_DOWN_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols down')
+            ->addOption(self::SHOW_SYMBOLS_OPTION, null, InputOption::VALUE_OPTIONAL, 'Show only specified symbols')
+            ->addOption(self::HIDE_SYMBOLS_OPTION, null, InputOption::VALUE_OPTIONAL, 'Hide specified symbols')
             ->addOption(self::DIFF_WITH_SAVED_CACHE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Output diff with saved cache')
             ->addOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, 'c', InputOption::VALUE_OPTIONAL, 'Comment on first cache save')
             ->addOption(self::CURRENT_STATE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Use specified cached data as current state')
@@ -143,17 +151,16 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $prevCache = $previousIterationCache;
             }
 
-            $this->doOut($cache, $prevCache);
-
             $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
             $saveCacheComment = $cacheComment && $iteration === 1;
-
-            $saveCurrentState =
+            $this->currentStateGonnaBeSaved =
                 !$updateEnabled
                 || $saveCacheComment
                 || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
 
-            if ($saveCurrentState) {
+            $this->doOut($cache, $prevCache);
+
+            if ($this->currentStateGonnaBeSaved) {
                 $cachedDataCacheKey = sprintf('opened_positions_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
                 if ($saveCacheComment) {
                     $cachedDataCacheKey .= '_' . $cacheComment;
@@ -204,6 +211,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
+        // @todo | rid off?
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
@@ -218,8 +226,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $bottomCells[] = Cell::default($pnlFormatter($unrealisedTotal))->setAlign(CellAlign::RIGHT);
         $bottomCells[] = '';
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => (new CoinAmount($singleCoin, $pnl))->value() : static fn($pnl) => (string)$pnl;
-        $selectedCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $selectedCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
-        $prevCache !== null && $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $prevCache['unrealizedTotal'], formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        if ($selectedCache !== null) {
+            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($selectedCache, $symbols);
+            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $unrealisedPnlCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        }
+        if ($prevCache !== null) {
+            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($prevCache, $symbols);
+            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $unrealisedPnlCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        }
 
         $bottomCells = array_merge($bottomCells, ['', '', '', '']);
         $rows[] = DataRow::default($bottomCells);
@@ -518,7 +532,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $equivalentHedgedSymbols = [];
         foreach ($this->positions as $symbolRaw => $symbolPositions) {
             $symbolsRaw[] = $symbolRaw;
-            $symbol = Symbol::from($symbolRaw);
             if ($moveHedgedUp && $symbolPositions[array_key_first($symbolPositions)]?->getHedge()?->isEquivalentHedge()) {
                 $equivalentHedgedSymbols[] = $symbolRaw;
             }
@@ -547,6 +560,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
+        if ($moveDownOption = $this->paramFetcher->getStringOption(self::MOVE_DOWN_OPTION, false)) {
+            $providedItems = self::parseProvidedSymbols($moveDownOption);
+            if ($providedItems) {
+                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                $providedItems = array_intersect($providedItems, $symbolsRaw);
+                if ($providedItems) {
+                    $symbolsRaw = array_merge(array_diff($symbolsRaw, $providedItems), $providedItems);
+                }
+            }
+        }
+
         if (!$this->currentSortSaved && $this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
             $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
             $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
@@ -555,11 +579,49 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $this->currentSortSaved = true;
         }
 
+        if (!$this->currentStateGonnaBeSaved) {
+            if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
+                $providedItems = self::parseProvidedSymbols($showSymbols);
+                if ($providedItems) {
+                    $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                    $symbolsRaw = array_intersect($providedItems, $symbolsRaw);
+                }
+            } elseif ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
+                $providedItems = self::parseProvidedSymbols($hideSymbols);
+                if ($providedItems) {
+                    $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                    $providedItems = array_intersect($providedItems, $symbolsRaw);
+                    if ($providedItems) {
+                        $symbolsRaw = array_diff($symbolsRaw, $providedItems);
+                    }
+                }
+            }
+        }
+
         if ($moveHedgedUp) {
             $symbolsRaw = array_merge($equivalentHedgedSymbols, array_diff($symbolsRaw, $equivalentHedgedSymbols));
         }
 
         return array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
+    }
+
+    /**
+     * @param Symbol[] $symbols
+     */
+    private function getTotalUnrealizedProfitFromCache(array $cache, array $symbols): float
+    {
+        $result = 0;
+        foreach ($symbols as $symbol) {
+            foreach ([Side::Buy, Side::Sell] as $side) {
+                /** @var Position $positionCache */
+                $positionCacheKey = self::positionCacheKeyByRaw($symbol, $side);
+                if ($positionCache = ($cache[$positionCacheKey] ?? null)) {
+                    $result += $positionCache->unrealizedPnl;
+                }
+            }
+        }
+
+        return $result;
     }
 
     private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
@@ -648,6 +710,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
+    private static function positionCacheKeyByRaw(Symbol $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->value, $side->value);}
 
     private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
 
