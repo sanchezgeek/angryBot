@@ -7,6 +7,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Helper\SymbolHelper;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
@@ -84,6 +85,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private array $cacheCollector = [];
     private ?string $showDiffWithOption;
     private ?string $cacheKeyToUseAsCurrentState;
+    private bool $useSavedSort;
+    private bool $moveHedgedSymbolsUp;
+
+    private ?array $savedRawSymbolsSort = null;
+    private ?array $rawSymbolsSetToMoveUp = null;
+    private ?array $rawSymbolsSetToMoveDown = null;
 
     /** @var Symbol[] */
     private array $symbols;
@@ -124,6 +131,23 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
         $this->cacheKeyToUseAsCurrentState = $this->paramFetcher->getStringOption(self::CURRENT_STATE_OPTION, false);
+        $this->useSavedSort = $this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION);
+        $this->savedRawSymbolsSort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
+        $this->moveHedgedSymbolsUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
+
+        if (
+            ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false))
+            && ($providedItems = self::parseProvidedSymbols($moveUpOption))
+        ) {
+            $this->rawSymbolsSetToMoveUp = SymbolHelper::symbolsToRawValues(...$providedItems);
+        }
+
+        if (
+            ($moveDownOption = $this->paramFetcher->getStringOption(self::MOVE_DOWN_OPTION, false))
+            && ($providedItems = self::parseProvidedSymbols($moveDownOption))
+        ) {
+            $this->rawSymbolsSetToMoveDown = SymbolHelper::symbolsToRawValues(...$providedItems);
+        }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -526,55 +550,36 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private function getOpenedPositionsSymbols(): array
     {
-        $moveHedgedUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
-
         $symbolsRaw = [];
         $equivalentHedgedSymbols = [];
         foreach ($this->positions as $symbolRaw => $symbolPositions) {
             $symbolsRaw[] = $symbolRaw;
-            if ($moveHedgedUp && $symbolPositions[array_key_first($symbolPositions)]?->getHedge()?->isEquivalentHedge()) {
+            if ($this->moveHedgedSymbolsUp && $symbolPositions[array_key_first($symbolPositions)]?->getHedge()?->isEquivalentHedge()) {
                 $equivalentHedgedSymbols[] = $symbolRaw;
             }
         }
 
-        if ($this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION)) {
-            $sort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
-            if ($sort === null) {
+        if ($this->useSavedSort) {
+            if ($this->savedRawSymbolsSort === null) {
                 OutputHelper::print('Saved sort not found');
             } else {
-                $newPositionsSymbols = array_diff($symbolsRaw, $sort);
-                $symbolsRawSorted = array_intersect($sort, $symbolsRaw);
+                $newPositionsSymbols = array_diff($symbolsRaw, $this->savedRawSymbolsSort);
+                $symbolsRawSorted = array_intersect($this->savedRawSymbolsSort, $symbolsRaw);
                 $symbolsRawSorted = array_merge($symbolsRawSorted, $newPositionsSymbols);
                 $symbolsRaw = $symbolsRawSorted;
             }
         }
 
-        if ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false)) {
-            $providedItems = self::parseProvidedSymbols($moveUpOption);
-            if ($providedItems) {
-                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
-                $providedItems = array_intersect($providedItems, $symbolsRaw);
-                if ($providedItems) {
-                    $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
-                }
-            }
+        if ($this->rawSymbolsSetToMoveUp && ($providedItems = array_intersect($this->rawSymbolsSetToMoveUp, $symbolsRaw))) {
+            $symbolsRaw = array_merge($providedItems, array_diff($symbolsRaw, $providedItems));
         }
 
-        if ($moveDownOption = $this->paramFetcher->getStringOption(self::MOVE_DOWN_OPTION, false)) {
-            $providedItems = self::parseProvidedSymbols($moveDownOption);
-            if ($providedItems) {
-                $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
-                $providedItems = array_intersect($providedItems, $symbolsRaw);
-                if ($providedItems) {
-                    $symbolsRaw = array_merge(array_diff($symbolsRaw, $providedItems), $providedItems);
-                }
-            }
+        if ($this->rawSymbolsSetToMoveDown && ($providedItems = array_intersect($this->rawSymbolsSetToMoveDown, $symbolsRaw))) {
+            $symbolsRaw = array_merge(array_diff($symbolsRaw, $providedItems), $providedItems);
         }
 
         if (!$this->currentSortSaved && $this->paramFetcher->getBoolOption(self::SAVE_SORT_OPTION)) {
-            $symbols = array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
-            $currentSymbolsSort = array_map(static fn (Symbol $symbol) => $symbol->value, $symbols);
-            $item = $this->cache->getItem(self::SortCacheKey)->set($currentSymbolsSort)->expiresAfter(null);
+            $item = $this->cache->getItem(self::SortCacheKey)->set($symbolsRaw)->expiresAfter(null);
             $this->cache->save($item);
             $this->currentSortSaved = true;
         }
@@ -583,13 +588,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
                 $providedItems = self::parseProvidedSymbols($showSymbols);
                 if ($providedItems) {
-                    $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
                     $symbolsRaw = array_intersect($providedItems, $symbolsRaw);
                 }
             } elseif ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
                 $providedItems = self::parseProvidedSymbols($hideSymbols);
                 if ($providedItems) {
-                    $providedItems = array_map(static fn (Symbol $symbol) => $symbol->value, $providedItems);
+                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
                     $providedItems = array_intersect($providedItems, $symbolsRaw);
                     if ($providedItems) {
                         $symbolsRaw = array_diff($symbolsRaw, $providedItems);
@@ -598,11 +603,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
-        if ($moveHedgedUp) {
+        if ($this->moveHedgedSymbolsUp) {
             $symbolsRaw = array_merge($equivalentHedgedSymbols, array_diff($symbolsRaw, $equivalentHedgedSymbols));
         }
 
-        return array_map(static fn (string $symbolRaw) => Symbol::from($symbolRaw), $symbolsRaw);
+        return SymbolHelper::rawSymbolsToValueObjects(...$symbolsRaw);
     }
 
     /**
