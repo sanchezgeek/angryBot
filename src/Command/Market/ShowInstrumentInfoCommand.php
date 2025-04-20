@@ -30,7 +30,6 @@ class ShowInstrumentInfoCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $symbols = $this->getSymbols();
-        $symbols[] = Symbol::BTCUSDT;
 
         foreach ($symbols as $symbol) {
             $this->io->info(sprintf('%s: %s', $symbol->value, json_encode($this->exchangeService->getInstrumentInfo($symbol))));
