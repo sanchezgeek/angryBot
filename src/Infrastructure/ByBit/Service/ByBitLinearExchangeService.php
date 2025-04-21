@@ -172,6 +172,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         return new InstrumentInfoDto(
             (float)$data['list'][0]['lotSizeFilter']['minOrderQty'],
             (float)$data['list'][0]['lotSizeFilter']['minNotionalValue'],
+            (float)$data['list'][0]['leverageFilter']['minLeverage'],
+            (float)$data['list'][0]['leverageFilter']['maxLeverage'],
+            (float)$data['list'][0]['priceFilter']['tickSize'],
         );
     }
 }
