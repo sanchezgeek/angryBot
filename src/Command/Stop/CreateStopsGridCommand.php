@@ -43,6 +43,8 @@ class CreateStopsGridCommand extends AbstractCommand
     use AdditionalStopContextAwareCommand;
     use OppositeOrdersDistanceAwareCommand;
 
+    public const NAME = 'sl:grid';
+
     private const BY_PRICE_STEP = 'by_step';
     private const BY_ORDERS_QNT = 'by_qnt';
 
@@ -51,7 +53,7 @@ class CreateStopsGridCommand extends AbstractCommand
         self::BY_ORDERS_QNT,
     ];
 
-    public const FOR_VOLUME_OPTION = 'forVolume';
+    public const FOR_VOLUME_ARGUMENT = 'forVolume';
     public const MODE_OPTION = 'mode';
     public const ORDERS_QNT_OPTION = 'ordersQnt';
     public const TRIGGER_DELTA_OPTION = 'triggerDelta';
@@ -61,31 +63,26 @@ class CreateStopsGridCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
-            ->configurePositionArgs()
-            ->configurePriceRangeArgs()
-            ->configureOppositeOrdersDistanceOption(alias: 'o')
-            ->addArgument(self::FOR_VOLUME_OPTION, InputArgument::REQUIRED, 'Volume value || $ of position size')
+            ->addArgument(self::FOR_VOLUME_ARGUMENT, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
-//            ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-//            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
-//            ->configureStopAdditionalContexts()
         ;
 
-        self::configureStopsArguments($this);
+        self::configureStopsGridArguments($this);
     }
 
     /**
-     * @param Command&PriceRangeAwareCommand&OppositeOrdersDistanceAwareCommand&AdditionalStopContextAwareCommand $cmd
+     * @param AbstractCommand&PositionAwareCommand&PriceRangeAwareCommand&OppositeOrdersDistanceAwareCommand&AdditionalStopContextAwareCommand $cmd
      */
-    public static function configureStopsArguments(Command $cmd): void
+    public static function configureStopsGridArguments(AbstractCommand $cmd): void
     {
-        $cmd
-            ->configureOppositeOrdersDistanceOption(alias: 'o')
-            ->configurePriceRangeArgs()
-            ->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT)
-            ->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta')
-            ->configureStopAdditionalContexts()
-        ;
+        $cmd->configureWithConfigurators([
+            static fn(Command $cmd) => /* @var $cmd PositionAwareCommand */ $cmd->configurePositionArgs(),
+            static fn(Command $cmd) => /* @var $cmd OppositeOrdersDistanceAwareCommand */ $cmd->configureOppositeOrdersDistanceOption(alias: 'o'),
+            static fn(Command $cmd) => /* @var $cmd PriceRangeAwareCommand */ $cmd->configurePriceRangeArgs(),
+            static fn(Command $cmd) => $cmd->addOption(self::ORDERS_QNT_OPTION, '-c', InputOption::VALUE_OPTIONAL, 'Grid orders count', self::DEFAULT_ORDERS_QNT),
+            static fn(Command $cmd) => $cmd->addOption(self::TRIGGER_DELTA_OPTION, '-d', InputOption::VALUE_OPTIONAL, 'Stop trigger delta'),
+            static fn(Command $cmd) => /* @var $cmd AdditionalStopContextAwareCommand */ $cmd->configureStopAdditionalContexts(),
+        ]);
     }
 
 //    protected function getPositionSide(): Side|string
@@ -219,10 +216,10 @@ class CreateStopsGridCommand extends AbstractCommand
     private function getForVolumeParam(): float
     {
         try {
-            $positionSizePart = $this->paramFetcher->getPercentArgument(self::FOR_VOLUME_OPTION);
+            $positionSizePart = $this->paramFetcher->getPercentArgument(self::FOR_VOLUME_ARGUMENT);
             $forVolume = $this->getPosition()->getVolumePart($positionSizePart);
         } catch (InvalidArgumentException) {
-            $forVolume = $this->paramFetcher->getFloatArgument(self::FOR_VOLUME_OPTION);
+            $forVolume = $this->paramFetcher->getFloatArgument(self::FOR_VOLUME_ARGUMENT);
         }
 
         return $forVolume;

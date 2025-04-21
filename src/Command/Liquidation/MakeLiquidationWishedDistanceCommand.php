@@ -12,6 +12,7 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
+use App\Command\ForwardedCommandExecutor;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
@@ -55,7 +56,7 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
             ->addOption(self::AS_STOP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Add as stops? (alias for `sl:grid` command)')
         ;
 
-        CreateStopsGridCommand::configureStopsArguments($this);
+        CreateStopsGridCommand::configureStopsGridArguments($this);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -86,25 +87,8 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
         }
 
         if ($this->asStop()) {
-            $params = [];
-            foreach ($input->getArguments() as $name => $value) {
-                if ($name === 'command') continue;
-                $params[$name] = $value;
-            }
-            foreach ($input->getOptions() as $name => $value) {
-                if (!in_array($name, array_merge(['symbol', CreateStopsGridCommand::ORDERS_QNT_OPTION, $this->fromOptionName, $this->toOptionName], $this->addedAdditionalStopContexts))) {
-                    continue;
-                }
-                $params[sprintf('--%s', $name)] = (string)$value;
-            }
-            unset($params['wishedLiquidationDistance'], $params['--y'], $params['--as-stop'], $params['--no-interaction']);
-
-            $slGridInput = new ArrayInput(array_merge([
-                'command' => 'sl:grid',
-                'forVolume' => (string)$calculatedDiff,
-            ], $params));
-
-            $this->getApplication()->doRun($slGridInput, $output);
+            $commandExecutor = new ForwardedCommandExecutor($this->getApplication());
+            $commandExecutor->execute(CreateStopsGridCommand::NAME, $input, $output, [CreateStopsGridCommand::FOR_VOLUME_ARGUMENT => (string)$calculatedDiff]);
         } else {
             $this->orderService->closeByMarket($position, $calculatedDiff);
 

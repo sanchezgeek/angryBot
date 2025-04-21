@@ -49,7 +49,7 @@ trait PositionAwareCommand
         return $positionSide;
     }
 
-    protected function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
+    public function configurePositionArgs(int $mode = InputArgument::REQUIRED): static
     {
         if (!$this->isSymbolArgsConfigured()) {
             $this->configureSymbolArgs();
