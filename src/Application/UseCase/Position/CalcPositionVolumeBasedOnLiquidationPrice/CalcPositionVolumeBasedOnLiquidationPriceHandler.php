@@ -76,7 +76,7 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
 
         $diffInLiquidationPrice = $recalculatedPositionLiquidation->differenceWith($wishedLiquidationPrice);
 
-        if (!($diffInLiquidationPrice->absDelta() > 0.0004 * $initialPosition->entryPrice)) {
+        if ($diffInLiquidationPrice->absDelta() <= 0.0004 * $initialPosition->entryPrice) {
             return new CalcPositionVolumeBasedOnLiquidationPriceResult(
                 $roundedResultSize,
                 $diffRounded,
@@ -84,19 +84,13 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
             );
         }
 
-        if (
-            $diffInLiquidationPrice->isProfitFor($initialPosition->side)
-            && $balanceDiff < 0
-        ) {
-            $msg = sprintf(
-                'incorrect logic? result liquidation (%s) is greater than wished (%s), but balance changed with %s',
+        if ($balanceDiff < 0 && !$diffInLiquidationPrice->isProfitFor($initialPosition->side)) {
+            $this->makeNotice($initialPosition, sprintf(
+                'incorrect logic? recalculated liquidation (%s) placed after wished (%s), but balance changed with %s',
                 $recalculatedPositionLiquidation,
                 $wishedLiquidationPrice,
                 $balanceDiff
-            );
-
-            $this->logNotice($initialPosition, $msg);
-            OutputHelper::print($msg);
+            ));
         }
 
         $estimatedDiffInVolume = abs($balanceDiff / $diffInLiquidationPrice->absDelta());
@@ -226,11 +220,13 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
         }
     }
 
-    private function logNotice(Position $position, string $msg): void
+    private function makeNotice(Position $position, string $msg): void
     {
-//        if (!$this->calcNewVolumeBasedOnWishedLiquidationPriceNoticeThrottlingLimiter->create($position->getCaption())->consume()->isAccepted()) {
-//            return;
-//        }
+        OutputHelper::print($msg);
+
+        if (!$this->calcNewVolumeBasedOnWishedLiquidationPriceNoticeThrottlingLimiter->create($position->getCaption())->consume()->isAccepted()) {
+            return;
+        }
 
         $this->appErrorLogger->critical(sprintf('%s / %s', __CLASS__, $msg));
     }
