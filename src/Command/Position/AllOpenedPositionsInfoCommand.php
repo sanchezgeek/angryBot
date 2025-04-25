@@ -239,11 +239,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
-        $bottomCells = [Cell::default($this->clock->now()->format('D, d M H:i:s'))->setAlign(CellAlign::CENTER)];
+        $bottomCells = [Cell::default($this->clock->now()->format('D d M H:i'))->setAlign(CellAlign::CENTER)];
         $balanceContent = isset($balance)
             ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->availableForTrade)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
             : '';
         $bottomCells[] = sprintf('% 48s', $balanceContent);
+        $bottomCells[] = '';
         $bottomCells[] = '';
 
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
@@ -266,6 +267,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $headerColumns = [
             $this->paramFetcher->getBoolOption(self::SHOW_FULL_TICKER_DATA_OPTION) ? 'symbol (last / mark / index)' : 'symbol',
             'entry / liq / size',
+            'IM',
             'PNL%',
             'PNL',
         ];
@@ -274,10 +276,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $prevCache && $headerColumns[] = 'prev';
         $headerColumns = array_merge($headerColumns, [
             'smb',
-            "liq-ent.(\ninitial\n liq.\n distance\n)",
-            "/ entry\n  price",
-            "liq-mark(\n current\n liq.\n distance\n)",
-            "/ entry\n  price",
+            "init.liq.dist.\n /entry price",
+            "curr.liq.dist.\n /entry price",
             "smb",
             "liq.\ndistance\npassed",
             "stops(\n between liq.\n and entry\n)\n[auto/manual]",
@@ -374,7 +374,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
             $cells = [sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)];
         } else {
-            $cells = [sprintf('%8s: %10s', $symbol->shortName(), $markPrice)];
+            $cells = [sprintf('%8s: %8s', $symbol->shortName(), $markPrice)];
         }
 
         $cells = array_merge($cells, [
@@ -385,6 +385,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
+            sprintf('%.1f', $main->initialMargin->value() + $support?->initialMargin->value() ?? 0),
         ]);
 
         # PNL%
@@ -436,10 +437,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $cells = array_merge($cells, [
             $extraSymbolCell,
-            $initialLiquidationDistance,
-            (string)$initialLiquidationDistancePercentOfEntry,
-            $distanceBetweenLiquidationAndTicker,
-            $distanceBetweenLiquidationAndTickerPercentOfEntry,
+            sprintf('%s %.2f', $initialLiquidationDistancePercentOfEntry, $initialLiquidationDistance),
+            sprintf('%s %.2f', $distanceBetweenLiquidationAndTickerPercentOfEntry, $distanceBetweenLiquidationAndTicker),
             $extraSymbolCell,
             !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
             $stoppedVolume ?? '',
@@ -462,6 +461,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                     CTH::colorizeText(sprintf('%9s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
                     self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
+                ''
             ];
 
             $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
@@ -486,7 +486,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 }
             }
 
-            $cells = array_merge($cells, ['', '', '', '',  '', '', '', $stoppedVolume ?? '']);
+            $cells = array_merge($cells, ['', '', '', '',  '', $stoppedVolume ?? '']);
 
             $result[$support->side->value] = DataRow::default($cells);
 
