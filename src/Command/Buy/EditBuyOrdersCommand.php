@@ -5,11 +5,13 @@ namespace App\Command\Buy;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -35,6 +37,7 @@ class EditBuyOrdersCommand extends AbstractCommand
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
+    public const NAME = 'buy:edit';
     public const ACTION_OPTION = 'action';
 
     public const FILTER_CALLBACKS_OPTION = 'fC';
@@ -157,6 +160,23 @@ class EditBuyOrdersCommand extends AbstractCommand
         }
 
         return $buyOrders;
+    }
+
+    public static function formatRemoveCmdByUniqueId(
+        Symbol $symbol,
+        Side $positionSide,
+        string $uniqueId,
+        bool $quiet = false
+    ): string {
+        return sprintf(
+            './bin/console %s%s --symbol=%s %s -a%s --fC="getContext(\'uniqid\')===\'%s\'"',
+            self::NAME,
+            $quiet ? ' --' . self::WITHOUT_CONFIRMATION_OPTION : '',
+            $symbol->value,
+            $positionSide->value,
+            self::ACTION_REMOVE,
+            $uniqueId
+        );
     }
 
     public function __construct(

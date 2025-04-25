@@ -25,13 +25,14 @@ trait PriceRangeAwareCommand
     public function configurePriceRangeArgs(
         string $fromName = 'from', string $fromAlias = 'f',
         string $toName = 'to', string $toAlias = 't',
+        string $desc = 'PNL% (relative to opened position or ticker if no position opened)'
     ): static {
         $this->fromOptionName = $fromName;
         $this->toOptionName = $toName;
 
         $this
-            ->addOption($fromName, sprintf('-%s', $fromAlias), InputOption::VALUE_REQUIRED, '`from` price | PNL%')
-            ->addOption($toName, sprintf('-%s', $toAlias), InputOption::VALUE_REQUIRED, '`to` price | PNL%')
+            ->addOption($fromName, sprintf('-%s', $fromAlias), InputOption::VALUE_REQUIRED, sprintf('`from` price | %s', $desc))
+            ->addOption($toName, sprintf('-%s', $toAlias), InputOption::VALUE_REQUIRED, sprintf('`to` price | %s', $desc))
         ;
 
         return $this;

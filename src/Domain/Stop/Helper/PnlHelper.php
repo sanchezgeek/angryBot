@@ -68,13 +68,13 @@ final class PnlHelper
         return self::targetPriceByPnlPercent($position->entryPrice(), $percent, $position);
     }
 
-    public static function targetPriceByPnlPercent(Price $fromPrice, float $percent, Position $position): Price
+    public static function targetPriceByPnlPercent(Price $fromPrice, float $percent, Position|Side $position): Price
     {
         $sign = $position->isShort() ? -1 : +1;
 
         $delta = self::convertPnlPercentOnPriceToAbsDelta($percent, $fromPrice);
 
-        return Price::float($fromPrice->add($sign * $delta)->value(), $position->symbol->pricePrecision());
+        return Price::float($fromPrice->add($sign * $delta)->value(), $position instanceof Position ? $position->symbol->pricePrecision() : null);
     }
 
     protected static function getPositionLeverage(?Position $position = null): float

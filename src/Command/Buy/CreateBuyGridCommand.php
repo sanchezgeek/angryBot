@@ -16,9 +16,7 @@ use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\ExchangeOrder;
-use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use Exception;
 use InvalidArgumentException;
@@ -27,9 +25,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Throwable;
 
 use function array_merge;
 use function array_unshift;
@@ -92,6 +88,7 @@ class CreateBuyGridCommand extends AbstractCommand
 
             $result = null;
             $count = 0;
+            $resultVolume = 0;
             foreach ($priceRange->byStepIterator($step, $side) as $price) {
                 $count++;
                 $modifier = FloatHelper::modify($step / 7, 0.15);
@@ -100,9 +97,11 @@ class CreateBuyGridCommand extends AbstractCommand
 
                 $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $volume, $orderPrice);
 
+                $qty = $exchangeOrder->getVolume();
                 $result = $this->createBuyOrderHandler->handle(
-                    new CreateBuyOrderEntryDto($symbol, $side, $exchangeOrder->getVolume(), $orderPrice, $context)
+                    new CreateBuyOrderEntryDto($symbol, $side, $qty, $orderPrice, $context)
                 );
+                $resultVolume += $qty;
             }
 
             $this->io->info(sprintf('%d orders has been created', $count));
@@ -112,16 +111,9 @@ class CreateBuyGridCommand extends AbstractCommand
                 $this->io->info(sprintf('The Orders have been created with recalculated volume ~= %s', $createdWithVolume));
             }
 
-            $output = [
-                sprintf(
-                    './bin/console buy:edit%s --symbol=%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"',
-                    $this->io->isQuiet() ? ' --' . EditBuyOrdersCommand::WITHOUT_CONFIRMATION_OPTION : '', // to also quiet remove orders
-                    $symbol->value,
-                    $side->value,
-                    $uniqueId
-                )
-            ];
+            $this->io->info(sprintf('Total volume = %s', $resultVolume));
 
+            $output = [EditBuyOrdersCommand::formatRemoveCmdByUniqueId($symbol, $side, $uniqueId, $this->io->isQuiet())];
             if (!$this->io->isQuiet()) {
                 $this->io->success(sprintf('BuyOrders uniqueID: %s', $uniqueId));
                 array_unshift($output, 'For delete them just run:');

@@ -63,6 +63,7 @@ class CreateStopsGridCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
+            ->configurePositionArgs()
             ->addArgument(self::FOR_VOLUME_ARGUMENT, InputArgument::REQUIRED, 'Volume value || $ of position size')
             ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::BY_ORDERS_QNT)
         ;
