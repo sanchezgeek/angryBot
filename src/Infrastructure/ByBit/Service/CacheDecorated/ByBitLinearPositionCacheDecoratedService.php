@@ -61,11 +61,6 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         return $this->positionService->getOpenedPositionsRawSymbols();
     }
 
-    public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
-    {
-        $this->positionService->setLeverage($symbol, $forBuy, $forSell);
-    }
-
     /**
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */

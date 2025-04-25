@@ -2,10 +2,10 @@
 
 namespace App\Command\Position;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Infrastructure\ByBit\API\V5\Enum\Position\PositionMode;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -14,8 +14,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'p:leverage:change')]
-class ChangeLeverageCommand extends AbstractCommand
+#[AsCommand(name: 'p:mode:change')]
+class ChangePositionModeCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -24,21 +24,21 @@ class ChangeLeverageCommand extends AbstractCommand
     {
         $this
             ->configureSymbolArgs()
-            ->addArgument('leverage', InputArgument::REQUIRED)
+            ->addArgument('mode', InputArgument::REQUIRED)
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $leverage = $this->paramFetcher->getFloatArgument('leverage');
-
-        $this->positionSvc->setLeverage($this->getSymbol(), $leverage, $leverage);
+        $this->positionSvc->switchPositionMode(
+            $this->getSymbol(),
+            PositionMode::from($this->paramFetcher->getStringArgument('mode'))
+        );
 
         return Command::SUCCESS;
     }
 
     public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionsCache $positionsCache,
         private readonly ByBitLinearPositionService $positionSvc,
         string $name = null,

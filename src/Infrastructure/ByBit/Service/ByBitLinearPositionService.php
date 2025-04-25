@@ -18,8 +18,10 @@ use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
+use App\Infrastructure\ByBit\API\V5\Enum\Position\PositionMode;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\SetLeverageRequest;
+use App\Infrastructure\ByBit\API\V5\Request\Position\SwitchPositionModeRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
@@ -66,6 +68,12 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
     {
         $request = new SetLeverageRequest(self::ASSET_CATEGORY, $symbol, $forBuy, $forSell);
+        $this->sendRequest($request);
+    }
+
+    public function switchPositionMode(Symbol $symbol, PositionMode $positionMode): void
+    {
+        $request = new SwitchPositionModeRequest(self::ASSET_CATEGORY, $symbol, $positionMode);
         $this->sendRequest($request);
     }
 
