@@ -229,7 +229,7 @@ final class CheckPositionIsUnderLiquidationHandler
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                         Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
-                        Stop::FIX_HEDGE_ON_LOSS => Params::FIX_OPPOSITE_AFTER_STOP,
+                        Stop::FIX_OPPOSITE_MAIN_ON_LOSS => Params::AFTER_STOP_FIX_OPPOSITE_IF_MAIN,
                     ];
 
                     if (Params::isSymbolWithoutOppositeBuyOrders($symbol)) {

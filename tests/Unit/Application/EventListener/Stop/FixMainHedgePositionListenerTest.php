@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\EventListener\Stop;
 
-use App\Application\EventListener\Stop\FixMainHedgePositionListener;
+use App\Application\EventListener\Stop\FixOppositePositionListener;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -28,12 +28,12 @@ use PHPUnit\Framework\TestCase;
 final class FixMainHedgePositionListenerTest extends TestCase
 {
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
-    const SUPPLY_STOP_PNL_DISTANCES = FixMainHedgePositionListener::SUPPLY_STOP_PNL_DISTANCES;
+    const CONFIG = FixOppositePositionListener::CONFIG;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
     private StopServiceInterface $stopService;
-    private FixMainHedgePositionListener $listener;
+    private FixOppositePositionListener $listener;
 
     protected function setUp(): void
     {
@@ -44,7 +44,7 @@ final class FixMainHedgePositionListenerTest extends TestCase
         $orderCostCalculator = new OrderCostCalculator(new ByBitCommissionProvider());
         $exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
 
-        $this->listener = new FixMainHedgePositionListener(
+        $this->listener = new FixOppositePositionListener(
             $orderCostCalculator,
             $exchangeAccountService,
             $this->exchangeService,
@@ -57,19 +57,24 @@ final class FixMainHedgePositionListenerTest extends TestCase
     /**
      * @dataProvider cases
      */
-    public function testAddedSupplyStopAfterSupportPositionInLossHasBeenClosedByMarket(
+    public function testSupplyStopAdded(
         Position $stoppedPosition,
         Stop $executedStop,
         float $expectedSupplyStopPrice,
         float $expectedSupplyStopVolume,
     ): void {
         $symbol = $stoppedPosition->symbol;
-
-        # common preconditions
-        $executedStop->setIsCloseByMarketContext();
-        $executedStop->setIsFixHedgeOnLossEnabled();
-        # stop closed by market
         $ticker = TickerFactory::withEqualPrices($symbol, $executedStop->getPrice());
+
+        # stop must be closed by market
+        $executedStop->setIsCloseByMarketContext();
+
+        # to add supply stop corresponding flag must be set
+        if ($stoppedPosition->isSupportPosition()) {
+            $executedStop->enableFixOppositeMainOnLoss();
+        } else {
+            $executedStop->enableFixOppositeSupportOnLoss();
+        }
 
         $this->haveTicker($ticker);
         $this->haveStoppedSupportPosition($stoppedPosition);
@@ -97,83 +102,111 @@ final class FixMainHedgePositionListenerTest extends TestCase
         ($this->listener)($event);
     }
 
+    /**
+     * @dataProvider cases
+     */
+    public function testSupplyStopNotAddedIfFLagIsNotSet(
+        Position $stoppedPosition,
+        Stop $executedStop,
+    ): void {
+        $symbol = $stoppedPosition->symbol;
+        $ticker = TickerFactory::withEqualPrices($symbol, $executedStop->getPrice());
+
+        # stop must be closed by market
+        $executedStop->setIsCloseByMarketContext();
+        # to add supply stop corresponding flag must NOT be set (so skip)
+
+        $this->haveTicker($ticker);
+        $this->haveStoppedSupportPosition($stoppedPosition);
+
+        $this->stopService->expects(self::never())->method('create');
+
+        $event = new StopPushedToExchange($executedStop);
+        ($this->listener)($event);
+    }
+
     public function cases(): iterable
     {
-        # support
+        # BTCUSDT support closed
         $symbol = Symbol::BTCUSDT;
+
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->opposite($main)->build();
-        $stop = new Stop(1, 62000, 0.1, null, $symbol, Side::Sell);
+        $stop = (new Stop(1, 62000, 0.1, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $main = PositionBuilder::short()->symbol($symbol)->entry(55000)->size(1)->build();
         $support = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.5)->opposite($main)->build();
-        $stop = new Stop(1, 49000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 49000, 0.1, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
+        # ADAUSDT support
         $symbol = Symbol::ADAUSDT;
         $main = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(4470)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(0.9052)->size(2700)->opposite($main)->build();
-        $stop = new Stop(1, 0.9442, 10, null, $symbol, Side::Sell);
+        $stop = (new Stop(1, 0.9442, 10, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $main = PositionBuilder::short()->symbol($symbol)->entry(0.8552)->size(4470)->build();
         $support = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(2700)->opposite($main)->build();
-        $stop = new Stop(1, 0.8200, 10, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 0.8200, 10, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
+        # BTCUSDT main closed
+        ### -- entry prices equal
         $symbol = Symbol::BTCUSDT;
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.5)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
-        $stop = new Stop(1, 48000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (1)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.45)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->opposite($support)->build();
-        $stop = new Stop(1, 47000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 47000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (2)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.4)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->opposite($support)->build();
-        $stop = new Stop(1, 46000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 46000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (3)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.35)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.7)->opposite($support)->build();
-        $stop = new Stop(1, 45000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 45000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (4)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
-        // ....
+        // .... 5, 6, 7 ....
 
+        ### -- II (some distance)
         $support = PositionBuilder::short()->symbol($symbol)->entry(55000)->size(0.5)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
-        $stop = new Stop(1, 48000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'II (some distance)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
-        $stop = new Stop(1, 48000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (1)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.483)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->opposite($support)->build();
-        $stop = new Stop(1, 47000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 47000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (2)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.459)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->opposite($support)->build();
-        $stop = new Stop(1, 46000, 0.1, null, $symbol, Side::Buy);
+        $stop = (new Stop(1, 46000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (3)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
@@ -183,12 +216,12 @@ final class FixMainHedgePositionListenerTest extends TestCase
 
     private function haveStoppedSupportPosition(Position $position): void
     {
-        $this->positionService->expects(self::once())->method('getPosition')->with($position->symbol)->willReturn($position);
+        $this->positionService->method('getPosition')->with($position->symbol)->willReturn($position);
     }
 
     private function haveTicker(Ticker $ticker): void
     {
-        $this->exchangeService->expects(self::once())->method('ticker')->with($ticker->symbol)->willReturn($ticker);
+        $this->exchangeService->method('ticker')->with($ticker->symbol)->willReturn($ticker);
     }
 
     private static function caseDescription(
@@ -216,8 +249,9 @@ final class FixMainHedgePositionListenerTest extends TestCase
         $stopPrice = $executedStop->getPrice();
         $closedVolume = $executedStop->getVolume();
 
-        $percent = self::SUPPLY_STOP_PNL_DISTANCES[$symbol->value] ?? self::SUPPLY_STOP_PNL_DISTANCES['other'];
-        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($percent, $symbol->makePrice($stopPrice)), 0.1);
+        [, $supplyStopPnlDistancePct] = self::CONFIG[$symbol->value] ?? self::CONFIG['other'];
+
+        $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($supplyStopPnlDistancePct, $symbol->makePrice($stopPrice)), 0.1);
         $supplyStopPrice = $symbol->makePrice(
             $stoppedPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance
         )->value();

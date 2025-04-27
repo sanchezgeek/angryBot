@@ -2,6 +2,7 @@
 
 namespace App\Command\Position;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -766,18 +767,22 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
         );
 
-        /** @var Stop[] $autoStops */
-        $autoStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
-            return $stop->isAdditionalStopFromLiquidationHandler() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
-        });
-        /** @var Stop[] $manualStops */
-        $manualStops = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
-            return $stop->isManuallyCreatedStop() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
-        });
-        /** @var Stop[] $stopsAfterFixOppositeHedgePosition */
-        $stopsAfterFixOppositeHedgePosition = array_filter($stops, static function(Stop $stop) use ($position, $symbol, $markPrice) {
-            return $stop->isStopAfterFixHedgeOppositePosition() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $markPrice);
-        });
+        $modifier = (new Percent(CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE))->of($position->liquidationDistance());
+        try {
+            $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
+        } catch (Exception $e) {
+            $bound = 0;
+        }
+        $mainPosStopsApplicableRange = PriceRange::create($markPrice, $bound, $symbol);
+
+        /**
+         * @var Stop[] $autoStops
+         * @var Stop[] $manualStops
+         * @var Stop[] $stopsAfterFixOppositeHedgePosition
+         */
+        $autoStops = array_filter($stops, static fn(Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
+        $manualStops = array_filter($stops, static fn(Stop $stop) => $stop->isManuallyCreatedStop() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
+        $stopsAfterFixOppositeHedgePosition = array_filter($stops, static fn(Stop $stop) => $stop->isStopAfterFixHedgeOppositePosition() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
 
         $stoppedVolume = [];
         if ($manualStops) {
@@ -843,21 +848,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $formatter($stoppedPartPct, count($stops), $firstStopDistancePnlPct, $firstStopDistanceColor);
     }
 
-    private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, $markPrice): bool
+    private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, PriceRange $mainPosStopsApplicableRange): bool
     {
         if (!$position->isPositionWithoutHedge() && !$position->isMainPosition()) {
             return false;
         }
-        return !self::isStopLayBetweenSpecifiedPriceAndLiquidation($stop, $position, $markPrice);
-    }
 
-    private static function isStopLayBetweenSpecifiedPriceAndLiquidation(Stop $stop, Position $position, $markPrice): bool
-    {
-        $symbol = $position->symbol;
-        $modifier = Percent::string('20%')->of($position->liquidationDistance());
-        $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
-        $stopPrice = $symbol->makePrice($stop->getPrice());
-        return $stopPrice->isPriceInRange(PriceRange::create($markPrice, $bound, $symbol));
+        return !$stop->getSymbol()->makePrice($stop->getPrice())->isPriceInRange($mainPosStopsApplicableRange);
     }
 
     /**

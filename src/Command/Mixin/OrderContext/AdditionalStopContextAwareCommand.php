@@ -18,9 +18,13 @@ trait AdditionalStopContextAwareCommand
             'caption' => 'Without opposite order',
             'mappedContext' => Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT,
         ],
-        'fH' => [
-            'caption' => 'Fix opposite position on loss',
-            'mappedContext' => Stop::FIX_HEDGE_ON_LOSS,
+        'fM' => [
+            'caption' => 'Fix opposite MAIN position after loss',
+            'mappedContext' => Stop::FIX_OPPOSITE_MAIN_ON_LOSS,
+        ],
+        'fS' => [
+            'caption' => 'Fix opposite SUPPORT position after loss',
+            'mappedContext' => Stop::FIX_OPPOSITE_SUPPORT_ON_LOSS,
         ],
         'bM' => [
             'caption' => 'Close By Market',

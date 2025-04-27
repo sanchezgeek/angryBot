@@ -14,7 +14,7 @@ final class CheckPositionIsUnderLiquidationParams
     public const ACCEPTABLE_STOPPED_PART_DEFAULT = 4;
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 8; // @todo Must be different for BTC and others
-    public const FIX_OPPOSITE_AFTER_STOP = false;
+    public const AFTER_STOP_FIX_OPPOSITE_IF_MAIN = true;
 
     public const WARNING_PNL_DISTANCES = [
         Symbol::BTCUSDT->value => 120,

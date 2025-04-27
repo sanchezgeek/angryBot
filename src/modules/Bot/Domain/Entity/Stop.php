@@ -20,6 +20,7 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Worker\AppContext;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -36,7 +37,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
     public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
     public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
-    public const FIX_HEDGE_ON_LOSS = 'fixHedgeOnLossEnabled';
+    public const FIX_OPPOSITE_MAIN_ON_LOSS = 'fixOppositeMainOnLossEnabled';
+    public const FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
     public const CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
 
     public const TP_TRIGGER_DELTA = 50;
@@ -223,14 +225,26 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
-    public function isFixHedgeOnLossEnabled(): bool
+    public function isFixOppositeMainOnLossEnabled(): bool
     {
-        return ($this->context[self::FIX_HEDGE_ON_LOSS] ?? null) === true;
+        return ($this->context[self::FIX_OPPOSITE_MAIN_ON_LOSS] ?? null) === true;
     }
 
-    public function setIsFixHedgeOnLossEnabled(): self
+    public function enableFixOppositeMainOnLoss(): self
     {
-        $this->context[self::FIX_HEDGE_ON_LOSS] = true;
+        $this->context[self::FIX_OPPOSITE_MAIN_ON_LOSS] = true;
+
+        return $this;
+    }
+
+    public function isFixOppositeSupportOnLossEnabled(): bool
+    {
+        return ($this->context[self::FIX_OPPOSITE_SUPPORT_ON_LOSS] ?? null) === true;
+    }
+
+    public function enableFixOppositeSupportOnLoss(): self
+    {
+        $this->context[self::FIX_OPPOSITE_SUPPORT_ON_LOSS] = true;
 
         return $this;
     }

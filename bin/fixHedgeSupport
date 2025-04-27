@@ -22,9 +22,9 @@ ORDERS_QNT=${9:-5}
 
 grids=(
   "-f-${FROM1}% -t-${TO1}% 10% --bM -o${OPPOSITE_DISTANCE1}% -c${ORDERS_QNT}"
-  "-f-${FROM2}% -t-${TO2}% 20% --bM --fH -o${OPPOSITE_DISTANCE2}%  -c${ORDERS_QNT}"
+  "-f-${FROM2}% -t-${TO2}% 20% --bM --fM -o${OPPOSITE_DISTANCE2}%  -c${ORDERS_QNT}"
   "-f-${FROM3}% -t-${TO3}% 7% --bM -o${OPPOSITE_DISTANCE3}% -c${ORDERS_QNT}"
-  "-f-${FROM4}% -t-${TO4}% 13% --bM --fH -o${OPPOSITE_DISTANCE4}% -c${ORDERS_QNT}"
+  "-f-${FROM4}% -t-${TO4}% 13% --bM --fM -o${OPPOSITE_DISTANCE4}% -c${ORDERS_QNT}"
 )
 
 for grid_def in "${grids[@]}"
