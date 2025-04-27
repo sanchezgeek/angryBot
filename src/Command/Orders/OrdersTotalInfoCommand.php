@@ -147,7 +147,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         };
 
         $tradingSandbox->setMarketBuyCheckService(
-            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings, null)
+            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings)
         );
 
         return $tradingSandbox;

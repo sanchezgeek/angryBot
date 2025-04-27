@@ -21,9 +21,10 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Settings\Application\Service\AppSettingsProvider;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
-class MarketBuyHandler
+readonly class MarketBuyHandler
 {
     /**
      * @throws BuyIsNotSafeException
@@ -67,6 +68,17 @@ class MarketBuyHandler
 
         $symbol = $dto->symbol;
         $ticker = $this->exchangeService->ticker($symbol);
+
+        if (
+            $this->checkFurtherPositionLiquidationAfterBuyLimiter
+            && $dto->sourceBuyOrder
+            && !$this->checkFurtherPositionLiquidationAfterBuyLimiter->create(
+                (string)($sourceOrderId = $dto->sourceBuyOrder->getId())
+            )->consume()->isAccepted()
+        ) {
+            throw new TooManyTriesForCheck(sprintf('Too many tries for check further position liquidation for order with id = %d', $sourceOrderId));
+        }
+
         $currentState = $this->sandboxStateFactory->byCurrentTradingAccountState($symbol);
 
         /**
@@ -92,11 +104,12 @@ class MarketBuyHandler
      * @param ByBitOrderService $orderService
      */
     public function __construct(
-        private readonly MarketBuyCheckService        $marketBuyCheckService,
-        private readonly OrderServiceInterface        $orderService,
-        private readonly ExchangeServiceInterface     $exchangeService,
-        private readonly SandboxStateFactoryInterface $sandboxStateFactory,
-        private readonly AppSettingsProvider          $settings,
+        private MarketBuyCheckService        $marketBuyCheckService,
+        private OrderServiceInterface        $orderService,
+        private ExchangeServiceInterface     $exchangeService,
+        private SandboxStateFactoryInterface $sandboxStateFactory,
+        private AppSettingsProvider          $settings,
+        private ?RateLimiterFactory $checkFurtherPositionLiquidationAfterBuyLimiter,
     ) {
     }
 }

@@ -72,7 +72,6 @@ class MarketBuyHandlerTest extends KernelTestCase
             $this->executionSandboxFactory,
             $this->logger,
             $settings,
-            self::makeRateLimiterFactory()
         );
 
         $this->marketBuyHandler = new MarketBuyHandler(
@@ -81,6 +80,7 @@ class MarketBuyHandlerTest extends KernelTestCase
             self::getContainer()->get(ExchangeServiceInterface::class),
             $this->sandboxStateFactory,
             $settings,
+            self::makeRateLimiterFactory()
         );
     }
 
