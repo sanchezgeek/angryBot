@@ -19,6 +19,6 @@ class PrintConsoleErrorEventListener
             return;
         }
 
-        OutputHelper::print($event->getError());
+        OutputHelper::print($event->getError()->getTraceAsString());
     }
 }

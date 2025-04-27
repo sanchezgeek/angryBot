@@ -312,7 +312,7 @@ class TradingSandbox implements TradingSandboxInterface
     {
         $liquidation = $position->isSupportPosition()
             ? 0
-            : $this->liquidationCalculator->handle($position, $this->currentState->getFreeBalanceForLiq())->estimatedLiquidationPrice()->value()
+            : $this->liquidationCalculator->handle($position, $this->currentState->getFundsAvailableForLiquidation())->estimatedLiquidationPrice()->value()
         ;
 
         $actualizedWithCalculatedLiquidation = PositionClone::clean($position)->withLiquidation($liquidation)->create();

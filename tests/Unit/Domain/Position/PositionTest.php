@@ -60,7 +60,7 @@ final class PositionTest extends TestCase
         self::assertEquals($size, $position->size);
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals($symbol->associatedCoinAmount($initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertNull($position->oppositePosition);
         self::assertNull($position->getHedge());
@@ -91,7 +91,7 @@ final class PositionTest extends TestCase
         self::assertEquals($size, $position->size);
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals($symbol->associatedCoinAmount($initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertSame($oppositePosition, $position->oppositePosition);
         self::assertNotNull($position->getHedge());
@@ -119,7 +119,7 @@ final class PositionTest extends TestCase
         self::assertEquals($size, $position->size);
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals($symbol->associatedCoinAmount($initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertNull($position->oppositePosition);
         self::assertNull($position->getHedge());
@@ -150,7 +150,7 @@ final class PositionTest extends TestCase
         self::assertEquals($size, $position->size);
         self::assertEquals($value, $position->value);
         self::assertEquals($liquidation, $position->liquidationPrice);
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $initialMargin), $position->initialMargin);
+        self::assertEquals($symbol->associatedCoinAmount($initialMargin), $position->initialMargin);
         self::assertEquals(new Leverage($leverage), $position->leverage);
         self::assertSame($oppositePosition, $position->oppositePosition);
         self::assertNotNull($position->getHedge());

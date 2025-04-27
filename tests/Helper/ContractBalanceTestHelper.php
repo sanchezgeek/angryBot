@@ -10,7 +10,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
-
 use LogicException;
 
 use function max;
@@ -21,7 +20,7 @@ use function sprintf;
  */
 class ContractBalanceTestHelper
 {
-    public static function contractBalanceBasedOnFree(float $free, array $positions, Ticker $ticker, float $freeForLiq = null): ContractBalance
+    public static function contractBalanceBasedOnFree(float $free, array $positions, Ticker $ticker): ContractBalance
     {
         $coin = $ticker->symbol->associatedCoin();
         $im = self::totalInitialMargin($coin, ...$positions);
@@ -31,7 +30,6 @@ class ContractBalanceTestHelper
             $im->add($free)->value(),
             self::availableBalance($free, $positions, $ticker),
             $free,
-            $freeForLiq ?? $free,
         );
     }
 

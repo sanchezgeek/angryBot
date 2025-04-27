@@ -14,9 +14,9 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceEntryDto
     public function __construct(
         public Position $initialPositionState,
         public ContractBalance $contractBalance,
-        public CoinAmount $freeContractBalanceForCalcLiquidation, // rid?
+        public CoinAmount $fundsAvailableForLiquidation,
         public Price $wishedLiquidationPrice,
-        public Price $currentPrice, # must be markPrice
+        public Price $currentPrice, # must be markPrice?
     ) {
     }
 }

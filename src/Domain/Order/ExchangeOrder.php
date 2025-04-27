@@ -18,6 +18,7 @@ final class ExchangeOrder // implements OrderInterface
     {
         $this->symbol = $symbol;
         $this->price = $symbol->makePrice(Price::toFloat($price));
+        // don't add domain logic for check positive volume. Or fix CalcPositionVolumeBasedOnLiquidationPriceHandler first (when get sign for calc parameters on recalculation and swap direction)
         $this->volume = $volume;
         $this->providedVolume = $providedVolume ?? $volume;
     }

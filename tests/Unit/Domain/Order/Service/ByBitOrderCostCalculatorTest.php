@@ -38,7 +38,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         $marginAmount = $this->orderCostCalculator->orderMargin($order, $leverage);
 
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), 0.34739), $marginAmount);
+        self::assertEquals($symbol->associatedCoinAmount(0.34739), $marginAmount);
     }
 
     /**
@@ -56,7 +56,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         $buyCost = $this->orderCostCalculator->totalBuyCost($order, $leverage, $positionSide);
 
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedCost), $buyCost);
+        self::assertEquals($symbol->associatedCoinAmount($expectedCost), $buyCost);
     }
 
     public function linearOrderBuyCostTestData(): iterable
@@ -89,7 +89,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         $buyCost = $this->orderCostCalculator->openFee($order);
 
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedOpenFee), $buyCost);
+        self::assertEquals($symbol->associatedCoinAmount($expectedOpenFee), $buyCost);
     }
 
     /**
@@ -107,7 +107,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         $buyCost = $this->orderCostCalculator->closeFee($order, $leverage, $positionSide);
 
-        self::assertEquals(new CoinAmount($symbol->associatedCoin(), $expectedCloseFee), $buyCost);
+        self::assertEquals($symbol->associatedCoinAmount($expectedCloseFee), $buyCost);
     }
 
     public function linearOrderCloseFeeTestData(): iterable

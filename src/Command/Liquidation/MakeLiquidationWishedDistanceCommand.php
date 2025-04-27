@@ -5,7 +5,6 @@ namespace App\Command\Liquidation;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationPrice\CalcPositionVolumeBasedOnLiquidationPriceEntryDto;
 use App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationPrice\CalcPositionVolumeBasedOnLiquidationPriceHandler;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -23,10 +22,9 @@ use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Price;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -40,7 +38,8 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
     use AdditionalStopContextAwareCommand;
     use OppositeOrdersDistanceAwareCommand;
 
-    public const WISHED_LIQUIDATION_DISTANCE = 'wishedLiquidationDistance';
+    public const WISHED_LIQUIDATION_DISTANCE_OPTION = 'distance';
+    public const WISHED_LIQUIDATION_PRICE_OPTION = 'price';
 
     public const WITHOUT_CONFIRMATION_OPTION = 'y';
     public const AS_STOP_OPTION = 'as-stop';
@@ -51,7 +50,8 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
     {
         $this
             ->configurePositionArgs()
-            ->addArgument(self::WISHED_LIQUIDATION_DISTANCE, InputArgument::REQUIRED)
+            ->addOption(self::WISHED_LIQUIDATION_DISTANCE_OPTION, null, InputOption::VALUE_REQUIRED, 'Wished liquidation price distance with ticker')
+            ->addOption(self::WISHED_LIQUIDATION_PRICE_OPTION, null, InputOption::VALUE_REQUIRED, 'Wished liquidation price')
             ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
             ->addOption(self::AS_STOP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Add as stops? (alias for `sl:grid` command)')
         ;
@@ -63,18 +63,22 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
     {
         $symbol = $this->getSymbol();
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
-        $ticker = $this->exchangeService->ticker($symbol);
+        $fundsAvailableForLiquidation = $this->exchangeAccountService->calcFundsAvailableForLiquidation($symbol, $contractBalance);
         $position = $this->getPosition();
+        $ticker = $this->exchangeService->ticker($symbol);
 
-        $wishedLiquidationDistance = $this->paramFetcher->getFloatArgument(self::WISHED_LIQUIDATION_DISTANCE);
-
-        $wishedLiquidationPrice = $ticker->markPrice->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $wishedLiquidationDistance);
+        if (!$wishedLiquidationPrice = $this->paramFetcher->floatOption(self::WISHED_LIQUIDATION_PRICE_OPTION)) {
+            $wishedLiquidationDistance = $this->paramFetcher->requiredFloatOption(self::WISHED_LIQUIDATION_DISTANCE_OPTION);
+            $wishedLiquidationPrice = $ticker->markPrice->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $wishedLiquidationDistance);
+        } else {
+            $wishedLiquidationPrice = $symbol->makePrice($wishedLiquidationPrice);
+        }
 
         $this->io->info(sprintf('Wished liquidation price: %s', $wishedLiquidationPrice));
 
         $result = $this->volumeCalculator->handle(
             new CalcPositionVolumeBasedOnLiquidationPriceEntryDto(
-                $position, $contractBalance, $contractBalance->freeForLiquidation, $wishedLiquidationPrice, $ticker->lastPrice
+                $position, $contractBalance, $fundsAvailableForLiquidation, $wishedLiquidationPrice, $ticker->lastPrice
             )
         );
         $calculatedDiff = $result->diff;
@@ -128,7 +132,7 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
         private readonly CalcPositionVolumeBasedOnLiquidationPriceHandler $volumeCalculator,
         private readonly OrderServiceInterface $orderService,
         private readonly ExchangeServiceInterface $exchangeService,
-        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly ByBitExchangeAccountService $exchangeAccountService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         string $name = null,

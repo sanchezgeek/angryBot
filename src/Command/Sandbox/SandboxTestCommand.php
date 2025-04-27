@@ -3,6 +3,7 @@
 namespace App\Command\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
+use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -64,15 +65,22 @@ class SandboxTestCommand extends AbstractCommand
      */
     private function getOrders(): array
     {
-        $ticker = $this->exchangeService->ticker($this->getSymbol());
+        $symbol = $this->getSymbol();
+        $ticker = $this->exchangeService->ticker($symbol);
+        $lastPrice = $ticker->lastPrice->value();
         $positionSide = $this->getPositionSide();
 
         $orders = [];
         foreach (explode('|', $this->paramFetcher->getStringOption(self::ORDERS_OPTION)) as $orderDefinition) {
-            $type = substr($orderDefinition, 0, 1); $volume = substr($orderDefinition, 1);
+            $type = substr($orderDefinition, 0, 1);
+            $volume = (float)substr($orderDefinition, 1);
+            if ($type == '+') {
+                $order = ExchangeOrder::roundedToMin($symbol, $volume, $lastPrice);
+                $volume = $order->getVolume();
+            }
             $orders[] = match ($type) {
-                '+' => new BuyOrder(1, $ticker->lastPrice, (float)$volume, $this->getSymbol(), $positionSide),
-                '-' => new Stop(1, $ticker->lastPrice->value(), (float)$volume, 1, $this->getSymbol(), $positionSide),
+                '+' => new BuyOrder(1, $lastPrice, $volume, $symbol, $positionSide),
+                '-' => new Stop(1, $lastPrice, $volume, 1, $symbol, $positionSide),
                 default => throw new InvalidArgumentException('Invalid type provided: ' . $type . ' ("+/-" expected)')
             };
         }
@@ -92,12 +100,14 @@ class SandboxTestCommand extends AbstractCommand
             $this->io->note($e->getMessage());
         }
         $positionSide = $this->getPositionSide();
+//        var_dump($this->getPosition());die;
         $symbol = $this->getSymbol();
 
         $orders = $this->getOrders();
         $infoMsg = $this->getInfoMsg($this->getSymbol(), $positionSide, $orders);
 
         $sandbox = $this->tradingSandboxFactory->byCurrentState($symbol, true);
+        $sandbox->addIgnoredException(SandboxInsufficientAvailableBalanceException::class);
 
         [$realContractBalance, ] = $this->printCurrentStats($sandbox, 'BEFORE make buy in sandbox', true);
         $sandbox->processOrders(...$orders);

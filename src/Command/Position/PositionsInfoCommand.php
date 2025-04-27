@@ -66,11 +66,13 @@ class PositionsInfoCommand extends AbstractCommand
         }
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
+        $fundsAvailableForLiquidation = $this->exchangeAccountService->calcFundsAvailableForLiquidation($symbol, $contractBalance);
+
         $position = $hedge?->mainPosition ?? $positions[0];
 //        if ($this->isDebugEnabled() && ($hedge = $position->getHedge())) {OutputHelper::printIfDebug($hedge->info());}
 
-        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->freeForLiquidation));
-        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $contractBalance->freeForLiquidation));
+        $this->printState($position, $this->calcPositionLiquidationPriceHandler->handle($position, $fundsAvailableForLiquidation));
+        echo '-------------------- docs --------------- ';  $this->printState($position, $this->calcPositionLiquidationPriceHandler->handleFromDocs($position, $fundsAvailableForLiquidation));
 
         return Command::SUCCESS;
     }

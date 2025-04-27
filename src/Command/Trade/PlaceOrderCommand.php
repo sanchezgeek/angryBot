@@ -3,8 +3,10 @@
 namespace App\Command\Trade;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -14,6 +16,8 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
+use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -255,11 +259,23 @@ class PlaceOrderCommand extends AbstractCommand
             }
 
             foreach ($orders as $order) {
-                try {
-                    $this->tradeService->marketBuy($order->getSymbol(), $positionSide, $order->getVolume());
-                } catch (Throwable $e) {
-                    OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $order->getSymbol()->value, $positionSide->title()));
+                $try = true;
+
+                while ($try) {
+                    try {
+                        $this->tradeService->marketBuy($order->getSymbol(), $positionSide, $order->getVolume());
+                        $try = false;
+                    } catch (CannotAffordOrderCostException $e) {
+                        $currentContract = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
+                        $cost = $this->orderCostCalculator->totalBuyCost($order, new Leverage(100), $this->getPositionSide());
+
+                        $diff = $cost->sub($currentContract->available);
+                        $this->exchangeAccountService->interTransferFromSpotToContract($order->getSymbol()->associatedCoin(), $diff->value());
+                    } catch (Throwable $e) {
+                        OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $order->getSymbol()->value, $positionSide->title()));
+                    }
                 }
+
             }
         }
     }
@@ -305,6 +321,8 @@ class PlaceOrderCommand extends AbstractCommand
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
+        private readonly OrderCostCalculator $orderCostCalculator,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

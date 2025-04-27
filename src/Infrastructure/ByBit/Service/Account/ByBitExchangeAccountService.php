@@ -114,22 +114,11 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
                 foreach ($item['coin'] as $coinData) {
                     if ($coinData['coin'] === $coin->value) {
                         $totalPositionIM = (float)$coinData['totalPositionIM'];
-
                         $total = (float)$coinData['walletBalance'];
                         $free = $total - $totalPositionIM;
                         $availableForTrade = $coinData['unrealisedPnl'] + $free;
 
-                        try {
-                            [$available, $freeForLiq] = $this->calcFreeContractBalance($coin, $total, $free);
-                        } catch (Throwable $e) {
-                            $message = sprintf('%s: "%s" when trying to calc free UTA balance.', __FUNCTION__, $e->getMessage());
-                            $this->appErrorLogger->critical($message, ['file' => __FILE__, 'line' => __LINE__]);
-                            OutputHelper::warning($message);
-
-                            $available = $freeForLiq = $free;
-                        }
-
-                        $balance = new ContractBalance($coin, $total, $available, $free, $freeForLiq, $availableForTrade);
+                        $balance = new ContractBalance($coin, $total, $availableForTrade, $free);
                     }
                 }
             }
@@ -137,20 +126,14 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
 
         if (!$balance) {
             $this->appErrorLogger->critical(sprintf('[ByBit] %s %s coin data not found', $accountType->value, $coin->value), ['file' => __FILE__, 'line' => __LINE__]);
-            return new ContractBalance($coin, 0, 0, 0, 0, 0);
+            return new ContractBalance($coin, 0, 0, 0);
         }
 
         return $balance;
     }
 
-    public function universalTransfer(
-        Coin $coin,
-        float $amount,
-        AccountType $fromAccountType,
-        AccountType $toAccountType,
-        string $fromMemberUid,
-        string $toMemberUid,
-    ): void {
+    public function universalTransfer(Coin $coin, float $amount, AccountType $fromAccountType, AccountType $toAccountType, string $fromMemberUid, string $toMemberUid): void
+    {
         $request = new CoinUniversalTransferRequest(
             new CoinAmount($coin, $amount),
             $fromAccountType,
@@ -225,13 +208,10 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
     /**
      * @todo tests
      */
-    private function calcFreeContractBalance(Coin $coin, float $total, float $free): array
+    public function calcFundsAvailableForLiquidation(Symbol $symbol, ContractBalance $contractBalance): CoinAmount
     {
-        // @todo | Temporary solution? (only if there is only BTCUSDT position is opened)
-        $symbol = null;
-        foreach (Symbol::cases() as $symbol) {
-            if ($symbol->associatedCoin() === $coin) break;
-        }
+        $total = $contractBalance->total();
+        $free = $contractBalance->free();
 
         // @todo | because of now positionService only works with linear category
         try {
@@ -241,12 +221,12 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         }
 
         if (!$positions) {
-            return [$total, $total];
+            return new CoinAmount($symbol->associatedCoin(), $total);
         }
 
         $hedge = $positions[0]->getHedge();
         if ($hedge && $hedge->isEquivalentHedge()) {
-            return [$free, $free];
+            return new CoinAmount($symbol->associatedCoin(), $free);
         }
 
         $positionForCalc = $hedge ? $hedge->mainPosition : $positions[0];
@@ -262,20 +242,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
         # check is correct
         $this->checkCalculatedFundsForLiquidation($positionForCalc, $fundsAvailableForLiquidation);
 
-        // what if there is network problems?
-        $ticker = $this->exchangeService->ticker($symbol);
-
-        $priceDelta = $ticker->lastPrice->differenceWith($positionForCalc->entryPrice());
-        $isMainPositionInLoss = $priceDelta->isLossFor($positionForCalc->side);
-
-        $available = $free;
-        if ($isMainPositionInLoss) {
-            $loss = $notCoveredSize * $priceDelta->absDelta();
-            $available -= $loss;
-        }
-
-        // @todo + realAvailable?
-        return [max($available, 0), $fundsAvailableForLiquidation];
+        return new CoinAmount($symbol->associatedCoin(), $fundsAvailableForLiquidation);
     }
 
     private function checkCalculatedFundsForLiquidation(Position $position, float $fundsAvailableForLiquidation): void
@@ -284,7 +251,7 @@ final class ByBitExchangeAccountService extends AbstractExchangeAccountService
             return;
         }
 
-        $fundsAvailableForLiquidation = new CoinAmount($position->symbol->associatedCoin(), $fundsAvailableForLiquidation);
+        $fundsAvailableForLiquidation = $position->symbol->associatedCoinAmount($fundsAvailableForLiquidation);
 
         $liquidationRecalculated = $this->positionLiquidationCalculator->handle($position, $fundsAvailableForLiquidation)->estimatedLiquidationPrice()->value();
         if (($diff = abs($position->liquidationPrice - $liquidationRecalculated)) > 1) {

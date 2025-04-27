@@ -33,24 +33,32 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
     ) {
     }
 
+    private static function calcInitialResultNotCoveredSize(
+        Position $initialPosition,
+        Price $wishedLiquidationPrice,
+        CoinAmount $fundsAvailableForLiquidation,
+    ): float {
+        $fundsAvailableForLiquidation = $fundsAvailableForLiquidation->value();
+        if (($hedge = $initialPosition->getHedge())?->isProfitableHedge()) {
+            $fundsAvailableForLiquidation += $hedge->getSupportProfitOnMainEntryPrice();
+        }
+        $maintenanceMarginLiquidationDistance = CalcPositionLiquidationPriceHandler::getMaintenanceMarginLiquidationDistance($initialPosition);
+
+        # reverse of CalcPositionLiquidationPriceHandler
+        return $fundsAvailableForLiquidation / ($wishedLiquidationPrice->differenceWith($initialPosition->entryPrice())->absDelta() - $maintenanceMarginLiquidationDistance);
+    }
+
     public function handle(CalcPositionVolumeBasedOnLiquidationPriceEntryDto $input): CalcPositionVolumeBasedOnLiquidationPriceResult
     {
         $initialPosition = $input->initialPositionState;
         $symbol = $initialPosition->symbol;
-        $freeContractBalanceForCalcLiquidation = $input->freeContractBalanceForCalcLiquidation;
+        $fundsAvailableForLiquidation = $input->fundsAvailableForLiquidation;
         $wishedLiquidationPrice = $input->wishedLiquidationPrice;
         $currentPrice = $input->currentPrice;
-        $notCoveredSize = $initialPosition->getNotCoveredSize();
 
         self::checkPrerequisites($input);
 
-        $fundsAvailableForLiquidation = $freeContractBalanceForCalcLiquidation->value();
-        if (($hedge = $initialPosition->getHedge())?->isProfitableHedge()) {
-            $fundsAvailableForLiquidation += $hedge->getSupportProfitOnMainEntryPrice();
-        }
-
-        $maintenanceMarginLiquidationDistance = CalcPositionLiquidationPriceHandler::getMaintenanceMarginLiquidationDistance($initialPosition);
-        $resultNotCoveredSize = $fundsAvailableForLiquidation / ($wishedLiquidationPrice->differenceWith($initialPosition->entryPrice())->absDelta() - $maintenanceMarginLiquidationDistance);
+        $resultNotCoveredSize = self::calcInitialResultNotCoveredSize($initialPosition, $wishedLiquidationPrice, $fundsAvailableForLiquidation);
 
         $supportPosition = $initialPosition->getHedge()?->supportPosition;
         $resultSize = $supportPosition ? $resultNotCoveredSize + $supportPosition->size : $resultNotCoveredSize;
@@ -62,8 +70,8 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
         $diffRounded = $symbol->roundVolumeDown($diffRaw);
         // @todo | try up?
 
-        // note: $NEW!freeContractBalanceForCalcLiquidation
-        [$newPositionState, $freeContractBalanceForCalcLiquidation] = $this->reducePositionAndRecalculateLiquidation($initialPosition, $currentPrice, $diffRounded, $input->contractBalance);
+        // note: $NEW!fundsAvailableForLiquidation
+        [$newPositionState, $fundsAvailableForLiquidation] = $this->reducePositionAndRecalculateLiquidation($initialPosition, $currentPrice, $diffRounded, $input->contractBalance, $fundsAvailableForLiquidation);
         $recalculatedPositionLiquidation = $newPositionState->liquidationPrice();
         // ---------------
         $releasedIM = $this->orderCostCalculator->orderMargin(
@@ -126,17 +134,17 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
 
         while ($recalculationsCount) {
             $prevPositionState = $newPositionState;
-            $prevFreeContractBalanceForCalcLiquidation = $freeContractBalanceForCalcLiquidation;
+            $prevFreeContractBalanceForCalcLiquidation = $fundsAvailableForLiquidation;
 //            echo $newPositionState->liquidationPrice() . ' ->      ';
 
-            $freeContractBalanceForCalcLiquidation = $freeContractBalanceForCalcLiquidation->add($freeBalanceModifier);
+            $fundsAvailableForLiquidation = $fundsAvailableForLiquidation->add($freeBalanceModifier);
 
             $newPositionState = PositionClone::full($newPositionState)
                 ->withSize($newPositionState->size + $volumeModifier)
                 ->withInitialMargin($newPositionState->initialMargin->add($imModifier))
                 ->create();
 
-            $recalculatedPositionLiquidation = $this->liquidationCalculator->handle($newPositionState, $freeContractBalanceForCalcLiquidation)->estimatedLiquidationPrice();
+            $recalculatedPositionLiquidation = $this->liquidationCalculator->handle($newPositionState, $fundsAvailableForLiquidation)->estimatedLiquidationPrice();
 
             $newPositionState = PositionClone::full($newPositionState)
                 ->withLiquidation($recalculatedPositionLiquidation->value())
@@ -155,7 +163,7 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
             if ($oppositeDirection !== $diffWithWished->movementDirection($positionSide)) {
 //                var_dump('back');
                 $newPositionState = $prevPositionState;
-                $freeContractBalanceForCalcLiquidation = $prevFreeContractBalanceForCalcLiquidation;
+                $fundsAvailableForLiquidation = $prevFreeContractBalanceForCalcLiquidation;
 
                 $volumeModifier = ($volumeModifier / 1.5);
 
@@ -182,18 +190,23 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
     /**
      * @return array{Position, CoinAmount}
      */
-    private function reducePositionAndRecalculateLiquidation(Position $currentPositionState, Price $currentPrice, float $qty, ContractBalance $contractBalance): array
-    {
+    private function reducePositionAndRecalculateLiquidation(
+        Position $currentPositionState,
+        Price $currentPrice,
+        float $qty,
+        ContractBalance $contractBalance,
+        CoinAmount $fundsAvailableForLiquidation
+    ): array {
         $symbol = $currentPositionState->symbol;
         $ticker = TickerFactory::withEqualPrices($symbol, $currentPrice->value());
         $sandbox = $this->sandboxFactory->empty($symbol);
         $positions = [$currentPositionState]; if ($currentPositionState->oppositePosition) $positions[] = $currentPositionState->oppositePosition;
-        $sandbox->setState(new SandboxState($ticker, $contractBalance,... $positions));
+        $sandbox->setState(new SandboxState($ticker, $contractBalance, $fundsAvailableForLiquidation, ... $positions));
         $sandbox->processOrders(new SandboxStopOrder($symbol, $currentPositionState->side, $currentPrice->value(), $qty));
 
         return [
             $sandbox->getCurrentState()->getPosition($currentPositionState->side),
-            $sandbox->getCurrentState()->getFreeBalanceForLiq(),
+            $sandbox->getCurrentState()->getFundsAvailableForLiquidation(),
         ];
     }
 

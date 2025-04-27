@@ -17,11 +17,11 @@ use LogicException;
  */
 final readonly class CalcPositionLiquidationPriceHandler
 {
-    public function handle(Position $position, CoinAmount $freeContractBalance): CalcPositionLiquidationPriceResult
+    public function handle(Position $position, CoinAmount $fundsAvailableForLiquidation): CalcPositionLiquidationPriceResult
     {
         self::checkPrerequisites($position);
 
-        $fundsAvailableForLiquidation = $freeContractBalance->value();
+        $fundsAvailableForLiquidation = $fundsAvailableForLiquidation->value();
         if (($hedge = $position->getHedge())?->isProfitableHedge()) {
             $fundsAvailableForLiquidation += $hedge->getSupportProfitOnMainEntryPrice();
         }

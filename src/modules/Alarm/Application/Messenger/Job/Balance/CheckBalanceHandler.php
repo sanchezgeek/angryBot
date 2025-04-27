@@ -24,7 +24,7 @@ final readonly class CheckBalanceHandler
         }
 
         if ($this->limiter->consume()->isAccepted()) {
-            if ($this->exchangeAccountService->getContractWalletBalance(Coin::USDT)->availableForTrade() > self::AMOUNT) {
+            if ($this->exchangeAccountService->getContractWalletBalance(Coin::USDT)->available() > self::AMOUNT) {
                 $this->appErrorLogger->critical('balance');
             }
         }

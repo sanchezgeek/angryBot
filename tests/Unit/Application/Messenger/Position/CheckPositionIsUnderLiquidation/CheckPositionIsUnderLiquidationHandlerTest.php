@@ -208,7 +208,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     {
         $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), 60);
 
-        return (new CoinAmount($position->symbol->associatedCoin(), $amount));
+        return $position->symbol->associatedCoinAmount($amount);
     }
 
     private function havePositions(Position ...$positions): void

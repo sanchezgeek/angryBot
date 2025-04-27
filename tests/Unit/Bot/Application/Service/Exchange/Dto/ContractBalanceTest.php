@@ -20,7 +20,7 @@ class ContractBalanceTest extends TestCase
         $available = 0.501;
         $free = 0.601;
 
-        $balance = new ContractBalance($coin, $total, $available, $free, $free);
+        $balance = new ContractBalance($coin, $total, $available, $free);
 
         self::assertEquals($coin, $balance->assetCoin);
 
@@ -32,8 +32,6 @@ class ContractBalanceTest extends TestCase
 
         self::assertEquals(new CoinAmount($coin, $free), $balance->free);
         self::assertEquals($free, $balance->free());
-
-        self::assertEquals(new CoinAmount($coin, $free), $balance->freeForLiquidation);
     }
 
     public function createTestData(): iterable

@@ -30,14 +30,18 @@ class SandboxState implements SandboxStateInterface
     private Price $lastPrice;
 
     private CoinAmount $freeBalance;
-    private CoinAmount $freeBalanceForLiquidation;
+    private CoinAmount $fundsAvailableForLiquidation;
 
-    public function __construct(Ticker $ticker, ContractBalance $contractBalance, Position ...$positions)
-    {
+    public function __construct(
+        Ticker $ticker,
+        ContractBalance $contractBalance,
+        CoinAmount $fundsAvailableForLiquidation,
+        Position ...$positions
+    ) {
         $this->symbol = $ticker->symbol;
         $this->setLastPrice($ticker->lastPrice);
         $this->freeBalance = $contractBalance->free;
-        $this->freeBalanceForLiquidation = $contractBalance->freeForLiquidation;
+        $this->fundsAvailableForLiquidation = $fundsAvailableForLiquidation;
 
         foreach ($positions as $position) {
             $this->setPositionAndActualizeOpposite($position);
@@ -117,7 +121,7 @@ class SandboxState implements SandboxStateInterface
     public function modifyFreeBalance(CoinAmount|float $amount): self
     {
         $this->freeBalance = $this->freeBalance->add($amount);
-        $this->freeBalanceForLiquidation = $this->freeBalanceForLiquidation->add($amount);
+        $this->fundsAvailableForLiquidation = $this->fundsAvailableForLiquidation->add($amount);
         return $this;
     }
 
@@ -126,9 +130,9 @@ class SandboxState implements SandboxStateInterface
         return $this->freeBalance;
     }
 
-    public function getFreeBalanceForLiq(): CoinAmount
+    public function getFundsAvailableForLiquidation(): CoinAmount
     {
-        return $this->freeBalanceForLiquidation;
+        return $this->fundsAvailableForLiquidation;
     }
 
     public function getAvailableBalance(): CoinAmount

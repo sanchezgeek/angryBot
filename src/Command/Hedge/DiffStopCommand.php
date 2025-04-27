@@ -51,6 +51,8 @@ class DiffStopCommand extends AbstractCommand
         }
 
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin);
+        $fundsAvailableForLiquidation = $this->exchangeAccountService->calcFundsAvailableForLiquidation($symbol, $contractBalance);
+
         $mainPosition = $hedge->mainPosition;
 
         $isLiquidationPriceAlreadyOverSpecifiedPrice = $mainPosition->isShort()
@@ -70,7 +72,7 @@ class DiffStopCommand extends AbstractCommand
             || ($mainPosition->isLong() && $liquidationPrice > $targetPrice)
         ) {
             $position = PositionClone::full($position)->withSize($position->size - $symbol->minOrderQty())->create();
-            $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, $contractBalance->freeForLiquidation);
+            $liquidationCalcResult = $this->calcPositionLiquidationPriceHandler->handle($position, $fundsAvailableForLiquidation);
 
             $liquidationPrice = $liquidationCalcResult->estimatedLiquidationPrice()->value();
         }

@@ -242,7 +242,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         ### bottom START ###
         $bottomCells = [Cell::default($this->clock->now()->format('D d M H:i'))->setAlign(CellAlign::CENTER)];
         $balanceContent = isset($balance)
-            ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->availableForTrade)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
+            ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->available)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
             : '';
         $bottomCells[] = sprintf('% 48s', $balanceContent);
         $bottomCells[] = '';

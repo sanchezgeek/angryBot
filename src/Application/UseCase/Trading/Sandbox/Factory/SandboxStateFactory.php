@@ -9,6 +9,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 
 /**
  * @todo | sandbox | Move to ... where?
@@ -18,7 +19,7 @@ final readonly class SandboxStateFactory implements SandboxStateFactoryInterface
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
         private PositionServiceInterface $positionService,
-        private ExchangeAccountServiceInterface $exchangeAccountService,
+        private ByBitExchangeAccountService $exchangeAccountService,
     ) {
     }
 
@@ -27,7 +28,8 @@ final readonly class SandboxStateFactory implements SandboxStateFactoryInterface
         $ticker = $this->exchangeService->ticker($symbol);
         $positions = $this->positionService->getPositions($symbol);
         $contractBalance = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
+        $fundsAvailableForLiquidation = $this->exchangeAccountService->calcFundsAvailableForLiquidation($symbol, $contractBalance);
 
-        return new SandboxState($ticker, $contractBalance, ...$positions);
+        return new SandboxState($ticker, $contractBalance, $fundsAvailableForLiquidation, ...$positions);
     }
 }

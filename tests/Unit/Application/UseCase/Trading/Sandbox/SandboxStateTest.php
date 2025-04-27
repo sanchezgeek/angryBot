@@ -37,14 +37,14 @@ class SandboxStateTest extends TestCase
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
         $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
 
-        $free = new CoinAmount($coin, 98.1001);
+        $free = $symbol->associatedCoinAmount(98.1001);
 
         $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free->value(), [$short, $long], $ticker);
 
-        $expectedAvailable = new CoinAmount($coin, 33.9768);
+        $expectedAvailable = $symbol->associatedCoinAmount(33.9768);
 
         // Act
-        $state = new SandboxState($ticker, $contactBalance, $long, $short);
+        $state = new SandboxState($ticker, $contactBalance, $contactBalance->free, $long, $short);
 
         // Assert
         self::isPositionsEqual($short, $state->getPosition(Side::Sell));
@@ -60,9 +60,9 @@ class SandboxStateTest extends TestCase
     {
         $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free, $positions, $ticker);
 
-        $state = new SandboxState($ticker, $contactBalance, ...$positions);
+        $state = new SandboxState($ticker, $contactBalance, $contactBalance->free, ...$positions);
 
-        self::assertEquals(new CoinAmount($ticker->symbol->associatedCoin(), $expectedAvailable), $state->getAvailableBalance());
+        self::assertEquals($ticker->symbol->associatedCoinAmount($expectedAvailable), $state->getAvailableBalance());
     }
 
     public function allFreeIsAvailableTestCases(): iterable
@@ -115,10 +115,10 @@ class SandboxStateTest extends TestCase
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
         $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
 
-        $free = new CoinAmount($coin, 98.1001);
+        $free = $symbol->associatedCoinAmount(98.1001);
         $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free->value(), [$short, $long], $ticker);
 
-        $state = new SandboxState($ticker, $contactBalance, $long, $short);
+        $state = new SandboxState($ticker, $contactBalance, $contactBalance->free, $long, $short);
 
         // Act
         $state->setPositionAndActualizeOpposite(new ClosedPosition(Side::Sell, $symbol));

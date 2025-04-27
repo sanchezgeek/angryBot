@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Domain\ValueObject;
 
 use App\Domain\Coin\Coin;
+use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -308,6 +309,13 @@ enum Symbol: string
         return round(pow(0.1, $pricePrecision - 1), $pricePrecision);
     }
 
+    public function minimalPriceMove(): float
+    {
+        $pricePrecision = $this->pricePrecision();
+
+        return round(pow(0.1, $pricePrecision), $pricePrecision);
+    }
+
     public function makePrice(float $value): Price
     {
         $factory = new PriceFactory($this);
@@ -397,5 +405,10 @@ enum Symbol: string
     public function veryShortName(): string
     {
         return substr(self::VERY_SHORT_NAMES[$this->value] ?? $this->shortName(), 0, 3);
+    }
+
+    public function associatedCoinAmount(float $amount): CoinAmount
+    {
+        return new CoinAmount($this->associatedCoin(), $amount);
     }
 }

@@ -50,7 +50,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $shortInitial = PB::short()->entry(67533.430)->size(0.187)->liq(75173)->build();
         $longInitial = PB::long()->entry(59426.560)->size(0.077)->build();
         $positionsBefore = [$shortInitial, $longInitial];
-        $initialState = new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, $positionsBefore, $ticker), ...$positionsBefore);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, $positionsBefore, $ticker);
+        $initialState = new SandboxState($ticker, $contractBalance, $contractBalance->free, ...$positionsBefore);
 
         # SHORT
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 68150, 0.001);
@@ -59,7 +60,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longInitialCloned, $shortAfterMake];
 
         $expectedFree = 178.2235; $expectedAvailable = 110.1483;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), $contractBalance, $contractBalance->free, ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxBuyOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxBuyOrder, $expectedStateAfterMake, $expectedAvailable
@@ -72,7 +74,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 178.2242; $expectedAvailable = 111.0181;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), $contractBalance, $contractBalance->free, ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxBuyOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxBuyOrder, $expectedStateAfterMake, $expectedAvailable
@@ -84,7 +87,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $initialFree =  11956.6364;
         $shortInitial = PB::short()->entry(67506.640)->size(0.189)->liq(131106.800)->build();
         $positionsBefore = [$shortInitial];
-        $initialState = new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, $positionsBefore, $ticker), ...$positionsBefore);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, $positionsBefore, $ticker);
+        $initialState = new SandboxState($ticker, $contractBalance, $contractBalance->free, ...$positionsBefore);
 
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Buy, 63400, 0.001);
         $longAfterMake = PB::long()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->build();
@@ -92,7 +96,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 11955.932999999999; $expectedAvailable = 11955.933;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), $contractBalance, $contractBalance->free, ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxBuyOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxBuyOrder, $expectedStateAfterMake, $expectedAvailable
@@ -103,7 +108,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
 
         ## opened short will become support
         $initialFree =  956.6364;
-        $initialState = new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, [$longInitial], $ticker), $longInitial);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, [$longInitial], $ticker);
+        $initialState = new SandboxState($ticker, $contractBalance, $contractBalance->free, $longInitial);
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 63400, 0.001);
 
         $shortAfterMake = PB::short()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->liq(0)->build();
@@ -111,7 +117,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 955.9322999999999; $expectedAvailable = 955.9323;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), $contractBalance, $contractBalance->free, ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxBuyOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxBuyOrder, $expectedStateAfterMake, $expectedAvailable
@@ -119,7 +126,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
 
         ## opened short will become main position
         $initialFree =  319.229;
-        $initialState = new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, [$longInitial], $ticker), $longInitial);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($initialFree, [$longInitial], $ticker);
+        $initialState = new SandboxState($ticker, $contractBalance, $contractBalance->free, $longInitial);
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 67533.430, 0.187);
 
         $shortAfterMake = PB::short()->entry(67533.430)->size(0.187)->liq(75173)->build();
@@ -127,7 +135,8 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 178.98039999999997; $expectedAvailable = 178.9804;
-        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker), ...$positionsAfter);
+        $contractBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($expectedFree, $positionsAfter, $ticker);
+        $expectedStateAfterMake = new SandboxState(TickerFactory::withEqualPrices($symbol, $sandboxBuyOrder->price), $contractBalance, $contractBalance->free, ...$positionsAfter);
 
         yield TestCaseDescriptionHelper::sandboxTestCaseCaption($initialState, $sandboxBuyOrder, $expectedStateAfterMake) => [
             $initialState, $sandboxBuyOrder, $expectedStateAfterMake, $expectedAvailable

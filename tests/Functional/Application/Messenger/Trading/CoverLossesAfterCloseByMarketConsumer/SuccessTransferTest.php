@@ -57,7 +57,7 @@ class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstr
         $this->havePosition($symbol, $closedPosition);
 
         $exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
-        $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn(new ContractBalance($coin, 100, 0, $freeContractBalance, $freeContractBalance));
+        $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn(new ContractBalance($coin, 100, 0, $freeContractBalance));
         $exchangeAccountServiceMock->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(new SpotBalance($coin, $availableSpotBalance, $availableSpotBalance));
         $consumer = new CoverLossesAfterCloseByMarketConsumer(
             $exchangeAccountServiceMock,
