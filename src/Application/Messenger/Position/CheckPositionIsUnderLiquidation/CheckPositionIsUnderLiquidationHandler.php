@@ -45,7 +45,7 @@ use function sprintf;
 
 /**
  * @see \App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest
- * @see \App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandlerTest
+ * @see \App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandlerTest
  */
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
@@ -56,7 +56,6 @@ final class CheckPositionIsUnderLiquidationHandler
     public const MAX_TRANSFER_AMOUNT = 60;
     private const TRANSFER_AMOUNT_MODIFIER = 0.2;
     private const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
-    private const MOVE_BACK_TO_SPOT_ENABLED = false;
 
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
 
@@ -147,6 +146,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $ticker = new Ticker($symbol, $markPrice, $markPrice, $markPrice); // @todo Get rid of ticker?
         $coin = $symbol->associatedCoin();
 
+        // @todo можно добавить какой-то self-check (например корректность warningRange относительно criticalRange)
         $this->dynamicParameters = $this->liquidationDynamicParametersFactory->create($message, $position, $ticker);
 
         ### remove stale ###
@@ -248,16 +248,6 @@ final class CheckPositionIsUnderLiquidationHandler
                     $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta, $context);
                 }
             }
-        } elseif (
-            self::MOVE_BACK_TO_SPOT_ENABLED && (
-                $distanceWithLiquidation > 2000
-                || ($currentPositionPnlPercent = $ticker->indexPrice->getPnlPercentFor($position)) > 300
-            )
-            && ($contractBalance = $this->exchangeAccountService->getContractWalletBalance($coin))
-            && ($totalBalance = $this->exchangeAccountService->getCachedTotalBalance($symbol))
-            && ($contractBalance->available() / $totalBalance) > 0.5
-        ) {
-            $this->exchangeAccountService->interTransferFromContractToSpot($coin, 1);
         }
 
         $this->setLastRunMarkPrice($position, $ticker);
