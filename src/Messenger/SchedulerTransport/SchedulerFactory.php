@@ -27,6 +27,7 @@ use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
+use App\Service\Application\Messenger\Job\GenerateSupervisorConfigs;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -43,12 +44,13 @@ final class SchedulerFactory
     private const FAST = '1 second';
     private const MEDIUM = '1200 milliseconds';
     private const SLOW = '2 seconds';
+    private const MEDIUM_SLOW = '3 seconds';
     private const VERY_SLOW = '5 seconds';
-    private const VERY_VERY_SLOW = '10 seconds';
+    private const VERY_VERY_SLOW = '9 seconds';
 
-    private const CONF = [
-        'short.sl'  => self::VERY_FAST, 'short.buy' => self::SLOW,
-        'long.sl'   => self::VERY_FAST, 'long.buy'  => self::SLOW,
+    private const SPEED_CONF = [
+        'sl'  => self::MEDIUM_SLOW,
+        'buy' => self::VERY_VERY_SLOW,
     ];
 
     private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
@@ -63,11 +65,11 @@ final class SchedulerFactory
     public function createScheduler(ClockInterface $clock): Scheduler
     {
         $jobSchedules = match (AppContext::runningWorker()) {
-            RunningWorker::SHORT => $this->short(),
-            RunningWorker::LONG  => $this->long(),
+            RunningWorker::BUY_ORDERS  => $this->buyOrders(),
             RunningWorker::UTILS => $this->utils(),
             RunningWorker::CACHE => $this->cache(),
             RunningWorker::CRITICAL => $this->critical(),
+            RunningWorker::SYMBOL_DEDICATED => $this->symbol(),
             default => [],
         };
 
@@ -81,31 +83,35 @@ final class SchedulerFactory
         ];
     }
 
-    private function short(): array
+    private function symbol(): array
     {
-        $items = [
-            PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::CONF['short.sl']), new PushStops(Symbol::BTCUSDT, Side::Sell)),
-            PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['short.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Sell))),
-        ];
+        $symbol = Symbol::from($_ENV['PROCESSED_SYMBOL']);
+        $processedOrders = $_ENV['PROCESSED_ORDERS'];
 
-        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['short.buy']), AsyncMessage::for(new PushBuyOrders($symbol, Side::Sell)));
+        var_dump(sprintf('%s %s started', $symbol->value, $processedOrders));
+
+        if ($processedOrders === 'Stop') {
+            return [
+                PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::SPEED_CONF['sl']), new PushStops($symbol, Side::Sell)),
+                PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::SPEED_CONF['sl']), new PushStops($symbol, Side::Buy)),
+            ];
+        } elseif ($processedOrders === 'BuyOrder') {
+            return [
+                PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Sell)),
+                PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Buy)),
+            ];
         }
 
-        return $items;
+        return [];
     }
 
-    private function long(): array
+    private function buyOrders(): array
     {
-        $items = [
-            PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::CONF['long.sl']), new PushStops(Symbol::BTCUSDT, Side::Buy)),
-            PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::CONF['long.buy']), AsyncMessage::for(new PushBuyOrders(Symbol::BTCUSDT, Side::Buy))),
-        ];
+        $items = [];
 
-        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::FAST), new PushStops($symbol, Side::Buy));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::CONF['long.buy']), AsyncMessage::for(new PushBuyOrders($symbol, Side::Buy)));
+        foreach ($this->getOpenedPositionsSymbols() as $symbol) {
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Sell));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Buy));
         }
 
         return $items;
@@ -116,6 +122,8 @@ final class SchedulerFactory
         $cleanupPeriod = '45S';
 
         $items = [
+            # service
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', AsyncMessage::for(new CheckMessengerMessages())),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', AsyncMessage::for(new CheckApiKeyDeadlineDay())),
 
@@ -155,7 +163,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(new CheckOrdersNowIsActive())),
         ];
 
-        foreach ($this->getOtherOpenedPositionsSymbols() as $symbol) {
+        foreach ($this->getOpenedPositionsSymbols([Symbol::BTCUSDT]) as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
         }
 
@@ -190,8 +198,8 @@ final class SchedulerFactory
     /**
      * @return Symbol[]
      */
-    private function getOtherOpenedPositionsSymbols(): array
+    private function getOpenedPositionsSymbols(array $except = []): array
     {
-        return $this->positionService->getOpenedPositionsSymbols([Symbol::BTCUSDT]);
+        return $this->positionService->getOpenedPositionsSymbols($except);
     }
 }

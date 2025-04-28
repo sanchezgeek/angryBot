@@ -1,6 +1,7 @@
 imports:
     - { resource: parameters.yaml }
     - { resource: ../src/modules/Settings/Infrastructure/Symfony/config/services.yaml }
+    - { resource: ../src/modules/Service/Infrastructure/Symfony/config/services.yaml }
 
 # This file is the entry point to configure your own services.
 # Files in the packages/ subdirectory configure your dependencies.

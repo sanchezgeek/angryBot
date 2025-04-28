@@ -1,0 +1,12 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Service\:
+        resource: '../../../'
+
+    App\Service\Application\Messenger\Job\GenerateSupervisorConfigsHandler:
+        arguments:
+            $configsPath: '/etc/supervisor.d'
+            $templatePath: '%kernel.project_dir%/docker/etc/symbol-consumer-template.ini'

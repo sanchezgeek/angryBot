@@ -8,8 +8,7 @@ enum RunningWorker: string
 {
     case SERVICE = 'service';
 
-    case SHORT = 'short';
-    case LONG = 'long';
+    case BUY_ORDERS = 'buy-orders';
 
     case ASYNC = 'async';
     case ASYNC_HIGH = 'async_high';
@@ -19,4 +18,5 @@ enum RunningWorker: string
     case CACHE = 'cache';
 
     case CRITICAL = 'critical';
+    case SYMBOL_DEDICATED = 'symbol-dedicated';
 }

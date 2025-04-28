@@ -20,6 +20,7 @@ framework:
         routing:
             # service
             App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMessengerMessages: service
+            App\Service\Application\Messenger\Job\GenerateSupervisorConfigs: service
 
             # account
             App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
@@ -27,17 +28,13 @@ framework:
             # market
             App\Application\Messenger\Market\TransferFundingFees: async_high
 
-            # buy
-            # todo | Нужен отдельный воркер для BO? Возможно это должен быть просто cron + short|long BUY
-            App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders: async_high
-
             # orders
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
             App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling: async
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation: async_critical
+            # App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation: async_critical # for now handled synchronously
             App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage: async
             App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async_high
             App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async_high

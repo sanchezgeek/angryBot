@@ -17,6 +17,7 @@
         "symfony/console": "6.2.*",
         "symfony/doctrine-messenger": "6.2.*",
         "symfony/dotenv": "6.2.*",
+        "symfony/finder": "6.2.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.2.*",
         "symfony/http-client": "6.2.*",
@@ -54,6 +55,8 @@
             "App\\Output\\": "src/modules/Output",
             "App\\Connection\\": "src/modules/Connection",
             "App\\Settings\\": "src/modules/Settings",
+            "App\\Liquidation\\": "src/modules/Liquidation",
+            "App\\Service\\": "src/modules/Service",
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }
     },
