@@ -209,6 +209,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->positions = $positionService->getAllPositions();
         $this->lastMarkPrices = $positionService->getLastMarkPrices();
         $symbols = $this->getOpenedPositionsSymbols();
+        $totalUnrealizedPnl = $this->getTotalUnrealizedProfit();
 
         $singleCoin = null;
         foreach ($symbols as $symbol) {
@@ -220,6 +221,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
+            $total = $balance->total->add($totalUnrealizedPnl);
         }
 
         $unrealisedTotal = 0;
@@ -245,7 +247,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->available)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
             : '';
         $bottomCells[] = sprintf('% 48s', $balanceContent);
-        $bottomCells[] = '';
+        $bottomCells[] = isset($total) ? self::formatPnl($total) : '';
         $bottomCells[] = '';
 
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => new CoinAmount($singleCoin, $pnl) : static fn($pnl) => (string)$pnl;
@@ -609,6 +611,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         return SymbolHelper::rawSymbolsToValueObjects(...$symbolsRaw);
+    }
+
+    public function getTotalUnrealizedProfit(): float
+    {
+        $result = 0;
+        foreach ($this->positions as $symbolRaw => $positions) {
+            foreach ($positions as $position) {
+                $result += $position->unrealizedPnl;
+            }
+        }
+
+        return $result;
     }
 
     /**
