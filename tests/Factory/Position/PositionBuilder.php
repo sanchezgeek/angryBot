@@ -9,6 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
+use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use LogicException;
@@ -131,11 +132,16 @@ class PositionBuilder
         $side = $this->side;
         $entry = $this->entry;
 
-        $positionValue = $entry * $this->size;
+        $size = $this->size;
+        $positionValue = $entry * $size;
         $initialMargin = new CoinAmount($this->symbol->associatedCoin(), ($positionValue / $this->leverage));
 
         $liquidation = null;
-        if ($this->liquidation !== null) {
+
+        if ($this->oppositePosition && $this->oppositePosition->size >= $size) {
+            $liquidation = 0; // @todo = null
+            $this->oppositePosition = PositionClone::clean($this->oppositePosition)->withoutLiquidation()->create();
+        } elseif ($this->liquidation !== null) {
             $liquidation = $this->liquidation;
         } elseif ($this->liquidationCalculator) {
             $fundsForLiquidation = $this->fundsForLiquidation;
@@ -152,7 +158,7 @@ class PositionBuilder
             $side,
             $this->symbol,
             $entry,
-            $this->size,
+            $size,
             $positionValue,
             $liquidation,
             $initialMargin->value(),

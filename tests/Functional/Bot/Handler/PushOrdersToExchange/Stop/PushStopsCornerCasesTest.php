@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 
-use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
-use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -22,7 +19,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -90,8 +87,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->stopRepository,
             $this->orderServiceMock,
             $this->messageBus,
-            $this->createMock(TradingSandboxFactoryInterface::class),
-            self::makeRateLimiterFactory(),
+            self::getContainer()->get(StopChecksChainFactory::class),
             self::getContainerSettingsProvider(),
             $this->exchangeServiceMock,
             $this->positionServiceMock,

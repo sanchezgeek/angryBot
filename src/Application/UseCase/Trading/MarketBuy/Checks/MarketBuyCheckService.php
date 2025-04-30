@@ -15,6 +15,7 @@ use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
+use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
 use App\Settings\Application\Service\AppSettingsProvider;
 use Psr\Log\LoggerInterface;
 
@@ -80,10 +81,18 @@ readonly class MarketBuyCheckService
 
         $liquidationPrice = $positionToCheckLiquidation->liquidationPrice();
 
+        // @todo | liquidation | null
+        if ($liquidationPrice->eq(0)) {
+            return;
+        }
+
         $safePriceDistance ??= $this->defaultSafePriceDistance;
-        $isLiquidationOnSafeDistance = $positionSide->isShort()
-            ? $liquidationPrice->sub($safePriceDistance)->greaterOrEquals($markPrice)
-            : $liquidationPrice->add($safePriceDistance)->lessOrEquals($markPrice);
+        $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert(
+            $positionSide,
+            $liquidationPrice,
+            $markPrice,
+            $safePriceDistance
+        );
 
         if (!$isLiquidationOnSafeDistance) {
             throw BuyIsNotSafeException::liquidationTooNear($liquidationPrice->deltaWith($markPrice), $safePriceDistance);

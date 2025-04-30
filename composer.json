@@ -57,6 +57,7 @@
             "App\\Settings\\": "src/modules/Settings",
             "App\\Liquidation\\": "src/modules/Liquidation",
             "App\\Service\\": "src/modules/Service",
+            "App\\Stop\\": "src/modules/Stop",
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }
     },
