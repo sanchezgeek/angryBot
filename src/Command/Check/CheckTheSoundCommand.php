@@ -2,7 +2,7 @@
 
 namespace App\Command\Check;
 
-use Psr\Log\LoggerInterface;
+use App\Application\Logger\AppErrorLoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +19,8 @@ class CheckTheSoundCommand extends Command
     }
 
     public function __construct(
-        private readonly LoggerInterface     $appErrorLogger,
-        string                               $name = null,
+        private readonly AppErrorLoggerInterface $appErrorLogger,
+        string $name = null,
     ) {
         parent::__construct($name);
     }

@@ -18,7 +18,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
-        if ($this->settingsProvider->get(PushStopSettings::Cover_Loss_After_Close_By_Market) !== true) {
+        if (
+            $this->settingsProvider->get(PushStopSettings::Cover_Loss_After_Close_By_Market) !== true
+            || !AppContext::hasPermissionsToFundBalance()
+        ) {
             return;
         }
 

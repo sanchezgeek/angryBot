@@ -18,7 +18,7 @@ readonly class SymfonyAppErrorLogger implements AppErrorLoggerInterface
         $this->logger = $appErrorLogger;
     }
 
-    public function log(Throwable $e): void
+    public function exception(Throwable $e): void
     {
         $message = $e->getMessage();
 
@@ -34,5 +34,10 @@ readonly class SymfonyAppErrorLogger implements AppErrorLoggerInterface
         }
 
         $this->logger->critical($message, $context);
+    }
+
+    public function error(string $message, array $data = []): void
+    {
+        $this->logger->error($message, $data);
     }
 }

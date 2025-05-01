@@ -37,7 +37,7 @@ final class StopChecksChain
             } catch (TooManyTriesForCheckStop) {
                 return $check::negativeResult(); // order must not be executed (but without reason)
             } catch (UnexpectedSandboxExecutionException $e) {
-                $this->appErrorLogger->log($e);
+                $this->appErrorLogger->exception($e);
                 return $check::negativeResult($e->getMessage()); // order must not be executed (with reason)
             }
 

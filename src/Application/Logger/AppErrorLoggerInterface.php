@@ -8,5 +8,6 @@ use Throwable;
 
 interface AppErrorLoggerInterface
 {
-    public function log(Throwable $e): void;
+    public function error(string $message, array $data = []): void;
+    public function exception(Throwable $e): void;
 }

@@ -57,7 +57,7 @@ class OutputHelper
 
     public static function warning(string $message): void
     {
-        var_dump(sprintf('@ %s', $message));
+        echo sprintf('@ %s', $message) . PHP_EOL;
     }
 
     public static function printIfDebug(mixed $data): void
