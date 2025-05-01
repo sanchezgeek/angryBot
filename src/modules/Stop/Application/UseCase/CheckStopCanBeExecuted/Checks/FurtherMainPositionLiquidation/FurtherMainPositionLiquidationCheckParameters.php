@@ -15,7 +15,6 @@ final class FurtherMainPositionLiquidationCheckParameters implements FurtherMain
         $tickerPrice = $tickerPrice->value();
 
         return match (true) {
-            $symbol === Symbol::BSWUSDT => $tickerPrice * 1.4,
             default => match (true) {
                 $tickerPrice > 10000 => $tickerPrice / 10,
                 $tickerPrice > 3000 => $tickerPrice / 8,

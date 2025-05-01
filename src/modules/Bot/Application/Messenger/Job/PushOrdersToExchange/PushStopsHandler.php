@@ -132,8 +132,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private function stopCanBePushed(Stop $stop, StopChecksContext $stopChecksContext): bool
     {
         $checkResult = $this->checksChain->check($stop, $stopChecksContext);
-        if (!$checkResult->success && $checkResult->reason) {
-            OutputHelper::warning($checkResult->reason);
+        $description = $checkResult->description();
+        if ($description) {
+            OutputHelper::warning($description);
         }
 
         return $checkResult->success;

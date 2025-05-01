@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\Sandbox\Exception\Unexpected;
 
-use RuntimeException;
+use Exception;
 
-final class UnexpectedSandboxExecutionException extends RuntimeException
+final class UnexpectedSandboxExecutionException extends Exception
 {
 }

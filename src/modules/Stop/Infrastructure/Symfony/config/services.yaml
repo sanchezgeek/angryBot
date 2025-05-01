@@ -5,3 +5,10 @@ services:
 
     App\Stop\:
         resource: '../../../'
+
+framework:
+    rate_limiter:
+        check_can_close_support_while_push_stops_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '15 seconds'

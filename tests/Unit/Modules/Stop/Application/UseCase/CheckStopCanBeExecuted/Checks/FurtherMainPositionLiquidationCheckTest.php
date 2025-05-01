@@ -105,9 +105,9 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
         $newMainPositionLiquidation = 105000;
-        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, StopCheckResult::positive()];
+        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::result(true, $ticker, $support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
         $newMainPositionLiquidation = 104999;
-        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::negativeResult($support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
+        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::result(false, $ticker, $support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
 
         # LONG
         $main = PositionBuilder::long()->entry(80000)->size(1)->liq(79000)->build();
@@ -116,24 +116,27 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
         $newMainPositionLiquidation = 75000;
-        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, StopCheckResult::positive()];
+        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::result(true, $ticker, $support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
         $newMainPositionLiquidation = 75001;
-        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::negativeResult($support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
+        yield [$support, $stop, $ticker, $safePriceDistance, $newMainPositionLiquidation, self::result(false, $ticker, $support, $stop, $safePriceDistance, $newMainPositionLiquidation)];
+
+        // @todo check 0
     }
 
-    private static function negativeResult(Position $closingPosition, Stop $stop, float $safePriceDistance, float $mainPositionLiquidationPriceNew): StopCheckResult
+    private static function result(bool $success, Ticker $ticker, Position $closingPosition, Stop $stop, float $safePriceDistance, float $mainPositionLiquidationPriceNew): StopCheckResult
     {
-        return StopCheckResult::negative(
-            FurtherMainPositionLiquidationCheck::class,
-            sprintf(
-                '[%s | %d | qty=%s, price=%s -> FurtherMainPositionLiquidation failed (safeDistance=%s,liquidation=%s)',
-                $closingPosition,
-                $stop->getId(),
-                $stop->getVolume(),
-                $stop->getPrice(),
-                $safePriceDistance,
-                $mainPositionLiquidationPriceNew
-            )
+        $executionPrice = $stop->isCloseByMarketContextSet() ? $ticker->markPrice : $ticker->symbol->makePrice($stop->getPrice());
+
+        $reason = sprintf(
+            '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
+            $closingPosition,
+            $stop->getId(),
+            $stop->getVolume(),
+            $executionPrice,
+            $safePriceDistance,
+            $mainPositionLiquidationPriceNew
         );
+
+        return $success ? FurtherMainPositionLiquidationCheck::positiveResult($reason) : FurtherMainPositionLiquidationCheck::negativeResult($reason);
     }
 }

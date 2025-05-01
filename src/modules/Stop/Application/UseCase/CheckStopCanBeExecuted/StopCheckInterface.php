@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted;
 
+use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Domain\Entity\Stop;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
@@ -16,6 +17,7 @@ interface StopCheckInterface
 
     /**
      * @throws TooManyTriesForCheckStop
+     * @throws UnexpectedSandboxExecutionException
      */
     public function check(Stop $stop, StopChecksContext $context): StopCheckResult;
 }

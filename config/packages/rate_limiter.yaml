@@ -33,10 +33,6 @@ framework:
             policy: 'fixed_window'
             limit: 5
             interval: '1 day'
-        check_can_close_support_while_push_stops_throttling:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '45 seconds'
         check_further_position_liquidation_after_buy:
             policy: 'fixed_window'
             limit: 1

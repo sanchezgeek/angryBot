@@ -4,31 +4,36 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto;
 
-use LogicException;
-
 final readonly class StopCheckResult
 {
     private function __construct(
         public bool $success,
-        public ?string $failedCheckClass = null,
+        public ?string $source = null,
         public ?string $reason = null
     ) {
-        if ($this->success && ($this->failedCheckClass || $this->reason)) {
-            throw new LogicException('failedCheckClass and reason must be empty for positive result');
-        }
-
-        if (!$this->success && !$this->failedCheckClass) {
-            throw new LogicException('failedCheckClass and reason must be set for positive result');
-        }
     }
 
-    public static function positive(): self
+    public static function positive(string $source = null, ?string $reason = null): self
     {
-        return new self(true);
+        return new self(true, $source, $reason);
     }
 
-    public static function negative(string $failedCheckClass, ?string $reason = null): self
+    public static function negative(string $source, ?string $reason = null): self
     {
-        return new self(false, $failedCheckClass, $reason);
+        return new self(false, $source, $reason);
+    }
+
+    public function resetReason(?string $reason = null): self
+    {
+        return new self($this->success, $this->source, $reason);
+    }
+
+    public function description(): ?string
+    {
+        if (!$this->reason) {
+            return null;
+        }
+
+        return sprintf('%s%s: %s', $this->source ? $this->source . ' ' : '', $this->success ? 'SUCCEED' : 'FAILED', $this->reason);
     }
 }

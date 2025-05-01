@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactory;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -14,6 +15,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 final readonly class StopChecksChainFactory
 {
     public function __construct(
+        private AppErrorLoggerInterface $appErrorLogger,
         private PositionServiceInterface $positionService,
         private TradingSandboxFactory $sandboxFactory,
         private SandboxStateFactory $sandboxStateFactory,
@@ -24,6 +26,7 @@ final readonly class StopChecksChainFactory
     public function full(): StopChecksChain
     {
         return new StopChecksChain(
+            $this->appErrorLogger,
             new FurtherMainPositionLiquidationCheck(
                 new FurtherMainPositionLiquidationCheckParameters(),
                 $this->checkCanCloseSupportWhilePushStopsThrottlingLimiter,
