@@ -213,6 +213,22 @@ class MarketBuyHandlerTest extends KernelTestCase
             '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Sell),
             '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$short], $ticker), $symbol->associatedCoinAmount($free), $short),
         ];
+
+        ### SHORT without liquidation
+        $short = PositionBuilder::short()->entry(65000)->liq(0)->build();
+        yield 'SHORT without liquidation' => [
+            '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Sell),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$short], $ticker), $symbol->associatedCoinAmount($free), $short),
+        ];
+
+        $ticker = TickerFactory::withEqualPrices($symbol, 1500);
+
+        ### LONG without liquidation
+        $long = PositionBuilder::long()->entry(1500)->liq(0)->build();
+        yield 'LONG without liquidation' => [
+            '$ticker' => $ticker, '$buyDto' => self::simpleBuyDto($symbol, Side::Buy),
+            '$sandboxState[afterBuy]' => new SandboxState($ticker, ContractBalanceTestHelper::contractBalanceBasedOnFree($free, [$long], $ticker), $symbol->associatedCoinAmount($free), $long),
+        ];
     }
 
     public function notSafeButForceOrderSuccessTestCases(): iterable
@@ -245,7 +261,7 @@ class MarketBuyHandlerTest extends KernelTestCase
 
     private static function simpleBuyDto(Symbol $symbol, Side $side): MarketBuyEntryDto
     {
-        return new MarketBuyEntryDto($symbol, $side, 0.001, false);
+        return new MarketBuyEntryDto($symbol, $side, 0.005, false);
     }
 
     private static function forceBuyDto(Symbol $symbol, Side $side): MarketBuyEntryDto
