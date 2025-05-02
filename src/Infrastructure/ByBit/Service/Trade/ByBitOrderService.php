@@ -19,6 +19,7 @@ use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use Closure;
@@ -54,6 +55,7 @@ final class ByBitOrderService implements OrderServiceInterface
      * @inheritDoc
      *
      * @throws CannotAffordOrderCostException
+     * @throws OrderDoesNotMeetMinimumOrderValue
      *
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
@@ -66,12 +68,16 @@ final class ByBitOrderService implements OrderServiceInterface
         $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
             static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
-                match ($error->code()) {
+                $code = $error->code();
+                $msg = $error->msg();
+
+                match ($code) {
                     ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
                         $symbol,
                         $positionSide,
                         $qty,
                     ),
+                    ApiV5Errors::OrderDoesNotMeetMinimumOrderValue->value => throw new OrderDoesNotMeetMinimumOrderValue($msg),
                     default => null
                 };
             },

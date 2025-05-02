@@ -4,13 +4,15 @@ namespace App\Infrastructure\ByBit\API\V5\Enum;
 
 enum ApiV5Errors: int
 {
+    case PermissionDenied = 10005;
     case ApiRateLimitReached = 10006;
     case CannotAffordOrderCost = 110007;
     case MaxActiveCondOrdersQntReached = 110009;
+
     case BadRequestParams = 10001;
     case BadRequestParams2 = 110092;
     case BadRequestParams3 = 110093;
-    case PermissionDenied = 10005;
+    case OrderDoesNotMeetMinimumOrderValue = 110094;
 
     public function code(): int
     {

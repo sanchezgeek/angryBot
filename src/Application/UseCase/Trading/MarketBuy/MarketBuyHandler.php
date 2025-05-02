@@ -12,15 +12,14 @@ use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\ExchangeOrder;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
-use Throwable;
 
 readonly class MarketBuyHandler
 {
@@ -44,11 +43,10 @@ readonly class MarketBuyHandler
 
         try {
             return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
-        } catch (CannotAffordOrderCostException $e) {
-            throw $e;
-        } catch (Throwable $e) {
-            OutputHelper::print(sprintf('%s while try to buy %s (%s initial) on %s %s', $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume, $symbol->value, $dto->positionSide->value));
-            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume() + $symbol->minOrderQty() * 2);
+        } catch (OrderDoesNotMeetMinimumOrderValue $e) {
+            // Make `/v5/order/create` request: got unknown errCode 110094 (Order does not meet minimum order value 5USDT) while try to buy 160 (126 initial) on BROCCOLIUSDT sell
+            OutputHelper::print(sprintf('%s %s: got "%s" while try to buy %s (%s initial)', $symbol->value, $dto->positionSide->value, $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume));
+            return $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume() + $symbol->minOrderQty() * 3);
         }
     }
 
