@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Service\Application\Messenger\Job;
+namespace App\Service\Infrastructure\Job\GenerateSupervisorConfigs;
 
 readonly class GenerateSupervisorConfigs
 {

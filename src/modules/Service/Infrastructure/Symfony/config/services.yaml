@@ -6,7 +6,7 @@ services:
     App\Service\:
         resource: '../../../'
 
-    App\Service\Application\Messenger\Job\GenerateSupervisorConfigsHandler:
+    App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigsHandler:
         arguments:
             $configsPath: '/etc/supervisor.d'
             $templatePath: '%kernel.project_dir%/docker/etc/symbol-consumer-template.ini'

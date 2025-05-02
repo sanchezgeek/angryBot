@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger\Infrastructure\CheckMessengerMessages;
+namespace App\Service\Infrastructure\Job\CheckMessengerMessages;
 
 /**
  * @codeCoverageIgnore

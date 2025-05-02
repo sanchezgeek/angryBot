@@ -13,6 +13,10 @@ class AddAdditionalDataToLogsProcessor implements ProcessorInterface
         $record->extra['acc_name'] = AppContext::accName() ?? 'null';
         $record->extra['worker_name'] = AppContext::runningWorker() ? AppContext::runningWorker()->name : 'null';
 
+        if ($symbol = $_ENV['PROCESSED_SYMBOL'] ?? null) {
+            $record->extra['symbol'] = $symbol;
+        }
+
         return $record;
     }
 }

@@ -3,8 +3,8 @@
 namespace App\Command\Service;
 
 use App\Command\AbstractCommand;
-use App\Service\Application\Messenger\Job\GenerateSupervisorConfigs;
-use App\Service\Application\Messenger\Job\GenerateSupervisorConfigsHandler;
+use App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs;
+use App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigsHandler;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;

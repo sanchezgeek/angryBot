@@ -7,7 +7,6 @@ namespace App\Messenger\SchedulerTransport;
 use App\Alarm\Application\Messenger\Job\Balance\CheckBalance;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay;
-use App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMessengerMessages;
 use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit;
@@ -18,16 +17,15 @@ use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
-use App\Bot\Application\Messenger\Job\Utils\FixupOrdersDoubling;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
-use App\Service\Application\Messenger\Job\GenerateSupervisorConfigs;
+use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
+use App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -127,43 +125,41 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', AsyncMessage::for(new CheckMessengerMessages())),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', AsyncMessage::for(new CheckApiKeyDeadlineDay())),
 
-            PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
+            // PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
-            PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
+            // PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # market
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(Symbol::BTCUSDT))),
-
-            # orders
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT12S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true))),
 
             # alarm
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckAlarm())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckBalance())),
 
             # connection
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckConnection())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckConnection())),
 
             # symbols
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
 
             # !!! position !!!
             // --- stops
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT45S', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
 
             // -- main positions loss
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT50S', AsyncMessage::for(new CheckPositionIsInLoss())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2M', AsyncMessage::for(new CheckPositionIsInLoss())),
 
             // -- positions profit
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckPositionIsInProfit())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckPositionIsInProfit())),
 
             // -- active BuyOrders
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10S', AsyncMessage::for(new CheckOrdersNowIsActive())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckOrdersNowIsActive())),
         ];
 
-        foreach ($this->getOpenedPositionsSymbols([Symbol::BTCUSDT]) as $symbol) {
+        foreach ($this->getOpenedPositionsSymbols() as $symbol) {
+            // @todo | all symbols at once
             $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
         }
 

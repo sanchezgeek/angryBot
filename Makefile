@@ -94,6 +94,7 @@ reload: ## Reload supervisor config
 	@$(PHP_CONT) /usr/bin/supervisorctl reload
 
 restart: ## Restart bot
+	@$(PHP_CONT) bash -c 'echo restart >> /srv/app/var/log/bot-supervizord-out.log'
 	@$(PHP_CONT) /usr/bin/supervisorctl restart all
 
 stop: ## Stop bot

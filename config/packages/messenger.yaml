@@ -1,5 +1,9 @@
 framework:
     messenger:
+        buses:
+            messenger.bus.default:
+                middleware:
+                    - App\Infrastructure\Symfony\Messenger\Middleware\OutputWorkerMemoryUsageMiddleware
         # Uncomment this (and the failed transport below) to send failed messages to this transport for later handling.
         # failure_transport: failed
 
@@ -19,8 +23,8 @@ framework:
 
         routing:
             # service
-            App\Application\Messenger\Infrastructure\CheckMessengerMessages\CheckMessengerMessages: service
-            App\Service\Application\Messenger\Job\GenerateSupervisorConfigs: service
+            App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages: service
+            App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs: service
 
             # account
             App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
@@ -46,7 +50,7 @@ framework:
             App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
 
             # connection
-            App\Connection\Application\Messenger\Job\CheckConnection: async_high
+            App\Connection\Application\Messenger\Job\CheckConnection: async
 
             # orders
             App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
