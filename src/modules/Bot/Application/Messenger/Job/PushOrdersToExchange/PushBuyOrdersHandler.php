@@ -28,7 +28,6 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -80,6 +79,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     /** "Reserved" - e.g. for avoiding liquidation */
     private const RESERVED_BALANCE = 0;
     public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
+    private const LAST_CANNOT_AFFORD_RESET_INTERVAL = 20;
 
     private array $lastCannotAffordAt = [];
     private array $lastCannotAffordAtPrice = [];
@@ -487,7 +487,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
     {
         $modifier = $ticker->indexPrice->value() * 0.0005;
 
-        $refreshSeconds = 8;
+        $refreshSeconds = self::LAST_CANNOT_AFFORD_RESET_INTERVAL;
         $lastCannotAffordAt = $this->lastCannotAffordAt[$ticker->symbol->value] ?? null;
         $lastCannotAffordAtPrice = $this->lastCannotAffordAtPrice[$ticker->symbol->value] ?? null;
 

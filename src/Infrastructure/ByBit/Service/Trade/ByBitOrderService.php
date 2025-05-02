@@ -24,10 +24,8 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use Closure;
 use Psr\Log\LoggerInterface;
-use Throwable;
 
 use function debug_backtrace;
-use function sprintf;
 
 final class ByBitOrderService implements OrderServiceInterface
 {
