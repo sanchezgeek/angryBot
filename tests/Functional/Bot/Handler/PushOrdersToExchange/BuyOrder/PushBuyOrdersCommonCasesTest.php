@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 
-use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
-use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
@@ -58,9 +56,6 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         self::truncateBuyOrders();
 
         $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
-
-        # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 10);
     }
 
     /**
@@ -78,6 +73,8 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         array $stopsExpectedAfterHandle,
     ): void {
         $symbol = $position->symbol;
+
+        $this->setMinimalSafePriceDistance($position->symbol, $position->side);
 
         $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
         $this->haveAvailableSpotBalance($symbol, 0);

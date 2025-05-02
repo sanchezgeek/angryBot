@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\UseCase\Trading\MarketBuy;
 
-use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
@@ -18,14 +17,11 @@ use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
-use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParametersInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\ContractBalanceTestHelper;
@@ -53,6 +49,7 @@ class MarketBuyHandlerTest extends KernelTestCase
 
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingSandboxFactoryInterface|MockObject $executionSandboxFactory;
+    private FurtherMainPositionLiquidationCheckParametersInterface|MockObject $mainPositionLiquidationParametersMock;
     private LoggerInterface $logger;
 
     private MarketBuyHandler $marketBuyHandler;
@@ -63,15 +60,14 @@ class MarketBuyHandlerTest extends KernelTestCase
         $this->executionSandboxFactory = $this->createMock(TradingSandboxFactoryInterface::class);
         $this->logger = new TestLogger();
 
-        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, self::SAFE_PRICE_DISTANCE);
-
-        $settings = self::getContainer()->get(AppSettingsProvider::class);
+        $this->mainPositionLiquidationParametersMock = $this->createMock(FurtherMainPositionLiquidationCheckParametersInterface::class);
+        $this->mainPositionLiquidationParametersMock->method('mainPositionSafeLiquidationPriceDelta')->willReturn((float)self::SAFE_PRICE_DISTANCE);
 
         $marketBuyCheckService = new MarketBuyCheckService(
             self::getContainer()->get(PositionServiceInterface::class),
             $this->executionSandboxFactory,
             $this->logger,
-            $settings,
+            $this->mainPositionLiquidationParametersMock
         );
 
         $this->marketBuyHandler = new MarketBuyHandler(
@@ -79,7 +75,6 @@ class MarketBuyHandlerTest extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(ExchangeServiceInterface::class),
             $this->sandboxStateFactory,
-            $settings,
             self::makeRateLimiterFactory()
         );
     }

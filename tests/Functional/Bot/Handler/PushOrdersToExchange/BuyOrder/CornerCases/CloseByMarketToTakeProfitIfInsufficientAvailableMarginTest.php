@@ -18,6 +18,8 @@ use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
+use App\Settings\Application\Service\Dto\SettingValueAccessor;
+use App\Stop\Application\Settings\SafePriceDistance;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -44,9 +46,6 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
 
         $this->orderCostCalculator = self::getContainer()->get(OrderCostCalculator::class);
 
-        # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $this->overrideSetting(TradingSettings::MarketBuy_SafePriceDistance, 500);
-
         # disable logging
         $orderService = self::getContainer()->get(OrderServiceInterface::class); /** @var ByBitOrderService $orderService */
         $orderService->unsetLogger();
@@ -67,6 +66,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         bool $takeProfitInCaseOfInsufficientBalanceEnabled,
         float $availableSpotBalance,
     ): void {
+        $this->setMinimalSafePriceDistance($position->symbol, $position->side);
         $this->overrideSetting(
             TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled,
             $takeProfitInCaseOfInsufficientBalanceEnabled
@@ -144,6 +144,8 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         BuyOrder $buyOrder,
         float $expectedCloseOrderVolume
     ): void {
+        $this->setMinimalSafePriceDistance($position->symbol, $position->side);
+
         $this->overrideSetting(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled, true);
 
         $symbol = $position->symbol;

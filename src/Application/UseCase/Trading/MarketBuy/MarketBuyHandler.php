@@ -12,7 +12,6 @@ use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\ExchangeOrder;
 use App\Helper\OutputHelper;
@@ -20,7 +19,6 @@ use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
-use App\Settings\Application\Service\AppSettingsProvider;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
@@ -39,9 +37,7 @@ readonly class MarketBuyHandler
     {
         $symbol = $dto->symbol;
 
-        if ($symbol === Symbol::BTCUSDT) {
-            $this->makeChecks($dto);
-        }
+        $this->makeChecks($dto);
 
         $ticker = $this->exchangeService->ticker($symbol);
         $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->lastPrice);
@@ -96,7 +92,6 @@ readonly class MarketBuyHandler
             order: $dto,
             ticker: $ticker,
             currentSandboxState: $currentState,
-            safePriceDistance: $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance),
         );
     }
 
@@ -108,7 +103,6 @@ readonly class MarketBuyHandler
         private OrderServiceInterface        $orderService,
         private ExchangeServiceInterface     $exchangeService,
         private SandboxStateFactoryInterface $sandboxStateFactory,
-        private AppSettingsProvider          $settings,
         private ?RateLimiterFactory $checkFurtherPositionLiquidationAfterBuyLimiter,
     ) {
     }

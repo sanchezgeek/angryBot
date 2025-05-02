@@ -43,6 +43,7 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProvider;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParametersInterface;
 use Psr\Log\NullLogger;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -147,7 +148,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         };
 
         $tradingSandbox->setMarketBuyCheckService(
-            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->settings)
+            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->furtherMainPositionLiquidationCheckParameters)
         );
 
         return $tradingSandbox;
@@ -421,12 +422,12 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
-        private readonly StopRepository           $stopRepository,
-        private readonly BuyOrderRepository       $buyOrderRepository,
-        PositionServiceInterface                  $positionService,
-        private readonly TradingSandboxFactory    $tradingSandboxFactory,
-        private readonly AppSettingsProvider      $settings,
-        string                                    $name = null,
+        private readonly StopRepository $stopRepository,
+        private readonly BuyOrderRepository $buyOrderRepository,
+        PositionServiceInterface $positionService,
+        private readonly TradingSandboxFactory $tradingSandboxFactory,
+        private readonly FurtherMainPositionLiquidationCheckParametersInterface $furtherMainPositionLiquidationCheckParameters,
+        string $name = null,
     ) {
         $this->withPositionService($positionService);
 

@@ -11,12 +11,11 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailab
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
 use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParametersInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -32,7 +31,6 @@ readonly class MarketBuyCheckService
         Ticker                $ticker,
         SandboxStateInterface $currentSandboxState,
         Position              $currentPositionState = null,
-        float                 $safePriceDistance = null
     ): void {
         if ($order->force) {
             return;
@@ -84,7 +82,7 @@ readonly class MarketBuyCheckService
             return;
         }
 
-        $safePriceDistance ??= $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
+        $safePriceDistance = $this->mainPositionLiquidationParameters->mainPositionSafeLiquidationPriceDelta($symbol, $positionSide, $markPrice->value());
         $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert(
             $positionSide,
             $liquidationPrice,
@@ -101,7 +99,7 @@ readonly class MarketBuyCheckService
         private PositionServiceInterface $positionService,
         private TradingSandboxFactoryInterface $sandboxFactory,
         private LoggerInterface $appErrorLogger,
-        private AppSettingsProvider $settings,
+        private FurtherMainPositionLiquidationCheckParametersInterface $mainPositionLiquidationParameters
     ) {
     }
 }

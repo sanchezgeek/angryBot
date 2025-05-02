@@ -82,9 +82,21 @@ final class AppSettingsProvider implements AppSettingsProviderInterface
     /**
      * @internal For tests
      */
-    public function set(SettingKeyAware $setting, mixed $value): void
+    public function set(SettingKeyAware|SettingValueAccessor $setting, mixed $value): void
     {
-        $this->overrides[$setting->getSettingKey()] = $value;
+        $settingValueAccessor = $setting instanceof SettingValueAccessor ? $setting : SettingValueAccessor::simple($setting);
+
+        $baseKey = $settingValueAccessor->setting->getSettingKey();
+        $side = $settingValueAccessor->side;
+        $symbol = $settingValueAccessor->symbol;
+
+        $key = match (true) {
+            $side !== null => sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol->value, $side->value),
+            $symbol !== null => sprintf('%s[symbol=%s]', $baseKey, $symbol->value),
+            default => $baseKey
+        };
+
+        $this->overrides[$key] = $value;
     }
 
     public function __construct(
