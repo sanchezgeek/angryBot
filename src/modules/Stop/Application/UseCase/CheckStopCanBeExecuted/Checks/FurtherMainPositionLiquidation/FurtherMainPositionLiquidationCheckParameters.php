@@ -5,28 +5,34 @@ declare(strict_types=1);
 namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Position\ValueObject\Side;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\Dto\SettingValueAccessor;
+use App\Stop\Application\Settings\SafePriceDistance;
 
-final class FurtherMainPositionLiquidationCheckParameters implements FurtherMainPositionLiquidationCheckParametersInterface
+final readonly class FurtherMainPositionLiquidationCheckParameters implements FurtherMainPositionLiquidationCheckParametersInterface
 {
-    public function mainPositionSafeLiquidationPriceDelta(Symbol $symbol, Price $tickerPrice): float
+    public function __construct(private AppSettingsProviderInterface $settingsProvider)
     {
-//        $this->saveLiquidationDistanceForMainPositionAfterCloseSupport = $this->settings->get(PushStopSettings::MainPositionSafeLiqDistance_After_PushSupportPositionStops);
-        $tickerPrice = $tickerPrice->value();
+    }
+
+    public function mainPositionSafeLiquidationPriceDelta(Symbol $symbol, Side $side, float $refPrice): float
+    {
+        if ($percentOverride = $this->settingsProvider->get(SettingValueAccessor::bySide(SafePriceDistance::SafePriceDistance_Percent, $symbol, $side), false)) {
+            return $refPrice * ($percentOverride / 100);
+        }
 
         return match (true) {
-            default => match (true) {
-                $tickerPrice > 10000 => $tickerPrice / 10,
-                $tickerPrice > 3000 => $tickerPrice / 8,
-                $tickerPrice > 2000 => $tickerPrice / 7,
-                $tickerPrice > 1000 => $tickerPrice / 5,
-                $tickerPrice > 100 => $tickerPrice / 4,
-                $tickerPrice > 1 => $tickerPrice / 6,
-                $tickerPrice > 0.1 => $tickerPrice / 7,
-                $tickerPrice > 0.05 => $tickerPrice / 3,
-                default => $tickerPrice * 2,
-                // default => $closingPosition->entryPrice()->deltaWith($ticker->markPrice) * 2
-            }
+            $refPrice >= 10000 => $refPrice / 10,
+            $refPrice >= 3000 => $refPrice / 8,
+            $refPrice >= 2000 => $refPrice / 7,
+            $refPrice >= 1000 => $refPrice / 5,
+            $refPrice >= 100 => $refPrice / 4,
+            $refPrice >= 1 => $refPrice / 6,
+            $refPrice >= 0.1 => $refPrice / 7,
+            $refPrice >= 0.05 => $refPrice / 3,
+            default => $refPrice * 1.4,
+            // default => $closingPosition->entryPrice()->deltaWith($ticker->markPrice) * 2
         };
     }
 }

@@ -24,8 +24,6 @@ use Psr\Log\LoggerInterface;
  */
 readonly class MarketBuyCheckService
 {
-    private float $defaultSafePriceDistance;
-
     /**
      * @throws BuyIsNotSafeException
      */
@@ -86,7 +84,7 @@ readonly class MarketBuyCheckService
             return;
         }
 
-        $safePriceDistance ??= $this->defaultSafePriceDistance;
+        $safePriceDistance ??= $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
         $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert(
             $positionSide,
             $liquidationPrice,
@@ -105,6 +103,5 @@ readonly class MarketBuyCheckService
         private LoggerInterface $appErrorLogger,
         private AppSettingsProvider $settings,
     ) {
-        $this->defaultSafePriceDistance = $this->settings->get(TradingSettings::MarketBuy_SafePriceDistance);
     }
 }

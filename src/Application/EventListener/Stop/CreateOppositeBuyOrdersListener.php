@@ -35,21 +35,10 @@ final class CreateOppositeBuyOrdersListener
         Symbol::ARCUSDT->value => 400,
     ];
 
-    private Percent $longOppositePnlDistance;
-    private Percent $shortOppositePnlDistance;
-
-    private Percent $longOppositePnlDistanceForAltCoin;
-    private Percent $shortOppositePnlDistanceForAltCoin;
-
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly AppSettingsProvider $settings,
     ) {
-        $this->longOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false);
-        $this->shortOppositePnlDistance = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false);
-
-        $this->longOppositePnlDistanceForAltCoin = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false);
-        $this->shortOppositePnlDistanceForAltCoin = Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false);
     }
 
     public function __invoke(StopPushedToExchange $event): void
@@ -122,9 +111,15 @@ final class CreateOppositeBuyOrdersListener
         }
 
         if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
-            return $stop->getPositionSide()->isLong() ? $this->longOppositePnlDistanceForAltCoin : $this->shortOppositePnlDistanceForAltCoin;
+            return $stop->getPositionSide()->isLong()
+                ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false)
+                : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false)
+            ;
         }
 
-        return $stop->getPositionSide()->isLong() ? $this->longOppositePnlDistance : $this->shortOppositePnlDistance;
+        return $stop->getPositionSide()->isLong()
+            ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false)
+            : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false)
+        ;
     }
 }

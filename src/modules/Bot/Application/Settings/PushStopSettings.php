@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Settings;
 
-use App\Settings\Application\Service\SettingKeyAware;
+use App\Settings\Application\Contract\SettingKeyAware;
 
 enum PushStopSettings: string implements SettingKeyAware
 {

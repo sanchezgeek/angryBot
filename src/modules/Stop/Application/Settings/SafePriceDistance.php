@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Connection\Application\Settings;
+namespace App\Stop\Application\Settings;
 
 use App\Settings\Application\Contract\SettingKeyAware;
 
-enum ConnectionSettings: string implements SettingKeyAware
+enum SafePriceDistance: string implements SettingKeyAware
 {
-    case CheckConnectionEnabled = 'connection.check.enabled';
+    case SafePriceDistance_Percent = 'safePriceDistance.percent';
 
     public function getSettingKey(): string
     {

@@ -25,6 +25,9 @@ use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Mixin\CheckBasedOnExecut
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
+/**
+ * @see \App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidationCheckTest
+ */
 final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
 {
     use SandboxExecutionAwareTrait;
@@ -130,9 +133,9 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
         }
 
         $tickerPrice = $ticker->markPrice;
-        $safeDistance = $this->parameters->mainPositionSafeLiquidationPriceDelta($mainPosition->symbol, $tickerPrice);
         // @todo separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $mainPosition->isPositionInLoss($tickerPrice) ? $tickerPrice : $mainPosition->entryPrice();
+        $safeDistance = $this->parameters->mainPositionSafeLiquidationPriceDelta($mainPosition->symbol, $mainPosition->side, $withPrice->value());
         $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert($mainPosition->side, $mainPositionLiquidationPriceNew, $withPrice, $safeDistance);
 
         $reason = sprintf(

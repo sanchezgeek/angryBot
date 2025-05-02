@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Settings\Application\Service;
+namespace App\Settings\Application\Contract;
 
 interface SettingKeyAware
 {

@@ -27,6 +27,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+/**
+ * @covers FurtherMainPositionLiquidationCheck
+ */
 final class FurtherMainPositionLiquidationCheckTest extends TestCase
 {
     use RateLimiterAwareTest;
@@ -81,7 +84,7 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         $sandbox->expects(self::once())->method('getCurrentState')->willReturn($newSandboxState);
         $this->tradingSandboxFactory->expects(self::once())->method('empty')->with($symbol)->willReturn($sandbox);
 
-        $this->parameters->method('mainPositionSafeLiquidationPriceDelta')->with($symbol, $ticker->markPrice)->willReturn($safePriceDistance);
+        $this->parameters->method('mainPositionSafeLiquidationPriceDelta')->with($symbol, $mainPosition->side, $ticker->markPrice->value())->willReturn($safePriceDistance);
 
         $result = $this->check->check($stop, $context);
 
