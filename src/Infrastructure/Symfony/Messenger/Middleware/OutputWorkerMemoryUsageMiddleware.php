@@ -10,6 +10,7 @@ use App\Worker\AppContext;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
+use Throwable;
 
 final class OutputWorkerMemoryUsageMiddleware implements MiddlewareInterface
 {
@@ -22,6 +23,19 @@ final class OutputWorkerMemoryUsageMiddleware implements MiddlewareInterface
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
     {
+        try {
+            $this->doLog();
+        } catch (Throwable) {}
+
+        return $stack->next()->handle($envelope, $stack);
+    }
+
+    private function doLog(): void
+    {
+        if (!($_ENV['LOG_MEMORY'] ?? null)) {
+            return;
+        }
+
         $worker = AppContext::runningWorker();
 
         if (
@@ -50,8 +64,6 @@ final class OutputWorkerMemoryUsageMiddleware implements MiddlewareInterface
         }
 
         $this->iterationsCount++;
-
-        return $stack->next()->handle($envelope, $stack);
     }
 }
 
