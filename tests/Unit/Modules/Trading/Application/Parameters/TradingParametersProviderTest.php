@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks;
+namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
@@ -10,17 +10,17 @@ use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\Dto\SettingValueAccessor;
 use App\Stop\Application\Settings\SafePriceDistance;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParameters;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Trading\Application\Parameters\TradingParametersProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers FurtherMainPositionLiquidationCheckParameters
+ * @covers TradingParametersProvider
  *
  * @group parameters
  */
-final class FurtherMainPositionLiquidationCheckParametersTest extends TestCase
+final class TradingParametersProviderTest extends TestCase
 {
     use SettingsAwareTest;
 
@@ -37,9 +37,9 @@ final class FurtherMainPositionLiquidationCheckParametersTest extends TestCase
     {
         $expectedSafeDistance = self::getExpectedSafeDistance(Symbol::ARCUSDT, Side::Sell, $refPrice);
 
-        $parameters = new FurtherMainPositionLiquidationCheckParameters($this->appSettingsProvider);
+        $parameters = new TradingParametersProvider($this->appSettingsProvider);
 
-        $result = $parameters->mainPositionSafeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
+        $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
         self::assertEquals($expectedSafeDistance, $result);
     }
@@ -135,9 +135,9 @@ final class FurtherMainPositionLiquidationCheckParametersTest extends TestCase
     {
         $this->appSettingsProvider->method('get')->with(SettingValueAccessor::bySide(SafePriceDistance::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
 
-        $parameters = new FurtherMainPositionLiquidationCheckParameters($this->appSettingsProvider);
+        $parameters = new TradingParametersProvider($this->appSettingsProvider);
 
-        $result = $parameters->mainPositionSafeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
+        $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
         self::assertEquals($expectedSafeDistance, $result);
     }

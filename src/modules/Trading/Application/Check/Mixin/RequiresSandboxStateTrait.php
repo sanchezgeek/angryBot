@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Mixin;
+namespace App\Trading\Application\Check\Mixin;
 
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 use RuntimeException;
 
 trait RequiresSandboxStateTrait
 {
-    private static function checkCurrentSandboxStateIsSet(StopChecksContext $context): void
+    private static function checkCurrentSandboxStateIsSet(TradingCheckContext $context): void
     {
         if (!$context->currentSandboxState) {
             throw new RuntimeException(

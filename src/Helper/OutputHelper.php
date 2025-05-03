@@ -82,8 +82,10 @@ class OutputHelper
         var_dump(array_map(static fn(Stop|BuyOrder $order) => sprintf('%s | %s%s', $order->getPrice(), $order instanceof Stop ? 's.' : 'b.', $order->getId()), $orders));
     }
 
-    public static function shortClassName(string $className): string
+    public static function shortClassName(string|object $className): string
     {
+        $className = is_string($className) ? $className : get_class($className);
+
         $methodName = null;
         if (str_contains($className, '::')) {
             $parts = explode('::', $className);

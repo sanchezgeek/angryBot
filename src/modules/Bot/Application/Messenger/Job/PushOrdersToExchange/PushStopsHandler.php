@@ -26,10 +26,8 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Settings\Application\Service\AppSettingsProvider;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -47,8 +45,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
     // @todo | need to review (based on other values through handling)
     public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
     public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
-
-    private StopChecksChain $checksChain;
 
     public function __invoke(PushStops $message): void
     {
@@ -72,12 +68,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
         $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $currentPrice);
 
-        $stopChecksContext = StopChecksContext::create($ticker, $position);
+        $checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);
         foreach ($stops as $stop) {
             ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
-                    $this->pushStopToExchange($ticker, $stop, $stopChecksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                    $this->pushStopToExchange($ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
                 }
                 continue;
             }
@@ -88,11 +84,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
             $callback = null;
             if ($stop->isCloseByMarketContextSet()) {
-                if (!$currentPriceOverStop || !$this->stopCanBePushed($stop, $stopChecksContext)) continue;
+                if (!$currentPriceOverStop || !$this->stopCanBePushed($stop, $checksContext)) continue;
                 $callback = self::closeByMarketCallback($orderService, $position, $stop, $stopsClosedByMarket);
             } else {
                 $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $stop->getTriggerDelta();
-                if ((!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) || !$this->stopCanBePushed($stop, $stopChecksContext)) continue;
+                if ((!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) || !$this->stopCanBePushed($stop, $checksContext)) continue;
 
                 if ($currentPriceOverStop) {
                     if ($distanceWithLiquidation <= $liquidationCriticalDistance) {
@@ -107,7 +103,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 }
             }
 
-            $this->pushStopToExchange($ticker, $stop, $stopChecksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+            $this->pushStopToExchange($ticker, $stop, $checksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
                 try {
                     return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                 } catch (Throwable) {
@@ -129,9 +125,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
         };
     }
 
-    private function stopCanBePushed(Stop $stop, StopChecksContext $stopChecksContext): bool
+    private function stopCanBePushed(Stop $stop, TradingCheckContext $checksContext): bool
     {
-        $checkResult = $this->checksChain->check($stop, $stopChecksContext);
+        $checkResult = $this->checks->check($stop, $checksContext);
         $description = $checkResult->description();
         if ($description) {
             OutputHelper::warning($description);
@@ -140,12 +136,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $checkResult->success;
     }
 
-    private function pushStopToExchange(Ticker $ticker, Stop $stop, StopChecksContext $stopChecksContext, callable $pushStopCallback): void
+    private function pushStopToExchange(Ticker $ticker, Stop $stop, TradingCheckContext $checksContext, callable $pushStopCallback): void
     {
         try {
             $exchangeOrderId = $pushStopCallback();
             $stop->wasPushedToExchange($exchangeOrderId);
-            $stopChecksContext->resetState();
+            $checksContext->resetState();
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -195,15 +191,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly OrderServiceInterface $orderService,
 
         private readonly MessageBusInterface $messageBus,
-        private readonly StopChecksChainFactory $stopChecksChainFactory,
-        private readonly AppSettingsProvider $settings,
+        private readonly StopChecksChain $checks,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $appErrorLogger,
         ClockInterface $clock,
     ) {
-        $this->checksChain = $this->stopChecksChainFactory->full();
-
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }
 }

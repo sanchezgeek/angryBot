@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation;
+namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
@@ -16,19 +16,19 @@ use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\AbstractStopCheck;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Exception\TooManyTriesForCheckStop;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Mixin\CheckBasedOnCurrentPositionState;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Mixin\CheckBasedOnExecutionInSandbox;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\Application\Check\Mixin\CheckBasedOnCurrentPositionState;
+use App\Trading\Application\Check\Mixin\CheckBasedOnExecutionInSandbox;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Throwable;
 
 /**
  * @see \App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidationCheckTest
  */
-final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
+final class StopAndCheckFurtherMainPositionLiquidation extends AbstractStopCheck
 {
     use SandboxExecutionAwareTrait;
     use CheckBasedOnExecutionInSandbox;
@@ -41,7 +41,7 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
     private int $cacheSavedAt;
 
     public function __construct(
-        private readonly FurtherMainPositionLiquidationCheckParametersInterface $parameters,
+        private readonly TradingParametersProviderInterface $parameters,
         private readonly RateLimiterFactory $checkCanCloseSupportWhilePushStopsThrottlingLimiter,
         PositionServiceInterface $positionService,
         TradingSandboxFactoryInterface $sandboxFactory,
@@ -53,14 +53,15 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
         $this->cacheSavedAt = time();
     }
 
-    public function supports(Stop $stop, StopChecksContext $context): bool
+    // @todo test?
+    public function supports(Stop $stop, TradingCheckContext $context): bool
     {
-        $this->enrichContextWithCurrentPositionState($stop, $context);
+        $this->enrichContextWithCurrentPositionState($stop->getSymbol(), $stop->getPositionSide(), $context);
 
         return $context->currentPositionState->isSupportPosition();
     }
 
-    public function check(Stop $stop, StopChecksContext $context): StopCheckResult
+    public function check(Stop $stop, TradingCheckContext $context): StopCheckResult
     {
         if (!$this->checkCanCloseSupportWhilePushStopsThrottlingLimiter->create((string)$stop->getId())->consume()->isAccepted()) {
             throw new TooManyTriesForCheckStop(sprintf('Too many tries for "%s" check (Stop.id = %d)', OutputHelper::shortClassName(__CLASS__), $stop->getId()));
@@ -74,7 +75,7 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
     /**
      * @throws UnexpectedSandboxExecutionException
      */
-    private function cached(Stop $stop, StopChecksContext $context): StopCheckResult
+    private function cached(Stop $stop, TradingCheckContext $context): StopCheckResult
     {
         $range = 2;
         $tickerPrice = self::realStopExecutionPrice($context->ticker, $stop);
@@ -102,7 +103,7 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
     /**
      * @throws UnexpectedSandboxExecutionException
      */
-    public function doCheck(Stop $stop, StopChecksContext $context): StopCheckResult
+    public function doCheck(Stop $stop, TradingCheckContext $context): StopCheckResult
     {
         $this->enrichContextWithCurrentSandboxState($context);
 
@@ -132,10 +133,12 @@ final class FurtherMainPositionLiquidationCheck extends AbstractStopCheck
             );
         }
 
+        // @todo check liq params
+
         $tickerPrice = $ticker->markPrice;
         // @todo separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $mainPosition->isPositionInLoss($tickerPrice) ? $tickerPrice : $mainPosition->entryPrice();
-        $safeDistance = $this->parameters->mainPositionSafeLiquidationPriceDelta($mainPosition->symbol, $mainPosition->side, $withPrice->value());
+        $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPosition->symbol, $mainPosition->side, $withPrice->value());
         $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert($mainPosition->side, $mainPositionLiquidationPriceNew, $withPrice, $safeDistance);
 
         $reason = sprintf(

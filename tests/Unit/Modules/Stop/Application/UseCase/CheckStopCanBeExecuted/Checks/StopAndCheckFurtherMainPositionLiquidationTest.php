@@ -15,41 +15,41 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\Helper\PositionClone;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheck;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParametersInterface;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\StopAndCheckFurtherMainPositionLiquidation;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\RateLimiterAwareTest;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * @covers FurtherMainPositionLiquidationCheck
+ * @covers StopAndCheckFurtherMainPositionLiquidation
  *
  * @group checks
  */
-final class FurtherMainPositionLiquidationCheckTest extends TestCase
+final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
 {
     use RateLimiterAwareTest;
 
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
-    private FurtherMainPositionLiquidationCheckParametersInterface|MockObject $parameters;
+    private TradingParametersProviderInterface|MockObject $parameters;
 
-    private FurtherMainPositionLiquidationCheck $check;
+    private StopAndCheckFurtherMainPositionLiquidation $check;
 
     protected function setUp(): void
     {
         $this->tradingSandboxFactory = $this->createMock(TradingSandboxFactoryInterface::class);
         $this->sandboxStateFactory = $this->createMock(SandboxStateFactoryInterface::class);
-        $this->parameters = $this->createMock(FurtherMainPositionLiquidationCheckParametersInterface::class);
+        $this->parameters = $this->createMock(TradingParametersProviderInterface::class);
         $positionService = $this->createMock(PositionServiceInterface::class);
 
-        $this->check = new FurtherMainPositionLiquidationCheck(
+        $this->check = new StopAndCheckFurtherMainPositionLiquidation(
             $this->parameters,
             self::makeRateLimiterFactory(),
             $positionService,
@@ -74,7 +74,7 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         $mainPosition = $stoppedSupportPosition->oppositePosition;
 
         # initial context
-        $context = StopChecksContext::create($ticker, $stoppedSupportPosition);
+        $context = TradingCheckContext::withCurrentPositionState($ticker, $stoppedSupportPosition);
         $initialSandboxState = self::mockSandboxState($ticker, $stoppedSupportPosition, $mainPosition);
         $context->currentSandboxState = $initialSandboxState;
 
@@ -86,16 +86,11 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         $sandbox->expects(self::once())->method('getCurrentState')->willReturn($newSandboxState);
         $this->tradingSandboxFactory->expects(self::once())->method('empty')->with($symbol)->willReturn($sandbox);
 
-        $this->parameters->method('mainPositionSafeLiquidationPriceDelta')->with($symbol, $mainPosition->side, $ticker->markPrice->value())->willReturn($safePriceDistance);
+        $this->parameters->method('safeLiquidationPriceDelta')->with($symbol, $mainPosition->side, $ticker->markPrice->value())->willReturn($safePriceDistance);
 
         $result = $this->check->check($stop, $context);
 
         self::assertEquals($expectedResult, $result);
-    }
-
-    private static function mockSandboxState(Ticker $ticker, Position ...$positions): SandboxState
-    {
-        return new SandboxState($ticker, new ContractBalance($ticker->symbol->associatedCoin(), 100500, 100500, 100500), $ticker->symbol->associatedCoinAmount(100500), ...$positions);
     }
 
     public function cases(): iterable
@@ -128,6 +123,11 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
         // @todo check 0
     }
 
+    private static function mockSandboxState(Ticker $ticker, Position ...$positions): SandboxState
+    {
+        return new SandboxState($ticker, new ContractBalance($ticker->symbol->associatedCoin(), 100500, 100500, 100500), $ticker->symbol->associatedCoinAmount(100500), ...$positions);
+    }
+
     private static function result(bool $success, Ticker $ticker, Position $closingPosition, Stop $stop, float $safePriceDistance, float $mainPositionLiquidationPriceNew): StopCheckResult
     {
         $executionPrice = $stop->isCloseByMarketContextSet() ? $ticker->markPrice : $ticker->symbol->makePrice($stop->getPrice());
@@ -142,6 +142,6 @@ final class FurtherMainPositionLiquidationCheckTest extends TestCase
             $mainPositionLiquidationPriceNew
         );
 
-        return $success ? FurtherMainPositionLiquidationCheck::positiveResult($reason) : FurtherMainPositionLiquidationCheck::negativeResult($reason);
+        return $success ? StopAndCheckFurtherMainPositionLiquidation::positiveResult($reason) : StopAndCheckFurtherMainPositionLiquidation::negativeResult($reason);
     }
 }

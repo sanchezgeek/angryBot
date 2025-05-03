@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit;
 
-use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -18,7 +17,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -79,8 +78,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
             $this->stopRepository,
             $this->orderServiceMock,
             $this->messageBus,
-            self::getContainer()->get(StopChecksChainFactory::class),
-            self::getContainerSettingsProvider(),
+            self::getContainer()->get(StopChecksChain::class),
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

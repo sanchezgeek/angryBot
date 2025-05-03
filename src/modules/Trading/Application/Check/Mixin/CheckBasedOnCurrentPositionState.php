@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Mixin;
+namespace App\Trading\Application\Check\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Entity\Stop;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 
 trait CheckBasedOnCurrentPositionState
 {
@@ -17,10 +18,10 @@ trait CheckBasedOnCurrentPositionState
         $this->positionService = $positionService;
     }
 
-    public function enrichContextWithCurrentPositionState(Stop $stop, StopChecksContext $context): void
+    public function enrichContextWithCurrentPositionState(Symbol $symbol, Side $positionSide, TradingCheckContext $context): void
     {
         if (!$context->currentPositionState) {
-            $context->currentPositionState = $this->positionService->getPosition($stop->getSymbol(), $stop->getPositionSide());
+            $context->currentPositionState = $this->positionService->getPosition($symbol, $positionSide);
         }
     }
 }

@@ -33,10 +33,6 @@ framework:
             policy: 'fixed_window'
             limit: 5
             interval: '1 day'
-        check_further_position_liquidation_after_buy:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '45 seconds'
         calc_new_volume_based_on_wished_liquidation_price_notice_throttling:
             policy: 'fixed_window'
             limit: 1

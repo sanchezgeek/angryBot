@@ -6,7 +6,6 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
-use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
 use App\Application\UseCase\Trading\Sandbox\Assertion\PositionLiquidationIsAfterOrderPriceAssertion;
@@ -17,7 +16,6 @@ use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionFailResultReason;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
-use App\Application\UseCase\Trading\Sandbox\Exception\AbstractSandboxExecutionFlowException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
@@ -26,6 +24,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\FurtherPositionLiquidationCheck\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -36,6 +36,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 use Exception;
 use RuntimeException;
 
@@ -74,19 +75,19 @@ class TradingSandbox implements TradingSandboxInterface
 
     public function getCurrentState(): SandboxStateInterface
     {
-        return (clone $this->currentState);
+        return clone $this->currentState;
     }
 
-    private ?MarketBuyCheckService $marketBuyCheckService = null;
+    private ?BuyChecksChain $checks = null;
 
     public function setErrorsHandlingType(SandboxErrorsHandlingType $errorsHandlingType): void
     {
         $this->errorsHandlingType = $errorsHandlingType;
     }
 
-    public function setMarketBuyCheckService(?MarketBuyCheckService $marketBuyCheckService): void
+    public function setChecks(BuyChecksChain $checks): void
     {
-        $this->marketBuyCheckService = $marketBuyCheckService;
+        $this->checks = $checks;
     }
 
     public function setState(SandboxStateInterface $state): void
@@ -187,6 +188,7 @@ class TradingSandbox implements TradingSandboxInterface
         $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $this->getLeverage($positionSide), $positionSide)->value();
 
         $availableBalance = $currentState->getAvailableBalance()->value();
+//        $availableBalance = $this->getAvailableBalance()->value();
         if ($availableBalance < $cost) {
             $this->throwExceptionWhileExecute(
                 SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('avail=%s < order.cost=%s', $availableBalance, $cost))
@@ -201,20 +203,41 @@ class TradingSandbox implements TradingSandboxInterface
          *       Instead of running checks right there, create MarketBuyHandler with some stubs as dependencies (that will make changes in sandbox)
          *       So ALL checks that is being performed before real buy will be applied
          */
-        if ($this->marketBuyCheckService) {
+        if ($this->checks) {
             assert($order->sourceOrder !== null, new RuntimeException('To do checks in sandbox source BuyOrder must be specified'));
-            $this->marketBuyCheckService->doChecks(
+
+            $context = TradingCheckContext::full($this->createTicker($price), $this->currentState->getPosition($positionSide), $this->getCurrentState())->disableThrottling();
+
+            // fetching from cache must be disabled somewhere (here or in OrdersTotalInfoCommand)
+            $checksResult = $this->checks->check(
                 MarketBuyEntryDto::fromBuyOrder($order->sourceOrder),
-                $this->createTicker($price),
-                $currentState,
-                $this->currentState->getPosition($positionSide)
+                $context
             );
+
+            // DRY?
+            if (!$checksResult->success) {
+                match (true) {
+                    $checksResult instanceof FurtherPositionLiquidationAfterBuyIsTooClose => throw new BuyIsNotSafeException(
+                        sprintf('liquidation is too near [distance = %s vs min.=%s]', $checksResult->actualDistance(), $checksResult->safeDistance)
+                    ),
+                    default => throw new BuyIsNotSafeException($checksResult->info() ?? ''),
+                };
+            }
         }
 
         $this->notice(sprintf('modify free balance with %s (order cost)', -$cost)); $currentState->modifyFreeBalance(-$cost);
         $this->modifyPositionWithBuy($positionSide, $orderDto);
 
         return $this->considerBuyCostAsLoss ? -$cost : 0;
+    }
+
+    private function getAvailableBalance(): CoinAmount
+    {
+        /** @var SandboxState $currentState */
+        $currentState = $this->currentState;
+        $contractBalance = $currentState->contractBalance;
+
+        return $contractBalance->available;
     }
 
     /**

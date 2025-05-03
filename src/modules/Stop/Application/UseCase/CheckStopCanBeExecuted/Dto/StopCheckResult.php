@@ -23,9 +23,9 @@ final readonly class StopCheckResult
         return new self(false, $source, $reason);
     }
 
-    public function resetReason(?string $reason = null): self
+    public function resetReason(): self
     {
-        return new self($this->success, $this->source, $reason);
+        return new self($this->success, $this->source, null);
     }
 
     public function description(): ?string

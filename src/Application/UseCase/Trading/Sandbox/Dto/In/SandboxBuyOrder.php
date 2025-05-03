@@ -34,9 +34,9 @@ readonly class SandboxBuyOrder implements Stringable, VolumeSignAwareInterface, 
         return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $withPrice, $buyOrder->getVolume(), $buyOrder);
     }
 
-    public static function fromMarketBuyEntryDto(MarketBuyEntryDto $marketBuyDto, Price $price): SandboxBuyOrder
+    public static function fromMarketBuyEntryDto(MarketBuyEntryDto $marketBuyDto, Price $price): self
     {
-        return new self($marketBuyDto->symbol, $marketBuyDto->positionSide, Price::toFloat($price), $marketBuyDto->volume);
+        return new self($marketBuyDto->symbol, $marketBuyDto->positionSide, Price::toFloat($price), $marketBuyDto->volume, $marketBuyDto?->sourceBuyOrder);
     }
 
     public function desc(): string

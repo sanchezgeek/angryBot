@@ -12,17 +12,10 @@ final class StopCheckResultTest extends TestCase
     public function testClone(): void
     {
         $prevResult = StopCheckResult::negative('som-class', 'some-reason');
-        $clone = $prevResult->resetReason('other-reason');
-
-        self::assertEquals($prevResult->success, $clone->success);
-        self::assertEquals($prevResult->source, $clone->source);
-        self::assertEquals('other-reason', $clone->reason);
-
-        $prevResult = StopCheckResult::negative('som-class', 'some-reason');
         $clone = $prevResult->resetReason();
 
         self::assertEquals($prevResult->success, $clone->success);
         self::assertEquals($prevResult->source, $clone->source);
-        self::assertIsNotArray($clone->reason);
+        self::assertNull($clone->reason);
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation;
+namespace App\Trading\Application\Parameters;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
@@ -10,13 +10,18 @@ use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\Dto\SettingValueAccessor;
 use App\Stop\Application\Settings\SafePriceDistance;
 
-final readonly class FurtherMainPositionLiquidationCheckParameters implements FurtherMainPositionLiquidationCheckParametersInterface
+/**
+ * @see \App\Tests\Unit\Modules\Trading\Application\Parameters\TradingParametersProviderTest
+ */
+final readonly class TradingParametersProvider implements TradingParametersProviderInterface
 {
+    // cache ?
+
     public function __construct(private AppSettingsProviderInterface $settingsProvider)
     {
     }
 
-    public function mainPositionSafeLiquidationPriceDelta(Symbol $symbol, Side $side, float $refPrice): float
+    public function safeLiquidationPriceDelta(Symbol $symbol, Side $side, float $refPrice): float
     {
         if ($percentOverride = $this->settingsProvider->get(SettingValueAccessor::bySide(SafePriceDistance::SafePriceDistance_Percent, $symbol, $side), false)) {
             return $refPrice * ($percentOverride / 100);

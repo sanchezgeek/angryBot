@@ -7,17 +7,17 @@ namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Domain\Entity\Stop;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Exception\TooManyTriesForCheckStop;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 
 interface StopCheckInterface
 {
-//    public function prepareContext(StopChecksContext $context): void;
-    public function supports(Stop $stop, StopChecksContext $context): bool;
+//    public function prepareContext(TradingCheckContext $context): void;
+    public function supports(Stop $stop, TradingCheckContext $context): bool;
 
     /**
      * @throws TooManyTriesForCheckStop
      * @throws UnexpectedSandboxExecutionException
      */
-    public function check(Stop $stop, StopChecksContext $context): StopCheckResult;
+    public function check(Stop $stop, TradingCheckContext $context): StopCheckResult;
 }

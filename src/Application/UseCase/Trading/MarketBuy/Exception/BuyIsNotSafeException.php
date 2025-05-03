@@ -8,8 +8,4 @@ use Exception;
 
 final class BuyIsNotSafeException extends Exception
 {
-    public static function liquidationTooNear(float $withDistance, float $minApplicableDistance): self
-    {
-        return new self(sprintf('liquidationPrice is too near [distance = %s vs min.=%s]', $withDistance, $minApplicableDistance));
-    }
 }

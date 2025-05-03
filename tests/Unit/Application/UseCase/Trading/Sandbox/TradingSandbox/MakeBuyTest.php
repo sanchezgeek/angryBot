@@ -112,7 +112,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $initialState = new SandboxState($ticker, $contractBalance, $contractBalance->free, $longInitial);
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 63400, 0.001);
 
-        $shortAfterMake = PB::short()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->liq(0)->build();
+        $shortAfterMake = PB::short()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->withoutLiquidation()->build();
         $longAfterMake = PB::long()->entry($longInitial->entryPrice)->size($longInitial->size)->liq(46499.09)->opposite($shortAfterMake)->build();
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 

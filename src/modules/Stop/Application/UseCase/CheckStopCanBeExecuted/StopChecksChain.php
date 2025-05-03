@@ -9,8 +9,8 @@ use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandb
 use App\Bot\Domain\Entity\Stop;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\AbstractStopCheck;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopChecksContext;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Exception\TooManyTriesForCheckStop;
+use App\Trading\Application\Check\Dto\TradingCheckContext;
 
 final class StopChecksChain
 {
@@ -24,7 +24,7 @@ final class StopChecksChain
         $this->checks = $checks;
     }
 
-    public function check(Stop $stop, StopChecksContext $context): StopCheckResult
+    public function check(Stop $stop, TradingCheckContext $context): StopCheckResult
     {
         $results = [];
         foreach ($this->checks as $check) {
