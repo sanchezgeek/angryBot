@@ -29,6 +29,8 @@ use RuntimeException;
 
 /**
  * @covers FurtherMainPositionLiquidationCheck
+ *
+ * @group checks
  */
 final class FurtherMainPositionLiquidationCheckTest extends TestCase
 {

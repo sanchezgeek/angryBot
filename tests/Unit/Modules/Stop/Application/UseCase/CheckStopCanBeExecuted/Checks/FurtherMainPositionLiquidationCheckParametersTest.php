@@ -15,6 +15,11 @@ use App\Tests\Mixin\Settings\SettingsAwareTest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers FurtherMainPositionLiquidationCheckParameters
+ *
+ * @group parameters
+ */
 final class FurtherMainPositionLiquidationCheckParametersTest extends TestCase
 {
     use SettingsAwareTest;
@@ -150,14 +155,16 @@ final class FurtherMainPositionLiquidationCheckParametersTest extends TestCase
     private static function getExpectedSafeDistance(Symbol $symbol, Side $side, float $refPrice): float
     {
         return match (true) {
-            $refPrice > 10000 => $refPrice / 10,
-            $refPrice > 3000 => $refPrice / 8,
-            $refPrice > 2000 => $refPrice / 7,
-            $refPrice > 1000 => $refPrice / 5,
-            $refPrice > 100 => $refPrice / 4,
-            $refPrice > 1 => $refPrice / 6,
-            $refPrice > 0.1 => $refPrice / 7,
-            $refPrice > 0.05 => $refPrice / 3,
+            $refPrice >= 10000 => $refPrice / 12,
+            $refPrice >= 5000 => $refPrice / 10,
+            $refPrice >= 2000 => $refPrice / 9,
+            $refPrice >= 1500 => $refPrice / 8,
+            $refPrice >= 1000 => $refPrice / 6,
+            $refPrice >= 100 => $refPrice / 4,
+            $refPrice >= 1 => $refPrice / 3,
+            $refPrice >= 0.1 => $refPrice / 2.5,
+            $refPrice >= 0.05 => $refPrice / 2,
+            $refPrice >= 0.03 => $refPrice,
             default => $refPrice * 1.4,
         };
     }
