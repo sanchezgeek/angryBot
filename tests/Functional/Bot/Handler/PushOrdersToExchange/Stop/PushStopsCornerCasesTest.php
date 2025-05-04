@@ -40,6 +40,8 @@ use function uuid_create;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
+ *
+ * @group stop
  */
 final class PushStopsCornerCasesTest extends KernelTestCase
 {

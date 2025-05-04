@@ -45,6 +45,8 @@ use function sprintf;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
+ *
+ * @group stop
  */
 final class PushStopsCommonCasesTest extends KernelTestCase
 {

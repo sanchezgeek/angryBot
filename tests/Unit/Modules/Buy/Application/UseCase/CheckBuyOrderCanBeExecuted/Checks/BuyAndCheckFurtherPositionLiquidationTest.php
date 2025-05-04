@@ -13,9 +13,9 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\FurtherPositionLiquidationCheck\BuyAndCheckFurtherPositionLiquidation;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\FurtherPositionLiquidationCheck\FurtherPositionLiquidationAfterBuyIsTooClose;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyAndCheckFurtherPositionLiquidation;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
@@ -24,10 +24,10 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Trading\PositionPreset;
 use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Sandbox\SandboxUnitTester;
-use App\Trading\Application\Check\Contract\AbstractTradingCheckResult;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
-use App\Trading\Application\Check\Dto\TradingCheckResult;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -48,7 +48,6 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
 
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
             $this->parameters,
-            self::makeRateLimiterFactory(),
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,
@@ -73,6 +72,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
         self::expectExceptionObject(new UnexpectedSandboxExecutionException($message, 0, $thrownException));
 
         // Assert
+        $orderDto = new MarketBuyCheckDto($orderDto, $ticker);
         $this->check->check($orderDto, $context);
     }
 
@@ -105,6 +105,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
 
         $this->parameters->method('safeLiquidationPriceDelta')->with($symbol, $position->side, $ticker->markPrice->value())->willReturn($safePriceDistance);
 
+        $orderDto = new MarketBuyCheckDto($orderDto, $ticker);
         $result = $this->check->check($orderDto, $context);
 
         self::assertEquals($expectedResult, $result);
@@ -170,11 +171,6 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
     private static function success(string $info): TradingCheckResult
     {
         return TradingCheckResult::succeed(OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $info);
-    }
-
-    private static function failed(string $info): TradingCheckResult
-    {
-        return TradingCheckResult::failed(OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), BuyCheckFailureEnum::FurtherLiquidationIsTooClose, $info);
     }
 
     private static function liquidationTooCloseResult(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose

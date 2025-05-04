@@ -15,14 +15,16 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\Helper\PositionClone;
+use App\Helper\OutputHelper;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\StopAndCheckFurtherMainPositionLiquidation;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Dto\StopCheckResult;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Mixin\RateLimiterAwareTest;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -34,8 +36,6 @@ use RuntimeException;
  */
 final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
 {
-    use RateLimiterAwareTest;
-
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingParametersProviderInterface|MockObject $parameters;
@@ -51,7 +51,6 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
 
         $this->check = new StopAndCheckFurtherMainPositionLiquidation(
             $this->parameters,
-            self::makeRateLimiterFactory(),
             $positionService,
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,
@@ -67,7 +66,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
         Ticker $ticker,
         float $safePriceDistance,
         float $newMainPositionLiquidation,
-        StopCheckResult $expectedResult,
+        TradingCheckResult $expectedResult,
     ): void {
         assert($stoppedSupportPosition->isSupportPosition(), new RuntimeException('Stopped position must be support'));
         $symbol = $stoppedSupportPosition->symbol;
@@ -88,7 +87,9 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
 
         $this->parameters->method('safeLiquidationPriceDelta')->with($symbol, $mainPosition->side, $ticker->markPrice->value())->willReturn($safePriceDistance);
 
-        $result = $this->check->check($stop, $context);
+        // Act
+        $dto = new StopCheckDto($stop, $ticker);
+        $result = $this->check->check($dto, $context);
 
         self::assertEquals($expectedResult, $result);
     }
@@ -128,11 +129,12 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
         return new SandboxState($ticker, new ContractBalance($ticker->symbol->associatedCoin(), 100500, 100500, 100500), $ticker->symbol->associatedCoinAmount(100500), ...$positions);
     }
 
-    private static function result(bool $success, Ticker $ticker, Position $closingPosition, Stop $stop, float $safePriceDistance, float $mainPositionLiquidationPriceNew): StopCheckResult
+    private static function result(bool $success, Ticker $ticker, Position $closingPosition, Stop $stop, float $safePriceDistance, float $mainPositionLiquidationPriceNew): TradingCheckResult
     {
         $executionPrice = $stop->isCloseByMarketContextSet() ? $ticker->markPrice : $ticker->symbol->makePrice($stop->getPrice());
 
-        $reason = sprintf(
+        $source = OutputHelper::shortClassName(StopAndCheckFurtherMainPositionLiquidation::class);
+        $info = sprintf(
             '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
             $closingPosition,
             $stop->getId(),
@@ -142,6 +144,6 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
             $mainPositionLiquidationPriceNew
         );
 
-        return $success ? StopAndCheckFurtherMainPositionLiquidation::positiveResult($reason) : StopAndCheckFurtherMainPositionLiquidation::negativeResult($reason);
+        return $success ? TradingCheckResult::succeed($source, $info) : TradingCheckResult::failed($source, StopCheckFailureEnum::FurtherMainPositionLiquidationIsTooClose, $info);
     }
 }

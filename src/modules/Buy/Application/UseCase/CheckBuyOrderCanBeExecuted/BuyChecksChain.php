@@ -6,18 +6,19 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
-use App\Trading\Application\Check\Contract\AbstractTradingCheckResult;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
-use App\Trading\Application\Check\Dto\TradingCheckResult;
-use App\Trading\Application\Check\Exception\TooManyTriesForCheck;
+use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
+use App\Trading\SDK\Check\Contract\TradingCheckInterface;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckResult;
+use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
+use App\Trading\SDK\Check\Result\CommonOrderCheckFailureEnum;
 
 final class BuyChecksChain
 {
-    /** @var BuyCheckInterface[] */
+    /** @var TradingCheckInterface[] */
     private array $checks;
 
-    public function __construct(BuyCheckInterface ...$checks)
+    public function __construct(TradingCheckInterface ...$checks)
     {
         $this->checks = $checks;
     }
@@ -29,18 +30,16 @@ final class BuyChecksChain
     {
         $results = [];
         foreach ($this->checks as $check) {
-            if (!$check->supports($marketBuyEntryDto, $context)) {
+            $orderCheckDto = new MarketBuyCheckDto($marketBuyEntryDto, $context->ticker);
+
+            if (!$check->supports($orderCheckDto, $context)) {
                 continue;
             }
 
             try {
-                $result = $check->check($marketBuyEntryDto, $context);
+                $result = $check->check($orderCheckDto, $context);
             } catch (TooManyTriesForCheck) {
-                return TradingCheckResult::failed(
-                    $check,
-                    BuyCheckFailureEnum::TooManyTries,
-                    'Too many tries, so here is no result. But order must not be executed.'
-                );
+                return TradingCheckResult::failed($check, CommonOrderCheckFailureEnum::TooManyTries, 'Too many tries => no result => order must not be executed', true); // quiet
             }//catch (UnexpectedSandboxExecutionException)
 
             if (!$result->success) {
@@ -50,12 +49,15 @@ final class BuyChecksChain
             $results[] = $result;
         }
 
-        $innerInfo = implode(' ,;, ', array_map(static fn(AbstractTradingCheckResult $result) => $result->info(), $results));
-        $buyOrder = $marketBuyEntryDto->sourceBuyOrder;
+        $innerInfo = $results
+            ? implode(' ,;, ', array_map(static fn(AbstractTradingCheckResult $result) => $result->info(), $results))
+            : 'no supported checks'
+        ;
 
         return TradingCheckResult::succeed(
-            sprintf('BuyChecksChain%s', $buyOrder ? sprintf(' for BuyOrder.id=%d', $buyOrder->getId()) : ''),
-            $innerInfo
+            sprintf('BuyChecksChain%s', $marketBuyEntryDto->sourceBuyOrder ? sprintf(' for BuyOrder.id=%d', $marketBuyEntryDto->sourceBuyOrder->getId()) : ''),
+            $innerInfo,
+            !$results
         );
     }
 }

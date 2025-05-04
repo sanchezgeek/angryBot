@@ -1,6 +1,6 @@
 framework:
     rate_limiter:
-        check_can_close_support_while_push_stops_throttling:
+        check_can_execute_support_stop_throttling:
             policy: 'fixed_window'
             limit: 1
             interval: '45 seconds'

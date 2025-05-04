@@ -27,7 +27,7 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReach
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -128,10 +128,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private function stopCanBePushed(Stop $stop, TradingCheckContext $checksContext): bool
     {
         $checkResult = $this->checks->check($stop, $checksContext);
-        $description = $checkResult->description();
-        if ($description) {
-            OutputHelper::warning($description);
-        }
+
+        !$checkResult->quiet && OutputHelper::warning($checkResult->info());
 
         return $checkResult->success;
     }

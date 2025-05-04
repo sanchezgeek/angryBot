@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\MarketBuy;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
 use App\Domain\Order\ExchangeOrder;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -19,7 +18,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 
 readonly class MarketBuyHandler
 {
@@ -36,7 +35,7 @@ readonly class MarketBuyHandler
     /**
      * # checks
      * @throws UnexpectedSandboxExecutionException
-     * @throws BuyIsNotSafeException
+     * @throws ChecksNotPassedException
      *
      * # buy
      * @throws CannotAffordOrderCostException
@@ -47,16 +46,16 @@ readonly class MarketBuyHandler
      */
     public function handle(MarketBuyEntryDto $dto, TradingCheckContext $checksContext): string
     {
-        $checksResult = $this->checks->check($dto, $checksContext);
-        if (!$checksResult->success) {
-            match ($checksResult->failedReason) {
-                BuyCheckFailureEnum::FurtherLiquidationIsTooClose => throw new BuyIsNotSafeException($checksResult->info() ?? ''),
-                default => throw new BuyIsNotSafeException(),
-            };
-        }
-
         $symbol = $dto->symbol;
         $ticker = $this->exchangeService->ticker($symbol);
+
+        $checksContext->ticker = $ticker;
+        $checksResult = $this->checks->check($dto, $checksContext);
+
+        if (!$checksResult->success) {
+            throw new ChecksNotPassedException(!$checksResult->quiet ? $checksResult->info() : '');
+        }
+
         $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->lastPrice);
 
         try {
@@ -69,9 +68,7 @@ readonly class MarketBuyHandler
 
         $checksContext->resetState();
 
-        if ($info = $checksResult->info()) {
-            OutputHelper::warning($info);
-        }
+        !$checksResult->quiet && OutputHelper::warning($checksResult->info());
 
         return $orderId;
     }

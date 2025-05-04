@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Trading\Sandbox\Output;
 
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
@@ -15,7 +15,6 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceFormatter;
@@ -250,9 +249,11 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                         $additionalInfo[] = implode(', ', $additionalOrderInfo);
                     }
 
-                    if ($orderExecutionResult->failReason?->exception instanceof BuyIsNotSafeException) {
+                    $exception = $orderExecutionResult->failReason?->exception;
+
+                    if ($exception instanceof ChecksNotPassedException) {
                         $additionalInfo[] = sprintf('won\'t be executed (%s)', $orderExecutionResult->failReason->exception->getMessage());
-                    } elseif ($orderExecutionResult->failReason?->exception instanceof SandboxInsufficientAvailableBalanceException) {
+                    } elseif ($exception instanceof SandboxInsufficientAvailableBalanceException) {
                         $additionalInfo[] =  sprintf('cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     }
 

@@ -22,7 +22,11 @@ final class PriceHelperTest extends TestCase
         self::assertEquals(456.01, PriceHelper::round(456.011));
         self::assertEquals(456.46, PriceHelper::round(456.456));
         self::assertEquals(456.46, PriceHelper::round(456.4567));
+        self::assertEquals(456.45, PriceHelper::round(456.4517));
         self::assertEquals(1000, PriceHelper::round(999.999));
+
+        self::assertEquals(999.99912, PriceHelper::round(999.999115, 5));
+        self::assertEquals(999.99911, PriceHelper::round(999.999114, 5));
     }
 
     /**

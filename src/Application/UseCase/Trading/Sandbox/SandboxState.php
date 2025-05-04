@@ -32,7 +32,7 @@ class SandboxState implements SandboxStateInterface
     private CoinAmount $freeBalance;
     private CoinAmount $fundsAvailableForLiquidation;
 
-    public ContractBalance $contractBalance;
+//    public ContractBalance $contractBalance;
 
     public function __construct(
         Ticker $ticker,

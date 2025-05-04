@@ -7,7 +7,7 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -50,7 +50,7 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Settings\Application\Service\AppSettingsProvider;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -374,7 +374,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             if ($order->isWithOppositeOrder()) {
                 $this->createStop($position, $ticker, $order);
             }
-        } catch (BuyIsNotSafeException $e) {
+        } catch (ChecksNotPassedException $e) {
             ($message = $e->getMessage()) && OutputHelper::warning($message);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);

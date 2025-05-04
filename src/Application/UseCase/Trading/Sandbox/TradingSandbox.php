@@ -7,7 +7,7 @@ namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\Sandbox\Assertion\PositionLiquidationIsAfterOrderPriceAssertion;
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
@@ -25,7 +25,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\FurtherPositionLiquidationCheck\FurtherPositionLiquidationAfterBuyIsTooClose;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -36,7 +36,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
-use App\Trading\Application\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Exception;
 use RuntimeException;
 
@@ -113,6 +113,9 @@ class TradingSandbox implements TradingSandboxInterface
         return $result;
     }
 
+    /**
+     * @throws Exception
+     */
     private function processBuy(SandboxBuyOrder $order): OrderExecutionResult
     {
         $stateBefore = $this->getCurrentState();
@@ -125,7 +128,7 @@ class TradingSandbox implements TradingSandboxInterface
             $pnl = $this->makeBuy($order);
             $orderExecuted = true;
             $stateAfter = $this->getCurrentState();
-        } catch (SandboxPositionLiquidatedBeforeOrderPriceException|BuyIsNotSafeException|SandboxInsufficientAvailableBalanceException $e) {
+        } catch (SandboxPositionLiquidatedBeforeOrderPriceException|ChecksNotPassedException|SandboxInsufficientAvailableBalanceException $e) {
             $this->handleExceptionOnExecutionStep($e);
             $failReason = new OrderExecutionFailResultReason($e);
         }
@@ -168,7 +171,7 @@ class TradingSandbox implements TradingSandboxInterface
     /**
      * @throws SandboxInsufficientAvailableBalanceException
      * @throws SandboxPositionLiquidatedBeforeOrderPriceException
-     * @throws BuyIsNotSafeException
+     * @throws ChecksNotPassedException
      */
     private function makeBuy(SandboxBuyOrder $order): ?float
     {
@@ -214,13 +217,12 @@ class TradingSandbox implements TradingSandboxInterface
                 $context
             );
 
-            // DRY?
             if (!$checksResult->success) {
                 match (true) {
-                    $checksResult instanceof FurtherPositionLiquidationAfterBuyIsTooClose => throw new BuyIsNotSafeException(
+                    $checksResult instanceof FurtherPositionLiquidationAfterBuyIsTooClose => throw new ChecksNotPassedException(
                         sprintf('liquidation is too near [distance = %s vs min.=%s]', $checksResult->actualDistance(), $checksResult->safeDistance)
                     ),
-                    default => throw new BuyIsNotSafeException($checksResult->info() ?? ''),
+                    default => throw new ChecksNotPassedException($checksResult->info()),
                 };
             }
         }

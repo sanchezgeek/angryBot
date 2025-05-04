@@ -5,3 +5,4 @@ services:
 
     App\Trading\:
         resource: '../../../'
+        exclude: '../../../SDK'

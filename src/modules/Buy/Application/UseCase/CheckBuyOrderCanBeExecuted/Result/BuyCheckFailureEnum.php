@@ -2,12 +2,9 @@
 
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result;
 
-use App\Trading\Application\Check\Contract\TradingCheckFailedReason;
+use App\Trading\SDK\Check\Contract\Dto\Out\TradingCheckFailedReason;
 
 enum BuyCheckFailureEnum implements TradingCheckFailedReason
 {
-    case TooManyTries;
-    case PreviousCheckNegativeResultUsed;
-
     case FurtherLiquidationIsTooClose;
 }
