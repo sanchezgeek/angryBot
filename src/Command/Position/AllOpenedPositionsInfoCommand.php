@@ -66,6 +66,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const WITH_SAVED_SORT_OPTION = 'sorted';
+    private const USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
     private const SAVE_SORT_OPTION = 'save-sort';
     private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
     private const MOVE_UP_OPTION = 'move-up';
@@ -87,6 +88,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private ?string $showDiffWithOption;
     private ?string $cacheKeyToUseAsCurrentState;
     private bool $useSavedSort;
+    private bool $useIMForSort;
     private bool $moveHedgedSymbolsUp;
 
     private ?array $savedRawSymbolsSort = null;
@@ -109,6 +111,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this
             ->addOption(self::MOVE_HEDGED_UP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Move fully-hedge positions up')
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
+            ->addOption(self::USE_INITIAL_MARGIN_FOR_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Use initial margin for sort (asc)')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::MOVE_DOWN_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols down')
@@ -133,6 +136,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $this->showDiffWithOption = $this->paramFetcher->getStringOption(self::DIFF_WITH_SAVED_CACHE_OPTION, false);
         $this->cacheKeyToUseAsCurrentState = $this->paramFetcher->getStringOption(self::CURRENT_STATE_OPTION, false);
         $this->useSavedSort = $this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION);
+        $this->useIMForSort = $this->paramFetcher->getBoolOption(self::USE_INITIAL_MARGIN_FOR_SORT_OPTION);
         $this->savedRawSymbolsSort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
         $this->moveHedgedSymbolsUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
 
@@ -562,7 +566,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
-        if ($this->useSavedSort) {
+        if ($this->useIMForSort) {
+            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
+            ksort($initialMarginMap);
+            $symbolsRaw = $initialMarginMap;
+        } elseif ($this->useSavedSort) {
             if ($this->savedRawSymbolsSort === null) {
                 OutputHelper::print('Saved sort not found');
             } else {
@@ -620,6 +628,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             foreach ($positions as $position) {
                 $result += $position->unrealizedPnl;
             }
+        }
+
+        return $result;
+    }
+
+    public function getSymbolsInitialMarginMap(): array
+    {
+        $result = [];
+        foreach ($this->positions as $symbolRaw => $positions) {
+            $im = 0;
+            foreach ($positions as $position) {
+                $im += $position->initialMargin->value();
+            }
+            $result[$symbolRaw] = (string)$im;
         }
 
         return $result;
