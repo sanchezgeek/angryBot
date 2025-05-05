@@ -8,10 +8,10 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\Settings\Application\Service\Dto\SettingValueAccessor;
-use App\Stop\Application\Settings\SafePriceDistance;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingParametersProvider;
+use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -22,8 +22,6 @@ use PHPUnit\Framework\TestCase;
  */
 final class TradingParametersProviderTest extends TestCase
 {
-    use SettingsAwareTest;
-
     private AppSettingsProviderInterface|MockObject $appSettingsProvider;
     protected function setUp(): void
     {
@@ -133,7 +131,7 @@ final class TradingParametersProviderTest extends TestCase
      */
     public function testSafeDistanceOnRefPriceWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): void
     {
-        $this->appSettingsProvider->method('get')->with(SettingValueAccessor::bySide(SafePriceDistance::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
+        $this->appSettingsProvider->method('get')->with(SettingAccessor::bySide(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
 
         $parameters = new TradingParametersProvider($this->appSettingsProvider);
 

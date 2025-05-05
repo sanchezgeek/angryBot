@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder\CornerCases;
 
-use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -18,8 +17,6 @@ use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
-use App\Settings\Application\Service\Dto\SettingValueAccessor;
-use App\Stop\Application\Settings\SafePriceDistance;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;

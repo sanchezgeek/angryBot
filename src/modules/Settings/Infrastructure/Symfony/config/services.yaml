@@ -1,5 +1,6 @@
 imports:
     - { resource: settings.yaml }
+    - { resource: doctrine.yaml }
 
 services:
     _defaults:
@@ -9,6 +10,12 @@ services:
     App\Settings\:
         resource: '../../../'
 
-    App\Settings\Application\Service\AppSettingsProvider:
+    App\Settings\Application\Service\AppSettingsService:
+        arguments:
+            $storedValuesProviders:
+                - '@App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider'
+                - '@App\Settings\Infrastructure\Storage\DoctrineSettingsStorage'
+
+    App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider:
         arguments:
             $settingsBag: '@app.settings'

@@ -49,7 +49,7 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrde
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
@@ -654,7 +654,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         private readonly MarketBuyHandler $marketBuyHandler,
         RateLimiterFactory $ignoreBuyThrottlingLimiter,
-        private readonly AppSettingsProvider $settings,
+        private readonly AppSettingsProviderInterface $settings,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,

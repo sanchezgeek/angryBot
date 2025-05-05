@@ -35,6 +35,9 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         parent::__construct($value);
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     public static function string(string $percent, bool $strict = true): self
     {
         if (

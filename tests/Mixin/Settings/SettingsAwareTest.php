@@ -7,15 +7,33 @@ namespace App\Tests\Mixin\Settings;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\SettingKeyAware;
-use App\Settings\Application\Service\AppSettingsProvider;
-use App\Settings\Application\Service\Dto\SettingValueAccessor;
-use App\Stop\Application\Settings\SafePriceDistance;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
+use App\Settings\Application\Storage\SettingsStorageInterface;
+use App\Settings\Domain\Entity\SettingValue;
+use App\Tests\Mixin\TestWithDoctrineRepository;
+use App\Trading\Application\Settings\SafePriceDistanceSettings;
 
 trait SettingsAwareTest
 {
-    protected static function getContainerSettingsProvider(): AppSettingsProvider
+    use TestWithDoctrineRepository;
+
+    /**
+     * @before
+     */
+    protected function before(): void
     {
-        return self::getContainer()->get(AppSettingsProvider::class);
+        self::truncateStoredSettings();
+    }
+
+    protected static function getSettingsStorage(): SettingsStorageInterface
+    {
+        return self::getContainer()->get(SettingsStorageInterface::class);
+    }
+
+    protected static function getContainerSettingsProvider(): AppSettingsProviderInterface
+    {
+        return self::getContainer()->get(AppSettingsProviderInterface::class);
     }
 
     protected static function getSettingValue(SettingKeyAware $setting): mixed
@@ -23,14 +41,24 @@ trait SettingsAwareTest
         return self::getContainerSettingsProvider()->get($setting);
     }
 
-    protected function overrideSetting(SettingKeyAware|SettingValueAccessor $setting, mixed $value): void
+    protected function overrideSetting(SettingKeyAware|SettingAccessor $setting, mixed $value): void
     {
-        self::getContainerSettingsProvider()->set($setting, $value);
+        self::getSettingsStorage()->store($setting, $value);
     }
 
     protected function setMinimalSafePriceDistance(Symbol $symbol, Side $positionSide, float $pricePercent = 0.1): void
     {
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
-        $this->overrideSetting(SettingValueAccessor::bySide(SafePriceDistance::SafePriceDistance_Percent, $symbol, $positionSide), $pricePercent);
+        $this->overrideSetting(SettingAccessor::bySide(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $pricePercent);
+    }
+
+    protected static function truncateStoredSettings(): int
+    {
+        $qnt = self::truncate(SettingValue::class);
+
+        $entityManager = self::getEntityManager();
+        $entityManager->getConnection()->executeQuery('SELECT setval(\'setting_value_id_seq\', 1, false);');
+
+        return $qnt;
     }
 }

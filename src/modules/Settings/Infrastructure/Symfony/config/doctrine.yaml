@@ -1,0 +1,7 @@
+doctrine:
+    orm:
+        mappings:
+            Settings:
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/modules/Settings/Domain/Entity'
+                prefix: 'App\Settings\Domain\Entity'

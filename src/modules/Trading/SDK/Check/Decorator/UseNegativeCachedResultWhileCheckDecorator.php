@@ -50,7 +50,7 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
 
         /** @var AbstractTradingCheckResult $cachedResult */
         if ($cachedResult = $this->cache->get($cacheKey)) {
-            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->value, $context->ticker->markPrice->value(), $orderDto->orderQty()));
+//            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->value, $context->ticker->markPrice->value(), $orderDto->orderQty()));
             return $cachedResult->quietClone();
         }
 

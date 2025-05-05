@@ -77,7 +77,7 @@ final class StopChecksChain
         }
 
         $innerInfo = $results
-            ? implode(' ,;, ', array_map(static fn(AbstractTradingCheckResult $result) => $result->description(), $results))
+            ? implode(' ,;, ', array_map(static fn(AbstractTradingCheckResult $result) => $result->info(), $results))
             : 'no supported checks'
         ;
 

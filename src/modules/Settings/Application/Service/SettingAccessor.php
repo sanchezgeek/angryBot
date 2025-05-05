@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Settings\Application\Service\Dto;
+namespace App\Settings\Application\Service;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\SettingKeyAware;
 use LogicException;
 
-final readonly class SettingValueAccessor
+final readonly class SettingAccessor
 {
-    private function __construct(
+    public function __construct(
         public SettingKeyAware $setting,
         public ?Symbol $symbol = null,
         public ?Side $side = null
@@ -35,4 +35,14 @@ final readonly class SettingValueAccessor
     {
         return new self($setting, $symbol, $side);
     }
+
+//    public function exact(): self
+//    {
+//
+//    }
+
+//    public function withAlternativesAllowed(): self
+//    {
+//
+//    }
 }

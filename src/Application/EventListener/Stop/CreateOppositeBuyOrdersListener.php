@@ -18,7 +18,7 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
@@ -32,12 +32,13 @@ final class CreateOppositeBuyOrdersListener
     ];
 
     public const DISTANCES = [
+        // @todo | settings
         Symbol::ARCUSDT->value => 400,
     ];
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-        private readonly AppSettingsProvider $settings,
+        private readonly AppSettingsProviderInterface $settings,
     ) {
     }
 
@@ -112,14 +113,14 @@ final class CreateOppositeBuyOrdersListener
 
         if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
             return $stop->getPositionSide()->isLong()
-                ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false)
-                : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false)
+                ? $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin)
+                : $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin)
             ;
         }
 
         return $stop->getPositionSide()->isLong()
-            ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false)
-            : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false)
+            ? $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)
+            : $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)
         ;
     }
 }

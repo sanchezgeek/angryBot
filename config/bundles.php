@@ -6,4 +6,6 @@ return [
     Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => ['all' => true],
     Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle::class => ['all' => true],
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
+    \App\Trading\TradingBundle::class => ['all' => true],
+    \App\Bot\BotBundle::class => ['all' => true],
 ];
