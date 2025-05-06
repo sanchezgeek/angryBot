@@ -19,7 +19,7 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 final class AppSettingsService implements AppSettingsProviderInterface
 {
-    private const CACHE_TTL = '1 minute';
+    private const CACHE_TTL = '5 minutes';
 
     /**
      * @throws Exception
