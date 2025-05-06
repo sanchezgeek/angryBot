@@ -27,7 +27,7 @@ class ShowSettingsCommand extends AbstractCommand
                 $values = $this->settingsProvider->getAllSettingAssignedValues($setting);
 
                 foreach ($values as $assignedValue) {
-                    $rows[] = DataRow::default([$assignedValue->fullKey, (string)$value, $assignedValue->info]);
+                    $rows[] = DataRow::default([$assignedValue->fullKey, (string)$assignedValue, $assignedValue->info]);
                 }
             }
         }
