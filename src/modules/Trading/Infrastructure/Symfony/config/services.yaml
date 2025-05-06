@@ -6,3 +6,7 @@ services:
     App\Trading\:
         resource: '../../../'
         exclude: '../../../SDK'
+
+    # dynamic parameters evaluation
+    App\Trading\Application\Parameters\TradingDynamicParameters:
+        public: true

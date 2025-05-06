@@ -9,12 +9,17 @@ use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
+use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPositionStateProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPriceProvider;
+use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentTickerProvider;
+use App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler\DefaultLiquidationHandlerHandledMessageProvider;
+use App\Settings\Application\Service\AppSettingsService;
 use BackedEnum;
 use InvalidArgumentException;
 use ReflectionParameter;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Container;
+use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 
 final readonly class AppDynamicParameterEvaluator
 {
@@ -25,33 +30,73 @@ final readonly class AppDynamicParameterEvaluator
     }
 
     /**
-     * @return string[]
+     * @return array{constructorArguments: string[], referencedMethodArguments: string[]}
      */
     public function getParameterArguments(string $group, string $parameterName): array
     {
-        return array_map(static fn(ReflectionParameter $ref) => $ref->getName(), $this->parametersLocator->getReferencedMethodReflection($group, $parameterName)->getParameters());
+        $methodReflection = $this->parametersLocator->getReferencedMethodReflection($group, $parameterName);
+
+        try {
+            $this->container->get($methodReflection->class);
+            $constructorArguments = [];
+        } catch (ServiceNotFoundException) {
+            $constructorArguments = $methodReflection->getDeclaringClass()->getConstructor()->getParameters();
+
+            $requiredKeys = [];
+            foreach ($constructorArguments as $argumentRef) {
+                $requiredKeys = array_merge($requiredKeys, $this->requiredInnerArguments($argumentRef));
+            }
+
+            $constructorArguments = array_filter($constructorArguments, static fn (ReflectionParameter $argumentRef) =>
+                !($evaluationAttributes = $argumentRef->getAttributes(AppDynamicParameterEvaluations::class))
+                && ($evaluationAttributes[0]->getArguments()['skipUserInput'] ?? false) !== true
+            );
+
+            $initialConstructorArguments = array_map(static fn(ReflectionParameter $ref) => $ref->getName(), $constructorArguments);
+
+            $constructorArguments = array_unique(array_merge($initialConstructorArguments, $requiredKeys));
+        }
+
+        $referencedMethodArguments = $this->parametersLocator->getReferencedMethodReflection($group, $parameterName)->getParameters();
+        $referencedMethodArguments = array_map(static fn(ReflectionParameter $ref) => $ref->getName(), $referencedMethodArguments);
+
+        return [
+            'constructorArguments' => $constructorArguments,
+            'referencedMethodArguments' => $referencedMethodArguments
+        ];
     }
 
     public function evaluate(AppDynamicParameterEvaluationEntry $entry): mixed
     {
         $methodReflection = $this->parametersLocator->getReferencedMethodReflection($entry->groupName, $entry->parameterName);
 
-        $arguments = $methodReflection->getParameters();
+        $referencedMethodArguments = $methodReflection->getParameters();
         $callArguments = [];
 
-        foreach ($arguments as $argumentRef) {
-            $callArguments[$argumentRef->getName()] = $this->parseArgument($argumentRef, $entry);
+        foreach ($referencedMethodArguments as $argumentRef) {
+            $callArguments[$argumentRef->getName()] = $this->parseArgument($argumentRef, $entry, $entry->methodArgumentsInput);
         }
 
-        $obj = $this->container->get($methodReflection->class);
+        try {
+            $obj = $this->container->get($methodReflection->class);
+        } catch (ServiceNotFoundException) {
+            $constructorArguments = $methodReflection->getDeclaringClass()->getConstructor()->getParameters();
+            $constructorCallArguments = [];
+            foreach ($constructorArguments as $argumentRef) {
+                $constructorCallArguments[$argumentRef->getName()] = $this->parseArgument($argumentRef, $entry, $entry->constructorArgumentsInput);
+            }
+
+            $obj = $methodReflection->getDeclaringClass()->newInstance(...$constructorCallArguments);
+        }
         $callback = [$obj, $methodReflection->getName()];
 
+//        return $methodReflection->getClosure($obj)->call($obj);
         return call_user_func_array($callback, $callArguments);
     }
 
-    private function parseArgument(ReflectionParameter $ref, AppDynamicParameterEvaluationEntry $entry): mixed
+    private function parseArgument(ReflectionParameter $ref, AppDynamicParameterEvaluationEntry $entry, array $data): mixed
     {
-        $providedValue = $entry->givenUserInput[$ref->getName()] ?: null;
+        $providedValue = !isset($data[$ref->getName()]) ? null : $data[$ref->getName()];
 
         // @todo if ! and without ?
         if ($providedValue === null) {
@@ -62,7 +107,11 @@ final readonly class AppDynamicParameterEvaluator
             $defaultValueProviderEnum = $evaluationAttributes[0]->getArguments()['defaultValueProvider'];
             $valueProvider = $this->getDefaultValueProvider($defaultValueProviderEnum);
 
-            return $valueProvider->get($entry->givenUserInput);
+            if ($valueProvider instanceof ParameterDefaultValueProviderInterface) {
+                return $valueProvider->get(array_merge($entry->constructorArgumentsInput, $entry->methodArgumentsInput));
+            }
+
+            return $valueProvider();
         }
 
         $type = $ref->getType()->getName();
@@ -75,10 +124,29 @@ final readonly class AppDynamicParameterEvaluator
         return $parser($providedValue);
     }
 
-    private function getDefaultValueProvider(DefaultValueProviderEnum $defaultValueProviderEnum): ParameterDefaultValueProviderInterface
+    private function requiredInnerArguments(ReflectionParameter $ref): array
+    {
+        if (!$evaluationAttributes = $ref->getAttributes(AppDynamicParameterEvaluations::class)) {
+            return [];
+        }
+
+        $defaultValueProviderEnum = $evaluationAttributes[0]->getArguments()['defaultValueProvider'];
+        $valueProvider = $this->getDefaultValueProvider($defaultValueProviderEnum);
+
+        return $valueProvider instanceof ParameterDefaultValueProviderInterface ? $valueProvider->getRequiredKeys() : [];
+
+    }
+
+    private function getDefaultValueProvider(DefaultValueProviderEnum $defaultValueProviderEnum): ParameterDefaultValueProviderInterface|callable
     {
         return match ($defaultValueProviderEnum) {
             DefaultValueProviderEnum::CurrentPrice => $this->container->get(DefaultCurrentPriceProvider::class),
+            DefaultValueProviderEnum::CurrentTicker => $this->container->get(DefaultCurrentTickerProvider::class),
+            DefaultValueProviderEnum::CurrentPositionState => $this->container->get(DefaultCurrentPositionStateProvider::class),
+
+            DefaultValueProviderEnum::SettingsProvider => fn() => $this->container->get(AppSettingsService::class),
+
+            DefaultValueProviderEnum::LiquidationHandlerHandledMessage => $this->container->get(DefaultLiquidationHandlerHandledMessageProvider::class),
             default => throw new RuntimeException(sprintf('Cannot find default value provider (%s)', $defaultValueProviderEnum->name))
         };
     }

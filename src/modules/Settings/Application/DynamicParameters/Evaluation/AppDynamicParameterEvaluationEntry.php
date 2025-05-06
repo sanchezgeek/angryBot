@@ -9,7 +9,8 @@ final readonly class AppDynamicParameterEvaluationEntry
     public function __construct(
         public string $groupName,
         public string $parameterName,
-        public array $givenUserInput
+        public array $methodArgumentsInput = [],
+        public array $constructorArgumentsInput = [],
     ) {
     }
 }

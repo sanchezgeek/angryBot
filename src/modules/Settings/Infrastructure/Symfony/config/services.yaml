@@ -11,6 +11,7 @@ services:
         resource: '../../../'
 
     App\Settings\Application\Service\AppSettingsService:
+        public: true
         arguments:
             $storedValuesProviders:
                 - '@App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider'
@@ -28,5 +29,7 @@ services:
         arguments:
             - '@service_container'
 
-    App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPriceProvider:
-        public: true
+    # dynamic parameters evaluation
+    _instanceof:
+        App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface:
+            public: true

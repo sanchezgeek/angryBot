@@ -52,18 +52,32 @@ class ShowParametersCommand extends AbstractCommand
 
         $arguments = $this->parameterEvaluator->getParameterArguments($selectedGroup, $selectedParameter);
 
-        $input = [];
-        foreach ($arguments as $argumentName) {
-            $input[$argumentName] = $io->ask(sprintf('%s: ', $argumentName));
+        $constructorInput = [];
+        foreach ($arguments['constructorArguments'] as $argumentName) {
+            $constructorInput[$argumentName] = $this->parseValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
+        }
+
+        $methodInput = [];
+        foreach ($arguments['referencedMethodArguments'] as $argumentName) {
+            $methodInput[$argumentName] = $this->parseValue($io->ask(sprintf('%s: ', $argumentName)));
         }
 
         $value = $this->parameterEvaluator->evaluate(
-            new AppDynamicParameterEvaluationEntry($selectedGroup, $selectedParameter, $input)
+            new AppDynamicParameterEvaluationEntry($selectedGroup, $selectedParameter, $methodInput, $constructorInput)
         );
 
-        $io->block(sprintf('result: %s', $value));
+        $io->block(sprintf('%s.%s: %s', $selectedGroup, $selectedParameter, $value));
 
         return Command::SUCCESS;
+    }
+
+    private function parseValue(string $input): mixed
+    {
+        return match ($input) {
+            'false' => false,
+            'true' => true,
+            default => $input
+        };
     }
 
     public function __construct(

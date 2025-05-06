@@ -12,6 +12,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest;
@@ -36,7 +37,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
 
         self::assertEquals(
             CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE,
@@ -45,7 +46,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
 
         # with override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
 
         self::assertEquals(
             $criticalPartOfLiquidationDistance,
@@ -69,7 +70,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
     ): void {
         $debug && AppContext::setIsDebug($debug);
 
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
 
         $actualStopsRange = $dynamicParameters->actualStopsRange();
         $additionalStopPrice = $dynamicParameters->additionalStopPrice();

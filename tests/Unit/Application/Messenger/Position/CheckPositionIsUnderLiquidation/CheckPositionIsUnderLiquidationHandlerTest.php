@@ -22,6 +22,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -56,6 +57,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     private StopServiceInterface $stopService;
     private OrderServiceInterface $orderService;
     private StopRepositoryInterface $stopRepository;
+    private AppSettingsProviderInterface $settingsProvider;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
 
@@ -69,6 +71,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->orderService = $this->createMock(OrderServiceInterface::class);
         $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
+        $this->settingsProvider = $this->createMock(AppSettingsProviderInterface::class);
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
@@ -79,7 +82,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
             null,
-            new LiquidationDynamicParametersFactory(),
+            new LiquidationDynamicParametersFactory($this->settingsProvider),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }

@@ -6,5 +6,6 @@ namespace App\Settings\Application\DynamicParameters\DefaultValues;
 
 interface ParameterDefaultValueProviderInterface
 {
+    public function getRequiredKeys(): array;
     public function get(array $input): mixed;
 }

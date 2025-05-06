@@ -9,7 +9,6 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 
-
 final readonly class RegisterAppDynamicParametersCompilerPass implements CompilerPassInterface
 {
     private const LOCATOR_SERVICE_ID = AppDynamicParametersLocator::class;
@@ -25,7 +24,6 @@ final readonly class RegisterAppDynamicParametersCompilerPass implements Compile
         foreach ($this->classNames as $className) {
             try {
                 $referencedService = $container->getDefinition($className);
-                $referencedService->setPublic(true);
             } catch (ServiceNotFoundException) {}
             $locator->addMethodCall('register', [$className]);
         }

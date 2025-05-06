@@ -8,4 +8,5 @@ return [
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
     \App\Trading\TradingBundle::class => ['all' => true],
     \App\Bot\BotBundle::class => ['all' => true],
+    \App\Liquidation\LiquidationModule::class => ['all' => true],
 ];

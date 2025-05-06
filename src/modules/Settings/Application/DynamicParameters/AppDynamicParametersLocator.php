@@ -35,11 +35,10 @@ final class AppDynamicParametersLocator
     {
         foreach ($this->containers as $containerClass) {
             foreach ((new ReflectionClass($containerClass))->getMethods() as $methodRef) {
-                if (!$methodRef->isPublic()) {
-                    continue;
-                }
-
-                if (!$appParameterAttributes = $methodRef->getAttributes(AppDynamicParameter::class)) {
+                if (
+                    !$methodRef->isPublic()
+                    || !$appParameterAttributes = $methodRef->getAttributes(AppDynamicParameter::class)
+                ) {
                     continue;
                 }
 
