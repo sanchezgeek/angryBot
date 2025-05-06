@@ -566,11 +566,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             }
         }
 
-        if ($this->useIMForSort) {
-            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
-            ksort($initialMarginMap);
-            $symbolsRaw = $initialMarginMap;
-        } elseif ($this->useSavedSort) {
+        if ($this->useSavedSort && !$this->useIMForSort) {
             if ($this->savedRawSymbolsSort === null) {
                 OutputHelper::print('Saved sort not found');
             } else {
@@ -612,6 +608,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                     }
                 }
             }
+        }
+
+        if ($this->useIMForSort) {
+            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
+            ksort($initialMarginMap);
+            $initialMarginMap = array_values($initialMarginMap);
+            $symbolsRaw = array_intersect($initialMarginMap, $symbolsRaw);
         }
 
         if ($this->moveHedgedSymbolsUp) {
