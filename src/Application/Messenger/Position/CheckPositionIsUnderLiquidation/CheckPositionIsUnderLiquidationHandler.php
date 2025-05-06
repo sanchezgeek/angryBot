@@ -150,6 +150,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $this->dynamicParameters = $this->liquidationDynamicParametersFactory->create($message, $position, $ticker);
 
         ### remove stale ###
+        // @todo | liquidation | works only for by market =(
         foreach ($this->getStaleStops($position) as $stop) {
             $this->stopRepository->remove($stop);
         }

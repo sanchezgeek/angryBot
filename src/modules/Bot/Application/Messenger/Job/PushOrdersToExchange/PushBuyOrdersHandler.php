@@ -223,6 +223,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         if (!$position) {
+            // @todo | checks | mb troubles with sandbox
+            // @todo | sandbox | mb troubles with sandbox (inner check will not work)
             $position = new Position($side, $symbol, $index->value(), 0.05, 1000, 0, 13, 100);
         }
 
