@@ -43,22 +43,22 @@ final class AppSettingsServiceTest extends TestCase
 
     public function testWithCache(): void
     {
-        $setting = SafePriceDistanceSettings::SafePriceDistance_Percent;
+        $setting = TestSetting::Test;
 
         $settingValueAccessor = SettingAccessor::exact($setting, Symbol::ARCUSDT, Side::Sell);
-        $values = ['safePriceDistance.percent[symbol=ARCUSDT][side=sell]' => 10];
+        $values = ['test.test[symbol=ARCUSDT][side=sell]' => 10];
         $this->mockExistedSettings($setting, $values); # with &
 
-        $result = $this->settingsService->get($settingValueAccessor, ttl: '1 second');
+        $result = $this->settingsService->required($settingValueAccessor);
         self::assertEquals(10, $result);
 
-        $values = ['safePriceDistance.percent[symbol=ARCUSDT][side=sell]' => 30];
-        $result = $this->settingsService->get($settingValueAccessor);
+        $values = ['test.test[symbol=ARCUSDT][side=sell]' => 30];
+        $result = $this->settingsService->required($settingValueAccessor);
         self::assertEquals(10, $result);
 
         sleep(1);
-        $values = ['safePriceDistance.percent[symbol=ARCUSDT][side=sell]' => 40];
-        $result = $this->settingsService->get($settingValueAccessor);
+        $values = ['test.test[symbol=ARCUSDT][side=sell]' => 40];
+        $result = $this->settingsService->required($settingValueAccessor);
         self::assertEquals(40, $result);
     }
 

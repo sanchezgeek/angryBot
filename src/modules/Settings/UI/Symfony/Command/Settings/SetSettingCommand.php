@@ -68,7 +68,7 @@ class SetSettingCommand extends AbstractCommand
                 return Command::SUCCESS;
             }
 
-            $this->storage->store($settingAccessor, $value);
+            $this->settingsService->set($settingAccessor, $value);
         } else {
             throw new InvalidArgumentException(sprintf('Unrecognized action "%s"', $action));
         }

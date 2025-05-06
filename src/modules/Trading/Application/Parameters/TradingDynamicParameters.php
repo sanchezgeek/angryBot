@@ -31,9 +31,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice
     ): float {
-        if ($percentOverride = $this->settingsProvider->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $side), false)) {
+        if ($percentOverride = $this->settingsProvider->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $side))) {
             return $refPrice * ($percentOverride / 100);
-        } elseif ($percentOverride = $this->settingsProvider->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol), false)) {
+        } elseif ($percentOverride = $this->settingsProvider->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol))) {
             return $refPrice * ($percentOverride / 100);
         }
 

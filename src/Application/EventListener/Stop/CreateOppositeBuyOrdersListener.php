@@ -114,14 +114,14 @@ final class CreateOppositeBuyOrdersListener
 
         if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
             return $stop->getPositionSide()->isLong()
-                ? $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin)
-                : $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin)
+                ? $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin)
+                : $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin)
             ;
         }
 
         return $stop->getPositionSide()->isLong()
-            ? $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)
-            : $this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)
+            ? $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)
+            : $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)
         ;
     }
 }

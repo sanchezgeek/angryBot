@@ -153,12 +153,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
-        if ($this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled) !== true) {
+        if ($this->settings->required(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled) !== true) {
             return false;
         }
 
         $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-        $minLastPricePnlPercentToTakeProfit = $this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent);
+        $minLastPricePnlPercentToTakeProfit = $this->settings->required(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent);
 
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
@@ -664,8 +664,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $this->ignoreBuyThrottlingLimiter = $ignoreBuyThrottlingLimiter->create('push_buy_orders');
 
         # checks
-        $this->useIsLastPriceOverIndexPriceCheck = $this->settings->get(PushBuyOrderSettings::Checks_lastPriceOverIndexPriceCheckEnabled);
-        $this->useIgnoreBuyCheckBasedOnTotalPositionLeverage = $this->settings->get(PushBuyOrderSettings::Checks_ignoreBuyBasedOnTotalPositionLeverageEnabled);
+        $this->useIsLastPriceOverIndexPriceCheck = $this->settings->required(PushBuyOrderSettings::Checks_lastPriceOverIndexPriceCheckEnabled);
+        $this->useIgnoreBuyCheckBasedOnTotalPositionLeverage = $this->settings->required(PushBuyOrderSettings::Checks_ignoreBuyBasedOnTotalPositionLeverageEnabled);
 
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }

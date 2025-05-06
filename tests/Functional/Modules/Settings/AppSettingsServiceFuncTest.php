@@ -34,7 +34,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), 300);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), 200);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function fullSet(): iterable
@@ -53,7 +53,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     public function testWhenOnlySymbolAndSideSet(SettingAccessor $providedAccessor, mixed $expectedValue): void
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), 300);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function onlySymbolAndSideSet(): iterable
@@ -72,7 +72,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     public function testWhenOnlySymbolSet(SettingAccessor $providedAccessor, mixed $expectedValue): void
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), 200);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function onlySymbol(): iterable
@@ -91,7 +91,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     public function testWhenOnlyRootSet(SettingAccessor $providedAccessor, mixed $expectedValue): void
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function onlyRoot(): iterable
@@ -111,7 +111,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), 300);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function topAndRoot(): iterable
@@ -131,7 +131,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), 200);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function middleAndRoot(): iterable
@@ -151,7 +151,7 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
     {
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), 300);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), 200);
-        self::assertEquals($expectedValue, $this->settingsService->get($providedAccessor, false));
+        self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
     public function middleAndTop(): iterable
@@ -170,14 +170,14 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), 200);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
 
-        self::assertEquals(300, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), false));
-        self::assertEquals(200, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), false));
-        self::assertEquals(100, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent), false));
+        self::assertEquals(300, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell)));
+        self::assertEquals(200, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT)));
+        self::assertEquals(100, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent)));
 
         $this->settingsService->disable(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT));
 
-        self::assertEquals(300, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), false));
-        self::assertEquals(null, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT), false));
-        self::assertEquals(100, $this->settingsService->get(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent), false));
+        self::assertEquals(300, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell)));
+        self::assertEquals(null, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT)));
+        self::assertEquals(100, $this->settingsService->optional(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent)));
     }
 }

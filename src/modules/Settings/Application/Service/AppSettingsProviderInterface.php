@@ -9,7 +9,8 @@ use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 
 interface AppSettingsProviderInterface
 {
-    public function get(AppSettingInterface|SettingAccessor $setting, bool $required = true, ?string $ttl = null): mixed;
+    public function optional(AppSettingInterface|SettingAccessor $setting): mixed;
+    public function required(AppSettingInterface|SettingAccessor $setting): mixed;
 
     /** @return AssignedSettingValue[] */
     public function getAllSettingAssignedValues(AppSettingInterface $setting): array;

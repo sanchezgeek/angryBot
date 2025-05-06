@@ -131,7 +131,7 @@ final class TradingParametersProviderTest extends TestCase
      */
     public function testSafeDistanceOnRefPriceWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): void
     {
-        $this->appSettingsProvider->method('get')->with(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
+        $this->appSettingsProvider->method('optional')->with(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
 
         $parameters = new TradingDynamicParameters($this->appSettingsProvider);
 

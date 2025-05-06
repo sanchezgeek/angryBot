@@ -24,6 +24,15 @@ final class AppSettingsService implements AppSettingsProviderInterface
     /**
      * @throws Exception
      */
+    public function set(SettingAccessor|AppSettingInterface $setting, mixed $value): void
+    {
+        $this->storage->store($setting, $value);
+        $this->settingsCache->clear();
+    }
+
+    /**
+     * @throws Exception
+     */
     public function disable(SettingAccessor $settingAccessor): void
     {
         if (!SettingParametersAttributeReader::isSettingNullable($settingAccessor->setting)) {
@@ -34,7 +43,17 @@ final class AppSettingsService implements AppSettingsProviderInterface
         $this->settingsCache->clear();
     }
 
-    public function get(AppSettingInterface|SettingAccessor $setting, bool $required = true, ?string $ttl = null): mixed
+    public function optional(SettingAccessor|AppSettingInterface $setting): mixed
+    {
+        return $this->get($setting, false);
+    }
+
+    public function required(AppSettingInterface|SettingAccessor $setting): mixed
+    {
+        return $this->get($setting, true);
+    }
+
+    private function get(AppSettingInterface|SettingAccessor $setting, bool $required): mixed
     {
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;

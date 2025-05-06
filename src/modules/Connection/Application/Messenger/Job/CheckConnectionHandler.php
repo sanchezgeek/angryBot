@@ -15,7 +15,7 @@ final readonly class CheckConnectionHandler
 {
     public function __invoke(CheckConnection $dto): void
     {
-        if ($this->settings->get(ConnectionSettings::CheckConnectionEnabled) !== true) {
+        if ($this->settings->required(ConnectionSettings::CheckConnectionEnabled) !== true) {
             return;
         }
 
