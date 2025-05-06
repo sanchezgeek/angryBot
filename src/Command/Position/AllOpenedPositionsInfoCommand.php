@@ -31,6 +31,7 @@ use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
@@ -39,6 +40,8 @@ use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -806,7 +809,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
         );
 
-        $modifier = (new Percent(CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE))->of($position->liquidationDistance());
+        $criticalPartOfLiquidationDistance = $this->settings->required(SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalPartOfLiquidationDistance, $symbol, $positionSide));
+        $modifier = (new Percent($criticalPartOfLiquidationDistance))->of($position->liquidationDistance());
         try {
             $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
         } catch (Exception $e) {
@@ -908,6 +912,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         private readonly CacheInterface $cache,
         private readonly ClockInterface $clock,
         private readonly StopRepository $stopRepository,
+        private readonly AppSettingsProviderInterface $settings,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

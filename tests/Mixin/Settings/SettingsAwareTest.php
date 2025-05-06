@@ -6,14 +6,20 @@ namespace App\Tests\Mixin\Settings;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\Logger\SymfonyAppErrorLogger;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
+use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Tests\Mixin\TestWithDoctrineRepository;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use Psr\Log\LoggerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 trait SettingsAwareTest
 {
@@ -24,7 +30,9 @@ trait SettingsAwareTest
      */
     protected function before(): void
     {
-        self::truncateStoredSettings();
+        if ($this instanceof KernelTestCase) {
+            self::truncateStoredSettings();
+        }
     }
 
     protected static function getSettingsService(): AppSettingsService
@@ -66,5 +74,30 @@ trait SettingsAwareTest
         $entityManager->getConnection()->executeQuery('SELECT setval(\'setting_value_id_seq\', 1, false);');
 
         return $qnt;
+    }
+
+    protected function settingsProviderMock(array $existentSettings): AppSettingsProviderInterface
+    {
+        $storedParametersProvider = $this->createMock(StoredSettingsProviderInterface::class);
+        $settingsStorage = $this->createMock(SettingsStorageInterface::class);
+
+        $settingsService = new AppSettingsService(
+            new ArrayAdapter(),
+            new SymfonyAppErrorLogger($this->createMock(LoggerInterface::class)),
+            $settingsStorage,
+            [$storedParametersProvider],
+        );
+
+        $storedParametersProvider->method('getSettingStoredValues')->willReturnCallback(static function (AppSettingInterface $providedSetting) use ($existentSettings) {
+            $storedValues = [];
+            foreach ($existentSettings as $key => $value) {
+                if (!str_contains($key, $providedSetting->getSettingKey())) continue;
+                $storedValues[] = new AssignedSettingValue($providedSetting, $key, $value);
+            }
+
+            return $storedValues;
+        });
+
+        return $settingsService;
     }
 }

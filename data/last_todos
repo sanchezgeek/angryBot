@@ -15,5 +15,6 @@ lP history points
 @todo | settings | tests
 liq strategy based on safePriceDistance
 @todo | stop
+// @todo | stop check mainPosition stops first
 @todo | liquidation
 @todo | cache

@@ -48,6 +48,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
     public function __invoke(PushStops $message): void
     {
+        // @todo | stop check mainPosition stops first
+
         $positionService = $this->positionService; $orderService = $this->orderService;
         $side = $message->side; $symbol = $message->symbol;
         $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */

@@ -12,12 +12,14 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest;
 use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Worker\AppContext;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -29,20 +31,22 @@ use RuntimeException;
  */
 final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCase
 {
+    use SettingsAwareTest;
+
     public function testCriticalPartOfLiquidationDistance(): void
     {
+        $criticalPartOfLiqDistance = 10;
+        $settingsMock = $this->settingsProviderMock([LiquidationHandlerSettings::CriticalPartOfLiquidationDistance->getSettingKey() => $criticalPartOfLiqDistance]);
+
         $symbol = Symbol::BTCUSDT;
         $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 35000);
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
-        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($settingsMock, $message, $position, $ticker);
 
-        self::assertEquals(
-            CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE,
-            $dynamicParameters->criticalPartOfLiquidationDistance()
-        );
+        self::assertEquals($criticalPartOfLiqDistance, $dynamicParameters->criticalPartOfLiquidationDistance());
 
         # with override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);

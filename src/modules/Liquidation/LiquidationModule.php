@@ -19,6 +19,7 @@ final class LiquidationModule extends AbstractBundle
     {
         parent::build($container);
 
+        $this->registerSettings($container, __NAMESPACE__, __DIR__ . '/Application/Settings');
         $this->registerDynamicParameters($container, [
             LiquidationDynamicParameters::class,
         ]);

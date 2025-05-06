@@ -27,7 +27,7 @@ use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function min;
 use function sprintf;
@@ -39,7 +39,7 @@ use function sprintf;
  *
  * @todo functional?
  */
-final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
+final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 {
     use PositionSideAwareTest;
     use AppErrorsLoggerTrait;
@@ -82,7 +82,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
             null,
-            new LiquidationDynamicParametersFactory($this->settingsProvider),
+            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }
