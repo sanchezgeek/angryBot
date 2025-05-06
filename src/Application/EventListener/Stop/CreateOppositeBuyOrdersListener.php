@@ -74,6 +74,7 @@ final class CreateOppositeBuyOrdersListener
 
         if ($stop->isAdditionalStopFromLiquidationHandler()) {
             $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+            // @todo | stop | либо за цену первоначального стопа?
         } else {
             $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
         }

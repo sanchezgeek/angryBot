@@ -337,6 +337,8 @@ final class CheckPositionIsUnderLiquidationHandler
         $oppositePositionStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side->getOpposite());
         $oppositePositionStops = array_filter($oppositePositionStops, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
 
+        // @todo | liquidation | или сначала надо получить цену нового стопа и потом принять решение об удалении?
+        // @todo | liquidation |нужна ли какая-то проверка warningRange?
         $actualStopsRange = $this->dynamicParameters->actualStopsRange();
         $criticalRange = $this->dynamicParameters->criticalRange();
 
@@ -374,6 +376,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
         $symbol = $position->symbol;
         foreach ($stopsToPositionSide as $stop) {
+            // @todo | liquidation | мб цена вообще ниже или выше границы
             if ($symbol->makePrice($stop->getPrice())->isPriceInRange($criticalRange)) {
                 continue;
             }

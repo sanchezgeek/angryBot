@@ -3,3 +3,17 @@ tests/Unit/Domain/Position/Helper/PositionCloneTest.php
 src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
 tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
 regexp CTRL-F: @todo.*sandbox
+
+
+
+move orders based on initial liq distance?
+increase position (by some paams)
+cals
+
+lP history points
+
+@todo | settings | tests
+liq strategy based on safePriceDistance
+@todo | stop
+@todo | liquidation
+@todo | cache

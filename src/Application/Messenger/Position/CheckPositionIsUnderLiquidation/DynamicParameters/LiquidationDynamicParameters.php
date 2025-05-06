@@ -209,6 +209,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 $modifier = 1;
             }
 
+            // @todo | liquidation | manual | short liq distance / ticker right before liquidation (in critical range)
+            // зафейлился: добавит объем в зависимости от той цены, которая где-то там выше
+
             return ($acceptableStoppedPart / Params::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
 //            return ($acceptableStoppedPart / 1.5) * $modifier;
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
