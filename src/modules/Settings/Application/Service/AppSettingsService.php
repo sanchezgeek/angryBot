@@ -31,11 +31,12 @@ final class AppSettingsService implements AppSettingsProviderInterface
         }
 
         $this->storage->store($settingAccessor, null);
+        $this->settingsCache->clear();
     }
 
     public function get(AppSettingInterface|SettingAccessor $setting, bool $required = true, ?string $ttl = null): mixed
     {
-        $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
+        $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;
 
         $ttl = $ttl ?? ($setting instanceof SettingCacheTtlAware ? $setting->cacheTtl() : self::CACHE_TTL);
@@ -43,7 +44,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
             sprintf('settingValueAccessor_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
         );
 
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($settingValueAccessor, $required, $ttl) {
+        return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($settingValueAccessor, $required, $ttl) {
             $item->expiresAfter(DateInterval::createFromDateString($ttl));
 
             $foundValue = $this->doGet($settingValueAccessor, $required);
@@ -77,10 +78,25 @@ final class AppSettingsService implements AppSettingsProviderInterface
         $symbol = $settingValueAccessor->symbol;
 
         $keys = [];
-        $side && $keys[] = sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol->value, $side->value);
-        $symbol && $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol->value);
 
-//        var_dump($assignedValues, $keys);die;
+        $break = false;
+        if ($side) {
+            $keys[] = sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol->value, $side->value);
+            if ($settingValueAccessor->exact) {
+                $break = true;
+            }
+        }
+
+        if ($symbol && !$break) {
+            $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol->value);
+            if ($settingValueAccessor->exact) {
+                $break = true;
+            }
+        }
+
+        if (!$break) {
+            $keys[] = $baseKey;
+        }
 
         foreach ($keys as $key) {
             if ($value = $assignedValues[$key] ?? null) {
@@ -88,14 +104,13 @@ final class AppSettingsService implements AppSettingsProviderInterface
             }
         }
 
-        $value = $assignedValues[$baseKey] ?? null;
-        if ($required && $value === null) { // @todo disabled
+        if ($required) { // @todo what about disabled?
             $msg = sprintf('Cannot find value for setting "%s"', $keys[0] ?? $baseKey);
             $this->appErrorLogger->error($msg);
             OutputHelper::print($msg);
         }
 
-        return $value;
+        return null;
     }
 
     /**
@@ -121,7 +136,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
      * @param iterable<StoredSettingsProviderInterface> $storedValuesProviders
      */
     public function __construct(
-        private readonly CacheInterface $cache,
+        private readonly CacheInterface $settingsCache,
         private readonly AppErrorLoggerInterface $appErrorLogger,
         private readonly SettingsStorageInterface $storage,
         private readonly iterable $storedValuesProviders

@@ -19,3 +19,6 @@ framework:
             tickers:
                 adapter: cache.adapter.filesystem
             #my.dedicated.cache: null
+
+            settings.cache:
+#                tags: 'settings'

@@ -41,7 +41,7 @@ class SetSettingCommand extends AbstractCommand
         $symbol = $io->ask("Symbol:"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
         $side = $io->ask("Side:"); $side = $side !== null ? Side::from($side) : null;
 
-        $settingAccessor = new SettingAccessor($selectedSetting, $symbol, $side);
+        $settingAccessor = SettingAccessor::exact($selectedSetting, $symbol, $side);
         $settingValue = $this->storage->get($settingAccessor);
 
         $action = $io->ask("Action: e - set, d - disable (disables default value), r - remove");

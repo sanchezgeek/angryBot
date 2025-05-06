@@ -14,35 +14,21 @@ final readonly class SettingAccessor
     public function __construct(
         public AppSettingInterface $setting,
         public ?Symbol $symbol = null,
-        public ?Side $side = null
+        public ?Side $side = null,
+        public bool $exact = false
     ) {
         if ($this->side !== null && $this->symbol === null) {
             throw new LogicException('When $side specified Symbol must be specified too');
         }
     }
 
-    public static function simple(AppSettingInterface $setting): self
+    public static function withAlternativesAllowed(AppSettingInterface $setting, ?Symbol $symbol = null, ?Side $side = null): self
     {
-        return new self($setting);
+        return new self($setting, $symbol, $side, false);
     }
 
-    public static function bySymbol(AppSettingInterface $setting, Symbol $symbol): self
+    public static function exact(AppSettingInterface $setting, ?Symbol $symbol = null, ?Side $side = null): self
     {
-        return new self($setting, $symbol);
+        return new self($setting, $symbol, $side, true);
     }
-
-    public static function bySide(AppSettingInterface $setting, Symbol $symbol, Side $side): self
-    {
-        return new self($setting, $symbol, $side);
-    }
-
-//    public function exact(): self
-//    {
-//
-//    }
-
-//    public function withAlternativesAllowed(): self
-//    {
-//
-//    }
 }

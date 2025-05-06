@@ -11,7 +11,7 @@ use App\Settings\Domain\Entity\SettingValue;
 interface SettingsStorageInterface
 {
     public function get(AppSettingInterface|SettingAccessor $setting): ?SettingValue;
-    // @todo some dto? or just not return
+    // @todo | settings some other dto? or just not return
     public function store(AppSettingInterface|SettingAccessor $setting, mixed $value): SettingValue;
     public function remove(AppSettingInterface|SettingAccessor $setting): void;
 }

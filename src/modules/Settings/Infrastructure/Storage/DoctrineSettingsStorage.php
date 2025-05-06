@@ -23,7 +23,11 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function get(SettingAccessor|AppSettingInterface $setting): ?SettingValue
     {
-        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
+        if ($setting instanceof SettingAccessor && !$setting->exact) {
+            throw new InvalidArgumentException('Only exact accessor allowed here');
+        }
+
+        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
 
         return $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]);
     }
@@ -54,7 +58,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
      */
     public function store(AppSettingInterface|SettingAccessor $setting, mixed $value): SettingValue
     {
-        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
+        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::exact($setting);
 
         $setting = $settingAccessor->setting;
         $settingKey = $setting->getSettingKey();
@@ -80,7 +84,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function remove(SettingAccessor|AppSettingInterface $setting): void
     {
-        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
+        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::exact($setting);
 
         $setting = $settingAccessor->setting;
         $settingKey = $setting->getSettingKey();
