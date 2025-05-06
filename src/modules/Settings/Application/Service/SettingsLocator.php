@@ -4,31 +4,28 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Service;
 
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
+use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use InvalidArgumentException;
 
 final class SettingsLocator
 {
-    private array $settings = [];
+    private array $groups = [];
 
-    public function __construct()
+    public function register(string $settingsGroup): void
     {
-    }
-
-    public function register(string $settingKeyAwareClass): void
-    {
-        if (!in_array(SettingKeyAware::class, class_implements($settingKeyAwareClass), true)) {
-            throw new InvalidArgumentException('Provided class must be StringBackedEnum');
+        if (!in_array(AppSettingInterface::class, class_implements($settingsGroup), true)) {
+            throw new InvalidArgumentException('Provided class must be of type AppSettingInterface');
         }
 
-        $this->settings[] = $settingKeyAwareClass;
+        $this->groups[] = $settingsGroup;
     }
 
     /**
-     * @return SettingKeyAware[]
+     * @return AppSettingsGroupInterface[]
      */
     public function getRegisteredSettingsGroups(): array
     {
-        return $this->settings;
+        return $this->groups;
     }
 }

@@ -6,7 +6,7 @@ namespace App\Settings\Domain;
 
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Attribute\SettingParametersAttributeReader;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Domain\Enum\SettingType;
 use InvalidArgumentException;
 
@@ -14,7 +14,7 @@ final class SettingValueValidator
 {
     private static ?array $validators = null;
 
-    public static function validate(SettingKeyAware $setting, mixed $value): bool
+    public static function validate(AppSettingInterface $setting, mixed $value): bool
     {
         self::initializeValidators();
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Infrastructure\Storage;
 
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
@@ -21,14 +21,14 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     {
     }
 
-    public function get(SettingAccessor|SettingKeyAware $setting): ?SettingValue
+    public function get(SettingAccessor|AppSettingInterface $setting): ?SettingValue
     {
         $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
 
         return $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]);
     }
 
-    public function getSettingStoredValues(SettingKeyAware $setting): array
+    public function getSettingStoredValues(AppSettingInterface $setting): array
     {
         $result = [];
         foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
@@ -52,7 +52,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     /**
      * @todo | settings | tests
      */
-    public function store(SettingKeyAware|SettingAccessor $setting, mixed $value): SettingValue
+    public function store(AppSettingInterface|SettingAccessor $setting, mixed $value): SettingValue
     {
         $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
 
@@ -78,7 +78,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
         return $settingValue;
     }
 
-    public function remove(SettingAccessor|SettingKeyAware $setting): void
+    public function remove(SettingAccessor|AppSettingInterface $setting): void
     {
         $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
 

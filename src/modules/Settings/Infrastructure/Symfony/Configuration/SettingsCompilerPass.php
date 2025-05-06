@@ -19,9 +19,11 @@ final class SettingsCompilerPass implements CompilerPassInterface
 
     public function __construct(string $settingsDirPath, private readonly string $namespace)
     {
-        if (!$this->settingsDirPath = realpath($settingsDirPath)) {
-            throw new RuntimeException(sprintf('Cannot find %s', $this->settingsDirPath));
+        if (!$realpath = realpath($settingsDirPath)) {
+            throw new RuntimeException(sprintf('Cannot find %s', $settingsDirPath));
         }
+
+        $this->settingsDirPath = $realpath;
     }
 
     public function process(ContainerBuilder $container): void

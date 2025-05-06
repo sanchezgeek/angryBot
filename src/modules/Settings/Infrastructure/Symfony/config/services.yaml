@@ -19,3 +19,14 @@ services:
     App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider:
         arguments:
             $settingsBag: '@app.settings'
+
+    App\Settings\Application\Parameters\AppParametersLocator:
+        arguments:
+            - '@service_container'
+
+    App\Settings\Application\DynamicParameters\Evaluation\AppDynamicParameterEvaluator:
+        arguments:
+            - '@service_container'
+
+    App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPriceProvider:
+        public: true

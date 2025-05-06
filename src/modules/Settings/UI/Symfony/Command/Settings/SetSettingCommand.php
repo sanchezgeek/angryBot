@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Settings\UI\Symfony\Command;
+namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Domain\Position\ValueObject\Side;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
@@ -32,7 +32,7 @@ class SetSettingCommand extends AbstractCommand
         }
 
         $settings = $selectedGroup::cases();
-        $settingsAsk = array_map(static fn (SettingKeyAware $setting, int $key) => sprintf('%d: %s', $key, $setting->getSettingKey()) , $settings, array_keys($settings));
+        $settingsAsk = array_map(static fn (AppSettingInterface $setting, int $key) => sprintf('%d: %s', $key, $setting->getSettingKey()) , $settings, array_keys($settings));
         $settingKey = $io->ask(sprintf("Select setting:\n\n%s", implode("\n", $settingsAsk)));
         if (!$selectedSetting = $settings[$settingKey] ?? null) {
             throw new InvalidArgumentException('Not found');

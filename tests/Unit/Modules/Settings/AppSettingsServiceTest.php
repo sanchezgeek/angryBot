@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Modules\Settings;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
@@ -98,9 +98,9 @@ final class AppSettingsServiceTest extends TestCase
         $this->settingsService->disable($settingValueAccessor);
     }
 
-    private function mockExistedSettings(SettingKeyAware $setting, array &$existentSettings): void
+    private function mockExistedSettings(AppSettingInterface $setting, array &$existentSettings): void
     {
-        $this->storedParametersProvider->method('getSettingStoredValues')->with($setting)->willReturnCallback(static function (SettingKeyAware $providedSetting) use (&$existentSettings, $setting) {
+        $this->storedParametersProvider->method('getSettingStoredValues')->with($setting)->willReturnCallback(static function (AppSettingInterface $providedSetting) use (&$existentSettings, $setting) {
             $storedValues = [];
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;

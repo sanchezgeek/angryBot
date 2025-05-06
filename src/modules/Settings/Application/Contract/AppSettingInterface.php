@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Contract;
 
-interface SettingKeyAware
+interface AppSettingInterface
 {
     public function getSettingKey(): string;
-
-    /**
-     * @return self[]
-     */
-    public static function cases(): array;
 }

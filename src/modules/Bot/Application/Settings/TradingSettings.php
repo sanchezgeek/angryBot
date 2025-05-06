@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Bot\Application\Settings;
 
 use App\Settings\Application\Attribute\SettingParametersAttribute;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
+use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use App\Settings\Domain\Enum\SettingType;
 
-enum TradingSettings: string implements SettingKeyAware
+enum TradingSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
     # Opposite BuyOrders (after SL executed)
     #[SettingParametersAttribute(type: SettingType::Percent)]

@@ -6,14 +6,14 @@ namespace App\Settings\Domain;
 
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Attribute\SettingParametersAttributeReader;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Domain\Enum\SettingType;
 
 final class SettingValueCaster
 {
     private static ?array $formatters = null;
 
-    public static function castToDeclaredType(SettingKeyAware $setting, mixed $value): mixed
+    public static function castToDeclaredType(AppSettingInterface $setting, mixed $value): mixed
     {
         self::initializeFormatters();
 

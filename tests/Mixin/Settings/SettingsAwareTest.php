@@ -6,7 +6,7 @@ namespace App\Tests\Mixin\Settings;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Storage\SettingsStorageInterface;
@@ -36,12 +36,12 @@ trait SettingsAwareTest
         return self::getContainer()->get(AppSettingsProviderInterface::class);
     }
 
-    protected static function getSettingValue(SettingKeyAware $setting): mixed
+    protected static function getSettingValue(AppSettingInterface $setting): mixed
     {
         return self::getContainerSettingsProvider()->get($setting);
     }
 
-    protected function overrideSetting(SettingKeyAware|SettingAccessor $setting, mixed $value): void
+    protected function overrideSetting(AppSettingInterface|SettingAccessor $setting, mixed $value): void
     {
         self::getSettingsStorage()->store($setting, $value);
     }

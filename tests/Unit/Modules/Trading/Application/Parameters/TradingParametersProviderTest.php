@@ -10,13 +10,13 @@ use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
-use App\Trading\Application\Parameters\TradingParametersProvider;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers TradingParametersProvider
+ * @covers TradingDynamicParameters
  *
  * @group parameters
  */
@@ -35,7 +35,7 @@ final class TradingParametersProviderTest extends TestCase
     {
         $expectedSafeDistance = self::getExpectedSafeDistance(Symbol::ARCUSDT, Side::Sell, $refPrice);
 
-        $parameters = new TradingParametersProvider($this->appSettingsProvider);
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider);
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
@@ -133,7 +133,7 @@ final class TradingParametersProviderTest extends TestCase
     {
         $this->appSettingsProvider->method('get')->with(SettingAccessor::bySide(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
 
-        $parameters = new TradingParametersProvider($this->appSettingsProvider);
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider);
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 

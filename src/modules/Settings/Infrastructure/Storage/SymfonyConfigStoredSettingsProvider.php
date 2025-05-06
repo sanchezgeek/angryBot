@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Infrastructure\Storage;
 
-use App\Settings\Application\Contract\SettingKeyAware;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\SettingValueCaster;
@@ -17,7 +17,7 @@ final readonly class SymfonyConfigStoredSettingsProvider implements StoredSettin
     ) {
     }
 
-    public function getSettingStoredValues(SettingKeyAware $setting): array
+    public function getSettingStoredValues(AppSettingInterface $setting): array
     {
         $result = [];
 

@@ -7,8 +7,8 @@ namespace App\Settings\Application\Service;
 use App\Application\Logger\AppErrorLoggerInterface;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Attribute\SettingParametersAttributeReader;
+use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\SettingCacheTtlAware;
-use App\Settings\Application\Contract\SettingKeyAware;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
@@ -33,7 +33,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
         $this->storage->store($settingAccessor, null);
     }
 
-    public function get(SettingKeyAware|SettingAccessor $setting, bool $required = true, ?string $ttl = null): mixed
+    public function get(AppSettingInterface|SettingAccessor $setting, bool $required = true, ?string $ttl = null): mixed
     {
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::simple($setting);
         $setting = $settingValueAccessor->setting;
@@ -55,7 +55,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
     /**
      * @return AssignedSettingValue[]
      */
-    public function getAllSettingAssignedValues(SettingKeyAware $setting): array
+    public function getAllSettingAssignedValues(AppSettingInterface $setting): array
     {
         $result = [];
         foreach ($this->storedValuesProviders as $provider) {

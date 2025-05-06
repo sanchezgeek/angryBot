@@ -6,6 +6,9 @@ namespace App\Trading\Application\Parameters;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
+use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
@@ -13,7 +16,7 @@ use App\Trading\Application\Settings\SafePriceDistanceSettings;
 /**
  * @see \App\Tests\Unit\Modules\Trading\Application\Parameters\TradingParametersProviderTest
  */
-final readonly class TradingParametersProvider implements TradingParametersProviderInterface
+final readonly class TradingDynamicParameters implements TradingParametersProviderInterface
 {
     // cache ?
 
@@ -21,8 +24,13 @@ final readonly class TradingParametersProvider implements TradingParametersProvi
     {
     }
 
-    public function safeLiquidationPriceDelta(Symbol $symbol, Side $side, float $refPrice): float
-    {
+    #[AppDynamicParameter(group: 'trading')]
+    public function safeLiquidationPriceDelta(
+        Symbol $symbol,
+        Side $side,
+        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
+        float $refPrice
+    ): float {
         if ($percentOverride = $this->settingsProvider->get(SettingAccessor::bySide(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $side), false)) {
             return $refPrice * ($percentOverride / 100);
         }

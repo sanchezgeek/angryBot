@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Settings\UI\Symfony\Command;
+namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Command\AbstractCommand;
 use App\Helper\OutputHelper;
@@ -27,13 +27,7 @@ class ShowSettingsCommand extends AbstractCommand
                 $values = $this->settingsProvider->getAllSettingAssignedValues($setting);
 
                 foreach ($values as $assignedValue) {
-                    $value = $assignedValue->value;
-                    $value = match (true) {
-                        $assignedValue->isDisabled() => 'disabled',
-                        is_object($value) && method_exists($value, '__toString') => (string) $value,
-                        default => var_export($value, true)
-                    };
-                    $rows[] = DataRow::default([$assignedValue->fullKey, $value, $assignedValue->info]);
+                    $rows[] = DataRow::default([$assignedValue->fullKey, (string)$value, $assignedValue->info]);
                 }
             }
         }
@@ -44,9 +38,6 @@ class ShowSettingsCommand extends AbstractCommand
             ->build()
             ->setStyle('box')
             ->render();
-
-        // func tests
-//        var_dump($this->settingsProvider->get(SettingAccessor::bySide(SafePriceDistanceSettings::SafePriceDistance_Percent, Symbol::BTCUSDT, Side::Sell), false));
 
         return Command::SUCCESS;
     }
