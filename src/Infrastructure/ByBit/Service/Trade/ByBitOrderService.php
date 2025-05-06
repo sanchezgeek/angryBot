@@ -100,6 +100,16 @@ final class ByBitOrderService implements OrderServiceInterface
         $symbol = $position->symbol;
         $qty = $symbol->roundVolume($qty);
 
+        // @todo | stop
+//        try {
+//            $exchangeOrderId = $this->sendPlaceOrderRequest(
+//                PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $symbol, $position->side, $qty)
+//            );
+//        } catch (\Throwable $e) {
+//            OutputHelper::print(sprintf('%s while try to close %s on %s %s', $e->getMessage(), $qty, $symbol->value, $position->side->value));
+//            throw $e;
+//        }
+
         $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $symbol, $position->side, $qty)
         );

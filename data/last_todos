@@ -5,6 +5,9 @@ tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.
 regexp CTRL-F: @todo.*sandbox
 
 
+написать compByHedge
+ttl for active
+veryHardPriceAv
 
 move orders based on initial liq distance?
 increase position (by some paams)
@@ -18,3 +21,4 @@ liq strategy based on safePriceDistance
 // @todo | stop check mainPosition stops first
 @todo | liquidation
 @todo | cache
+@todo | buy
