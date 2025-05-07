@@ -34,6 +34,7 @@ final class FixOppositePositionListener
 
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 300;
 
+    // @todo | settings
     /** @var <array-key, int[]> PNL_GREATER_THAN, SUPPLY_STOP_DISTANCE_PCT */
     const CONFIG = [
         Symbol::BTCUSDT->value => [300, 120],

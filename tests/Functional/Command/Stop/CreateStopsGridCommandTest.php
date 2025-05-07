@@ -10,6 +10,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -347,7 +348,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => '0.1',
             '$from' => '-1',
             '$to' => '28900', '$qnt' => 10,
-            'expectedMessage' => new LogicException('Price cannot be less than zero.'),
+            'expectedMessage' => new PriceCannotBeLessThanZero(),
         ];
 
         yield '`to` must be ordersQnt must be >= 1' => [
@@ -355,7 +356,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => '0.1',
             '$from' => '29000',
             '$to' => '-1', '$qnt' => 10,
-            'expectedMessage' => new LogicException('Price cannot be less than zero.'),
+            'expectedMessage' => new PriceCannotBeLessThanZero(),
         ];
     }
 

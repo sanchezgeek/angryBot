@@ -15,10 +15,29 @@ cals
 
 lP history points
 
+@todo | settings
 @todo | settings | tests
 liq strategy based on safePriceDistance
 @todo | stop
-// @todo | stop check mainPosition stops first
+@todo | stop/check
+@todo | stop check mainPosition stops first
 @todo | liquidation
 @todo | cache
 @todo | buy
+@todo | buy/check
+
+
+
+
+hedge as grid creates order in strange range
+
+
+
+
+/**
+ * equiv hedge from BuyAndCheckFurtherPositionLiquidation
+ * eth Buy
+ * $liquidationPrice =
+ * $withPrice =
+ * $safePriceDistance =
+ */

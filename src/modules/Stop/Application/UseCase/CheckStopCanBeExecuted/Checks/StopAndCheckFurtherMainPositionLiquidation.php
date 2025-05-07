@@ -10,7 +10,7 @@ use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterfa
 use App\Application\UseCase\Trading\Sandbox\Mixin\SandboxExecutionAwareTrait;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
+use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -41,8 +41,11 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         $this->initPositionService($positionService);
     }
 
-    // @todo test?
-    public function supports(CheckOrderDto|StopCheckDto $orderDto, TradingCheckContext $context): bool
+    /**
+     * @param StopCheckDto $orderDto
+     * @todo | stop/check | test?
+     */
+    public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         $stop = self::extractStopFromEntryDto($orderDto);
 
@@ -51,7 +54,11 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         return $context->currentPositionState->isSupportPosition();
     }
 
-    public function check(CheckOrderDto|StopCheckDto $orderDto, TradingCheckContext $context): TradingCheckResult
+    /**
+     * @param StopCheckDto $orderDto
+     * @inheritdoc
+     */
+    public function check(CheckOrderDto $orderDto, TradingCheckContext $context): TradingCheckResult
     {
         $this->enrichContextWithCurrentSandboxState($context);
 
@@ -62,7 +69,10 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         $sandbox = $this->sandboxFactory->empty($stop->getSymbol());
         $sandbox->setState($context->currentSandboxState);
 
-        $sandboxOrder = SandboxStopOrder::fromStop($stop);
+        $sandboxOrder = SandboxStopOrder::fromStop($stop, $orderDto->priceValueWillBeingUsedAtExecution());
+
+// @todo | stop/check | use ticker price if by market?
+
         try {
             $sandbox->processOrders($sandboxOrder);
         } catch (Throwable $e) {
@@ -70,31 +80,29 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         }
 
         $newState = $sandbox->getCurrentState();
-        $mainPosition = $newState->getPosition($closingPosition->side->getOpposite());
-        $mainPositionLiquidationPriceNew = $mainPosition->liquidationPrice();
+        $mainPositionStateAfterExec = $newState->getPosition($closingPosition->side->getOpposite());
+        $mainPositionLiquidation = $mainPositionStateAfterExec->liquidationPrice();
 
         $ticker = $context->ticker;
         $executionPrice = $orderDto->priceValueWillBeingUsedAtExecution();
 
         // @todo | liquidation | null
-        if ($mainPositionLiquidationPriceNew->eq(0)) {
+        if ($mainPositionLiquidation->eq(0)) {
             return TradingCheckResult::succeed(
                 $this,
-                sprintf('%s | id=%d, qty=%s, price=%s | liquidation=%s', $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $mainPositionLiquidationPriceNew)
+                sprintf('%s | id=%d, qty=%s, price=%s | liquidation=%s', $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $mainPositionLiquidation)
             );
         }
 
-        // @todo check liq params
-
-        $tickerPrice = $ticker->markPrice;
-        // @todo separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
-        $withPrice = $mainPosition->isPositionInLoss($tickerPrice) ? $tickerPrice : $mainPosition->entryPrice();
-        $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPosition->symbol, $mainPosition->side, $withPrice->value());
-        $isLiquidationOnSafeDistance = LiquidationIsSafeAssertion::assert($mainPosition->side, $mainPositionLiquidationPriceNew, $withPrice, $safeDistance);
+// @todo | stop/check | check liq params
+// @todo | stop/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
+        $withPrice = $mainPositionStateAfterExec->isPositionInLoss($ticker->markPrice) ? $ticker->markPrice : $mainPositionStateAfterExec->entryPrice();
+        $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side, $withPrice->value());
+        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance);
 
         $info = sprintf(
             '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
-            $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $safeDistance, $mainPositionLiquidationPriceNew
+            $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $safeDistance, $mainPositionLiquidation
         );
 
         return
@@ -104,7 +112,7 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         ;
     }
 
-    private static function extractStopFromEntryDto(CheckOrderDto|StopCheckDto $entryDto): Stop
+    private static function extractStopFromEntryDto(StopCheckDto $entryDto): Stop
     {
         return $entryDto->inner;
     }

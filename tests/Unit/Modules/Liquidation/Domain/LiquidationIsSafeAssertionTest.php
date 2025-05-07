@@ -9,6 +9,9 @@ use App\Domain\Price\Price;
 use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers LiquidationIsSafeAssertion
+ */
 final class LiquidationIsSafeAssertionTest extends TestCase
 {
     /**
@@ -37,7 +40,6 @@ final class LiquidationIsSafeAssertionTest extends TestCase
             [Side::Buy, 1500, 2000, 500, true],
             [Side::Buy, 1500, 2000, 400, true],
             [Side::Buy, 1500, 2000, 3000, false],
-
         ];
     }
 }
