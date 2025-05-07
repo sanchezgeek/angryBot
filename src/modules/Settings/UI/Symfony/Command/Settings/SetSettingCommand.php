@@ -14,34 +14,71 @@ use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'settings:set')]
 class SetSettingCommand extends AbstractCommand
 {
+    private const RESET_OPTION = 'reset';
+    private const PATH_OPTION = 'path';
+
+    protected function configure()
+    {
+        $this
+            ->addOption(self::RESET_OPTION, null, InputOption::VALUE_NEGATABLE)
+            ->addOption(self::PATH_OPTION, null, InputOption::VALUE_REQUIRED)
+        ;
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $settingsGroups = $this->settingsLocator->getRegisteredSettingsGroups();
-        $groupsAsk = array_map(static fn (string $className, int $key) => sprintf('%d: %s', $key, $className) , $settingsGroups, array_keys($settingsGroups));
-        $group = $io->ask(sprintf("Select group:\n\n%s", implode("\n", $groupsAsk)));
-        if (!$selectedGroup = $settingsGroups[$group] ?? null) {
-            throw new InvalidArgumentException('Not found');
+        $reset = $this->paramFetcher->getBoolOption(self::RESET_OPTION);
+        $path = $this->paramFetcher->getStringOption(self::PATH_OPTION, false);
+
+        if (!$path) {
+            $settingsGroups = $this->settingsLocator->getRegisteredSettingsGroups();
+            $groupsAsk = array_map(static fn (string $className, int $key) => sprintf('%d: %s', $key, $className) , $settingsGroups, array_keys($settingsGroups));
+            $group = $io->ask(sprintf("Select group:\n\n%s", implode("\n", $groupsAsk)));
+            if (!$selectedGroup = $settingsGroups[$group] ?? null) {
+                throw new InvalidArgumentException('Not found');
+            }
+
+            $settings = $selectedGroup::cases();
+            $settingsAsk = array_map(static fn (AppSettingInterface $setting, int $key) => sprintf('%d: %s', $key, $setting->getSettingKey()) , $settings, array_keys($settings));
+            $settingKey = $io->ask(sprintf("Select setting:\n\n%s", implode("\n", $settingsAsk)));
+            if (!$selectedSetting = $settings[$settingKey] ?? null) {
+                throw new InvalidArgumentException('Not found');
+            }
+        } else {
+            $parts = explode('|', $path);
+            $className = $parts[0];
+            if (!$selectedGroup = $this->settingsLocator->tryGetByShortClassName($className)) {
+                throw new InvalidArgumentException(sprintf('Cannot find settings group by provided %s', $className));
+            }
+
+            $selectedSetting = $selectedGroup::from($parts[1]);
         }
 
-        $settings = $selectedGroup::cases();
-        $settingsAsk = array_map(static fn (AppSettingInterface $setting, int $key) => sprintf('%d: %s', $key, $setting->getSettingKey()) , $settings, array_keys($settings));
-        $settingKey = $io->ask(sprintf("Select setting:\n\n%s", implode("\n", $settingsAsk)));
-        if (!$selectedSetting = $settings[$settingKey] ?? null) {
-            throw new InvalidArgumentException('Not found');
+        if (!$reset) {
+            $symbol = $io->ask("Symbol:"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
+            $side = $io->ask("Side:"); $side = $side !== null ? Side::from($side) : null;
+        } else {
+            $symbol = null;
+            $side = null;
         }
 
-        $symbol = $io->ask("Symbol:"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
-        $side = $io->ask("Side:"); $side = $side !== null ? Side::from($side) : null;
+        if ($reset) {
+            $this->settingsService->resetSetting($selectedSetting);
+
+            return Command::SUCCESS;
+        }
 
         $settingAccessor = SettingAccessor::exact($selectedSetting, $symbol, $side);
+
         $settingValue = $this->storage->get($settingAccessor);
 
         $action = $io->ask("Action: e - set, d - disable (disables default value), r - remove");

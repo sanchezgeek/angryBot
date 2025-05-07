@@ -10,6 +10,7 @@ use InvalidArgumentException;
 
 final class SettingsLocator
 {
+    /** @var AppSettingsGroupInterface[]  */
     private array $groups = [];
 
     public function register(string $settingsGroup): void
@@ -27,5 +28,16 @@ final class SettingsLocator
     public function getRegisteredSettingsGroups(): array
     {
         return $this->groups;
+    }
+
+    public function tryGetByShortClassName(string $className): ?string
+    {
+        foreach ($this->groups as $group) {
+            if (str_contains($group, $className)) {
+                return $group;
+            }
+        }
+
+        return null;
     }
 }

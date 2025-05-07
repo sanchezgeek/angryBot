@@ -91,4 +91,11 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
         $this->repository->remove($settingValue);
     }
+
+    public function removeAllBySetting(AppSettingInterface $setting): void
+    {
+        foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
+            $this->repository->remove($settingValue);
+        }
+    }
 }

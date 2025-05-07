@@ -24,7 +24,7 @@ framework:
         position_in_loss_alert_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '5 minutes'
+            interval: '2 minutes'
         position_in_profit_alert_throttling:
             policy: 'fixed_window'
             limit: 1

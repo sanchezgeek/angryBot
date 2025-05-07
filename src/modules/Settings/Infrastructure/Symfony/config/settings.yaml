@@ -3,6 +3,10 @@ services:
         class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
         arguments:
             $parameters:
+                # profit / loss
+                alarm.loss.enabled: false
+                alarm.profit.enabled: false
+
                 # connection
                 connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'
 
