@@ -56,6 +56,15 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         $this->enrichContextWithCurrentPositionState($stop->getSymbol(), $stop->getPositionSide(), $context);
 
         return $context->currentPositionState->isSupportPosition();
+        // @todo | stop/check seems it doesn't work for фт unknown reason
+//        $oppositePosition = $context->currentPositionState->oppositePosition;
+//
+//        return
+//            $oppositePosition && (
+//                $context->currentPositionState->isSupportPosition()
+//                || $context->currentPositionState->size - $stop->getVolume() < $oppositePosition->size
+//            )
+//            ;
     }
 
     /**
