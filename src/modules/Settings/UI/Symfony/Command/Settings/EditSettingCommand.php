@@ -22,7 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'settings:edit')]
-class SetSettingCommand extends AbstractCommand
+class EditSettingCommand extends AbstractCommand
 {
     private const RESET_OPTION = 'reset-all-values';
 
@@ -82,6 +82,7 @@ class SetSettingCommand extends AbstractCommand
 
         $settingAccessor = SettingAccessor::exact($selectedSetting, $symbol, $side);
         $storedSettingValue = $this->storage->get($settingAccessor);
+        $currentValue = $storedSettingValue ? AssignedSettingValueFactory::byAccessorAndValue($settingAccessor, $storedSettingValue->value) : null;
 
         $action = $specifiedValue ? 'e' : $io->ask("Action: e - set, d - disable (disables default value), r - remove");
         if ($action === 'r') {
@@ -95,7 +96,7 @@ class SetSettingCommand extends AbstractCommand
         } elseif ($action === 'd') {
             $this->settingsService->disable($settingAccessor);
         } elseif ($action === 'e') {
-            assert($value = $specifiedValue ?? $io->ask("Value:"), new InvalidArgumentException('Value must be specified'));
+            assert($value = $specifiedValue ?? $io->ask(sprintf('%sValue:', $currentValue ? sprintf('Current value = %s. ', $currentValue) : '')), new InvalidArgumentException('Value must be specified'));
 
             $value = match ($value) {'false' => false, 'true' => true, default => $value};
             if (!SettingValueValidator::validate($selectedSetting, $value)) {
@@ -105,7 +106,7 @@ class SetSettingCommand extends AbstractCommand
 
             $newValue = AssignedSettingValueFactory::byAccessorAndValue($settingAccessor, $value);
             $confirmMsg = $storedSettingValue
-                ? sprintf('Existed setting value for "%s" = %s. Override to "%s"?', $settingAccessor, AssignedSettingValueFactory::byAccessorAndValue($settingAccessor, $storedSettingValue->value), $newValue)
+                ? sprintf('Existed setting value for "%s" = %s. Override to "%s"?', $settingAccessor, $currentValue, $newValue)
                 : sprintf('You want to store %s with value "%s". Ok?', $settingAccessor, $newValue);
 
             if (!$io->confirm($confirmMsg)) {
