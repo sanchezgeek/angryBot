@@ -30,11 +30,13 @@ final class SettingsLocator
         return $this->groups;
     }
 
-    public function tryGetByShortClassName(string $className): ?string
+    public function tryGetBySettingBaseKey(string $className): ?AppSettingInterface
     {
         foreach ($this->groups as $group) {
-            if (str_contains($group, $className)) {
-                return $group;
+            foreach ($group::cases() as $case) {
+                if ($case->getSettingKey() === $className) {
+                    return $case;
+                }
             }
         }
 

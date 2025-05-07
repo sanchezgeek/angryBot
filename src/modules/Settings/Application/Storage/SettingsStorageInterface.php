@@ -14,5 +14,5 @@ interface SettingsStorageInterface
     // @todo | settings some other dto? or just not return
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue;
     public function remove(SettingAccessor $settingAccessor): void;
-    public function removeAllBySetting(AppSettingInterface $setting): void;
+    public function removeAllByBaseKey(string $baseKey): void;
 }

@@ -9,26 +9,32 @@ use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
+use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\SettingsStorageInterface;
+use App\Settings\Domain\SettingValueValidator;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'settings:set')]
+#[AsCommand(name: 'settings:edit')]
 class SetSettingCommand extends AbstractCommand
 {
-    private const RESET_OPTION = 'reset';
-    private const PATH_OPTION = 'path';
+    private const RESET_OPTION = 'reset-all-values';
 
-    protected function configure()
+    private const SETTING_KEY_ARG = 'key';
+    private const SETTING_VALUE_OPTION = 'value';
+
+    protected function configure(): void
     {
         $this
+            ->addArgument(self::SETTING_KEY_ARG, InputArgument::OPTIONAL, 'Provide key for fast access')
             ->addOption(self::RESET_OPTION, null, InputOption::VALUE_NEGATABLE)
-            ->addOption(self::PATH_OPTION, null, InputOption::VALUE_REQUIRED)
+            ->addOption(self::SETTING_VALUE_OPTION, null, InputOption::VALUE_REQUIRED)
         ;
     }
 
@@ -37,9 +43,10 @@ class SetSettingCommand extends AbstractCommand
         $io = new SymfonyStyle($input, $output);
 
         $reset = $this->paramFetcher->getBoolOption(self::RESET_OPTION);
-        $path = $this->paramFetcher->getStringOption(self::PATH_OPTION, false);
+        $settingKey = $this->paramFetcher->getStringArgument(self::SETTING_KEY_ARG);
+        $specifiedValue = $this->paramFetcher->getStringOption(self::SETTING_VALUE_OPTION, false);
 
-        if (!$path) {
+        if (!$settingKey) {
             $settingsGroups = $this->settingsLocator->getRegisteredSettingsGroups();
             $groupsAsk = array_map(static fn (string $className, int $key) => sprintf('%d: %s', $key, $className) , $settingsGroups, array_keys($settingsGroups));
             $group = $io->ask(sprintf("Select group:\n\n%s", implode("\n", $groupsAsk)));
@@ -54,13 +61,9 @@ class SetSettingCommand extends AbstractCommand
                 throw new InvalidArgumentException('Not found');
             }
         } else {
-            $parts = explode('|', $path);
-            $className = $parts[0];
-            if (!$selectedGroup = $this->settingsLocator->tryGetByShortClassName($className)) {
-                throw new InvalidArgumentException(sprintf('Cannot find settings group by provided %s', $className));
+            if (!$selectedSetting = $this->settingsLocator->tryGetBySettingBaseKey($settingKey)) {
+                throw new InvalidArgumentException(sprintf('Cannot find settings group by provided %s', $settingKey));
             }
-
-            $selectedSetting = $selectedGroup::from($parts[1]);
         }
 
         if (!$reset) {
@@ -78,13 +81,11 @@ class SetSettingCommand extends AbstractCommand
         }
 
         $settingAccessor = SettingAccessor::exact($selectedSetting, $symbol, $side);
+        $storedSettingValue = $this->storage->get($settingAccessor);
 
-        $settingValue = $this->storage->get($settingAccessor);
-
-        $action = $io->ask("Action: e - set, d - disable (disables default value), r - remove");
-
+        $action = $specifiedValue ? 'e' : $io->ask("Action: e - set, d - disable (disables default value), r - remove");
         if ($action === 'r') {
-            if (!$settingValue) {
+            if (!$storedSettingValue) {
                 $io->info('Have not stored value. Skip');
             } else {
                 $this->settingsService->unset($settingAccessor);
@@ -94,14 +95,20 @@ class SetSettingCommand extends AbstractCommand
         } elseif ($action === 'd') {
             $this->settingsService->disable($settingAccessor);
         } elseif ($action === 'e') {
-            assert($value = $io->ask("Value:"), new InvalidArgumentException('Value must be specified'));
-            $value = match ($value) {
-                'false' => false,
-                'true' => true,
-                default => $value
-            };
+            assert($value = $specifiedValue ?? $io->ask("Value:"), new InvalidArgumentException('Value must be specified'));
 
-            if ($settingValue && !$io->confirm(sprintf('Existed setting value = %s. Override?', $settingValue->value))) {
+            $value = match ($value) {'false' => false, 'true' => true, default => $value};
+            if (!SettingValueValidator::validate($selectedSetting, $value)) {
+                $value = json_encode($value);
+                throw new InvalidArgumentException(sprintf('Invalid value "%s" for setting "%s"', $value, $settingKey));
+            }
+
+            $newValue = AssignedSettingValueFactory::byAccessorAndValue($settingAccessor, $value);
+            $confirmMsg = $storedSettingValue
+                ? sprintf('Existed setting value for "%s" = %s. Override to "%s"?', $settingAccessor, AssignedSettingValueFactory::byAccessorAndValue($settingAccessor, $storedSettingValue->value), $newValue)
+                : sprintf('You want to store %s with value "%s". Ok?', $settingAccessor, $newValue);
+
+            if (!$io->confirm($confirmMsg)) {
                 return Command::SUCCESS;
             }
 

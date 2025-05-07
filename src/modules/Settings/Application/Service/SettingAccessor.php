@@ -7,9 +7,11 @@ namespace App\Settings\Application\Service;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
+use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use LogicException;
+use Stringable;
 
-final readonly class SettingAccessor
+final readonly class SettingAccessor implements Stringable
 {
     public function __construct(
         public AppSettingInterface $setting,
@@ -30,5 +32,10 @@ final readonly class SettingAccessor
     public static function exact(AppSettingInterface $setting, ?Symbol $symbol = null, ?Side $side = null): self
     {
         return new self($setting, $symbol, $side, true);
+    }
+
+    public function __toString(): string
+    {
+        return AssignedSettingValueFactory::buildFullKey($this->setting, $this->symbol, $this->side);
     }
 }

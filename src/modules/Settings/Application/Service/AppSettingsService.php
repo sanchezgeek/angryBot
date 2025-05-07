@@ -46,9 +46,11 @@ final class AppSettingsService implements AppSettingsProviderInterface
     /**
      * @throws Exception
      */
-    public function resetSetting(AppSettingInterface $setting): void
+    public function resetSetting(AppSettingInterface|string $setting): void
     {
-        $this->storage->removeAllBySetting($setting);
+        $settingKey = $setting instanceof AppSettingInterface ? $setting->getSettingKey() : $setting;
+
+        $this->storage->removeAllByBaseKey($settingKey);
         $this->settingsCache->clear();
     }
 

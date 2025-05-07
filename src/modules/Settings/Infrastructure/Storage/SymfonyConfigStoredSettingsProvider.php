@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Settings\Infrastructure\Storage;
 
 use App\Settings\Application\Contract\AppSettingInterface;
-use App\Settings\Application\Storage\Dto\AssignedSettingValue;
+use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
-use App\Settings\Domain\SettingValueCaster;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 final readonly class SymfonyConfigStoredSettingsProvider implements StoredSettingsProviderInterface
@@ -25,12 +24,7 @@ final readonly class SymfonyConfigStoredSettingsProvider implements StoredSettin
         foreach ($all as $key => $value) {
             if (!str_contains($key, $setting->getSettingKey())) continue;
 
-            $result[] = new AssignedSettingValue(
-                $setting,
-                $key,
-                SettingValueCaster::castToDeclaredType($setting, $value),
-                'default from yaml'
-            );
+            $result[] = AssignedSettingValueFactory::byKeyAndValue($setting, $key, $value, 'default from yaml');
         }
 
         return $result;

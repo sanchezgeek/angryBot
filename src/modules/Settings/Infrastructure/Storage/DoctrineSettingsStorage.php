@@ -6,12 +6,11 @@ namespace App\Settings\Infrastructure\Storage;
 
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
-use App\Settings\Application\Storage\Dto\AssignedSettingValue;
+use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
-use App\Settings\Domain\SettingValueCaster;
 use App\Settings\Domain\SettingValueValidator;
 use InvalidArgumentException;
 
@@ -36,18 +35,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     {
         $result = [];
         foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
-            $baseKey = $setting->getSettingKey();
-
-            // @todo move somewhere
-            $key = match (true) {
-                $settingValue->positionSide !== null => sprintf('%s[symbol=%s][side=%s]', $baseKey, $settingValue->symbol->value, $settingValue->positionSide->value),
-                $settingValue->symbol !== null => sprintf('%s[symbol=%s]', $baseKey, $settingValue->symbol->value),
-                default => $baseKey,
-            };
-
-            $value = $settingValue->value === null ? null : SettingValueCaster::castToDeclaredType($setting, $settingValue->value);
-
-            $result[] = new AssignedSettingValue($setting, $key, $value, 'from db');
+            $result[] = AssignedSettingValueFactory::fromEntity($setting, $settingValue, 'from db');
         }
 
         return $result;
@@ -92,9 +80,9 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
         $this->repository->remove($settingValue);
     }
 
-    public function removeAllBySetting(AppSettingInterface $setting): void
+    public function removeAllByBaseKey(string $baseKey): void
     {
-        foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
+        foreach ($this->repository->findBy(['key' => $baseKey]) as $settingValue) {
             $this->repository->remove($settingValue);
         }
     }
