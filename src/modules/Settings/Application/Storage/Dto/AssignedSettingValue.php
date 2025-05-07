@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Settings\Application\Storage\Dto;
 
 use App\Settings\Application\Contract\AppSettingInterface;
+use BackedEnum;
 use Stringable;
 
 final readonly class AssignedSettingValue implements Stringable
@@ -29,6 +30,7 @@ final readonly class AssignedSettingValue implements Stringable
         return match (true) {
             $this->isDisabled() => 'disabled',
             is_object($value) && method_exists($value, '__toString') => (string)$value,
+            $this->value instanceof BackedEnum => $this->value->value,
             default => var_export($value, true)
         };
     }

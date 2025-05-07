@@ -25,6 +25,7 @@ services:
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
                 # trading
+                safePriceDistance.applyStrategy: 'conservative'
                 # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
                 # safePriceDistance.percent[symbol=BTCUSDT][side=sell]: 6   # example with symbol and side
 

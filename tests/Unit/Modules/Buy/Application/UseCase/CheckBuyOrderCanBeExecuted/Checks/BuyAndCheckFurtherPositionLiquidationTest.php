@@ -24,16 +24,18 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Trading\PositionPreset;
 use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Sandbox\SandboxUnitTester;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
+final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
 {
+    use SettingsAwareTest;
     use SandboxUnitTester;
     use RateLimiterAwareTest;
 
@@ -47,6 +49,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends TestCase
         $this->parameters = $this->createMock(TradingParametersProviderInterface::class);
 
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
+            self::getContainerSettingsProvider(),
             $this->parameters,
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,

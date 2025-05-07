@@ -11,9 +11,12 @@ use App\Application\UseCase\Trading\Sandbox\Mixin\SandboxExecutionAwareTrait;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
@@ -32,6 +35,7 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
     use CheckBasedOnCurrentPositionState;
 
     public function __construct(
+        private readonly AppSettingsProviderInterface $settings,
         private readonly TradingParametersProviderInterface $parameters,
         PositionServiceInterface $positionService,
         TradingSandboxFactoryInterface $sandboxFactory,
@@ -98,7 +102,10 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
 // @todo | stop/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $mainPositionStateAfterExec->isPositionInLoss($ticker->markPrice) ? $ticker->markPrice : $mainPositionStateAfterExec->entryPrice();
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side, $withPrice->value());
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance);
+        $safePriceAssertionStrategy = $this->settings->required(
+            SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side)
+        );
+        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
             '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',

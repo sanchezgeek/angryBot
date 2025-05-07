@@ -22,20 +22,24 @@ use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @covers StopAndCheckFurtherMainPositionLiquidation
  *
  * @group checks
  */
-final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
+final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCase
 {
+    use SettingsAwareTest;
+
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingParametersProviderInterface|MockObject $parameters;
@@ -50,6 +54,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends TestCase
         $positionService = $this->createMock(PositionServiceInterface::class);
 
         $this->check = new StopAndCheckFurtherMainPositionLiquidation(
+            self::getContainerSettingsProvider(),
             $this->parameters,
             $positionService,
             $this->tradingSandboxFactory,

@@ -14,7 +14,10 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
@@ -34,6 +37,7 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
     use CheckBasedOnCurrentPositionState;
 
     public function __construct(
+        private readonly AppSettingsProviderInterface $settings,
         private readonly TradingParametersProviderInterface $parameters,
         PositionServiceInterface $positionService,
         TradingSandboxFactoryInterface $sandboxFactory,
@@ -97,7 +101,7 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
 
         if ($positionAfterBuy->isSupportPosition()) {
             // @todo | buy/check how is it possible?
-            // @todo skip check at all if initially position also is support
+            // @todo mb need skip check at all if initially position is support
             return TradingCheckResult::succeed($this, 'position became support after buy');
         }
 
@@ -115,7 +119,8 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
 // @todo | buy/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $ticker->markPrice;
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($symbol, $positionSide, $withPrice->value());
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance);
+        $safePriceAssertionStrategy = $this->settings->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide));
+        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
             '%s | %sqty=%s, price=%s | safeDistance=%s, liquidation=%s, delta=%s',

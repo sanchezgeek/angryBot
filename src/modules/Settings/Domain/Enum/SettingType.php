@@ -9,6 +9,7 @@ enum SettingType
     case String;
     case Integer;
     case Float;
+    case Enum;
     case Boolean;
     case Percent;
 }
