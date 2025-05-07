@@ -57,7 +57,9 @@ trait SettingsAwareTest
 
     protected function overrideSetting(AppSettingInterface|SettingAccessor $setting, mixed $value): void
     {
-        self::getSettingsService()->set($setting, $value);
+        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::exact($setting);
+
+        self::getSettingsService()->set($settingAccessor, $value);
     }
 
     protected function setMinimalSafePriceDistance(Symbol $symbol, Side $positionSide, float $pricePercent = 0.1): void

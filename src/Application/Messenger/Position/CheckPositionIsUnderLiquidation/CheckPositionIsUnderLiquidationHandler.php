@@ -30,6 +30,9 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -161,10 +164,12 @@ final class CheckPositionIsUnderLiquidationHandler
 
         ### add new ###
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+        $positionSide = $position->side;
+
         if (
             $distanceWithLiquidation > $this->dynamicParameters->warningDistance()
             && ($lastRunMarketPrice = $this->getLastRunMarkPrice($position)) !== null
-            && PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice)->isProfitFor($position->side)
+            && PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice)->isProfitFor($positionSide)
         ) {
             return; # skip checks if price didn't move to position loss direction AND liquidation is not in warning range
         }
@@ -230,7 +235,12 @@ final class CheckPositionIsUnderLiquidationHandler
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                         Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
-                        Stop::FIX_OPPOSITE_MAIN_ON_LOSS => Params::AFTER_STOP_FIX_OPPOSITE_IF_MAIN,
+                        Stop::FIX_OPPOSITE_MAIN_ON_LOSS => $this->settings->required(
+                            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::FixOppositeIfMain, $symbol, $positionSide)
+                        ),
+                        Stop::FIX_OPPOSITE_SUPPORT_ON_LOSS => $this->settings->required(
+                            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::FixOppositeEvenIfSupport, $symbol, $positionSide)
+                        ),
                     ];
 
                     if (Params::isSymbolWithoutOppositeBuyOrders($symbol)) {
@@ -246,7 +256,7 @@ final class CheckPositionIsUnderLiquidationHandler
 //                        ];
 //                    }
 
-                    $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta, $context);
+                    $this->stopService->create($position->symbol, $positionSide, $stopPrice, $stopQty, $triggerDelta, $context);
                 }
             }
         }
@@ -429,6 +439,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly StopRepositoryInterface $stopRepository,
         private readonly LoggerInterface $appErrorLogger,
         private readonly ?CacheInterface $cache,
+        private readonly AppSettingsProviderInterface $settings,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {

@@ -24,9 +24,9 @@ final class AppSettingsService implements AppSettingsProviderInterface
     /**
      * @throws Exception
      */
-    public function set(SettingAccessor|AppSettingInterface $setting, mixed $value): void
+    public function set(SettingAccessor $settingAccessor, mixed $value): void
     {
-        $this->storage->store($setting, $value);
+        $this->storage->store($settingAccessor, $value);
         $this->settingsCache->clear();
     }
 
@@ -40,6 +40,15 @@ final class AppSettingsService implements AppSettingsProviderInterface
         }
 
         $this->storage->store($settingAccessor, null);
+        $this->settingsCache->clear();
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function unset(SettingAccessor $settingAccessor): void
+    {
+        $this->storage->remove($settingAccessor);
         $this->settingsCache->clear();
     }
 

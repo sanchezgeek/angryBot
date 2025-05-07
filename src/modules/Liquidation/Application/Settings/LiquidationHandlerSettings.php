@@ -11,8 +11,14 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
-    #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
+    #[SettingParametersAttribute(type: SettingType::Float)]
     case CriticalPartOfLiquidationDistance = 'liquidationHandlerSettings.CriticalPartOfLiquidationDistance';
+
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case FixOppositeIfMain = 'liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain';
+
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case FixOppositeEvenIfSupport = 'liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport';
 
     public function getSettingKey(): string
     {

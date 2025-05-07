@@ -56,10 +56,8 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     /**
      * @todo | settings | tests
      */
-    public function store(AppSettingInterface|SettingAccessor $setting, mixed $value): SettingValue
+    public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue
     {
-        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::exact($setting);
-
         $setting = $settingAccessor->setting;
         $settingKey = $setting->getSettingKey();
 
@@ -82,17 +80,12 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
         return $settingValue;
     }
 
-    public function remove(SettingAccessor|AppSettingInterface $setting): void
+    public function remove(SettingAccessor $settingAccessor): void
     {
-        $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::exact($setting);
-
-        $setting = $settingAccessor->setting;
-        $settingKey = $setting->getSettingKey();
-
         $symbol = $settingAccessor->symbol;
         $side = $settingAccessor->side;
 
-        if (!$settingValue = $this->repository->findOneBy(['key' => $settingKey, 'symbol' => $symbol, 'positionSide' => $side])) {
+        if (!$settingValue = $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $symbol, 'positionSide' => $side])) {
             return;
         }
 

@@ -50,7 +50,7 @@ class SetSettingCommand extends AbstractCommand
             if (!$settingValue) {
                 $io->info('Have not stored value. Skip');
             } else {
-                $this->storage->remove($settingAccessor);
+                $this->settingsService->unset($settingAccessor);
             }
 
             return Command::SUCCESS;

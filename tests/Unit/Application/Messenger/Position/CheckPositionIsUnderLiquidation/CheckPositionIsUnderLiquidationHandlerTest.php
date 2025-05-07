@@ -27,6 +27,7 @@ use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function min;
@@ -43,6 +44,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 {
     use PositionSideAwareTest;
     use AppErrorsLoggerTrait;
+    use SettingsAwareTest;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
@@ -82,6 +84,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
             null,
+            self::getContainerSettingsProvider(),
             self::getContainer()->get(LiquidationDynamicParametersFactory::class),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );

@@ -12,6 +12,6 @@ interface SettingsStorageInterface
 {
     public function get(AppSettingInterface|SettingAccessor $setting): ?SettingValue;
     // @todo | settings some other dto? or just not return
-    public function store(AppSettingInterface|SettingAccessor $setting, mixed $value): SettingValue;
-    public function remove(AppSettingInterface|SettingAccessor $setting): void;
+    public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue;
+    public function remove(SettingAccessor $settingAccessor): void;
 }

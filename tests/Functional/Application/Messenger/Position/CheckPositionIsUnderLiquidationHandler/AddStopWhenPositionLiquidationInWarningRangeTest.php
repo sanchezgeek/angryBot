@@ -19,10 +19,13 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -46,6 +49,10 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
+    use SettingsAwareTest;
+
+    private const FixOppositeIfMain = true;
+    private const FixOppositeIfSupport = true;
 
 //    private const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 //    private const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
@@ -81,6 +88,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         $this->haveStopsInDb(...$delayedStops);
         $this->haveActiveConditionalStopsOnMultipleSymbols(...$activeConditionalStops);
+
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::FixOppositeIfMain, $symbol, $position->side), self::FixOppositeIfMain);
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::FixOppositeEvenIfSupport, $symbol, $position->side), self::FixOppositeIfSupport);
 
         // Act
         ($this->handler)($message);
@@ -442,6 +452,9 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $symbol = $allOpenedPositions[array_key_first($allOpenedPositions)]->symbol;
         $this->haveAvailableSpotBalance($symbol, 0.1);
 
+        $this->overrideSetting(LiquidationHandlerSettings::FixOppositeIfMain, self::FixOppositeIfMain);
+        $this->overrideSetting(LiquidationHandlerSettings::FixOppositeEvenIfSupport, self::FixOppositeIfSupport);
+
         // Act
         ($this->handler)($message);
 
@@ -633,7 +646,8 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             [
                 Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                 Stop::CLOSE_BY_MARKET_CONTEXT => true,
-                Stop::FIX_OPPOSITE_MAIN_ON_LOSS => Params::AFTER_STOP_FIX_OPPOSITE_IF_MAIN,
+                Stop::FIX_OPPOSITE_MAIN_ON_LOSS => self::FixOppositeIfMain,
+                Stop::FIX_OPPOSITE_SUPPORT_ON_LOSS => self::FixOppositeIfSupport,
             ],
         );
     }
