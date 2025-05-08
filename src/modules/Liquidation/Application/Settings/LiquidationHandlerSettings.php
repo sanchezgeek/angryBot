@@ -17,6 +17,9 @@ enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSetti
     #[SettingParametersAttribute(type: SettingType::Percent)]
     case PercentOfLiquidationDistanceToAddStop = 'liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop';
 
+    #[SettingParametersAttribute(type: SettingType::Float)]
+    case WarningDistancePnl = 'liquidationHandlerSettings.warningDistancePnl';
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case FixOppositeIfMain = 'liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain';
 

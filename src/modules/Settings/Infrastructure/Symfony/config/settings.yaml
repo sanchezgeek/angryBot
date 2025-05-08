@@ -38,3 +38,10 @@ services:
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
+
+                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+                liquidationHandlerSettings.warningDistancePnl: 400
+                liquidationHandlerSettings.warningDistancePnl[symbol=BTCUSDT]: 120
+                liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 200
+                liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 500
+                liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 500

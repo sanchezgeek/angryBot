@@ -105,6 +105,8 @@ final class AppSettingsService implements AppSettingsProviderInterface
             }
         }
 
+        ksort($result);
+
         return $result;
     }
 
