@@ -21,6 +21,7 @@ use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
+use App\Trading\SDK\Check\Exception\ReferencedPositionNotFound;
 use App\Trading\SDK\Check\Mixin\CheckBasedOnCurrentPositionState;
 use App\Trading\SDK\Check\Mixin\CheckBasedOnExecutionInSandbox;
 use Throwable;
@@ -46,14 +47,23 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
     }
 
     /**
+     * @inheritDoc
+     *
      * @param StopCheckDto $orderDto
      * @todo | stop/check | test?
      */
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         $stop = self::extractStopFromEntryDto($orderDto);
+        $symbol = $stop->getSymbol();
+        $side = $stop->getPositionSide();
 
-        $this->enrichContextWithCurrentPositionState($stop->getSymbol(), $stop->getPositionSide(), $context);
+        $this->enrichContextWithCurrentPositionState($symbol, $side, $context);
+
+        if (!$context->currentPositionState) {
+            // e.g. position closed at this moment
+            throw new ReferencedPositionNotFound(sprintf('Trying to find position by %s %s, but cannot', $symbol->value, $side->value));
+        }
 
         return $context->currentPositionState->isSupportPosition();
         // @todo | stop/check seems it doesn't work for фт unknown reason

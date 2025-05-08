@@ -8,10 +8,14 @@ use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandb
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
+use App\Trading\SDK\Check\Exception\ReferencedPositionNotFound;
 use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
 
 interface TradingCheckInterface
 {
+    /**
+     * @throws ReferencedPositionNotFound
+     */
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool;
 
     /**

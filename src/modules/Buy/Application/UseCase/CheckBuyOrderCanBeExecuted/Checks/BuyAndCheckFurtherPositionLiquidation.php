@@ -119,6 +119,7 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
 // @todo | buy/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $ticker->markPrice;
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($symbol, $positionSide, $withPrice->value());
+// @todo | settings | it also can be setting for whole class to define hot to retrieve setting (with alternatives / exact)
         $safePriceAssertionStrategy = $this->settings->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide));
         $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
 

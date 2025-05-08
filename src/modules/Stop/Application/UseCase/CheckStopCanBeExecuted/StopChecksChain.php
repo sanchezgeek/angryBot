@@ -13,6 +13,7 @@ use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
+use App\Trading\SDK\Check\Exception\ReferencedPositionNotFound;
 use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
 use App\Trading\SDK\Check\Result\CommonOrderCheckFailureEnum;
 
@@ -35,8 +36,12 @@ final class StopChecksChain
         foreach ($this->checks as $check) {
             $dto = new StopCheckDto($stop, $context->ticker);
 
-            if (!$check->supports($dto, $context)) {
-                continue;
+            try {
+                if (!$check->supports($dto, $context)) {
+                    continue;
+                }
+            } catch (ReferencedPositionNotFound $e) {
+                return TradingCheckResult::failed($check, CommonOrderCheckFailureEnum::ReferencedPositionNotFound, $e->getMessage(), true); // quiet
             }
 
             $currentPositionState = $context->currentPositionState ?? $this->positionService->getPosition($stop->getSymbol(), $stop->getPositionSide());
