@@ -35,5 +35,6 @@ services:
 
                 # liquidationHandler
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
+                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false

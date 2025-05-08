@@ -67,6 +67,7 @@ class ShowParametersCommand extends AbstractCommand
         );
 
         $io->block(sprintf('%s.%s: %s', $selectedGroup, $selectedParameter, $value));
+        $io->block(sprintf('var_export: %s', var_export($value, true)));
 
         return Command::SUCCESS;
     }

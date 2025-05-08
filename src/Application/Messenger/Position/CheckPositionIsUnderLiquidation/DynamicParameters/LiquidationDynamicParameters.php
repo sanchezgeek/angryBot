@@ -166,6 +166,18 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         );
     }
 
+    #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function percentOfLiquidationDistanceToAddStop(): Percent
+    {
+        if ($this->handledMessage->percentOfLiquidationDistanceToAddStop) {
+            return new Percent($this->handledMessage->percentOfLiquidationDistanceToAddStop, false);
+        }
+
+        return $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::PercentOfLiquidationDistanceToAddStop, $this->symbol, $this->position->side)
+        );
+    }
+
 //    #[AppDynamicParameter(group: 'liquidation-handler')]
     private function additionalStopDistanceWithLiquidation(bool $minWithTickerDistance = false): float
     {
@@ -175,8 +187,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             $min = $this->warningDistance();
 
             if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal situation
-                $distancePnl = $this->handledMessage->percentOfLiquidationDistanceToAddStop ?? Params::PERCENT_OF_LIQUIDATION_DISTANCE_TO_ADD_STOP_BEFORE;
-                $this->additionalStopDistanceWithLiquidation = (new Percent($distancePnl, false))->of($position->liquidationDistance());
+                $this->additionalStopDistanceWithLiquidation = $this->percentOfLiquidationDistanceToAddStop()->of($position->liquidationDistance());
 
                 $this->additionalStopDistanceWithLiquidation = max($this->additionalStopDistanceWithLiquidation, $min);
             } else { # bad scenario
