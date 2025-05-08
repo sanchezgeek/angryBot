@@ -23,13 +23,14 @@ use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Worker\AppContext;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @group liquidation
  *
  * @covers LiquidationDynamicParameters
  */
-final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCase
+final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelTestCase
 {
     use SettingsAwareTest;
 
@@ -74,7 +75,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
     ): void {
         $debug && AppContext::setIsDebug($debug);
 
-        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters(self::getContainerSettingsProvider(), $message, $position, $ticker);
 
         $actualStopsRange = $dynamicParameters->actualStopsRange();
         $additionalStopPrice = $dynamicParameters->additionalStopPrice();

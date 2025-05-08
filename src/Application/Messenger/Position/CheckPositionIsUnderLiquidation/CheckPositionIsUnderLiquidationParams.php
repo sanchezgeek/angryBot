@@ -12,14 +12,6 @@ final class CheckPositionIsUnderLiquidationParams
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
     public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = 8; // @todo Must be different for BTC and others
 
-    public const CRITICAL_DISTANCE_PNLS = [
-        Symbol::BTCUSDT->value => 60,
-        Symbol::ETHUSDT->value => 80,
-        Symbol::ARCUSDT->value => 200, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
-        Symbol::FARTCOINUSDT->value => 200, // @todo Must be (somehow) calculated automatically based on symbol volatility statistics
-        'other' => 200
-    ];
-
     /** @var Symbol[] */
     private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
 //        Symbol::LAIUSDT,
@@ -49,10 +41,5 @@ final class CheckPositionIsUnderLiquidationParams
     public static function getAcceptableStoppedPart(Symbol $symbol): float|int|null
     {
         return self::ACCEPTABLE_STOPPED_PART[$symbol->value] ?? null;
-    }
-
-    public static function criticalDistancePnlDefault(Symbol $symbol): int|float
-    {
-        return self::CRITICAL_DISTANCE_PNLS[$symbol->value] ?? self::CRITICAL_DISTANCE_PNLS['other'];
     }
 }

@@ -94,7 +94,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalDistancePnl(): float
     {
-        return Params::criticalDistancePnlDefault($this->handledMessage->symbol);
+        return $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalDistancePnl, $this->symbol, $this->position->side)
+        );
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]

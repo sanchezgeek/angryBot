@@ -45,3 +45,10 @@ services:
                 liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 200
                 liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 500
                 liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 500
+
+                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+                liquidationHandlerSettings.criticalDistancePnl: 200
+                liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT]: 60
+                liquidationHandlerSettings.criticalDistancePnl[symbol=ETHUSDT]: 80
+                liquidationHandlerSettings.criticalDistancePnl[symbol=ARCUSDT]: 200
+                liquidationHandlerSettings.criticalDistancePnl[symbol=FARTCOINUSDT]: 200
