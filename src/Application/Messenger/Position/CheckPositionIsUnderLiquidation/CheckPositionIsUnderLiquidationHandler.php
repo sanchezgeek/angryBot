@@ -112,7 +112,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
                 $messages[] = new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop ?? Params::getAdditionalStopDistanceWithLiquidation($symbol),
+                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop,
                     acceptableStoppedPart: $message->acceptableStoppedPart ?? Params::getAcceptableStoppedPart($symbol),
                     warningPnlDistance: $message->warningPnlDistance,
                 );
