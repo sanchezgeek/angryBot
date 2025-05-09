@@ -4,6 +4,7 @@ namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
@@ -24,6 +25,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'settings:edit')]
 class EditSettingCommand extends AbstractCommand
 {
+    use SymbolAwareCommand;
+
     private const RESET_OPTION = 'reset-all-values';
 
     private const SETTING_KEY_ARG = 'key';
@@ -32,6 +35,7 @@ class EditSettingCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
+            ->configureSymbolArgs(defaultValue: null)
             ->addArgument(self::SETTING_KEY_ARG, InputArgument::OPTIONAL, 'Provide key for fast access')
             ->addOption(self::RESET_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::SETTING_VALUE_OPTION, null, InputOption::VALUE_REQUIRED)
@@ -67,8 +71,10 @@ class EditSettingCommand extends AbstractCommand
         }
 
         if (!$reset) {
-            $symbol = $io->ask("Symbol:"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
-            $side = $io->ask("Side:"); $side = $side !== null ? Side::from($side) : null;
+            if (!($this->symbolIsSpecified() && $symbol = $this->getSymbol())) {
+                $symbol = $io->ask("Symbol (default = `null`):"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
+            }
+            $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {
             $symbol = null;
             $side = null;
