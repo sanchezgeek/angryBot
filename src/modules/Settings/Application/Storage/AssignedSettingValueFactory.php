@@ -14,16 +14,40 @@ use App\Settings\Domain\SettingValueCaster;
 
 final class AssignedSettingValueFactory
 {
+    /**
+     * @return array{Symbol, Side}
+     */
+    public static function parseSymbolAndSide(string $fullKey): array
+    {
+        $symbol = null;
+        $side = null;
+
+        if (str_contains($fullKey, 'symbol=') || str_contains($fullKey, 'side=')) {
+            preg_match_all('/(?<=\[).*?(?=\])/', $fullKey, $matches);
+            foreach ($matches[0] as $match) {
+                if (str_contains($match, 'symbol=')) {
+                    $symbol = Symbol::tryFrom(str_replace('symbol=', '', $match));
+                } elseif (str_contains($match, 'side=')) {
+                    $side = Side::tryFrom(str_replace('side=', '', $match));
+                }
+            }
+        }
+
+        return [$symbol, $side];
+    }
+
     public static function byKeyAndValue(AppSettingInterface $setting, string $fullKey, mixed $value, ?string $info = null): AssignedSettingValue
     {
-        return new AssignedSettingValue($setting, $fullKey, self::castStoredValue($setting, $value), $info);
+        [$symbol, $side] = self::parseSymbolAndSide($fullKey);
+
+        return new AssignedSettingValue($setting, $symbol, $side, $fullKey, self::castStoredValue($setting, $value), $info);
     }
 
     public static function fromEntity(AppSettingInterface $setting, SettingValue $settingValue, ?string $info = null): AssignedSettingValue
     {
         $fullKey = self::buildFullKey($setting, $settingValue->symbol, $settingValue->positionSide);
 
-        return new AssignedSettingValue($setting, $fullKey, self::castStoredValue($setting, $settingValue->value), $info);
+        return new AssignedSettingValue($setting, $settingValue->symbol, $settingValue->positionSide, $fullKey, self::castStoredValue($setting, $settingValue->value), $info);
     }
 
     public static function byAccessorAndValue(SettingAccessor $settingAccessor, mixed $value, ?string $info = null): AssignedSettingValue
@@ -31,7 +55,7 @@ final class AssignedSettingValueFactory
         $setting = $settingAccessor->setting;
         $fullKey = self::buildFullKey($setting, $settingAccessor->symbol, $settingAccessor->side);
 
-        return new AssignedSettingValue($setting, $fullKey, self::castStoredValue($setting, $value), $info);
+        return new AssignedSettingValue($setting, $settingAccessor->symbol, $settingAccessor->side, $fullKey, self::castStoredValue($setting, $value), $info);
     }
 
     private static function castStoredValue(AppSettingInterface $setting, mixed $storedValue): mixed

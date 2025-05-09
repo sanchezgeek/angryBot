@@ -9,6 +9,7 @@ use App\Helper\OutputHelper;
 use App\Settings\Application\Attribute\SettingParametersAttributeReader;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\SettingCacheTtlAware;
+use App\Settings\Application\Storage\AssignedSettingValueCollection;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
@@ -92,10 +93,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
         });
     }
 
-    /**
-     * @return AssignedSettingValue[]
-     */
-    public function getAllSettingAssignedValues(AppSettingInterface $setting): array
+    public function getAllSettingAssignedValuesCollection(AppSettingInterface $setting): AssignedSettingValueCollection
     {
         $result = [];
         foreach ($this->storedValuesProviders as $provider) {
@@ -107,12 +105,12 @@ final class AppSettingsService implements AppSettingsProviderInterface
 
         ksort($result);
 
-        return $result;
+        return new AssignedSettingValueCollection(...$result);
     }
 
     private function doGet(SettingAccessor $settingValueAccessor, bool $required): ?AssignedSettingValue
     {
-        $assignedValues = $this->getAllSettingAssignedValues($settingValueAccessor->setting);
+        $assignedValues = $this->getAllSettingAssignedValuesCollection($settingValueAccessor->setting)->mapByFullKey();
 
         $baseKey = $settingValueAccessor->setting->getSettingKey();
         $side = $settingValueAccessor->side;
@@ -153,25 +151,6 @@ final class AppSettingsService implements AppSettingsProviderInterface
 
         return null;
     }
-
-    /**
-     * @todo cache decorator
-     * @see StoredSettingsProviderInterface
-     */
-//    private function fetch(string $key, string $ttl): mixed
-//    {
-//        $cacheKey = md5(sprintf('setting_%s', $key));
-//
-//        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($key, $ttl) {
-//            $item->expiresAfter(DateInterval::createFromDateString($ttl));
-//
-//            try {
-//                return $this->settingsBag->get($key);
-//            } catch (ParameterNotFoundException) {
-//                return null;
-//            }
-//        });
-//    }
 
     /**
      * @param iterable<StoredSettingsProviderInterface> $storedValuesProviders

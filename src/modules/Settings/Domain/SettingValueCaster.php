@@ -37,7 +37,7 @@ final class SettingValueCaster
             self::$formatters[SettingType::Integer->name] = static fn($value) => intval($value);
             self::$formatters[SettingType::Float->name] = static fn($value) => floatval($value);
             self::$formatters[SettingType::Boolean->name] = static fn($value) => (bool)$value;
-            self::$formatters[SettingType::Percent->name] = static fn($value) => Percent::string($value, false);
+            self::$formatters[SettingType::Percent->name] = static fn($value) => Percent::string($value, false)->setOutputFloatPrecision(2);
         }
     }
 }

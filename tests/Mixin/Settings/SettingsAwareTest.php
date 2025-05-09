@@ -11,6 +11,7 @@ use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
@@ -94,7 +95,8 @@ trait SettingsAwareTest
             $storedValues = [];
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;
-                $storedValues[] = new AssignedSettingValue($providedSetting, $key, $value);
+                [$symbol, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
+                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol, $side, $key, $value);
             }
 
             return $storedValues;

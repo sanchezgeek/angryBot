@@ -196,8 +196,8 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $liquidationPrice = $ticker->symbol->makePrice($liquidationPrice);
 
         return sprintf(
-            '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s, delta=%s',
-            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $safePriceDistance, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice)
+            '%s | id=%d, qty=%s, price=%s | liquidation=%s, delta=%s, safeDistance=%s',
+            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $safePriceDistance
         );
     }
 

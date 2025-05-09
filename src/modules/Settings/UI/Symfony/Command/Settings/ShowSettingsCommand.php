@@ -6,6 +6,8 @@ use App\Command\AbstractCommand;
 use App\Helper\OutputHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
+use App\Output\Table\Dto\SeparatorRow;
+use App\Output\Table\Dto\Style\CellStyle;
 use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsService;
@@ -23,11 +25,43 @@ class ShowSettingsCommand extends AbstractCommand
         $rows = [];
         foreach ($this->settingsLocator->getRegisteredSettingsGroups() as $group) {
             $rows[] = DataRow::separated([Cell::restColumnsMerged(OutputHelper::shortClassName($group))->setAlign(CellAlign::CENTER)]);
-            foreach ($group::cases() as $setting) {
-                $values = $this->settingsProvider->getAllSettingAssignedValues($setting);
+            $groupCases = $group::cases();
+            foreach ($groupCases as $settKey => $setting) {
+                $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);
+
+                if (!$values->isSettingHasFallbackValue()) {
+                    $rows[] = DataRow::separated([sprintf('%s (without fallback)', $setting->getSettingKey())]);
+                }
 
                 foreach ($values as $assignedValue) {
-                    $rows[] = DataRow::default([$assignedValue->fullKey, (string)$assignedValue, $assignedValue->info]);
+
+                    $fullKey = $assignedValue->fullKey;
+                    $baseKey = $setting->getSettingKey();
+
+                    $style = CellStyle::default();
+                    if ($assignedValue->isFallbackValue()) {
+                        $settingKey = sprintf('%s (fallback)', $baseKey);
+                    } else {
+                        $settingKey = str_pad(str_replace($baseKey, '', $fullKey), 30);
+                        $style = CellStyle::right();
+                    }
+
+                    if (!$assignedValue->isDefault()) {
+                        $style->align = CellAlign::RIGHT;
+                    }
+
+                    $rows[] = DataRow::default(
+                        [
+                            Cell::default($settingKey)->addStyle($style),
+                            (string)$assignedValue,
+                            Cell::default(
+                                $assignedValue->info . ($assignedValue->isDefault() ? '   ' : '')
+                            )->setAlign($assignedValue->isDefault() ? CellAlign::LEFT : CellAlign::RIGHT),
+                        ]
+                    );
+                }
+                if ($settKey !== array_key_last($groupCases)) {
+                    $rows[] = new SeparatorRow();
                 }
             }
         }

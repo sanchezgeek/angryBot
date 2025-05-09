@@ -24,7 +24,7 @@ final readonly class SymfonyConfigStoredSettingsProvider implements StoredSettin
         foreach ($all as $key => $value) {
             if (!str_contains($key, $setting->getSettingKey())) continue;
 
-            $result[] = AssignedSettingValueFactory::byKeyAndValue($setting, $key, $value, 'default from yaml');
+            $result[] = AssignedSettingValueFactory::byKeyAndValue($setting, $key, $value, 'default');
         }
 
         return $result;

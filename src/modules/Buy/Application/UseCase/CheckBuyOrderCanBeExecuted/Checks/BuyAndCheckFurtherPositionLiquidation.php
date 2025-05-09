@@ -124,8 +124,14 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
         $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
-            '%s | %sqty=%s, price=%s | safeDistance=%s, liquidation=%s, delta=%s',
-            $positionAfterBuy, $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '', $order->volume, $executionPrice, $safeDistance, $liquidationPrice, $liquidationPrice->deltaWith($withPrice)
+            '%s | %sqty=%s, price=%s | liquidation=%s, delta=%s, safeDistance=%s',
+            $positionAfterBuy,
+            $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '',
+            $order->volume,
+            $executionPrice,
+            $liquidationPrice,
+            $liquidationPrice->deltaWith($withPrice),
+            $safeDistance
         );
 
         return

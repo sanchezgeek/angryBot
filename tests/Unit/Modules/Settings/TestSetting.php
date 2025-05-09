@@ -19,6 +19,6 @@ enum TestSetting: string implements AppSettingInterface, AppSettingsGroupInterfa
 
     public function cacheTtl(): string
     {
-        return '1 second';
+        return '900 milliseconds';
     }
 }
