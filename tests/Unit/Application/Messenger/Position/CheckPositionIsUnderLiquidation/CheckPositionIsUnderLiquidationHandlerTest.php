@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiqu
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
@@ -22,7 +21,9 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
@@ -51,7 +52,6 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 
     private const MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
     private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
-    private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION_DEFAULT = CheckPositionIsUnderLiquidationParams::ACCEPTABLE_STOPPED_PART_DEFAULT;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -162,7 +162,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
-        $acceptableStoppedPartBeforeLiquidation = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION_DEFAULT;
+        $acceptableStoppedPartBeforeLiquidation = self::getContainerSettingsProvider()->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $position->symbol, $position->side)
+        );
 
         $this->orderService
             ->expects(self::once())

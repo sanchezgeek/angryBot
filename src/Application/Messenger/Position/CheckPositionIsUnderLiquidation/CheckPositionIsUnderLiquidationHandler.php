@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -118,7 +117,7 @@ final class CheckPositionIsUnderLiquidationHandler
                 $messages[] = new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
                     percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop,
-                    acceptableStoppedPart: $message->acceptableStoppedPart ?? Params::getAcceptableStoppedPart($symbol),
+                    acceptableStoppedPart: $message->acceptableStoppedPart,
                     warningPnlDistance: $message->warningPnlDistance,
                 );
                 $this->positions[$symbol->value] = $main;

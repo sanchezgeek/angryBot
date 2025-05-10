@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -21,7 +20,6 @@ use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Worker\AppContext;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -113,7 +111,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
              * @var Position $position
              * @var Ticker $ticker
              */
-            $bag = CheckLiquidationParametersBag::create($message, $position, $ticker);
+            $bag = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position, $ticker);
             $expectedActualStopsRange = $bag->actualStopsRange();
             $expectedStopPrice = $bag->additionalStopPrice();
             $expectedCriticalDistance = $bag->criticalDistance();
@@ -164,7 +162,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
         $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
-        $expectedStopPrice = Price::float(30179.6); /** @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS */
+        $expectedStopPrice = Price::float(30179.6); /** @see LiquidationHandlerSettings::CriticalDistancePnl */
         $warningDistance = 180.6;
         $criticalDistance = 180.6;
         $acceptableStoppedPart = 44.075304540420824;

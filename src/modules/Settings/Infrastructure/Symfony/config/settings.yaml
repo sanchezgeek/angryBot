@@ -36,9 +36,16 @@ services:
                 # liquidationHandler
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
+                liquidationHandlerSettings.acceptableStoppedPartFallback: 4
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
                 liquidationHandlerSettings.afterStop.addOppositeBuyOrders: true
+
+                # @todo Must be based on current price? or volatility
+                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop: 50
+                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BTCUSDT]: 8
+                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=ETHUSDT]: 20
+                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BNBUSDT]: 20
 
                 # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
                 liquidationHandlerSettings.warningDistancePnl: 400

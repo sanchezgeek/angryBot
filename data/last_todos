@@ -25,6 +25,7 @@ liq strategy based on safePriceDistance
 @todo | cache
 @todo | buy
 @todo | buy/check
+@todo | performance | rid of Percent if can
 
 
 

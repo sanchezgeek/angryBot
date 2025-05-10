@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
@@ -27,6 +26,8 @@ use RuntimeException;
 
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface
 {
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+
     private Symbol $symbol;
     private ?float $warningDistance = null;
     private ?PriceRange $warningRange = null;
@@ -225,6 +226,14 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function acceptableStoppedPartFallback(): float|null
+    {
+        return $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $this->symbol, $this->position->side)
+        );
+    }
+
+    #[AppDynamicParameter(group: 'liquidation-handler')]
     public function acceptableStoppedPart(): float
     {
         if ($this->handledMessage->acceptableStoppedPart) {
@@ -251,7 +260,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             // @todo | liquidation | manual | short liq distance / ticker right before liquidation (in critical range)
             // зафейлился: добавит объем в зависимости от той цены, которая где-то там выше
 
-            return ($acceptableStoppedPart / Params::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
+            return ($acceptableStoppedPart / self::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
 //            return ($acceptableStoppedPart / 1.5) * $modifier;
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
             $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
@@ -268,7 +277,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             return $acceptableStoppedPart * $modifier;
         }
 
-        return Params::ACCEPTABLE_STOPPED_PART_DEFAULT;
+        return $this->acceptableStoppedPartFallback();
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
@@ -281,8 +290,13 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         $position = $this->position;
         $additionalStopPrice = $this->additionalStopPrice();
 
+        $actualStopsRangeFromAdditionalStop = $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
+        );
+
         try {
-            $modifier = (new Percent(Params::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($position->liquidationDistance());
+            // @todo | performance | rid of Percent if can
+            $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
 
             $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
             $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
@@ -319,7 +333,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         } catch (\Exception $e) {
             if ($e->getMessage() === 'Price cannot be less than zero.') {
                 $modifier = min(
-                    (new Percent(Params::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($position->liquidationDistance()),
+                    (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance()),
                     PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice)
                 );
 

@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnd
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
@@ -525,7 +524,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     public static function tickerInCheckStopsRange(CheckPositionIsUnderLiquidation $message, Position $position): Ticker
     {
-        $checkStopsOnDistance = CheckLiquidationParametersBag::create($message, $position)->checkStopsOnDistance();
+        $checkStopsOnDistance = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position)->checkStopsOnDistance();
 
         return TickerFactory::withEqualPrices(
             $position->symbol,
@@ -535,7 +534,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     public static function tickerInWarningRange(CheckPositionIsUnderLiquidation $message, Position $position, ?Percent $passedDistance = null): Ticker
     {
-        $distancePnl = CheckLiquidationParametersBag::create($message, $position)->warningDistancePnl();
+        $distancePnl = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position)->warningDistancePnl();
         $pnlDistanceWithLiquidation = $distancePnl - ($passedDistance ? $passedDistance->value() : 0);
         $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistanceWithLiquidation, $position->entryPrice()), 0.1);
 
@@ -547,7 +546,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     public static function tickerInCriticalRange(CheckPositionIsUnderLiquidation $message, Position $position, ?Percent $passedDistance = null): Ticker
     {
-        $distancePnl = CheckLiquidationParametersBag::create($message, $position)->criticalDistancePnl();
+        $distancePnl = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position)->criticalDistancePnl();
         $pnlDistanceWithLiquidation = $distancePnl - ($passedDistance ? $passedDistance->value() : 0);
         $warningDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistanceWithLiquidation, $position->entryPrice()), 0.1);
 
@@ -571,7 +570,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
     private static function stopPriceThatLeanInAcceptableRange(CheckPositionIsUnderLiquidation $message, Position $position): Price
     {
-        $actualStopsRange = CheckLiquidationParametersBag::create($message, $position)->actualStopsRange();
+        $actualStopsRange = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position)->actualStopsRange();
         $someDelta = Percent::string('2%')->of($position->liquidationDistance());
 
         return $position->isShort() ? $actualStopsRange->to()->sub($someDelta) : $actualStopsRange->from()->add($someDelta);
@@ -618,7 +617,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         }
         $lastId = $lastStopsIdInDb ?? $lastId;
 
-        $checkLiquidationParametersBag = CheckLiquidationParametersBag::create($message, $position, $ticker);
+        $checkLiquidationParametersBag = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position, $ticker);
 
         $expectedStopSize = $checkLiquidationParametersBag->acceptableStoppedPart() - Percent::fromPart($stopped / $size, false)->value();
         $additionalStopDistanceWithLiquidation = $checkLiquidationParametersBag->additionalStopDistanceWithLiquidation();
@@ -668,7 +667,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
             $mainPosition,
         );
 
-        $needToCoverPercent = CheckLiquidationParametersBag::create($message, $mainPosition, $ticker)->acceptableStoppedPart() - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
+        $needToCoverPercent = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $mainPosition, $ticker)->acceptableStoppedPart() - $delayedStopsPositionSizePart - $activeConditionalOrdersSizePart;
 
         return sprintf(
             '[%s%s] / ticker.markPrice = %.2f) | stopped %.2f%% => need to cover %.2f%% => add %s on %s',
