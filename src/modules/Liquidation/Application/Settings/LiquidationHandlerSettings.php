@@ -29,6 +29,9 @@ enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSetti
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case FixOppositeEvenIfSupport = 'liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport';
 
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case AddOppositeBuyOrdersAfterStop = 'liquidationHandlerSettings.afterStop.addOppositeBuyOrders';
+
     public function getSettingKey(): string
     {
         return $this->value;

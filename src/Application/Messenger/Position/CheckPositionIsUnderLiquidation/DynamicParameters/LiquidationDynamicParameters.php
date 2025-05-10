@@ -56,6 +56,14 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function addOppositeBuyOrdersAfterStop(): bool
+    {
+        return $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AddOppositeBuyOrdersAfterStop, $this->symbol, $this->position->side)
+        );
+    }
+
+    #[AppDynamicParameter(group: 'liquidation-handler')]
     public function checkStopsOnDistance(): float
     {
         $message = $this->handledMessage;

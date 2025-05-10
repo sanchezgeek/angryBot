@@ -9,6 +9,7 @@ use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
 use App\Output\Table\Dto\Style\CellStyle;
 use App\Output\Table\Dto\Style\Enum\CellAlign;
+use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingsLocator;
@@ -24,7 +25,9 @@ class ShowSettingsCommand extends AbstractCommand
     {
         $rows = [];
         foreach ($this->settingsLocator->getRegisteredSettingsGroups() as $group) {
-            $rows[] = DataRow::separated([Cell::restColumnsMerged(OutputHelper::shortClassName($group))->setAlign(CellAlign::CENTER)]);
+            $rows[] = DataRow::separated([
+                Cell::restColumnsMerged(sprintf('~ ~ ~ %s ~ ~ ~', OutputHelper::shortClassName($group)))->addStyle(new CellStyle(fontColor: Color::YELLOW, align: CellAlign::CENTER))
+            ]);
             $groupCases = $group::cases();
             foreach ($groupCases as $settKey => $setting) {
                 $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);

@@ -38,6 +38,7 @@ services:
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
+                liquidationHandlerSettings.afterStop.addOppositeBuyOrders: true
 
                 # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
                 liquidationHandlerSettings.warningDistancePnl: 400

@@ -53,6 +53,11 @@ use function sprintf;
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
 {
+    /** @var Symbol[] */
+    private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
+//        Symbol::LAIUSDT,
+    ];
+
     # Transfer from spot
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
@@ -106,7 +111,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
                 $symbol = $main->symbol;
 
-                if (Params::isSymbolIgnored($symbol)) {
+                if (self::isSymbolIgnored($symbol)) {
                     continue;
                 }
 
@@ -243,7 +248,7 @@ final class CheckPositionIsUnderLiquidationHandler
                         ),
                     ];
 
-                    if (Params::isSymbolWithoutOppositeBuyOrders($symbol)) {
+                    if (!$this->dynamicParameters->addOppositeBuyOrdersAfterStop()) {
                         $context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
                     }
 
@@ -395,6 +400,11 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         return new StopsCollection(...$result);
+    }
+
+    public static function isSymbolIgnored(Symbol $symbol): bool
+    {
+        return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
     private function getLastRunMarkPrice(Position $position): ?Price
