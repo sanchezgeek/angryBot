@@ -12,12 +12,19 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
+use DateInterval;
 use InvalidArgumentException;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
 {
-    public function __construct(private SettingValueRepository $repository)
-    {
+    private const CACHE_TTL = '1 minute';
+
+    public function __construct(
+        private SettingValueRepository $repository,
+        private CacheInterface $settingsCache,
+    ) {
     }
 
     public function get(SettingAccessor|AppSettingInterface $setting): ?SettingValue
@@ -33,12 +40,18 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function getSettingStoredValues(AppSettingInterface $setting): array
     {
-        $result = [];
-        foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
-            $result[] = AssignedSettingValueFactory::fromEntity($setting, $settingValue, 'from db');
-        }
+        $cacheKey = md5(sprintf('doctrineAllSettingValues_for_%s', $setting->getSettingKey()));
 
-        return $result;
+        return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($setting) {
+            $item->expiresAfter(DateInterval::createFromDateString(self::CACHE_TTL));
+
+            $result = [];
+            foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
+                $result[] = AssignedSettingValueFactory::fromEntity($setting, $settingValue, 'from db');
+            }
+
+            return $result;
+        });
     }
 
     /**

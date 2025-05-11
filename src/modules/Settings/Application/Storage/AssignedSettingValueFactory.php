@@ -36,7 +36,7 @@ final class AssignedSettingValueFactory
         return [$symbol, $side];
     }
 
-    public static function byKeyAndValue(AppSettingInterface $setting, string $fullKey, mixed $value, ?string $info = null): AssignedSettingValue
+    public static function byFullKeyAndValue(AppSettingInterface $setting, string $fullKey, mixed $value, ?string $info = null): AssignedSettingValue
     {
         [$symbol, $side] = self::parseSymbolAndSide($fullKey);
 

@@ -79,9 +79,9 @@ final class AppSettingsService implements AppSettingsProviderInterface
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;
 
-        $ttl = $ttl ?? ($setting instanceof SettingCacheTtlAware ? $setting->cacheTtl() : self::CACHE_TTL);
+        $ttl = $setting instanceof SettingCacheTtlAware ? $setting->cacheTtl() : self::CACHE_TTL;
         $cacheKey = md5(
-            sprintf('settingValueAccessor_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
+            sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
         );
 
         return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($settingValueAccessor, $required, $ttl) {

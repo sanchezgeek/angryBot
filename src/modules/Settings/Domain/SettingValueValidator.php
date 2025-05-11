@@ -49,7 +49,7 @@ final class SettingValueValidator
             self::$validators[SettingType::Boolean->name] = static fn($value) => is_bool($value);
             self::$validators[SettingType::Percent->name] = static function($value) {
                 try {
-                    Percent::string($value);
+                    Percent::string($value, false);
                     return true;
                 } catch (InvalidArgumentException) {
                     return false;

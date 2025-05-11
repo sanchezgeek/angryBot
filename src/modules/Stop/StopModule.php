@@ -17,5 +17,6 @@ final class StopModule extends AbstractBundle
         parent::build($container);
 
         $this->registerSettings($container, __NAMESPACE__, __DIR__ . '/Application/Settings');
+        $this->registerSettingsValues($container,__DIR__ . '/Infrastructure/Symfony/config/stop_settings.yaml');
     }
 }

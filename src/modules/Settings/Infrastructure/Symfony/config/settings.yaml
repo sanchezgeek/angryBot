@@ -1,4 +1,5 @@
 services:
+    # !!! @see SettingsDefaultValuesCompilerPass !!!
     app.settings:
         class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
         arguments:
@@ -24,16 +25,16 @@ services:
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
 
-                # other
+# other
                 trading.takeProfitWhenBalanceIsInsufficient.enabled: false
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
-                # trading
+# Trading\Application\Settings\SafePriceDistanceSettings
                 safePriceDistance.applyStrategy: 'conservative'
                 # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
                 # safePriceDistance.percent[symbol=BTCUSDT][side=sell]: 6   # example with symbol and side
 
-                # liquidationHandler
+# Liquidation\Application\Settings\LiquidationHandlerSettings
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.acceptableStoppedPartFallback: 4

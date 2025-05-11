@@ -2,19 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Application\EventListener\Stop;
+namespace App\Stop\Application\EventListener;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
+use App\Stop\Application\Settings\FixOppositePositionSettings;
 use App\Worker\AppContext;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -30,36 +32,26 @@ use function sprintf;
 #[AsEventListener]
 final class FixOppositePositionListener
 {
-    public const ENABLED = true;
-
-    const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 300;
-
-    // @todo | settings
-    /** @var <array-key, int[]> PNL_GREATER_THAN, SUPPLY_STOP_DISTANCE_PCT */
-    const CONFIG = [
-        Symbol::BTCUSDT->value => [300, 120],
-        Symbol::ETHUSDT->value => [500, 200],
-        Symbol::FARTCOINUSDT->value => [600, 400],
-        'other' => [1000, 300],
-    ];
-
     public function __construct(
+        private readonly AppSettingsProviderInterface $settings,
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionServiceInterface $positionService, /** @todo | MB without cache? */
         private readonly StopServiceInterface $stopService,
-        private readonly ?float $applyIfMainPositionPnlGreaterThan = null, // for tests
     ) {
     }
 
     public function __invoke(StopPushedToExchange $event): void
     {
-        if (!self::ENABLED) {
+        $stop = $event->stop;
+        $symbol = $stop->getSymbol();
+        $positionSide = $stop->getPositionSide();
+
+        if (!$this->settings->required(SettingAccessor::withAlternativesAllowed(FixOppositePositionSettings::FixOppositePosition_Enabled, $symbol, $positionSide))) {
             return;
         }
 
-        $stop = $event->stop;
         if (!$stop->isCloseByMarketContextSet()) {
             return;
         } // if (!($closedVolume >= $symbol->minOrderQty())) return;
@@ -76,7 +68,6 @@ final class FixOppositePositionListener
             return;
         }
 
-        $symbol = $stop->getSymbol();
         $stopPrice = $stop->getPrice();
         $closedVolume = $stop->getVolume();
 
@@ -86,11 +77,12 @@ final class FixOppositePositionListener
         } // if ($this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)) {self::echo(sprintf('%s size enough for support mainPosition => skip', $stoppedSupportPosition->getCaption())); return;}
         self::echo(sprintf('%s: %s stop closed at %f', __CLASS__, $stoppedPosition->getCaption(), $stopPrice));
 
-        [$applyIfOppositePositionPnlGreaterThan, $supplyStopPnlDistancePct] = self::CONFIG[$symbol->value] ?? self::CONFIG['other'];
-        $applyIfOppositePositionPnlGreaterThan = $this->applyIfMainPositionPnlGreaterThan ?? $applyIfOppositePositionPnlGreaterThan;
+        /** @var Percent $applyIfOppositePositionPnlGreaterThan */
+        $applyIfOppositePositionPnlGreaterThan = $this->settings->required(
+            SettingAccessor::withAlternativesAllowed(FixOppositePositionSettings::FixOppositePosition_If_OppositePositionPnl_GreaterThan, $symbol, $positionSide)
+        );
 
-        $oppositePositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($oppositePosition);
-        if ($oppositePositionPnlPercent < $applyIfOppositePositionPnlGreaterThan) {
+        if ($ticker->lastPrice->getPnlPercentFor($oppositePosition) < $applyIfOppositePositionPnlGreaterThan->value()) {
             self::echo(sprintf('%s: oppositePosition PNL is not enough for add supply stop => skip', __CLASS__)); return;
         }
 
@@ -106,6 +98,11 @@ final class FixOppositePositionListener
             Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
             Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION => true,
         ];
+
+        /** @var Percent $supplyStopPnlDistancePct */
+        $supplyStopPnlDistancePct = $this->settings->required(
+            SettingAccessor::withAlternativesAllowed(FixOppositePositionSettings::FixOppositePosition_supplyStopPnlDistance, $symbol, $positionSide)
+        );
 
         $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($supplyStopPnlDistancePct, $ticker->indexPrice), 0.1);
         $supplyStopPrice = $symbol->makePrice($stoppedPosition->isLong() ? $stopPrice + $distance : $stopPrice - $distance)->value();
