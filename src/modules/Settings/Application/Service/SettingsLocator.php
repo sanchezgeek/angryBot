@@ -13,9 +13,9 @@ final class SettingsLocator
     /** @var AppSettingsGroupInterface[]  */
     private array $groups = [];
 
-    public function register(string $settingsGroup): void
+    public function registerGroup(string $settingsGroup): void
     {
-        if (!in_array(AppSettingInterface::class, class_implements($settingsGroup), true)) {
+        if (!in_array(AppSettingsGroupInterface::class, class_implements($settingsGroup), true)) {
             throw new InvalidArgumentException('Provided class must be of type AppSettingInterface');
         }
 

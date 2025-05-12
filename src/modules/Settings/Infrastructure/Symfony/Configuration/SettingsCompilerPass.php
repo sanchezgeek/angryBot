@@ -36,7 +36,9 @@ final class SettingsCompilerPass implements CompilerPassInterface
         if ($finder->hasResults()) {
             foreach ($finder as $file) {
                 $className = $this->namespace . '\\' . str_replace('.php', '', $file->getFilename());
-                $locator->addMethodCall('register', [$className]);
+                /** @see SettingsLocator::registerGroup */
+                // @todo use finder to find only implementations?
+                $locator->addMethodCall('registerGroup', [$className]);
             }
         }
     }

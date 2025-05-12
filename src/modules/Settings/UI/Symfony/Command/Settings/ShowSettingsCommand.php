@@ -3,6 +3,7 @@
 namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Command\AbstractCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Helper\OutputHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
@@ -21,36 +22,48 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'settings:show')]
 class ShowSettingsCommand extends AbstractCommand
 {
+    use SymbolAwareCommand;
+
+    protected function configure(): void
+    {
+        $this
+            ->configureSymbolArgs(defaultValue: null)
+        ;
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
+
         $rows = [];
         foreach ($this->settingsLocator->getRegisteredSettingsGroups() as $group) {
             $rows[] = DataRow::separated([
-                Cell::restColumnsMerged(sprintf('~ ~ ~ %s ~ ~ ~', OutputHelper::shortClassName($group)))->addStyle(new CellStyle(fontColor: Color::YELLOW, align: CellAlign::CENTER))
+                Cell::restColumnsMerged(sprintf('%s', OutputHelper::shortClassName($group)))->addStyle(new CellStyle(fontColor: Color::YELLOW, align: CellAlign::CENTER))
             ]);
             $groupCases = $group::cases();
             foreach ($groupCases as $settKey => $setting) {
                 $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);
 
                 if (!$values->isSettingHasFallbackValue()) {
-                    $rows[] = DataRow::separated([sprintf('%s (without fallback)', $setting->getSettingKey())]);
+                    $rows[] = DataRow::default([$setting->getSettingKey(), Cell::align(CellAlign::CENTER, '---'), Cell::align(CellAlign::CENTER, '---')]);
                 }
 
                 foreach ($values as $assignedValue) {
+                    $isFallbackValue = $assignedValue->isFallbackValue();
+
+                    if ($symbol && !($isFallbackValue || $assignedValue->symbol === $symbol)) {
+                        continue;
+                    }
 
                     $fullKey = $assignedValue->fullKey;
                     $baseKey = $setting->getSettingKey();
 
                     $style = CellStyle::default();
-                    if ($assignedValue->isFallbackValue()) {
-                        $settingKey = sprintf('%s (fallback)', $baseKey);
+                    if ($isFallbackValue) {
+                        $settingKey = $baseKey;
                     } else {
                         $settingKey = str_pad(str_replace($baseKey, '', $fullKey), 30);
                         $style = CellStyle::right();
-                    }
-
-                    if (!$assignedValue->isDefault()) {
-                        $style->align = CellAlign::RIGHT;
                     }
 
                     $rows[] = DataRow::default(
@@ -59,7 +72,7 @@ class ShowSettingsCommand extends AbstractCommand
                             (string)$assignedValue,
                             Cell::default(
                                 $assignedValue->info . ($assignedValue->isDefault() ? '   ' : '')
-                            )->setAlign($assignedValue->isDefault() ? CellAlign::LEFT : CellAlign::RIGHT),
+                            )->addStyle(new CellStyle(fontColor: $assignedValue->isDefault() ? Color::GRAY : Color::DEFAULT)),
                         ]
                     );
                 }
