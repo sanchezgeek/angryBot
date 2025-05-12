@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Storage;
 
+use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use IteratorAggregate;
 use Traversable;
@@ -52,4 +53,19 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
         return $result;
     }
 
+    public function filterByAccessor(SettingAccessor $settingAccessor): self
+    {
+        $exact = $settingAccessor->exact;
+
+        $callback = $exact
+            ? static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol === $settingAccessor->symbol) && (!$settingAccessor->side || $value->side === $settingAccessor->side)
+            : static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol === $settingAccessor->symbol) && (!$settingAccessor->side || $value->side === $settingAccessor->side) || $value->isFallbackValue();
+
+        return new self(...array_filter($this->values, $callback));
+    }
+
+    public function count(): int
+    {
+        return count($this->values);
+    }
 }

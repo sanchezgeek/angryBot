@@ -13,6 +13,7 @@ use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsService;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -44,16 +45,16 @@ class ShowSettingsCommand extends AbstractCommand
             foreach ($groupCases as $settKey => $setting) {
                 $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);
 
+                if ($symbol) {
+                    $values = $values->filterByAccessor(SettingAccessor::withAlternativesAllowed($setting, $symbol));
+                }
+
                 if (!$values->isSettingHasFallbackValue()) {
                     $rows[] = DataRow::default([$setting->getSettingKey(), Cell::align(CellAlign::CENTER, '---'), Cell::align(CellAlign::CENTER, '---')]);
                 }
 
                 foreach ($values as $assignedValue) {
                     $isFallbackValue = $assignedValue->isFallbackValue();
-
-                    if ($symbol && !($isFallbackValue || $assignedValue->symbol === $symbol)) {
-                        continue;
-                    }
 
                     $fullKey = $assignedValue->fullKey;
                     $baseKey = $setting->getSettingKey();
