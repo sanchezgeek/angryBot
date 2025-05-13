@@ -1,0 +1,14 @@
+### Stop\Application\Settings\FixOppositePositionSettings
+stop.afterStop.fixOppositePosition.enabled: true
+
+stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan: '1000%' # @todo MB change some (all symbols)
+stop.afterStop.fixOppositePosition.supplyStopPnlDistance: '300%'
+
+stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[symbol=FARTCOINUSDT]: '600%'
+stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=FARTCOINUSDT]: '400%'
+
+stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[symbol=ETHUSDT]: '500%'
+stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=ETHUSDT]: '200%'
+
+stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[symbol=BTCUSDT]: '300%'
+stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=BTCUSDT]: '120%'

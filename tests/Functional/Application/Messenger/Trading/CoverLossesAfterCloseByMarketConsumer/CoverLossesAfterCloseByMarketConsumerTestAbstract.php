@@ -6,7 +6,7 @@ namespace App\Tests\Functional\Application\Messenger\Trading\CoverLossesAfterClo
 
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer;
 use App\Bot\Application\Settings\PushStopSettings;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -17,7 +17,7 @@ abstract class CoverLossesAfterCloseByMarketConsumerTestAbstract extends KernelT
     use SettingsAwareTest;
 
     protected CoverLossesAfterCloseByMarketConsumer $consumer;
-    protected AppSettingsProvider $settingsProvider;
+    protected AppSettingsProviderInterface $settingsProvider;
 
     protected function setUp(): void
     {
@@ -25,6 +25,6 @@ abstract class CoverLossesAfterCloseByMarketConsumerTestAbstract extends KernelT
 
         # enable
         $this->settingsProvider = self::getContainerSettingsProvider();
-        $this->settingsProvider->set(PushStopSettings::Cover_Loss_After_Close_By_Market, true);
+        $this->overrideSetting(PushStopSettings::Cover_Loss_After_Close_By_Market, true);
     }
 }

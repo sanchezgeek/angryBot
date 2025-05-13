@@ -1,3 +1,10 @@
+framework:
+    rate_limiter:
+        check_can_execute_support_stop_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '45 seconds'
+
 services:
     _defaults:
         autowire: true
@@ -6,9 +13,5 @@ services:
     App\Stop\:
         resource: '../../../'
 
-framework:
-    rate_limiter:
-        check_can_close_support_while_push_stops_throttling:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '45 seconds'
+    App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain:
+        factory: [ '@App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory', 'full' ]

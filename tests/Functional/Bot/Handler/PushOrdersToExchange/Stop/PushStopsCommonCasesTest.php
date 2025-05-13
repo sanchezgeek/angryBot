@@ -45,6 +45,8 @@ use function sprintf;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
+ *
+ * @group stop
  */
 final class PushStopsCommonCasesTest extends KernelTestCase
 {
@@ -624,15 +626,15 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     {
         if (null === self::$oppositeBuyOrderPnlDistances) {
             self::$oppositeBuyOrderPnlDistances = [
-                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false),
-                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false),
+                Side::Buy->value => self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition),
+                Side::Sell->value => self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition),
             ];
         }
 
         if (null === self::$oppositeBuyOrderPnlDistancesForAltCoins) {
             self::$oppositeBuyOrderPnlDistancesForAltCoins = [
-                Side::Buy->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false),
-                Side::Sell->value => Percent::string(self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false),
+                Side::Buy->value => self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin),
+                Side::Sell->value => self::getSettingValue(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin),
             ];
         }
 

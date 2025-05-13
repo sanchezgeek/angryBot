@@ -107,6 +107,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     public function clearPositionsCache(Symbol $symbol, ?Side $positionSide = null): void
     {
+        // @todo | cache | all symbols?
         $this->cache->delete(
             self::positionsCacheKey($symbol)
         );

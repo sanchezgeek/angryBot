@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiqu
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
@@ -22,11 +21,15 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
-use PHPUnit\Framework\TestCase;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function min;
 use function sprintf;
@@ -38,17 +41,17 @@ use function sprintf;
  *
  * @todo functional?
  */
-final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
+final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 {
     use PositionSideAwareTest;
     use AppErrorsLoggerTrait;
+    use SettingsAwareTest;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
     private const MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
     private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
-    private const ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION_DEFAULT = CheckPositionIsUnderLiquidationParams::ACCEPTABLE_STOPPED_PART_DEFAULT;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -56,6 +59,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
     private StopServiceInterface $stopService;
     private OrderServiceInterface $orderService;
     private StopRepositoryInterface $stopRepository;
+    private AppSettingsProviderInterface $settingsProvider;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
 
@@ -69,6 +73,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
         $this->orderService = $this->createMock(OrderServiceInterface::class);
         $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
+        $this->settingsProvider = $this->createMock(AppSettingsProviderInterface::class);
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
@@ -79,7 +84,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->stopRepository,
             self::getTestAppErrorsLogger(),
             null,
-            new LiquidationDynamicParametersFactory(),
+            self::getContainerSettingsProvider(),
+            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }
@@ -156,7 +162,9 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends TestCase
             $this->exchangeAccountService->expects(self::never())->method('interTransferFromSpotToContract');
         }
 
-        $acceptableStoppedPartBeforeLiquidation = self::ACCEPTABLE_STOPPED_PART_BEFORE_LIQUIDATION_DEFAULT;
+        $acceptableStoppedPartBeforeLiquidation = self::getContainerSettingsProvider()->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $position->symbol, $position->side)
+        );
 
         $this->orderService
             ->expects(self::once())

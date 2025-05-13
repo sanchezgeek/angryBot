@@ -1,5 +1,6 @@
 imports:
     - { resource: settings.yaml }
+    - { resource: doctrine.yaml }
 
 services:
     _defaults:
@@ -9,6 +10,26 @@ services:
     App\Settings\:
         resource: '../../../'
 
-    App\Settings\Application\Service\AppSettingsProvider:
+    App\Settings\Application\Service\AppSettingsService:
+        public: true
+        arguments:
+            $storedValuesProviders:
+                - '@App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider'
+                - '@App\Settings\Infrastructure\Storage\DoctrineSettingsStorage'
+
+    App\Settings\Infrastructure\Storage\SymfonyConfigStoredSettingsProvider:
         arguments:
             $settingsBag: '@app.settings'
+
+    App\Settings\Application\Parameters\AppParametersLocator:
+        arguments:
+            - '@service_container'
+
+    App\Settings\Application\DynamicParameters\Evaluation\AppDynamicParameterEvaluator:
+        arguments:
+            - '@service_container'
+
+    # dynamic parameters evaluation
+    _instanceof:
+        App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface:
+            public: true

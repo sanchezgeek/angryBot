@@ -1,0 +1,17 @@
+framework:
+    rate_limiter:
+        check_further_position_liquidation_after_buy:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '45 seconds'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Buy\:
+        resource: '../../../'
+
+    App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain:
+        factory: [ '@App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChainFactory', 'full' ]

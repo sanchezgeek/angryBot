@@ -7,6 +7,7 @@ namespace App\Domain\Price;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use RuntimeException;
@@ -28,13 +29,14 @@ final class Price implements Stringable
     public ?int $precision = null;
 
     /**
+     * @throws PriceCannotBeLessThanZero
      * @todo | Get precision on construct to further use. Maybe even external (with some getter)
      *         While accurate value must be calculated somewhere else and passed here
      */
     private function __construct(float $value, int $precision)
     {
         if ($value < 0) {
-            throw new \DomainException('Price cannot be less than zero.');
+            throw new PriceCannotBeLessThanZero();
         }
 
         $this->value = $value;
@@ -115,7 +117,12 @@ final class Price implements Stringable
 
     public function isPriceOverStop(Side $positionSide, float $stopPrice): bool
     {
-        return $positionSide->isShort() ? $this->value > $stopPrice : $this->value < $stopPrice;
+        return $this->isPriceInLossOfOther($positionSide, $stopPrice);
+    }
+
+    public function isPriceInLossOfOther(Side $positionSide, Price|float $other): bool
+    {
+        return $positionSide->isShort() ? $this->value > $other : $this->value < $other;
     }
 
     public function differenceWith(Price $otherPrice): PriceMovement

@@ -99,6 +99,9 @@ enum Symbol: string
     case THETAUSDT = 'THETAUSDT';
     case UNIUSDT = 'UNIUSDT';
     case TAOUSDT = 'TAOUSDT';
+    case STPTUSDT = 'STPTUSDT';
+    case SOLAYERUSDT = 'SOLAYERUSDT';
+    case ZBCNUSDT = 'ZBCNUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -179,6 +182,9 @@ enum Symbol: string
         self::THETAUSDT->value => 4,
         self::UNIUSDT->value => 3,
         self::TAOUSDT->value => 2,
+        self::STPTUSDT->value => 5,
+        self::SOLAYERUSDT->value => 4,
+        self::ZBCNUSDT->value => 7,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -260,6 +266,9 @@ enum Symbol: string
         self::THETAUSDT->value => 1,
         self::UNIUSDT->value => 0.1,
         self::TAOUSDT->value => 0.001,
+        self::STPTUSDT->value => 1,
+        self::SOLAYERUSDT->value => 1,
+        self::ZBCNUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [

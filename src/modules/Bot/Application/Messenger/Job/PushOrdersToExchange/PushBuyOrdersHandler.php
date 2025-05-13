@@ -6,10 +6,10 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
-use App\Application\UseCase\Trading\MarketBuy\Checks\Exception\TooManyTriesForCheck;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\MarketBuy\Exception\BuyIsNotSafeException;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
+use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -31,24 +31,30 @@ use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
+use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
+use Random\RandomException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -88,6 +94,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private readonly bool $useIsLastPriceOverIndexPriceCheck;
     private readonly bool $useIgnoreBuyCheckBasedOnTotalPositionLeverage;
+
+    private TradingCheckContext $checksContext;
 
     /**
      * @todo It must be separated service receiving some context of spot usage to make decision.
@@ -145,12 +153,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     private function canTakeProfit(Position $position, Ticker $ticker): bool
     {
-        if ($this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled) !== true) {
+        if ($this->settings->required(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled) !== true) {
             return false;
         }
 
         $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
-        $minLastPricePnlPercentToTakeProfit = $this->settings->get(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent);
+        $minLastPricePnlPercentToTakeProfit = $this->settings->required(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_After_Position_Pnl_Percent);
 
         return $currentPnlPercent >= $minLastPricePnlPercentToTakeProfit;
     }
@@ -175,6 +183,19 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         );
     }
 
+    /**
+     * @todo | exceptions
+     *
+     * @throws UnexpectedSandboxExecutionException
+     * @throws RandomException
+     * @throws OrderDoesNotMeetMinimumOrderValue
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     * @throws UnexpectedApiErrorException
+     * @throws TickerNotFoundException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     */
     public function __invoke(PushBuyOrders $message): void
     {
         if ($this->marketService->isNowFundingFeesPaymentTime()) {
@@ -202,8 +223,12 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         if (!$position) {
+            // @todo | checks | mb troubles with sandbox
+            // @todo | sandbox | mb troubles with sandbox (inner check will not work)
             $position = new Position($side, $symbol, $index->value(), 0.05, 1000, 0, 13, 100);
         }
+
+        $this->checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);
 
         /** @var BuyOrder $lastBuy For `CannotAffordOrderCost` exception processing */
         $lastBuy = null;
@@ -338,21 +363,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
     /**
      * @throws CannotAffordOrderCostException
+     * @throws UnexpectedSandboxExecutionException
+     * @throws OrderDoesNotMeetMinimumOrderValue
      */
     private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
     {
         try {
-            $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order));
+            $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order), $this->checksContext);
             $order->setExchangeOrderId($exchangeOrderId);
 //            $this->events->dispatch(new BuyOrderPushedToExchange($order));
 
             if ($order->isWithOppositeOrder()) {
                 $this->createStop($position, $ticker, $order);
             }
-        } catch (TooManyTriesForCheck $e) {
-            // do nothing
-        } catch (BuyIsNotSafeException) {
-            OutputHelper::warning(sprintf('[%d] Skip buy %s|%s on %s.', $order->getId(), $order->getVolume(), $order->getPrice(), $position));
+        } catch (ChecksNotPassedException $e) {
+            ($message = $e->getMessage()) && OutputHelper::warning($message);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -631,7 +656,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
         private readonly MarketBuyHandler $marketBuyHandler,
         RateLimiterFactory $ignoreBuyThrottlingLimiter,
-        private readonly AppSettingsProvider $settings,
+        private readonly AppSettingsProviderInterface $settings,
 
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
@@ -641,8 +666,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         $this->ignoreBuyThrottlingLimiter = $ignoreBuyThrottlingLimiter->create('push_buy_orders');
 
         # checks
-        $this->useIsLastPriceOverIndexPriceCheck = $this->settings->get(PushBuyOrderSettings::Checks_lastPriceOverIndexPriceCheckEnabled);
-        $this->useIgnoreBuyCheckBasedOnTotalPositionLeverage = $this->settings->get(PushBuyOrderSettings::Checks_ignoreBuyBasedOnTotalPositionLeverageEnabled);
+        $this->useIsLastPriceOverIndexPriceCheck = $this->settings->required(PushBuyOrderSettings::Checks_lastPriceOverIndexPriceCheckEnabled);
+        $this->useIgnoreBuyCheckBasedOnTotalPositionLeverage = $this->settings->required(PushBuyOrderSettings::Checks_ignoreBuyBasedOnTotalPositionLeverageEnabled);
 
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }

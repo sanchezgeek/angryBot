@@ -5,47 +5,51 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler\AddStopWhenPositionLiquidationInWarningRangeTest;
 use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Worker\AppContext;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @group liquidation
  *
  * @covers LiquidationDynamicParameters
  */
-final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCase
+final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelTestCase
 {
+    use SettingsAwareTest;
+
     public function testCriticalPartOfLiquidationDistance(): void
     {
+        $criticalPartOfLiqDistance = 10;
+        $settingsMock = $this->settingsProviderMock([LiquidationHandlerSettings::CriticalPartOfLiquidationDistance->getSettingKey() => $criticalPartOfLiqDistance]);
+
         $symbol = Symbol::BTCUSDT;
         $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 35000);
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($settingsMock, $message, $position, $ticker);
 
-        self::assertEquals(
-            CheckPositionIsUnderLiquidationParams::CRITICAL_PART_OF_LIQUIDATION_DISTANCE,
-            $dynamicParameters->criticalPartOfLiquidationDistance()
-        );
+        self::assertEquals($criticalPartOfLiqDistance, $dynamicParameters->criticalPartOfLiquidationDistance());
 
         # with override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
 
         self::assertEquals(
             $criticalPartOfLiquidationDistance,
@@ -69,7 +73,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
     ): void {
         $debug && AppContext::setIsDebug($debug);
 
-        $dynamicParameters = new LiquidationDynamicParameters($message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters(self::getContainerSettingsProvider(), $message, $position, $ticker);
 
         $actualStopsRange = $dynamicParameters->actualStopsRange();
         $additionalStopPrice = $dynamicParameters->additionalStopPrice();
@@ -107,7 +111,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
              * @var Position $position
              * @var Ticker $ticker
              */
-            $bag = CheckLiquidationParametersBag::create($message, $position, $ticker);
+            $bag = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position, $ticker);
             $expectedActualStopsRange = $bag->actualStopsRange();
             $expectedStopPrice = $bag->additionalStopPrice();
             $expectedCriticalDistance = $bag->criticalDistance();
@@ -158,7 +162,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends TestCas
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
         $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
-        $expectedStopPrice = Price::float(30179.6); /** @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS */
+        $expectedStopPrice = Price::float(30179.6); /** @see LiquidationHandlerSettings::CriticalDistancePnl */
         $warningDistance = 180.6;
         $criticalDistance = 180.6;
         $acceptableStoppedPart = 44.075304540420824;

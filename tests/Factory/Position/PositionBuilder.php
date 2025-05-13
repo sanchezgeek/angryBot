@@ -104,6 +104,14 @@ class PositionBuilder
         return $builder;
     }
 
+    public function withoutLiquidation(): self
+    {
+        $builder = clone $this;
+        $builder->liquidation = 0;
+
+        return $builder;
+    }
+
     public function opposite(Position $oppositePosition): self
     {
         if ($oppositePosition->side === $this->side) {

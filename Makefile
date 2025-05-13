@@ -61,8 +61,8 @@ composer: ## Run composer, pass the parameter "c=" to run a given command, examp
 	@$(eval c ?=)
 	@$(COMPOSER) $(c)
 
-dump-al: c=dump-autoload --classmap-authoritative
-dump-al: composer
+dump-authoritative: c=dump-autoload --classmap-authoritative
+dump-authoritative: composer
 
 vendor: ## Install vendors according to the current composer.lock file
 vendor: c=install --prefer-dist --no-dev --no-progress --no-scripts --no-interaction

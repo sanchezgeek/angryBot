@@ -131,7 +131,7 @@ abstract class AbstractExecStepResultTableRowBuilder
                 $info[] = sprintf('after SL (s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');
             }
 
-            !$sourceOrder->isWithOppositeOrder() && $info[] = 'without Stop';
+            !$sourceOrder->isWithOppositeOrder() && $info[] = 'without SL';
         }
         // opposite?
 

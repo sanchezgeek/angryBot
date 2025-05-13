@@ -30,6 +30,11 @@ final class Cell
         return new self($content, new CellStyle(colspan: $colspan));
     }
 
+    public static function align(CellAlign $align, string $content = ''): self
+    {
+        return new self($content, new CellStyle(align: $align));
+    }
+
     public static function resetToDefaults(string $content = ''): self
     {
         return new self($content, CellStyle::resetToDefaults());

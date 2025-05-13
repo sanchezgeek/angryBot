@@ -22,6 +22,7 @@ use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -40,6 +41,7 @@ class RemoveStaleStopsTest extends KernelTestCase
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
     use AppErrorsLoggerTrait;
+    use SettingsAwareTest;
 
     private LiquidationDynamicParametersInterface|MockObject $liquidationDynamicParameters;
     private CheckPositionIsUnderLiquidationHandler $handler;
@@ -62,6 +64,7 @@ class RemoveStaleStopsTest extends KernelTestCase
             self::getContainer()->get(StopRepositoryInterface::class),
             self::getTestAppErrorsLogger(),
             null,
+            self::getContainerSettingsProvider(),
             $liquidationDynamicParametersFactory
         );
 

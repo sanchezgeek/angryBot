@@ -18,4 +18,6 @@ interface LiquidationDynamicParametersInterface
     public function criticalRange(): PriceRange;
     public function acceptableStoppedPart(): float;
     public function actualStopsRange(): PriceRange;
+
+    public function addOppositeBuyOrdersAfterStop(): bool;
 }

@@ -19,7 +19,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
@@ -28,8 +28,6 @@ use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
-use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
 {
@@ -59,7 +57,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(MarketBuyHandler::class),
             self::makeRateLimiterFactory(),
-            self::getContainer()->get(AppSettingsProvider::class),
+            self::getContainer()->get(AppSettingsProviderInterface::class),
 
             self::getContainer()->get(ExchangeServiceInterface::class),
             self::getContainer()->get(PositionServiceInterface::class),

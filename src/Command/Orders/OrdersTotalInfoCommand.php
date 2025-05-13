@@ -2,7 +2,6 @@
 
 namespace App\Command\Orders;
 
-use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyCheckService;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
@@ -23,6 +22,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChainFactory;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Orders\OrdersInfoTable\Dto\InitialStateRow;
@@ -42,9 +42,7 @@ use App\Output\Table\Dto\Style\Enum\CellAlign;
 use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
-use App\Settings\Application\Service\AppSettingsProvider;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidation\FurtherMainPositionLiquidationCheckParametersInterface;
-use Psr\Log\NullLogger;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -147,9 +145,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
             public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
-        $tradingSandbox->setMarketBuyCheckService(
-            new MarketBuyCheckService($positionServiceStub, $this->tradingSandboxFactory, new NullLogger(), $this->furtherMainPositionLiquidationCheckParameters)
-        );
+        $tradingSandbox->setChecks($this->buyChecksChainFactory->full());
 
         return $tradingSandbox;
     }
@@ -426,7 +422,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
         private readonly BuyOrderRepository $buyOrderRepository,
         PositionServiceInterface $positionService,
         private readonly TradingSandboxFactory $tradingSandboxFactory,
-        private readonly FurtherMainPositionLiquidationCheckParametersInterface $furtherMainPositionLiquidationCheckParameters,
+        private readonly TradingParametersProviderInterface $furtherMainPositionLiquidationCheckParameters,
+        private readonly BuyChecksChainFactory $buyChecksChainFactory,
         string $name = null,
     ) {
         $this->withPositionService($positionService);

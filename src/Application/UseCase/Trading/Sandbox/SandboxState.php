@@ -32,12 +32,16 @@ class SandboxState implements SandboxStateInterface
     private CoinAmount $freeBalance;
     private CoinAmount $fundsAvailableForLiquidation;
 
+//    public ContractBalance $contractBalance;
+
     public function __construct(
         Ticker $ticker,
         ContractBalance $contractBalance,
         CoinAmount $fundsAvailableForLiquidation,
         Position ...$positions
     ) {
+//        $this->contractBalance = $contractBalance;
+
         $this->symbol = $ticker->symbol;
         $this->setLastPrice($ticker->lastPrice);
         $this->freeBalance = $contractBalance->free;

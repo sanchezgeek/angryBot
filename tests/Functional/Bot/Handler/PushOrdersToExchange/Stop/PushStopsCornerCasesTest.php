@@ -19,7 +19,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory;
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -40,6 +40,8 @@ use function uuid_create;
 /**
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
+ *
+ * @group stop
  */
 final class PushStopsCornerCasesTest extends KernelTestCase
 {
@@ -87,8 +89,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->stopRepository,
             $this->orderServiceMock,
             $this->messageBus,
-            self::getContainer()->get(StopChecksChainFactory::class),
-            self::getContainerSettingsProvider(),
+            self::getContainer()->get(StopChecksChain::class),
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,

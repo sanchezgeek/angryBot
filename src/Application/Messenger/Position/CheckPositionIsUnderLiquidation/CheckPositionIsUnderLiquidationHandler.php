@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -30,6 +29,9 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -50,6 +52,11 @@ use function sprintf;
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
 {
+    /** @var Symbol[] */
+    private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
+//        Symbol::LAIUSDT,
+    ];
+
     # Transfer from spot
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
     public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
@@ -103,14 +110,14 @@ final class CheckPositionIsUnderLiquidationHandler
 
                 $symbol = $main->symbol;
 
-                if (Params::isSymbolIgnored($symbol)) {
+                if (self::isSymbolIgnored($symbol)) {
                     continue;
                 }
 
                 $messages[] = new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
-                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop ?? Params::getAdditionalStopDistanceWithLiquidation($symbol),
-                    acceptableStoppedPart: $message->acceptableStoppedPart ?? Params::getAcceptableStoppedPart($symbol),
+                    percentOfLiquidationDistanceToAddStop: $message->percentOfLiquidationDistanceToAddStop,
+                    acceptableStoppedPart: $message->acceptableStoppedPart,
                     warningPnlDistance: $message->warningPnlDistance,
                 );
                 $this->positions[$symbol->value] = $main;
@@ -150,6 +157,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $this->dynamicParameters = $this->liquidationDynamicParametersFactory->create($message, $position, $ticker);
 
         ### remove stale ###
+        // @todo | liquidation | works only for by market =(
         foreach ($this->getStaleStops($position) as $stop) {
             $this->stopRepository->remove($stop);
         }
@@ -160,10 +168,12 @@ final class CheckPositionIsUnderLiquidationHandler
 
         ### add new ###
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+        $positionSide = $position->side;
+
         if (
             $distanceWithLiquidation > $this->dynamicParameters->warningDistance()
             && ($lastRunMarketPrice = $this->getLastRunMarkPrice($position)) !== null
-            && PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice)->isProfitFor($position->side)
+            && PriceMovement::fromToTarget($lastRunMarketPrice, $ticker->markPrice)->isProfitFor($positionSide)
         ) {
             return; # skip checks if price didn't move to position loss direction AND liquidation is not in warning range
         }
@@ -229,10 +239,15 @@ final class CheckPositionIsUnderLiquidationHandler
                     $context = [
                         Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER => true,
                         Stop::CLOSE_BY_MARKET_CONTEXT => true, // @todo | settings
-                        Stop::FIX_OPPOSITE_MAIN_ON_LOSS => Params::AFTER_STOP_FIX_OPPOSITE_IF_MAIN,
+                        Stop::FIX_OPPOSITE_MAIN_ON_LOSS => $this->settings->required(
+                            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::FixOppositeIfMain, $symbol, $positionSide)
+                        ),
+                        Stop::FIX_OPPOSITE_SUPPORT_ON_LOSS => $this->settings->required(
+                            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::FixOppositeEvenIfSupport, $symbol, $positionSide)
+                        ),
                     ];
 
-                    if (Params::isSymbolWithoutOppositeBuyOrders($symbol)) {
+                    if (!$this->dynamicParameters->addOppositeBuyOrdersAfterStop()) {
                         $context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
                     }
 
@@ -245,7 +260,7 @@ final class CheckPositionIsUnderLiquidationHandler
 //                        ];
 //                    }
 
-                    $this->stopService->create($position->symbol, $position->side, $stopPrice, $stopQty, $triggerDelta, $context);
+                    $this->stopService->create($position->symbol, $positionSide, $stopPrice, $stopQty, $triggerDelta, $context);
                 }
             }
         }
@@ -337,6 +352,8 @@ final class CheckPositionIsUnderLiquidationHandler
         $oppositePositionStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side->getOpposite());
         $oppositePositionStops = array_filter($oppositePositionStops, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
 
+        // @todo | liquidation | или сначала надо получить цену нового стопа и потом принять решение об удалении?
+        // @todo | liquidation |нужна ли какая-то проверка warningRange?
         $actualStopsRange = $this->dynamicParameters->actualStopsRange();
         $criticalRange = $this->dynamicParameters->criticalRange();
 
@@ -374,6 +391,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
         $symbol = $position->symbol;
         foreach ($stopsToPositionSide as $stop) {
+            // @todo | liquidation | мб цена вообще ниже или выше границы
             if ($symbol->makePrice($stop->getPrice())->isPriceInRange($criticalRange)) {
                 continue;
             }
@@ -381,6 +399,11 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         return new StopsCollection(...$result);
+    }
+
+    public static function isSymbolIgnored(Symbol $symbol): bool
+    {
+        return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
     private function getLastRunMarkPrice(Position $position): ?Price
@@ -425,6 +448,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly StopRepositoryInterface $stopRepository,
         private readonly LoggerInterface $appErrorLogger,
         private readonly ?CacheInterface $cache,
+        private readonly AppSettingsProviderInterface $settings,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         private readonly ?int $distanceForCalcTransferAmount = null,
     ) {

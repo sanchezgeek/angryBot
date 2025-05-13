@@ -6,7 +6,6 @@ namespace App\Tests\Helper;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationParams as Params;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -16,11 +15,19 @@ use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use InvalidArgumentException;
 use RuntimeException;
 
 class CheckLiquidationParametersBag
 {
+    /**
+     * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
+     */
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+
     /**
      * @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS
      */
@@ -32,18 +39,18 @@ class CheckLiquidationParametersBag
     ];
 
     public const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
-    public const ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP = Params::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP;
 
     private function __construct(
+        private readonly AppSettingsProviderInterface $settingsProvider,
         private readonly CheckPositionIsUnderLiquidation $message,
         private readonly Position $position,
         private readonly ?Ticker $ticker,
     ) {
     }
 
-    public static function create(CheckPositionIsUnderLiquidation $message, Position $position, ?Ticker $ticker = null): self
+    public static function create(AppSettingsProviderInterface $settingsProvider, CheckPositionIsUnderLiquidation $message, Position $position, ?Ticker $ticker = null): self
     {
-        return new self($message, $position, $ticker);
+        return new self($settingsProvider, $message, $position, $ticker);
     }
 
     /**
@@ -84,7 +91,7 @@ class CheckLiquidationParametersBag
                     $modifier = 1;
                 }
 
-                return ($acceptableStoppedPart / Params::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
+                return ($acceptableStoppedPart / self::ACCEPTABLE_STOPPED_PART_DIVIDER) * $modifier;
             } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
                 $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
                 $initialDistanceWithLiquidation = $this->warningDistance();
@@ -101,7 +108,17 @@ class CheckLiquidationParametersBag
             }
         }
 
-        return Params::ACCEPTABLE_STOPPED_PART_DEFAULT;
+        return $this->acceptableStoppedPartFallback();
+    }
+
+    /**
+     * @see LiquidationDynamicParameters::acceptableStoppedPartFallback
+     */
+    public function acceptableStoppedPartFallback(): float|null
+    {
+        return $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $this->position->symbol, $this->position->side)
+        );
     }
 
     /**
@@ -220,7 +237,11 @@ class CheckLiquidationParametersBag
         $additionalStopPrice = $this->additionalStopPrice();
         $criticalDistance = $this->criticalDistance();
 
-        $modifier = (new Percent(self::ACTUAL_STOPS_RANGE_FROM_ADDITIONAL_STOP))->of($position->liquidationDistance());
+        $actualStopsRangeFromAdditionalStop = $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
+        );
+
+        $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
 
         $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
         $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);

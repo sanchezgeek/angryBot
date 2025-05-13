@@ -18,8 +18,10 @@ final class PriceHelper
      *
      * @todo | symbol | rest use cases
      */
-    public static function round(float $price, int $precision = self::DEFAULT_PRECISION): float
+    public static function round(float $price, ?int $precision = null): float
     {
+        $precision ??= self::DEFAULT_PRECISION;
+
         return \round($price, $precision);
     }
 

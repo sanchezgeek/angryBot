@@ -15,6 +15,9 @@ final readonly class CreateBuyOrderHandler
 
     public function handle(CreateBuyOrderEntryDto $dto): CreateBuyOrderResultDto
     {
+        // @todo | buy | round here?
+//        $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $volume, $orderPrice); ?
+
         $id = $this->repository->getNextId();
 
         $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, $dto->symbol, $dto->side, $dto->context);

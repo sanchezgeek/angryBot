@@ -47,6 +47,14 @@ readonly class PriceMovement
         return -$this->deltaForPositionProfit($positionSide);
     }
 
+    public function absPercentDelta(float|Price $forPrice = null): Percent
+    {
+        $forPrice ??= $this->fromPrice;
+        $delta = $this->absDelta();
+
+        return PnlHelper::convertAbsDeltaToPnlPercentOnPrice($delta, $forPrice);
+    }
+
     public function percentDeltaForPositionProfit(Side $relativeToPositionSide, float|Price $price = null): Percent
     {
         $price ??= $this->fromPrice;

@@ -18,7 +18,7 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Settings\Application\Service\AppSettingsProvider;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
@@ -32,12 +32,13 @@ final class CreateOppositeBuyOrdersListener
     ];
 
     public const DISTANCES = [
+        // @todo | settings
         Symbol::ARCUSDT->value => 400,
     ];
 
     public function __construct(
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-        private readonly AppSettingsProvider $settings,
+        private readonly AppSettingsProviderInterface $settings,
     ) {
     }
 
@@ -73,6 +74,7 @@ final class CreateOppositeBuyOrdersListener
 
         if ($stop->isAdditionalStopFromLiquidationHandler()) {
             $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
+            // @todo | stop | либо за цену первоначального стопа?
         } else {
             $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
         }
@@ -112,14 +114,14 @@ final class CreateOppositeBuyOrdersListener
 
         if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
             return $stop->getPositionSide()->isLong()
-                ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin), false)
-                : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin), false)
+                ? $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin)
+                : $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin)
             ;
         }
 
         return $stop->getPositionSide()->isLong()
-            ? Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition), false)
-            : Percent::string($this->settings->get(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition), false)
+            ? $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition)
+            : $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition)
         ;
     }
 }

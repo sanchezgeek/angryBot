@@ -24,19 +24,15 @@ framework:
         position_in_loss_alert_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '5 minutes'
+            interval: '2 minutes'
         position_in_profit_alert_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '30 seconds'
+            interval: '2 minutes'
         api_key_deadline_day_throttling:
             policy: 'fixed_window'
             limit: 5
             interval: '1 day'
-        check_further_position_liquidation_after_buy:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '45 seconds'
         calc_new_volume_based_on_wished_liquidation_price_notice_throttling:
             policy: 'fixed_window'
             limit: 1

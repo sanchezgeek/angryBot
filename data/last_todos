@@ -3,3 +3,43 @@ tests/Unit/Domain/Position/Helper/PositionCloneTest.php
 src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
 tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
 regexp CTRL-F: @todo.*sandbox
+
+
+написать compByHedge
+ttl for active
+veryHardPriceAv
+
+move orders based on initial liq distance?
+increase position (by some paams)
+cals
+
+lP history points
+
+@todo | settings
+@todo | settings | tests
+liq strategy based on safePriceDistance
+@todo | stop
+@todo | stop/check
+@todo | stop check mainPosition stops first
+@todo | liquidation
+@todo | cache
+@todo | buy
+@todo | buy/check
+@todo | performance | rid of Percent if can
+
+
+
+
+hedge as grid creates order in strange range
+
+safe price strategy by defined level
+
+
+
+/**
+ * equiv hedge from BuyAndCheckFurtherPositionLiquidation
+ * eth Buy
+ * $liquidationPrice =
+ * $withPrice =
+ * $safePriceDistance =
+ */

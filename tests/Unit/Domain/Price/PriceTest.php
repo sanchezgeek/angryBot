@@ -7,11 +7,13 @@ namespace App\Tests\Unit\Domain\Price;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Price;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\PositionFactory;
 use DomainException;
+use Exception;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -47,10 +49,9 @@ final class PriceTest extends TestCase
     /**
      * @dataProvider failCreateCases
      */
-    public function testFailCreate(float $value, string $expectedMessage): void
+    public function testFailCreate(float $value, Exception $expectedException): void
     {
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage($expectedMessage);
+        $this->expectExceptionObject($expectedException);
 
         Price::float($value);
     }
@@ -58,8 +59,8 @@ final class PriceTest extends TestCase
     private function failCreateCases(): iterable
     {
         return [
-            [-1, 'Price cannot be less than zero.'],
-            [-0.009, 'Price cannot be less than zero.'],
+            [-1, new PriceCannotBeLessThanZero()],
+            [-0.009, new PriceCannotBeLessThanZero()],
         ];
     }
 
@@ -226,16 +227,16 @@ final class PriceTest extends TestCase
     }
 
     /**
-     * @dataProvider priceIsOverStopTestCases
+     * @dataProvider priceInLossOfOther
      */
-    public function testIsPriceOverStop(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
+    public function testIsPriceInLossOfOther(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
     {
-        $result = $price->isPriceOverStop($positionSide, $takeProfitPrice);
+        $result = $price->isPriceInLossOfOther($positionSide, $takeProfitPrice);
 
         self::assertEquals($expectedResult, $result);
     }
 
-    private function priceIsOverStopTestCases(): iterable
+    private function priceInLossOfOther(): iterable
     {
         yield 'over SHORT SL (+)' => [
             'price' => Price::float(200501.01),

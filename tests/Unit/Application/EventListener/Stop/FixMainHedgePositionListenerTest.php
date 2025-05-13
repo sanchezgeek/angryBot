@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\EventListener\Stop;
 
-use App\Application\EventListener\Stop\FixOppositePositionListener;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -14,21 +13,25 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Service\OrderCostCalculator;
-use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
+use App\Settings\Application\Service\SettingAccessor;
+use App\Stop\Application\EventListener\FixOppositePositionListener;
+use App\Stop\Application\Settings\FixOppositePositionSettings;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
-use PHPUnit\Framework\TestCase;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-final class FixMainHedgePositionListenerTest extends TestCase
+final class FixMainHedgePositionListenerTest extends KernelTestCase
 {
+    use SettingsAwareTest;
+
     const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
-    const CONFIG = FixOppositePositionListener::CONFIG;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -44,13 +47,15 @@ final class FixMainHedgePositionListenerTest extends TestCase
         $orderCostCalculator = new OrderCostCalculator(new ByBitCommissionProvider());
         $exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
 
+        $this->overrideSetting(FixOppositePositionSettings::FixOppositePosition_If_OppositePositionPnl_GreaterThan, sprintf('%d%%', self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT));
+
         $this->listener = new FixOppositePositionListener(
+            self::getContainerSettingsProvider(),
             $orderCostCalculator,
             $exchangeAccountService,
             $this->exchangeService,
             $this->positionService,
             $this->stopService,
-            self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT
         );
     }
 
@@ -247,9 +252,12 @@ final class FixMainHedgePositionListenerTest extends TestCase
         $symbol = $stoppedPosition->symbol;
         $oppositePosition = $stoppedPosition->oppositePosition;
         $stopPrice = $executedStop->getPrice();
+        $positionSide = $executedStop->getPositionSide();
         $closedVolume = $executedStop->getVolume();
 
-        [, $supplyStopPnlDistancePct] = self::CONFIG[$symbol->value] ?? self::CONFIG['other'];
+        $supplyStopPnlDistancePct = self::getContainerSettingsProvider()->required(
+            SettingAccessor::withAlternativesAllowed(FixOppositePositionSettings::FixOppositePosition_supplyStopPnlDistance, $symbol, $positionSide)
+        );
 
         $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($supplyStopPnlDistancePct, $symbol->makePrice($stopPrice)), 0.1);
         $supplyStopPrice = $symbol->makePrice(

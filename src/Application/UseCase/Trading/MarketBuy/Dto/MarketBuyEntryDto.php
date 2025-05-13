@@ -21,15 +21,6 @@ readonly class MarketBuyEntryDto
 
     public static function fromBuyOrder(BuyOrder $buyOrder): self
     {
-        $force = false;
-//        if ($buyOrder->isOppositeBuyOrderAfterStopLoss()) {
-//            $force = true;
-//        }
-
-        if ($buyOrder->isForceBuyOrder()) {
-            $force = true;
-        }
-
-        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume(), $force, $buyOrder);
+        return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $buyOrder->getVolume(), $buyOrder->isForceBuyOrder(), $buyOrder);
     }
 }
