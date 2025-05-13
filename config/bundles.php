@@ -9,6 +9,6 @@ return [
     \App\Alarm\AlarmModule::class => ['all' => true],
     \App\Bot\BotBundle::class => ['all' => true],
     \App\Stop\StopModule::class => ['all' => true],
-    \App\Trading\TradingBundle::class => ['all' => true],
     \App\Liquidation\LiquidationModule::class => ['all' => true],
+    \App\Trading\TradingBundle::class => ['all' => true],
 ];

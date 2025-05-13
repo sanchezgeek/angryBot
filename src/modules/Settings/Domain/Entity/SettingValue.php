@@ -71,4 +71,24 @@ class SettingValue
     {
         return $this->value === null;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'key' => $this->key,
+            'symbol' => $this->symbol?->value,
+            'positionSide' => $this->positionSide?->value,
+            'value' => $this->value,
+        ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            $data['key'],
+            $data['value'],
+            $data['symbol'] ? Symbol::from($data['symbol']) : null,
+            $data['positionSide'] ? Side::from($data['positionSide']) : null,
+        );
+    }
 }
