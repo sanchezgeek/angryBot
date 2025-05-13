@@ -108,6 +108,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canUseSpot(Ticker $ticker, Position $position, SpotBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
+        // @todo | check | other | reserved balance
+//        if ($spotBalance->available() < self::RESERVED_BALANCE) {
+//            return false;
+//        }
+
         if ($spotBalance->available() === 0.00) {
             return false;
         }

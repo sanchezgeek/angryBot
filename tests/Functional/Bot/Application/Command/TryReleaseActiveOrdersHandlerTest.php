@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Bot\Application\Command;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrdersHandler;
+use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
@@ -33,8 +34,6 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use BuyOrdersTester;
-
-    private const DEFAULT_RELEASE_OVER_DISTANCE = TryReleaseActiveOrdersHandler::DEFAULT_RELEASE_OVER_DISTANCE;
 
     protected EventDispatcherInterface $eventDispatcher;
     protected StopService $stopService;
@@ -94,7 +93,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
             $this->exchangeServiceMock->expects(self::once())->method('closeActiveConditionalOrder')->with($expectedClosedActiveConditionalOrders[0]);
         }
 
-        $command = new TryReleaseActiveOrders(symbol: Symbol::BTCUSDT, force: true);
+        $command = new TryReleaseActiveOrders(symbol: $ticker->symbol, force: true);
 
         ($this->handler)($command);
 
@@ -126,9 +125,10 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
             ]
         ];
 
-        $releaseOnDistance = self::DEFAULT_RELEASE_OVER_DISTANCE + 1;
+        $ticker = TickerFactory::create($symbol, 28571, 28571, 28571);
+        $releaseOnDistance = StopHelper::defaultReleaseStopsDistance($ticker->indexPrice);
         yield 'need to release' => [
-            '$ticker' => $ticker = TickerFactory::create($symbol, 28571, 28571, 28571),
+            '$ticker' => $ticker,
             '$stopsFixtures' => [
                 new StopFixture(StopBuilder::long(1, 28500, 0.001)->withTD(10)->build()->setExchangeOrderId($exchangeOrderId))
             ],

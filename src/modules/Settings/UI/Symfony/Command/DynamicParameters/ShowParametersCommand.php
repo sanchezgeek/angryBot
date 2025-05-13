@@ -54,12 +54,12 @@ class ShowParametersCommand extends AbstractCommand
 
         $constructorInput = [];
         foreach ($arguments['constructorArguments'] as $argumentName) {
-            $constructorInput[$argumentName] = $this->parseValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
+            $constructorInput[$argumentName] = $this->parseInputValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
         }
 
         $methodInput = [];
         foreach ($arguments['referencedMethodArguments'] as $argumentName) {
-            $methodInput[$argumentName] = $this->parseValue($io->ask(sprintf('%s: ', $argumentName)));
+            $methodInput[$argumentName] = $this->parseInputValue($io->ask(sprintf('%s: ', $argumentName)));
         }
 
         $value = $this->parameterEvaluator->evaluate(
@@ -72,7 +72,7 @@ class ShowParametersCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    private function parseValue(string $input): mixed
+    private function parseInputValue(mixed $input): mixed
     {
         return match ($input) {
             'false' => false,

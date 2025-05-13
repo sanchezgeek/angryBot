@@ -156,12 +156,10 @@ final class SchedulerFactory
 
             // -- active BuyOrders
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckOrdersNowIsActive())),
-        ];
 
-        foreach ($this->getOpenedPositionsSymbols() as $symbol) {
-            // @todo | all symbols at once
-            $items[] = PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(symbol: $symbol, force: true)));
-        }
+            // -- active Conditional orders
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(force: true))),
+        ];
 
         return $items;
     }

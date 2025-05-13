@@ -82,10 +82,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      */
     public function getOpenedPositionsSymbols(array $except = []): array
     {
-        $symbolsRaw = $this->getOpenedPositionsRawSymbols();
-
         $symbols = [];
-        foreach ($symbolsRaw as $rawItem) {
+        foreach ($this->getOpenedPositionsRawSymbols() as $rawItem) {
             if ($symbol = Symbol::tryFrom($rawItem)) {
                 $symbols[] = $symbol;
             }
@@ -127,6 +125,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws UnexpectedApiErrorException
      * @throws ApiRateLimitReached
      * @throws PermissionDeniedException
+     *
+     * @todo some collection
      */
     public function getAllPositions(): array
     {

@@ -17,8 +17,6 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\Price;
-use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
-use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -31,8 +29,10 @@ use function count;
 #[AsMessageHandler]
 final class TryReleaseActiveOrdersHandler
 {
-    private const MIN_LEFT_ORDERS_QNT = 3;
-    public const DEFAULT_RELEASE_OVER_DISTANCE = 120;
+    private const MIN_LEFT_ORDERS_QNT_PER_SYMBOL = 3;
+
+    /** @var array<ActiveStopOrder[]> */
+    private array $activeConditionalStopOrders = [];
 
     /**
      * @param ByBitLinearExchangeService $exchangeService
@@ -48,16 +48,37 @@ final class TryReleaseActiveOrdersHandler
     ) {
     }
 
-    /**
-     * @throws UnknownByBitApiErrorException
-     * @throws ApiRateLimitReached
-     */
-    public function __invoke(TryReleaseActiveOrders $command): void
+    public function __invoke(TryReleaseActiveOrders $message): void
+    {
+        $messages = [];
+        if ($message->isMessageForAllSymbols()) {
+            foreach ($this->positionService->getOpenedPositionsSymbols() as $symbol) {
+                $messages[] = $message->cloneForSymbol($symbol);
+            }
+            $activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
+        } else {
+            $messages[] = $message;
+            $activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders($message->symbol);
+        }
+
+        foreach ($messages as $msg) {
+            $symbol = $msg->symbol;
+
+            $this->activeConditionalStopOrders[$symbol->value] = array_filter(
+                $activeConditionalStopOrders,
+                static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->symbol === $symbol
+            );
+
+            $this->handleMessage($msg);
+        }
+    }
+
+    public function handleMessage(TryReleaseActiveOrders $command): void
     {
         $symbol = $command->symbol;
         $claimedOrderVolume = $command->forVolume;
 
-        $activeOrders = $this->exchangeService->activeConditionalOrders($symbol);
+        $activeOrders = $this->activeConditionalStopOrders[$symbol->value];
         if (!count($activeOrders)) {
             return;
         }
@@ -71,7 +92,7 @@ final class TryReleaseActiveOrdersHandler
         $compareWithPrices[Side::Buy->value] = PriceHelper::min($ticker->indexPrice, $ticker->markPrice);
 
         foreach ($activeOrders as $key => $order) {
-            if (!$command->force && \count($activeOrders) < self::MIN_LEFT_ORDERS_QNT) {
+            if (!$command->force && \count($activeOrders) < self::MIN_LEFT_ORDERS_QNT_PER_SYMBOL) {
                 return;
             }
 
