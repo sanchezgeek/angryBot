@@ -134,8 +134,8 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(Symbol::BTCUSDT))),
 
             # alarm
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckAlarm())),
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new CheckBalance())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new CheckAlarm())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckBalance())),
 
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckConnection())),
