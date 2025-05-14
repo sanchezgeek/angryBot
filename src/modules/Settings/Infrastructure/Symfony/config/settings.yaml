@@ -29,11 +29,6 @@ services:
                 trading.takeProfitWhenBalanceIsInsufficient.enabled: false
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
-# Trading\Application\Settings\SafePriceDistanceSettings
-                safePriceDistance.applyStrategy: 'conservative'
-                # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
-                # safePriceDistance.percent[symbol=BTCUSDT][side=sell]: 6   # example with symbol and side
-
 # Liquidation\Application\Settings\LiquidationHandlerSettings
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'

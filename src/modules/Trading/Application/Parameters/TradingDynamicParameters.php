@@ -37,7 +37,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             return $refPrice * ($percentOverride / 100);
         }
 
-        return match (true) {
+        $base = match (true) {
             $refPrice >= 10000 => $refPrice / 12,
             $refPrice >= 5000 => $refPrice / 10,
             $refPrice >= 2000 => $refPrice / 9,
@@ -51,5 +51,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             default => $refPrice * 1.4,
             // default => $closingPosition->entryPrice()->deltaWith($ticker->markPrice) * 2
         };
+
+        $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
+
+        return $base * $k;
     }
 }

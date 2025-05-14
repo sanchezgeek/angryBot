@@ -15,6 +15,9 @@ enum SafePriceDistanceSettings: string implements AppSettingInterface, AppSettin
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
     case SafePriceDistance_Percent = 'safePriceDistance.percent';
 
+    #[SettingParametersAttribute(type: SettingType::Float)]
+    case SafePriceDistance_Multiplier = 'safePriceDistance.baseMultiplier';
+
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: SafePriceAssertionStrategyEnum::class)]
     case SafePriceDistance_Apply_Strategy = 'safePriceDistance.applyStrategy';
 

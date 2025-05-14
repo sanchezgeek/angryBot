@@ -21,6 +21,7 @@ final class TradingBundle extends AbstractBundle
         parent::build($container);
 
         $this->registerSettings($container, __NAMESPACE__, __DIR__ . '/Application/Settings');
+        $this->registerSettingsValues($container,__DIR__ . '/Infrastructure/Symfony/config/trading_settings.yaml');
         $this->registerDynamicParameters($container, [
             TradingDynamicParameters::class,
         ]);
