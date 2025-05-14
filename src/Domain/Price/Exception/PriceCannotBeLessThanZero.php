@@ -8,5 +8,8 @@ use Exception;
 
 final class PriceCannotBeLessThanZero extends Exception
 {
-
+    public function __construct(float $price)
+    {
+        parent::__construct(sprintf('Price cannot be less than zero (%s)', $price), 0);
+    }
 }

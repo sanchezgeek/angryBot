@@ -59,8 +59,8 @@ final class PriceTest extends TestCase
     private function failCreateCases(): iterable
     {
         return [
-            [-1, new PriceCannotBeLessThanZero()],
-            [-0.009, new PriceCannotBeLessThanZero()],
+            [-1, new PriceCannotBeLessThanZero(-1)],
+            [-0.009, new PriceCannotBeLessThanZero(-0.009)],
         ];
     }
 

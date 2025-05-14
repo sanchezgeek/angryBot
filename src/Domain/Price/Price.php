@@ -36,7 +36,7 @@ final class Price implements Stringable
     private function __construct(float $value, int $precision)
     {
         if ($value < 0) {
-            throw new PriceCannotBeLessThanZero();
+            throw new PriceCannotBeLessThanZero($value);
         }
 
         $this->value = $value;
