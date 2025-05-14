@@ -9,7 +9,7 @@ use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 
-trait AppErrorsLoggerTrait
+trait AppErrorsSymfonyLoggerTrait
 {
     static private ?LoggerInterface $testAppLogger = null;
 

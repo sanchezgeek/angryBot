@@ -23,6 +23,7 @@ use App\Helper\OutputHelper;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Trading\PositionPreset;
+use App\Tests\Mixin\Check\ChecksAwareTest;
 use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Sandbox\SandboxUnitTester;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
@@ -44,6 +45,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
     use SettingsAwareTest;
     use SandboxUnitTester;
     use RateLimiterAwareTest;
+    use ChecksAwareTest;
 
     private TradingParametersProviderInterface|MockObject $parameters;
 
@@ -57,7 +59,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
-            self::getContainer()->get(UnexpectedSandboxExecutionExceptionHandler::class),
+            self::getUnexpectedSandboxExecutionExceptionHandler(),
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,

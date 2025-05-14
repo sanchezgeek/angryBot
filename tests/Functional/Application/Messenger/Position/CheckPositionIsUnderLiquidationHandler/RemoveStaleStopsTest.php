@@ -21,7 +21,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
-use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
+use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -40,7 +40,7 @@ class RemoveStaleStopsTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
-    use AppErrorsLoggerTrait;
+    use AppErrorsSymfonyLoggerTrait;
     use SettingsAwareTest;
 
     private LiquidationDynamicParametersInterface|MockObject $liquidationDynamicParameters;

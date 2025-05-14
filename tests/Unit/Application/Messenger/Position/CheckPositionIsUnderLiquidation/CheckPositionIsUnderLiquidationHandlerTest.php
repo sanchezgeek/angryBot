@@ -27,7 +27,7 @@ use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
-use App\Tests\Mixin\Logger\AppErrorsLoggerTrait;
+use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -44,7 +44,7 @@ use function sprintf;
 final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 {
     use PositionSideAwareTest;
-    use AppErrorsLoggerTrait;
+    use AppErrorsSymfonyLoggerTrait;
     use SettingsAwareTest;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;

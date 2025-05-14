@@ -14,26 +14,32 @@ use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @covers TradingDynamicParameters
  *
  * @group parameters
  */
-final class TradingParametersProviderTest extends TestCase
+final class TradingParametersProviderTest extends KernelTestCase
 {
+    use SettingsAwareTest;
+
     private AppSettingsProviderInterface|MockObject $appSettingsProvider;
+
     protected function setUp(): void
     {
-        $this->appSettingsProvider = $this->createMock(AppSettingsProviderInterface::class);
+        $this->appSettingsProvider = self::getContainerSettingsProvider();
     }
 
     /**
      * @dataProvider defaultValueCases
      */
-    public function testSafeDistanceOnRefPriceDefault(Symbol $symbol, Side $positionSide, float $refPrice): void
+    public function testSafeDistanceOnRefPriceDefault(Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): void
     {
-        $expectedSafeDistance = self::getExpectedSafeDistance(Symbol::ARCUSDT, Side::Sell, $refPrice);
+        if ($k) {
+            self::overrideSetting(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $k);
+        }
 
         $parameters = new TradingDynamicParameters($this->appSettingsProvider);
 
@@ -124,6 +130,10 @@ final class TradingParametersProviderTest extends TestCase
 
         $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.01351);
         yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
+
+        $k = 1.5;
+        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.01351, $k);
+        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance, $k) => [$symbol, $side, $refPrice, $expectedSafeDistance, $k];
     }
 
     /**
@@ -131,7 +141,7 @@ final class TradingParametersProviderTest extends TestCase
      */
     public function testSafeDistanceOnRefPriceWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): void
     {
-        $this->appSettingsProvider->method('optional')->with(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide))->willReturn($overridePercent);
+        self::overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $overridePercent);
 
         $parameters = new TradingDynamicParameters($this->appSettingsProvider);
 
@@ -150,9 +160,9 @@ final class TradingParametersProviderTest extends TestCase
         yield self::caseDescriptionWithOverride($overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance) => [$overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance];
     }
 
-    private static function getExpectedSafeDistance(Symbol $symbol, Side $side, float $refPrice): float
+    private static function getExpectedSafeDistance(Symbol $symbol, Side $side, float $refPrice, float $k = 1): float
     {
-        return match (true) {
+        $base = match (true) {
             $refPrice >= 10000 => $refPrice / 12,
             $refPrice >= 5000 => $refPrice / 10,
             $refPrice >= 2000 => $refPrice / 9,
@@ -165,13 +175,15 @@ final class TradingParametersProviderTest extends TestCase
             $refPrice >= 0.03 => $refPrice,
             default => $refPrice * 1.4,
         };
+
+        return $base * $k;
     }
 
-    private function caseDescription(Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): string
+    private function caseDescription(Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): string
     {
         $pct = Percent::fromPart($expectedSafeDistance / $refPrice, false);
 
-        return sprintf('%s, %s, %s => %s (%s)', $symbol->value, $positionSide->value, $refPrice, $expectedSafeDistance, $pct);
+        return sprintf('%s, %s, %s%s => %s (%s)', $symbol->value, $positionSide->value, $refPrice, $k !== null ? sprintf(', k=%s', $k) : null, $expectedSafeDistance, $pct);
     }
 
     private function caseDescriptionWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): string

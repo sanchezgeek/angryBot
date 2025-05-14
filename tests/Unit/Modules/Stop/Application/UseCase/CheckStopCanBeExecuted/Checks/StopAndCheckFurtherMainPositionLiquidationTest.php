@@ -23,6 +23,7 @@ use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
+use App\Tests\Mixin\Check\ChecksAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
@@ -39,6 +40,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCase
 {
     use SettingsAwareTest;
+    use ChecksAwareTest;
 
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
@@ -56,7 +58,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
         $this->check = new StopAndCheckFurtherMainPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
-            self::getContainer()->get(UnexpectedSandboxExecutionExceptionHandler::class),
+            self::getUnexpectedSandboxExecutionExceptionHandler(),
             $positionService,
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,
