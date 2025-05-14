@@ -17,14 +17,14 @@ use App\Trading\SDK\Check\Exception\ReferencedPositionNotFound;
 use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
 use App\Trading\SDK\Check\Result\CommonOrderCheckFailureEnum;
 
-final class StopChecksChain
+final readonly class StopChecksChain
 {
     /** @var TradingCheckInterface[] */
     private array $checks;
 
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
-        private readonly AppErrorLoggerInterface $appErrorLogger,
+        private PositionServiceInterface $positionService,
+        private AppErrorLoggerInterface $appErrorLogger,
         TradingCheckInterface ...$checks
     ) {
         $this->checks = $checks;
@@ -63,9 +63,6 @@ final class StopChecksChain
                 // @todo and here
                 //       if execution goes here than here also must be check of MainPositionStopCheckInterface
                 // @todo but anyway exception must be caught (push handler must live...)
-                $this->appErrorLogger->exception($e);
-
-                // order must not be executed (with reason)
                 return TradingCheckResult::failed(
                     $check,
                     CommonOrderCheckFailureEnum::UnexpectedSandboxExecutionExceptionThrown,

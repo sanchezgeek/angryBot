@@ -9,7 +9,7 @@ use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
-use App\Application\UseCase\Trading\Sandbox\Mixin\SandboxExecutionAwareTrait;
+use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
@@ -30,15 +30,15 @@ use Throwable;
 /**
  * @see \App\Tests\Unit\Modules\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyAndCheckFurtherPositionLiquidationTest
  */
-final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterface
+final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterface
 {
-    use SandboxExecutionAwareTrait;
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
     public function __construct(
-        private readonly AppSettingsProviderInterface $settings,
-        private readonly TradingParametersProviderInterface $parameters,
+        private AppSettingsProviderInterface $settings,
+        private TradingParametersProviderInterface $parameters,
+        private UnexpectedSandboxExecutionExceptionHandler $unexpectedSandboxExceptionHandler,
         PositionServiceInterface $positionService,
         TradingSandboxFactoryInterface $sandboxFactory,
         SandboxStateFactoryInterface $sandboxStateFactory,
@@ -47,6 +47,9 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
         $this->initPositionService($positionService);
     }
 
+    /**
+     * @todo | buy/check | What if there is no position opened? In this case there is also no position state => fatal
+     */
     public function supports(CheckOrderDto|MarketBuyCheckDto $orderDto, TradingCheckContext $context): bool
     {
         $orderDto = self::extractMarketBuyEntryDto($orderDto);
@@ -91,9 +94,8 @@ final class BuyAndCheckFurtherPositionLiquidation implements TradingCheckInterfa
         $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($order, $lastPrice);
         try {
             $sandbox->processOrders($sandboxOrder);
-
         } catch (Throwable $e) {
-            self::processSandboxExecutionException($e, $sandboxOrder);
+            $this->unexpectedSandboxExceptionHandler->handle($this, $e, $sandboxOrder);
         }
 
         $newState = $sandbox->getCurrentState();

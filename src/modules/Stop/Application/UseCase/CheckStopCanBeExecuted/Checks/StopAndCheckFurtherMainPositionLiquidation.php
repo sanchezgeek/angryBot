@@ -7,7 +7,7 @@ namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
-use App\Application\UseCase\Trading\Sandbox\Mixin\SandboxExecutionAwareTrait;
+use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
@@ -29,15 +29,15 @@ use Throwable;
 /**
  * @see \App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\FurtherMainPositionLiquidationCheckTest
  */
-final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckInterface
+final readonly class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckInterface
 {
-    use SandboxExecutionAwareTrait;
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
     public function __construct(
-        private readonly AppSettingsProviderInterface $settings,
-        private readonly TradingParametersProviderInterface $parameters,
+        private AppSettingsProviderInterface $settings,
+        private TradingParametersProviderInterface $parameters,
+        private UnexpectedSandboxExecutionExceptionHandler $unexpectedSandboxExceptionHandler,
         PositionServiceInterface $positionService,
         TradingSandboxFactoryInterface $sandboxFactory,
         SandboxStateFactoryInterface $sandboxStateFactory,
@@ -99,7 +99,7 @@ final class StopAndCheckFurtherMainPositionLiquidation implements TradingCheckIn
         try {
             $sandbox->processOrders($sandboxOrder);
         } catch (Throwable $e) {
-            self::processSandboxExecutionException($e, $sandboxOrder);
+            $this->unexpectedSandboxExceptionHandler->handle($this, $e, $sandboxOrder);
         }
 
         $newState = $sandbox->getCurrentState();

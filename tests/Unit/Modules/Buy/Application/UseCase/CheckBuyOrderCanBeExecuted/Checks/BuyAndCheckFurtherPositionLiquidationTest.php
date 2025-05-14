@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Modules\Buy\Application\UseCase\CheckBuyOrderCanBeExecu
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
+use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -33,6 +34,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
+/**
+ * @covers BuyAndCheckFurtherPositionLiquidation
+ *
+ * @group checks
+ */
 final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
 {
     use SettingsAwareTest;
@@ -51,6 +57,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
+            self::getContainer()->get(UnexpectedSandboxExecutionExceptionHandler::class),
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,

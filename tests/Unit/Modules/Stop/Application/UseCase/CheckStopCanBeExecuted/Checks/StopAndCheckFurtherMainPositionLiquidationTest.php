@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted
 
 use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
+use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
@@ -27,7 +28,6 @@ use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -56,6 +56,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
         $this->check = new StopAndCheckFurtherMainPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
+            self::getContainer()->get(UnexpectedSandboxExecutionExceptionHandler::class),
             $positionService,
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,

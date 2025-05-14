@@ -23,9 +23,6 @@ final class BuyChecksChain
         $this->checks = $checks;
     }
 
-    /**
-     * @throws UnexpectedSandboxExecutionException
-     */
     public function check(MarketBuyEntryDto $marketBuyEntryDto, TradingCheckContext $context): AbstractTradingCheckResult
     {
         $results = [];
@@ -40,7 +37,14 @@ final class BuyChecksChain
                 $result = $check->check($orderCheckDto, $context);
             } catch (TooManyTriesForCheck) {
                 return TradingCheckResult::failed($check, CommonOrderCheckFailureEnum::TooManyTries, 'Too many tries => no result => order must not be executed', true); // quiet
-            }//catch (UnexpectedSandboxExecutionException)
+            } catch (UnexpectedSandboxExecutionException $e) {
+                return TradingCheckResult::failed(
+                    $check,
+                    CommonOrderCheckFailureEnum::UnexpectedSandboxExecutionExceptionThrown,
+                    sprintf('sandbox error (%s)', $e->getMessage()),
+                    true // quiet
+                );
+            }
 
             if (!$result->success) {
                 return $result;

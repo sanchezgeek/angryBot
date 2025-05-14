@@ -10,3 +10,12 @@ services:
     # dynamic parameters evaluation
     App\Trading\Application\Parameters\TradingDynamicParameters:
         public: true
+
+
+# @todo move to sandbox module
+framework:
+    rate_limiter:
+        unexpected_sandbox_exception_while_check_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '2 minutes'
