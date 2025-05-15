@@ -105,6 +105,7 @@ enum Symbol: string
     case NEIROCTO1000USDT = '1000NEIROCTOUSDT';
     case MOODENGUSDT = 'MOODENGUSDT';
     case KAITOUSDT = 'KAITOUSDT';
+    case FTNUSDT = 'FTNUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -191,6 +192,7 @@ enum Symbol: string
         self::NEIROCTO1000USDT->value => 5,
         self::MOODENGUSDT->value => 5,
         self::KAITOUSDT->value => 4,
+        self::FTNUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -278,6 +280,7 @@ enum Symbol: string
         self::NEIROCTO1000USDT->value => 1,
         self::MOODENGUSDT->value => 1,
         self::KAITOUSDT->value => 1,
+        self::FTNUSDT->value => 0.1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
