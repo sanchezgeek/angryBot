@@ -14,6 +14,7 @@ use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
@@ -40,14 +41,14 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::SettingsProvider, skipUserInput: true)]
         private readonly AppSettingsProviderInterface $settingsProvider,
 
-        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
-        private readonly CheckPositionIsUnderLiquidation $handledMessage,
-
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPositionState, skipUserInput: true)]
         private readonly Position $position,
 
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentTicker, skipUserInput: true)]
         private readonly Ticker $ticker,
+
+        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
+        private readonly ?CheckPositionIsUnderLiquidation $handledMessage = null,
     ) {
         if ($this->ticker->symbol !== $this->position->symbol) {
             throw new LogicException('Something wrong');
@@ -67,20 +68,19 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function checkStopsOnDistance(): float
     {
-        $message = $this->handledMessage;
         $ticker = $this->ticker;
 
-        if ($message->checkStopsOnPnlPercent !== null) {
-            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->markPrice);
+        if ($override = $this->handledMessage?->checkStopsOnPnlPercent) {
+            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($override, $ticker->markPrice);
         }
 
-        return $ticker->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
+        return $this->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
     }
 
 //    #[AppDynamicParameter(group: 'liquidation-handler')]
     public function additionalStopTriggerDelta(): float
     {
-        return FloatHelper::modify($this->position->symbol->stopDefaultTriggerDelta() * 3, 0.1);
+        return FloatHelper::modify($this->symbol->stopDefaultTriggerDelta() * 3, 0.1);
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
@@ -147,7 +147,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     public function warningDistancePnlPercent(): float
     {
         return max(
-            $this->handledMessage->warningPnlDistance ?? $this->settingsProvider->required(
+            $this->handledMessage?->warningPnlDistance ?? $this->settingsProvider->required(
                 SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnl, $this->symbol, $this->position->side)
             ),
             $this->criticalDistancePnl() // foolproof
@@ -157,8 +157,10 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function warningDistance(): float
     {
+        // @todo | performance | settings | slow cache or db? or foreach
+//            $start = OutputHelper::currentTimePoint();
         if ($this->warningDistance === null) {
-            if ($this->handledMessage->warningPnlDistance && !AppContext::isTest()) {
+            if ($this->handledMessage?->warningPnlDistance && !AppContext::isTest()) {
                 throw new RuntimeException('Specifying of warningPnlDistance allowed only in test environment');
             }
 
@@ -171,6 +173,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 $this->warningDistance = $warningDistance;
             }
         }
+//        OutputHelper::print($this->symbol->value);
+//        OutputHelper::printTimeDiff($start);
 
         return $this->warningDistance;
     }
@@ -178,7 +182,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalPartOfLiquidationDistance(): float|int
     {
-        return $this->handledMessage->criticalPartOfLiquidationDistance ?? $this->settingsProvider->required(
+        return $this->handledMessage?->criticalPartOfLiquidationDistance ?? $this->settingsProvider->required(
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalPartOfLiquidationDistance, $this->symbol, $this->position->side)
         );
     }
@@ -186,8 +190,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function percentOfLiquidationDistanceToAddStop(): Percent
     {
-        if ($this->handledMessage->percentOfLiquidationDistanceToAddStop) {
-            return new Percent($this->handledMessage->percentOfLiquidationDistanceToAddStop, false);
+        if ($override = $this->handledMessage?->percentOfLiquidationDistanceToAddStop) {
+            return new Percent($override, false);
         }
 
         return $this->settingsProvider->required(
@@ -236,8 +240,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function acceptableStoppedPart(): float
     {
-        if ($this->handledMessage->acceptableStoppedPart) {
-            return $this->handledMessage->acceptableStoppedPart;
+        if ($override = $this->handledMessage?->acceptableStoppedPart) {
+            return $override;
         }
 
         $ticker = $this->ticker;

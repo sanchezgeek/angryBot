@@ -97,4 +97,16 @@ class OutputHelper
 
         return end($class) . ($methodName ? '::' . $methodName : '');
     }
+
+    public static function currentTimePoint(): float
+    {
+        return microtime(true);
+    }
+
+    public static function printTimeDiff(float $start): void
+    {
+        $end = microtime(true);
+
+        self::print(sprintf('%s - %s = %s', $end, $start, $end - $start));
+    }
 }

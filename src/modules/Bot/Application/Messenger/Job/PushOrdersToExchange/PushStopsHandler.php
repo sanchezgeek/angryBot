@@ -54,7 +54,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $side = $message->side; $symbol = $message->symbol;
         $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
 
-        if (!($position = $this->positionService->getPosition($symbol, $side))) {
+        $position = $message->positionState ?? $this->positionService->getPosition($symbol, $side);
+        if (!$position) {
             return;
         }
 
@@ -129,8 +130,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
     private function stopCanBePushed(Stop $stop, TradingCheckContext $checksContext): bool
     {
-        $checkResult = $this->checks->check($stop, $checksContext);
+        if (!$this->checks) {
+            return true;
+        }
 
+        $checkResult = $this->checks->check($stop, $checksContext);
         !$checkResult->quiet && OutputHelper::warning($checkResult->info());
 
         return $checkResult->success;
@@ -141,6 +145,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
         try {
             $exchangeOrderId = $pushStopCallback();
             $stop->wasPushedToExchange($exchangeOrderId);
+            // @todo manual release events
+            // or check what might happen in case of some exception
             $checksContext->resetState();
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
@@ -191,11 +197,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
         private readonly OrderServiceInterface $orderService,
 
         private readonly MessageBusInterface $messageBus,
-        private readonly StopChecksChain $checks,
         ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
         LoggerInterface $appErrorLogger,
         ClockInterface $clock,
+        private readonly ?StopChecksChain $checks = null,
     ) {
         parent::__construct($exchangeService, $positionService, $clock, $appErrorLogger);
     }

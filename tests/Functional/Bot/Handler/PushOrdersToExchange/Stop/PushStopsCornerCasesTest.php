@@ -89,11 +89,11 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->stopRepository,
             $this->orderServiceMock,
             $this->messageBus,
-            self::getContainer()->get(StopChecksChain::class),
             $this->exchangeServiceMock,
             $this->positionServiceMock,
             $this->loggerMock,
-            $this->clockMock
+            $this->clockMock,
+            self::getContainer()->get(StopChecksChain::class),
         );
 
         self::truncateStops();

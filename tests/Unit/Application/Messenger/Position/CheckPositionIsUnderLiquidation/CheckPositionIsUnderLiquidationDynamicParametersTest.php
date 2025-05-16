@@ -43,13 +43,18 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
-        $dynamicParameters = new LiquidationDynamicParameters($settingsMock, $message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters(settingsProvider: $settingsMock, position: $position, ticker: $ticker, handledMessage: $message);
 
         self::assertEquals($criticalPartOfLiqDistance, $dynamicParameters->criticalPartOfLiquidationDistance());
 
         # with override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);
-        $dynamicParameters = new LiquidationDynamicParameters($this->createMock(AppSettingsProviderInterface::class), $message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters(
+            settingsProvider: $this->createMock(AppSettingsProviderInterface::class),
+            position: $position,
+            ticker: $ticker,
+            handledMessage: $message
+        );
 
         self::assertEquals(
             $criticalPartOfLiquidationDistance,
@@ -73,7 +78,12 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
     ): void {
         $debug && AppContext::setIsDebug($debug);
 
-        $dynamicParameters = new LiquidationDynamicParameters(self::getContainerSettingsProvider(), $message, $position, $ticker);
+        $dynamicParameters = new LiquidationDynamicParameters(
+            settingsProvider: self::getContainerSettingsProvider(),
+            position: $position,
+            ticker: $ticker,
+            handledMessage: $message
+        );
 
         $actualStopsRange = $dynamicParameters->actualStopsRange();
         $additionalStopPrice = $dynamicParameters->additionalStopPrice();

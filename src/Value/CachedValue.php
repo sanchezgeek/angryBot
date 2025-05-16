@@ -17,7 +17,12 @@ final class CachedValue
     public function __construct(
         private readonly \Closure $valueFactory,
         private readonly int $ttl = self::DEFAULT_TTL,
+        mixed $initialValue = null
     ) {
+        $this->value = $initialValue;
+        if ($initialValue !== null) {
+            $this->updatedAt = \date_create_immutable();
+        }
     }
 
     public function get(): mixed

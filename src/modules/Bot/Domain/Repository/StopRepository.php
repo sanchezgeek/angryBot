@@ -4,11 +4,15 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Query\Expr\OrderBy;
+use Doctrine\ORM\Query\Parameter;
+use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -79,6 +83,16 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         callable $qbModifier = null
     ): array {
+        return $this->findActiveQB($symbol, $side, $nearTicker, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
+    }
+
+    public function findActiveQB(
+        Symbol $symbol,
+        Side $side,
+        ?Ticker $nearTicker = null,
+        bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
+        callable $qbModifier = null
+    ): QueryBuilder {
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
@@ -103,7 +117,42 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
             $qbModifier($qb);
         }
 
-        return $qb->getQuery()->getResult();
+        return $qb;
+    }
+
+    /**
+     * @param FindStopsDto[] $data
+     * @return Stop[]
+     */
+    public function findAllActive(array $data): array
+    {
+        $queries = [];
+        $key = 0;
+        $parameters = new ArrayCollection();
+        foreach ($data as $dto) {
+            $symbol = $dto->symbol;
+            $currentPrice = $dto->currentPrice;
+            $positionSide = $dto->positionSide;
+            $ticker = new Ticker($symbol, $currentPrice, $currentPrice, $currentPrice);
+
+            $qb = $this->findActiveQB($symbol, $positionSide, $ticker);
+            $queries[] = $qb->getQuery()->getSQL();
+            foreach ($qb->getQuery()->getParameters()->toArray() as $param) {
+                $parameters->add(new Parameter($key, $param->getValue()));
+                $key++;
+            }
+        }
+
+        $query = implode(' UNION ALL ', $queries);
+        $query = str_replace('id_0', 'id', $query); # doctrine bug?
+
+        $rsm = new ResultSetMappingBuilder($this->_em);
+        $rsm->addRootEntityFromClassMetadata(Stop::class, 's0_');
+
+        $query = $this->_em->createNativeQuery($query, $rsm);
+        $query->setParameters($parameters);
+
+        return $query->getResult();
     }
 
     public function findFirstStopUnderPosition(Position $position): ?Stop

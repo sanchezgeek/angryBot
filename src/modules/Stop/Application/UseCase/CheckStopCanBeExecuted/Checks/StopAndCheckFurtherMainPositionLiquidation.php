@@ -55,6 +55,11 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         $stop = self::extractStopFromEntryDto($orderDto);
+
+        if ($stop->isSupportChecksSkipped()) {
+            return false;
+        }
+
         $symbol = $stop->getSymbol();
         $side = $stop->getPositionSide();
 

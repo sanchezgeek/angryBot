@@ -29,7 +29,6 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderT
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use InvalidArgumentException;
 use LogicException;
-use Psr\Log\LoggerInterface;
 
 use function array_filter;
 use function array_unique;
@@ -58,10 +57,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
     private array $lastMarkPrices = [];
 
-    public function __construct(
-        ByBitApiClientInterface $apiClient,
-        private readonly LoggerInterface $appErrorLogger,
-    ) {
+    public function __construct(ByBitApiClientInterface $apiClient)
+    {
         $this->apiClient = $apiClient;
     }
 
@@ -119,6 +116,58 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
+     * @return Position[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getPositionsWithLiquidation(): array
+    {
+        $allPositions = $this->getAllPositions();
+
+        $result = [];
+        foreach ($allPositions as $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+//                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
+                // @todo | liquidation | null
+                if ($position->liquidationPrice !== 0.00) {
+                    $result[] = $position;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return Position[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getPositionsWithoutLiquidation(): array
+    {
+        $allPositions = $this->getAllPositions();
+
+        $result = [];
+        foreach ($allPositions as $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+//                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
+                // @todo | liquidation | null
+                if ($position->liquidationPrice === 0.00) {
+                    $result[] = $position;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @return array<Position[]>
      *
      * @throws UnknownByBitApiErrorException
@@ -141,6 +190,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         $positions = [];
         foreach ($list as $item) {
             $side = Side::from(strtolower($item['side']));
+            // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
             $symbol = Symbol::from($item['symbol']);
 
             $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
@@ -259,6 +309,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */

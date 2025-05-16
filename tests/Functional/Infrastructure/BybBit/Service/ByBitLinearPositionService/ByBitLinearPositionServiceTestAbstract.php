@@ -18,9 +18,6 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->service = new ByBitLinearPositionService(
-            $this->initializeApiClient(),
-            self::getTestAppErrorsLogger(),
-        );
+        $this->service = new ByBitLinearPositionService($this->initializeApiClient());
     }
 }
