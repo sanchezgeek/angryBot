@@ -38,6 +38,7 @@ liq strategy based on safePriceDistance
 @todo | liquidation | null
 @todo manual release events
 @todo | performance | settings | slow cache or db? or foreach
+@todo | stop | isCloseByMarketContextSet | if support
 
 
 performance

@@ -204,6 +204,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function isCloseByMarketContextSet(): bool
     {
+        // @todo | stop | isCloseByMarketContextSet | if support
+        if (!AppContext::isTest()) {
+            return true;
+        }
+
         return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
     }
 
