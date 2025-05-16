@@ -24,6 +24,7 @@ final readonly class PushAllMainPositionsStopsHandler
 {
     public function __invoke(PushAllMainPositionsStops $message): void
     {
+        $start = OutputHelper::currentTimePoint();
         // @todo save cahce (e.g. for check) ... or have no sense? (context->currPosition already fresh)
         $positions = $this->positionService->getPositionsWithLiquidation();
         /** @var Position[] $positions */
@@ -37,7 +38,7 @@ final readonly class PushAllMainPositionsStopsHandler
         $queryInput = [];
         foreach ($positions as $position) {
             $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->value]);
-            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 1000, $position);
+            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 3000, $position);
         }
 
         $stopsToSymbolsMap = [];
@@ -50,8 +51,7 @@ final readonly class PushAllMainPositionsStopsHandler
         foreach ($positions as $position) {
             $positionSymbol = $position->symbol;
             $symbolRaw = $positionSymbol->value;
-            $positionStops = $stopsToSymbolsMap[$symbolRaw] ?? [];
-//            $sort[$symbolRaw] = sprintf('activatedStops_%d_%s', count($positionStops), $symbolRaw);
+            $possibleTriggeredStops = $stopsToSymbolsMap[$symbolRaw] ?? [];
             $currentPrice = $lastMarkPrices[$positionSymbol->value];
             $ticker = new Ticker($positionSymbol, $currentPrice, $currentPrice, $currentPrice);
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
@@ -63,22 +63,28 @@ final readonly class PushAllMainPositionsStopsHandler
                 $passedDistancePart = 1 - $priceDeltaWithLiquidation / $initialDistanceWithLiquidation;
             }
 
-            $sort[$symbolRaw] = sprintf('passedDistancePart_%.2f_activatedStops_%d_%s', $passedDistancePart, count($positionStops), $symbolRaw);
+            $sort[$symbolRaw] = sprintf(
+                'passedDistancePart_%.2f_im_%s_activatedStops_%d_%s',
+                $passedDistancePart,
+                $position->initialMargin->value(),
+                count($possibleTriggeredStops),
+                $symbolRaw
+            );
         }
 
         $sort = array_flip($sort);
 //        var_dump($sort);
         krsort($sort);
-//        var_dump($sort);die;
+//        var_dump($sort);
 
-        $start = OutputHelper::currentTimePoint();
         foreach ($sort as $symbolRaw) {
             $symbol = Symbol::from($symbolRaw);
 
             try {
                 $positionState = $positionsCache[$symbol->value]->get();
             } catch (RuntimeException $e) {
-                if ($e->getMessage() === 'Not implemented') { OutputHelper::block(sprintf('%s: slow cache', OutputHelper::shortClassName($this)), $e->getMessage(), $symbol->value);
+                if ($e->getMessage() === 'Not implemented') {
+//                    OutputHelper::block(sprintf('%s: slow cache', OutputHelper::shortClassName($this)), $e->getMessage(), $symbol->value);
                     $positionState = null; // if not in warn/crit
                     // and get without cache if in crit/warn
                 } else {
@@ -90,7 +96,8 @@ final readonly class PushAllMainPositionsStopsHandler
 
             $this->innerHandler->__invoke($message);
         }
-        OutputHelper::printTimeDiff($start);
+
+        OutputHelper::printTimeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start);
     }
 
     public function __construct(

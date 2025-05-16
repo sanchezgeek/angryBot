@@ -103,10 +103,10 @@ class OutputHelper
         return microtime(true);
     }
 
-    public static function printTimeDiff(float $start): void
+    public static function printTimeDiff(string $desc, float $start): void
     {
         $end = microtime(true);
 
-        self::print(sprintf('%s - %s = %s', $end, $start, $end - $start));
+        self::print(sprintf('~~~ %s time diff: %s ~~~', $desc, $end - $start));
     }
 }

@@ -6,6 +6,9 @@ namespace App\Worker;
 
 enum RunningWorker: string
 {
+    /** @deprecated @see symbol-consumer-template */
+    case SYMBOL_DEDICATED = 'symbol-dedicated';
+
     case SERVICE = 'service';
 
     case BUY_ORDERS = 'buy-orders';
@@ -18,5 +21,7 @@ enum RunningWorker: string
     case CACHE = 'cache';
 
     case CRITICAL = 'critical';
-    case SYMBOL_DEDICATED = 'symbol-dedicated';
+
+    case MAIN_POSITIONS_STOPS = 'main-positions-stops';
+    case REST_POSITIONS_STOPS = 'rest-positions-stops';
 }
