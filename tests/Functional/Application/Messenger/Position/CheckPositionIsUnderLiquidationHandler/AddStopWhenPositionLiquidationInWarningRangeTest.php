@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnd
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
@@ -102,6 +103,11 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         string $testName,
         int|float|null|string $criticalPartOfLiquidationDistance = null
     ): iterable {
+        // @todo | changeable values
+        $calculationsInitialModifier = 2.3;
+        $actualModifier = LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER;
+        $koefficientForInLossCases = $calculationsInitialModifier / $actualModifier;
+
         $criticalPartOfLiquidationDistance = $criticalPartOfLiquidationDistance ?? 30;
         $percentOfLiquidationDistanceToAddStop = 70;
         $warningPnlDistance = 100;
@@ -252,7 +258,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (1)
         $ticker = self::tickerInPositionLoss($long, Percent::string('10%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.04, 32000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.04 * $koefficientForInLossCases, 32000);
         $note = 'dynamic part / ticker IN POSITION LOSS 1';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -260,7 +266,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (2)
         $ticker = self::tickerInPositionLoss($long, Percent::string('30%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.04, 32000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.04 * $koefficientForInLossCases, 32000);
         $note = 'dynamic part / ticker IN POSITION LOSS 2';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -268,7 +274,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (3): when ticker is below top bound of range where additional stop must be placed
         $ticker = self::tickerInPositionLoss($long, Percent::string('50%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.092, 30000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.092 * $koefficientForInLossCases, 30000);
         $note = 'dynamic part / ticker IN POSITION LOSS 3';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -276,7 +282,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (4): go deeper ...
         $ticker = self::tickerInPositionLoss($long, Percent::string('70%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.199, 28000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.199 * $koefficientForInLossCases, 28000);
         $note = 'dynamic part / ticker IN POSITION LOSS 4';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -284,7 +290,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (5): and deeper ...
         $ticker = self::tickerInPositionLoss($long, Percent::string('90%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.392, 26000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.392 * $koefficientForInLossCases, 26000);
         $note = 'dynamic part / ticker IN POSITION LOSS 5';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -292,7 +298,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         # -- BTCUSDT LONG with ticker IN POSITION LOSS (5): and deeper ... + ticker in warning range
         $ticker = self::tickerInWarningRange($message, $long, Percent::string('10%'));
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.422, 25315);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.422 * $koefficientForInLossCases, 25315);
         $note = 'dynamic part / ticker IN POSITION LOSS 6 (in warning range)';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             $message, $long, $ticker, $delayed, $active, [$expectedStop], $note,
@@ -402,7 +408,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.129, 29400);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], $symbol->roundVolumeDown(0.129 * $koefficientForInLossCases), 29400);
         $note = 'short liq. distance';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             'message' => $message,
@@ -420,7 +426,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($long, $pushedStopsPercent, $existedStopsPrice)];
-        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], 0.013, 79000);
+        $expectedStop = self::expectedAdditionalStop($long, $ticker, $message, [...$delayed, ...$active], $symbol->roundVolumeDown(0.013 * $koefficientForInLossCases), 79000);
         $note = 'long liq. distance';
         yield self::caseDescription($message, $long, $ticker, $delayed, $active, $expectedStop, $note) => [
             'message' => $message,

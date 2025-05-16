@@ -26,7 +26,7 @@ class CheckLiquidationParametersBag
     /**
      * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
      */
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     /**
      * @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS
