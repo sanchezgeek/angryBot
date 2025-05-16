@@ -68,7 +68,7 @@ final class SchedulerFactory
     {
         $jobSchedules = match (AppContext::runningWorker()) {
             RunningWorker::BUY_ORDERS  => $this->buyOrders(),
-            RunningWorker::UTILS => $this->utils(),
+            RunningWorker::SERVICE => $this->service(),
             RunningWorker::CACHE => $this->cache(),
             RunningWorker::CRITICAL => $this->critical(),
             RunningWorker::SYMBOL_DEDICATED => $this->symbol(),
@@ -133,16 +133,15 @@ final class SchedulerFactory
         return $items;
     }
 
-    private function utils(): array
+    private function service(): array
     {
-        $cleanupPeriod = '45S';
-
-        $items = [
+        return [
             # service
 //            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', AsyncMessage::for(new CheckMessengerMessages())),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', AsyncMessage::for(new CheckApiKeyDeadlineDay())),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 
+            // $cleanupPeriod = '45S';
             // PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
             // PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
@@ -178,8 +177,6 @@ final class SchedulerFactory
             // -- active Conditional orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(force: true))),
         ];
-
-        return $items;
     }
 
     private function cache(): array
