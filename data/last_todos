@@ -39,6 +39,9 @@ liq strategy based on safePriceDistance
 @todo manual release events
 @todo | performance | settings | slow cache or db? or foreach
 @todo | stop | isCloseByMarketContextSet | if support
+@todo | liquidation | log into app_errors?
+@todo publish to async
+@todo | take early stopped part into account
 
 
 performance
@@ -67,3 +70,9 @@ parameters
  */
 
 metrics
+
+
+
+
+хз что это
+    !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)

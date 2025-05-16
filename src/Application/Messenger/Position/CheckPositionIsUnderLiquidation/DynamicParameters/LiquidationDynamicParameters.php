@@ -251,7 +251,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         if ($position->isPositionInLoss($ticker->markPrice)) {
             $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
             $initialDistanceWithLiquidation = $position->liquidationDistance();
-            $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+            $distanceLeftInPercent = ($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation) * 100;
             $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
             $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
@@ -269,7 +269,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
             $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $initialDistanceWithLiquidation = $this->warningDistance();
-            $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+            $distanceLeftInPercent = ($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation) * 100;
             $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
             $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
@@ -298,28 +298,20 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );
 
-        try {
-            // @todo | performance | rid of Percent if can
-            $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
+        $modifierInitial = ($actualStopsRangeFromAdditionalStop / 100) * $position->liquidationDistance();
+        $modifierMax = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
+        $modifierMin = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
 
-            $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
-            $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
-            if ($modifier < $min) {
-                $modifier = $min;
-            } elseif ($modifier > $max) {
-                $modifier = $max;
+        try {
+            $modifier = $modifierInitial;
+
+            if ($modifier < $modifierMin) {
+                $modifier = $modifierMin;
+            } elseif ($modifier > $modifierMax) {
+                $modifier = $modifierMax;
             }
             $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
-
-//            if (self::isDebug()) {
-//                var_dump(
-//                    $min,
-//                    $max,
-//                    $position->liquidationDistance(),
-//                    $modifier,
-//                    $additionalStopPrice
-//                );die;
-//            }
+//            if (self::isDebug()) var_dump($modifierMin, $modifierMax, $position->liquidationDistance(), $modifier, $additionalStopPrice);die;
 
             $markPrice = $this->ticker->markPrice;
             $criticalDistance = $this->criticalDistance();
@@ -335,11 +327,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             return $this->actualStopsPriceRange = PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);
         } catch (\Exception $e) {
+            // @todo | liquidation | log into app_errors?
             if ($e->getMessage() === 'Price cannot be less than zero.') {
-                $modifier = min(
-                    (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance()),
-                    PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice)
-                );
+                $modifier = min($modifierInitial, $modifierMax);
 
                 $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier));
                 var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->value, $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));

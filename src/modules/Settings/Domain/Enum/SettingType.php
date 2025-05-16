@@ -12,4 +12,6 @@ enum SettingType
     case Enum;
     case Boolean;
     case Percent;
+
+    // @todo StrictPercent vs CommonPercent
 }

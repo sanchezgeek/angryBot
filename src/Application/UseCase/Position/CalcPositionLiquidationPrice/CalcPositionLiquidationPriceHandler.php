@@ -77,9 +77,7 @@ final readonly class CalcPositionLiquidationPriceHandler
             return $position->entryPrice / $position->leverage->value() / 2;
         }
 
-        $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
-
-        return $maintenanceMargin->value() / $position->size;
+        return ($position->initialMargin->value() / 2) / $position->size;
     }
 
     private static function checkPrerequisites(Position $position): void
