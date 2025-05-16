@@ -27,7 +27,7 @@ use RuntimeException;
 
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface
 {
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     private Symbol $symbol;
     private ?float $warningDistance = null;
