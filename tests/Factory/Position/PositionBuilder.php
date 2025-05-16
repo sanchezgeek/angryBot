@@ -12,7 +12,10 @@ use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Price;
+use App\Domain\Value\Percent\Percent;
 use LogicException;
+
+use RuntimeException;
 
 use function sprintf;
 
@@ -84,6 +87,14 @@ class PositionBuilder
         return $builder;
     }
 
+    public function unrealizedPnl(float $unrealizedPnl): self
+    {
+        $builder = clone $this;
+        $builder->unrealizedPnl = $unrealizedPnl;
+
+        return $builder;
+    }
+
     public function liq(float|Price $liquidation): self
     {
         $builder = clone $this;
@@ -112,18 +123,6 @@ class PositionBuilder
         return $builder;
     }
 
-    public function opposite(Position $oppositePosition): self
-    {
-        if ($oppositePosition->side === $this->side) {
-            throw new LogicException(sprintf('Cannot set opposite position to %s: positions on the same side', $oppositePosition->side->name));
-        }
-
-        $builder = clone $this;
-        $builder->oppositePosition = $oppositePosition;
-
-        return $builder;
-    }
-
     public function withLiquidationCalculator(float $fundsForLiquidation): self
     {
         $this->liquidationCalculator = new CalcPositionLiquidationPriceHandler();
@@ -135,8 +134,18 @@ class PositionBuilder
     /**
      * @throws SizeCannotBeLessOrEqualsZeroException
      */
-    public function build(): Position
+    public function build(?Position &$oppositePosition = null): Position
     {
+        if ($oppositePosition && $oppositePosition->side === $this->side) {
+            throw new LogicException(sprintf('Cannot set opposite position to %s: positions on the same side', $oppositePosition->side->name));
+        }
+
+        if ($oppositePosition && $this->oppositePosition) {
+            throw new RuntimeException('Use one of options to specify oppositePosition: either PositionBuilder::opposite or PositionBuilder::build');
+        }
+
+        $oppositePosition ??= $this->oppositePosition;
+
         $side = $this->side;
         $entry = $this->entry;
 
@@ -144,19 +153,35 @@ class PositionBuilder
         $positionValue = $entry * $size;
         $initialMargin = new CoinAmount($this->symbol->associatedCoin(), ($positionValue / $this->leverage));
 
-        $liquidation = null;
+        $isSupportPosition = $oppositePosition && $oppositePosition->size > $size;
+        $isMainPosition = $oppositePosition && $oppositePosition->size < $size;
 
-        if ($this->oppositePosition && $this->oppositePosition->size >= $size) {
-            $liquidation = 0; // @todo = null
-            $this->oppositePosition = PositionClone::clean($this->oppositePosition)->withoutLiquidation()->create();
-        } elseif ($this->liquidation !== null) {
+        $liquidation = null;
+        if ($this->liquidation !== null) {
+            assert(!$isSupportPosition, new LogicException('Opposite position size greater than self one. Position cannot have liquidation'));
             $liquidation = $this->liquidation;
         } elseif ($this->liquidationCalculator) {
             $fundsForLiquidation = $this->fundsForLiquidation;
             // ...
-        } else {
-            $liquidation = $side->isShort() ? $entry + 99999 : 0;
         }
+
+        if ($oppositePosition) {
+            if ($isSupportPosition) {
+                $liquidation = 0; // @todo | liquidation | null
+            } elseif ($isMainPosition) {
+                $oppositePosition = PositionClone::clean($oppositePosition)->withoutLiquidation()->create();
+            } else {
+                $liquidation = 0; // @todo | liquidation | null
+                $oppositePosition = PositionClone::clean($oppositePosition)->withoutLiquidation()->create();
+            }
+        }
+
+        if ($liquidation === null) {
+//            $liquidation = $side->isShort() ? $entry + 99999 : 0;
+            $modifier = Percent::string('10%')->of($entry);
+            $liquidation = $side->isShort() ? $entry + $modifier : $entry - $modifier;
+        }
+
 
 //        if (($side->isShort() && $liquidation < $entry) || ($side->isLong() && $liquidation > $entry)) {
 //            throw new LogicException(sprintf('Invalid liquidation price "%s" provided (entry = "%s")', $liquidation, $entry));
@@ -174,11 +199,11 @@ class PositionBuilder
             $this->unrealizedPnl,
         );
 
-        if ($this->oppositePosition) {
-            $position->setOppositePosition($this->oppositePosition);
+        if ($oppositePosition) {
+            $position->setOppositePosition($oppositePosition);
 
             # make testcases more handy
-            $this->oppositePosition->setOppositePosition($position);
+            $oppositePosition->setOppositePosition($position);
         }
 
         return $position;

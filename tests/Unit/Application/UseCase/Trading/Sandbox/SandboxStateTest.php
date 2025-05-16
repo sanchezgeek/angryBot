@@ -35,7 +35,7 @@ class SandboxStateTest extends TestCase
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
-        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
+        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->build($long);
 
         $free = $symbol->associatedCoinAmount(98.1001);
 
@@ -94,13 +94,13 @@ class SandboxStateTest extends TestCase
 
         # HEDGE (mainPosition = SHORT)
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
-        $short = PB::short()->entry(69533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
+        $short = PB::short()->entry(69533.430)->size(0.188)->liq(75361.600)->build($long);
         $positions = [$long, $short];
         $expectedAvailable = $free;
         yield '[hedge] main position in profit' => [$ticker, $free, $positions, $expectedAvailable];
 
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
-        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
+        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->build($long);
         $positions = [$long, $short];
         $expectedAvailable = 33.9768;
         yield '[hedge] main position is loss' => [$ticker, $free, $positions, $expectedAvailable];
@@ -113,7 +113,7 @@ class SandboxStateTest extends TestCase
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
         $long = PB::long()->entry(59426.560)->size(0.084)->build();
-        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->opposite($long)->build();
+        $short = PB::short()->entry(67533.430)->size(0.188)->liq(75361.600)->build($long);
 
         $free = $symbol->associatedCoinAmount(98.1001);
         $contactBalance = ContractBalanceTestHelper::contractBalanceBasedOnFree($free->value(), [$short, $long], $ticker);

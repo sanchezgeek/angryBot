@@ -136,13 +136,13 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         $symbol = Symbol::BTCUSDT;
 
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build();
-        $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->build($main);
         $stop = (new Stop(1, 62000, 0.1, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $main = PositionBuilder::short()->symbol($symbol)->entry(55000)->size(1)->build();
-        $support = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.5)->build($main);
         $stop = (new Stop(1, 49000, 0.1, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
@@ -150,13 +150,13 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         # ADAUSDT support
         $symbol = Symbol::ADAUSDT;
         $main = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(4470)->build();
-        $support = PositionBuilder::short()->symbol($symbol)->entry(0.9052)->size(2700)->opposite($main)->build();
+        $support = PositionBuilder::short()->symbol($symbol)->entry(0.9052)->size(2700)->build($main);
         $stop = (new Stop(1, 0.9442, 10, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $main = PositionBuilder::short()->symbol($symbol)->entry(0.8552)->size(4470)->build();
-        $support = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(2700)->opposite($main)->build();
+        $support = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(2700)->build($main);
         $stop = (new Stop(1, 0.8200, 10, null, $symbol, $support->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($support, $stop);
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
@@ -165,25 +165,25 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         ### -- entry prices equal
         $symbol = Symbol::BTCUSDT;
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.5)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build($support);
         $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (1)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.45)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->build($support);
         $stop = (new Stop(1, 47000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (2)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.4)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->build($support);
         $stop = (new Stop(1, 46000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (3)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.35)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.7)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.7)->build($support);
         $stop = (new Stop(1, 45000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'I (when entry prices equal) step by step (4)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
@@ -192,25 +192,25 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 
         ### -- II (some distance)
         $support = PositionBuilder::short()->symbol($symbol)->entry(55000)->size(0.5)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build($support);
         $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'II (some distance)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build($support);
         $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (1)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.483)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.9)->build($support);
         $stop = (new Stop(1, 47000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (2)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];
 
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.459)->build();
-        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->opposite($support)->build();
+        $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(0.8)->build($support);
         $stop = (new Stop(1, 46000, 0.1, null, $symbol, $main->side));
         [$expectedStopPrice, $expectedStopVolume] = self::expectedStopPriceAndDistance($main, $stop);
         yield self::caseDescription($main, $stop, $expectedStopPrice, $expectedStopVolume, 'III (some distance) step by step (3)') => [$main, $stop, $expectedStopPrice, $expectedStopVolume];

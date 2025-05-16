@@ -138,7 +138,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         // --- short with hedge
         $long = PositionBuilder::long()->entry($shortEntry - 10000)->size(0.11)->build();
-        $short = PositionBuilder::short()->entry($shortEntry)->size(0.5)->liq($shortLiquidation)->opposite($long)->build();
+        $short = PositionBuilder::short()->entry($shortEntry)->size(0.5)->liq($shortLiquidation)->build($long);
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
         $active = [self::activeCondOrder($short, $pushedStopsPercent, $existedStopsPrice)];
@@ -162,7 +162,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         // -- long with hedge
         $short = PositionBuilder::short()->entry($longEntry + 10000)->size(0.11)->build();
-        $long = PositionBuilder::long()->entry($longEntry)->size(0.5)->liq($longLiquidation)->opposite($short)->build();
+        $long = PositionBuilder::long()->entry($longEntry)->size(0.5)->liq($longLiquidation)->build($short);
         $ticker = self::tickerInCheckStopsRange($message, $long);
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];
@@ -197,7 +197,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         // --- short with hedge
         $long = PositionBuilder::long()->symbol($symbol)->entry($shortEntry - 1)->size(2.5)->build();
-        $short = PositionBuilder::short()->symbol($symbol)->entry($shortEntry)->size(10.5)->liq($shortLiquidation)->opposite($long)->build();
+        $short = PositionBuilder::short()->symbol($symbol)->entry($shortEntry)->size(10.5)->liq($shortLiquidation)->build($long);
         $ticker = self::tickerInCheckStopsRange($message, $short);
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $short);
         $delayed = [self::delayedStop($short, $delayedStopsPercent, $existedStopsPrice)];
@@ -223,7 +223,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         // --- long with hedge
         $short = PositionBuilder::short()->symbol($symbol)->entry($longEntry + 1)->size(2.5)->build();
-        $long = PositionBuilder::long()->symbol($symbol)->entry($longEntry)->size(10.5)->liq($longLiquidation)->opposite($short)->build();
+        $long = PositionBuilder::long()->symbol($symbol)->entry($longEntry)->size(10.5)->liq($longLiquidation)->build($short);
         $ticker = self::tickerInCheckStopsRange($message, $long);
         $existedStopsPrice = self::stopPriceThatLeanInAcceptableRange($message, $long);
         $delayed = [self::delayedStop($long, $delayedStopsPercent, $existedStopsPrice)];

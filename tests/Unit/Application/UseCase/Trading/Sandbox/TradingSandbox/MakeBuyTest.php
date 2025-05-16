@@ -56,7 +56,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         # SHORT
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 68150, 0.001);
         $longInitialCloned = PositionClone::clean($longInitial)->create();
-        $shortAfterMake = PB::short()->entry(67536.70962765957)->size($shortInitial->size + 0.001)->liq(75105.97)->opposite($longInitialCloned)->build();
+        $shortAfterMake = PB::short()->entry(67536.70962765957)->size($shortInitial->size + 0.001)->liq(75105.97)->build($longInitialCloned);
         $positionsAfter = [$longInitialCloned, $shortAfterMake];
 
         $expectedFree = 178.2235; $expectedAvailable = 110.1483;
@@ -70,7 +70,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         # LONG
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Buy, 68150, 0.001);
         $longAfterMake = PB::long()->entry(59538.39897435897)->size($longInitial->size + 0.001)->build();
-        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(75227.40)->opposite($longAfterMake)->build();
+        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(75227.40)->build($longAfterMake);
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 178.2242; $expectedAvailable = 111.0181;
@@ -92,7 +92,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
 
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Buy, 63400, 0.001);
         $longAfterMake = PB::long()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->build();
-        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(131461.41)->opposite($longAfterMake)->build();
+        $shortAfterMake = PB::short()->entry($shortInitial->entryPrice)->size($shortInitial->size)->liq(131461.41)->build($longAfterMake);
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 11955.932999999999; $expectedAvailable = 11955.933;
@@ -113,7 +113,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
         $sandboxBuyOrder = new SandboxBuyOrder($symbol, Side::Sell, 63400, 0.001);
 
         $shortAfterMake = PB::short()->entry($sandboxBuyOrder->price)->size($sandboxBuyOrder->volume)->withoutLiquidation()->build();
-        $longAfterMake = PB::long()->entry($longInitial->entryPrice)->size($longInitial->size)->liq(46499.09)->opposite($shortAfterMake)->build();
+        $longAfterMake = PB::long()->entry($longInitial->entryPrice)->size($longInitial->size)->liq(46499.09)->build($shortAfterMake);
         $positionsAfter = [$longAfterMake, $shortAfterMake];
 
         $expectedFree = 955.9322999999999; $expectedAvailable = 955.9323;

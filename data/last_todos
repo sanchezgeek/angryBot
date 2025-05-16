@@ -34,8 +34,8 @@ liq strategy based on safePriceDistance
 @todo | cache | all symbols?
 @todo | exceptions
 @todo | sandbox | mb troubles with sandbox (inner check will not work)
-
-
+@todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
+@todo | liquidation | null
 
 
 performance
@@ -63,3 +63,4 @@ parameters
  * $safePriceDistance =
  */
 
+metrics

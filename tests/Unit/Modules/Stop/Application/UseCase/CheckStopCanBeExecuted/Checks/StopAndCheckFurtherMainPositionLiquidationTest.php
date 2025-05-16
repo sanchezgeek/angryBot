@@ -109,7 +109,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
 
         # SHORT
         $main = PositionBuilder::short()->entry(100000)->size(1)->liq(101000)->build();
-        $support = PositionBuilder::long()->entry(80000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::long()->entry(80000)->size(0.5)->build($main);
         $stop = StopBuilder::long(1, 100000, 0.001, $symbol)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
@@ -120,7 +120,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
 
         # LONG
         $main = PositionBuilder::long()->entry(80000)->size(1)->liq(79000)->build();
-        $support = PositionBuilder::short()->entry(100000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::short()->entry(100000)->size(0.5)->build($main);
         $stop = StopBuilder::short(1, 80000, 0.001)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
