@@ -27,6 +27,7 @@ class EditAlarmCommand extends AbstractCommand
 
     private const LOSS_OPTION = 'loss';
     private const PROFIT_OPTION = 'profit';
+    private const PNL_PERCENT_OPTION = 'percent';
 
     private const ENABLE_OPTION = 'enable';
     private const DISABLE_OPTION = 'disable';
@@ -39,6 +40,7 @@ class EditAlarmCommand extends AbstractCommand
             ->configureSymbolArgs()
             ->addOption(self::LOSS_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::PROFIT_OPTION, null, InputOption::VALUE_NEGATABLE)
+            ->addOption(self::PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL)
             ->addOption(self::ENABLE_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::DISABLE_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::SIDE_OPTION, null, InputOption::VALUE_REQUIRED)
@@ -48,28 +50,37 @@ class EditAlarmCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $setting = match (true) {
-            $this->paramFetcher->getBoolOption(self::LOSS_OPTION) => AlarmSettings::AlarmOnLossEnabled,
-            $this->paramFetcher->getBoolOption(self::PROFIT_OPTION) => AlarmSettings::AlarmOnProfitEnabled,
-            default => throw new InvalidArgumentException('One of "loss" or "profit" options must be selected'),
-        };
-
-        $enable = match (true) {
-            $this->paramFetcher->getBoolOption(self::ENABLE_OPTION) => true,
-            $this->paramFetcher->getBoolOption(self::DISABLE_OPTION) => false,
-            default => throw new InvalidArgumentException('One of "enable" or "disable" options must be selected'),
-        };
-
-        if ($this->paramFetcher->getBoolOption(self::ROOT_OPTION)) {
-            $symbol = null;
-            $side = null;
-        } else {
+        if ($percent = $this->paramFetcher->percentOption(self::PNL_PERCENT_OPTION)) {
             $symbol = $this->getSymbol();
             $sideRaw = $this->paramFetcher->getStringOption(self::SIDE_OPTION, false);
             $side = $sideRaw ? Side::from($sideRaw) : null;
+
+            $this->settingsService->set(SettingAccessor::exact(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side), (int)$percent);
+        } else {
+            $setting = match (true) {
+                $this->paramFetcher->getBoolOption(self::LOSS_OPTION) => AlarmSettings::AlarmOnLossEnabled,
+                $this->paramFetcher->getBoolOption(self::PROFIT_OPTION) => AlarmSettings::AlarmOnProfitEnabled,
+                default => throw new InvalidArgumentException('One of "loss" or "profit" options must be selected'),
+            };
+
+            $enable = match (true) {
+                $this->paramFetcher->getBoolOption(self::ENABLE_OPTION) => true,
+                $this->paramFetcher->getBoolOption(self::DISABLE_OPTION) => false,
+                default => throw new InvalidArgumentException('One of "enable" or "disable" options must be selected'),
+            };
+
+            if ($this->paramFetcher->getBoolOption(self::ROOT_OPTION)) {
+                $symbol = null;
+                $side = null;
+            } else {
+                $symbol = $this->getSymbol();
+                $sideRaw = $this->paramFetcher->getStringOption(self::SIDE_OPTION, false);
+                $side = $sideRaw ? Side::from($sideRaw) : null;
+            }
+
+            $this->settingsService->set(SettingAccessor::exact($setting, $symbol, $side), $enable);
         }
 
-        $this->settingsService->set(SettingAccessor::exact($setting, $symbol, $side), $enable);
 
         return Command::SUCCESS;
     }

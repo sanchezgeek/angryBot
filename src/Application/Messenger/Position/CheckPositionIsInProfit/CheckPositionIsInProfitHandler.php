@@ -49,7 +49,7 @@ final class CheckPositionIsInProfitHandler
                 $ticker = $this->exchangeService->ticker($symbol);
                 $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
 
-                if (!($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side)))) {
+                if ($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side))) {
                     $alertPercentSpecifiedManually = true;
                 } else {
                     $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->value] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
