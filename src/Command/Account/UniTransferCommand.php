@@ -76,7 +76,7 @@ class UniTransferCommand extends AbstractCommand
     public function __construct(
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         string $accountUids,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->accountUids = json_decode($accountUids, true);
 

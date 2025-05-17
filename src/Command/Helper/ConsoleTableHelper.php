@@ -12,7 +12,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ConsoleTableHelper
 {
-    public static function cell(mixed $content, int $col = null, array $options = [], string $fontColor = null, string $backgroundColor = null, string $align = null): TableCell
+    public static function cell(mixed $content, ?int $col = null, array $options = [], ?string $fontColor = null, ?string $backgroundColor = null, ?string $align = null): TableCell
     {
         $style = [];
         if ($col) $options['colspan'] = $col;

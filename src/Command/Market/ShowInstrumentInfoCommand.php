@@ -41,7 +41,7 @@ class ShowInstrumentInfoCommand extends AbstractCommand
 
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

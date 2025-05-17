@@ -15,6 +15,6 @@ interface PositionOrderRepository
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false,
-        callable $qbModifier = null
+        ?callable $qbModifier = null
     ): array;
 }

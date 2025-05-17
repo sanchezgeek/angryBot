@@ -307,7 +307,7 @@ class StopInfoCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
         private readonly TradingSandboxFactory $tradingSandboxFactory,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

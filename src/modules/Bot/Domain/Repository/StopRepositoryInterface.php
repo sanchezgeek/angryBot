@@ -14,5 +14,5 @@ interface StopRepositoryInterface
     /**
      * @return Stop[]
      */
-    public function findActive(Symbol $symbol, Side $side, ?Ticker $nearTicker = null, bool $exceptOppositeOrders = false, callable $qbModifier = null): array;
+    public function findActive(Symbol $symbol, Side $side, ?Ticker $nearTicker = null, bool $exceptOppositeOrders = false, ?callable $qbModifier = null): array;
 }

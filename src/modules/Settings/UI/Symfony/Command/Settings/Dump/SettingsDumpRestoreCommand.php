@@ -65,7 +65,7 @@ class SettingsDumpRestoreCommand extends AbstractCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly SettingValueRepository $settingValueRepository,
         private ClockInterface $clock,
-        string $name = null,
+        ?string $name = null,
     ) {
 
         parent::__construct($name);

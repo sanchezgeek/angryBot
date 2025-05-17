@@ -15,7 +15,7 @@ final class Cell
 
     public function __construct(
         public mixed  $content,
-        CellStyle     $style = null,
+        ?CellStyle     $style = null,
     ) {
         $this->style = $style ?? new CellStyle();
     }
@@ -40,7 +40,7 @@ final class Cell
         return new self($content, CellStyle::resetToDefaults());
     }
 
-    public static function restColumnsMerged(string $content = '', int $rightOffsetAfterMerge = null): self
+    public static function restColumnsMerged(string $content = '', ?int $rightOffsetAfterMerge = null): self
     {
         $cell = self::default($content);
         $cell->style->setMustBeMergedToTableEnd();
@@ -49,7 +49,7 @@ final class Cell
         return $cell;
     }
 
-    public static function generalInfo(string $content, CellStyle $cellStyle = null): self
+    public static function generalInfo(string $content, ?CellStyle $cellStyle = null): self
     {
         $cellStyle = $cellStyle ?? new CellStyle();
         $cellStyle->fontColor = Color::YELLOW;

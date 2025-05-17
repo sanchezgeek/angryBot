@@ -20,7 +20,7 @@ class CheckTheSoundCommand extends Command
 
     public function __construct(
         private readonly AppErrorLoggerInterface $appErrorLogger,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

@@ -232,7 +232,7 @@ class CreateStopsGridCommand extends AbstractCommand
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

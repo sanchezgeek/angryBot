@@ -183,7 +183,7 @@ class EditBuyOrdersCommand extends AbstractCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly BuyOrderRepository $buyOrderRepository,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

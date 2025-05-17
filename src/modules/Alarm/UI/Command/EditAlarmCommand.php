@@ -88,7 +88,7 @@ class EditAlarmCommand extends AbstractCommand
     public function __construct(
         private readonly AppSettingsService $settingsService,
         private readonly AppDynamicParameterEvaluator $parameterEvaluator,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

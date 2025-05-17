@@ -98,7 +98,7 @@ class PositionsInfoCommand extends AbstractCommand
         private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
         private readonly PositionsCache $positionsCache,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

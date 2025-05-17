@@ -46,7 +46,7 @@ final class Price implements Stringable
     /**
      * @todo | CS | rename to `fromFloat`?
      */
-    public static function float(float $value, int $precision = null): self
+    public static function float(float $value, ?int $precision = null): self
     {
         $precision = $precision ?? 2;
         return new self($value, $precision);
@@ -149,7 +149,7 @@ final class Price implements Stringable
         return $value instanceof self ? $value->value : $value;
     }
 
-    public static function toObj(self|float $value, int $precision = null): self
+    public static function toObj(self|float $value, ?int $precision = null): self
     {
         return $value instanceof self ? $value : self::float($value, $precision);
     }

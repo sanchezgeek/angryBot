@@ -77,7 +77,7 @@ class PositionMoveInfoCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly BuyOrderRepository $buyOrderRepository,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

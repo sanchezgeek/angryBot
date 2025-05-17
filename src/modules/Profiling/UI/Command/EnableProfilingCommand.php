@@ -23,7 +23,7 @@ class EnableProfilingCommand extends AbstractCommand
 
     public function __construct(
         private readonly AppSettingsService $settingsService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

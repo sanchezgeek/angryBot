@@ -22,7 +22,7 @@ trait OppositeOrdersDistanceAwareCommand
 
     public function configureOppositeOrdersDistanceOption(
         string $name = 'oppositeDistance',
-        string $alias = null,
+        ?string $alias = null,
     ): static
     {
         $this->oppositeDistanceOption = $name;

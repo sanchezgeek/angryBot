@@ -131,7 +131,7 @@ class EditSettingCommand extends AbstractCommand
         private readonly SettingsLocator $settingsLocator,
         private readonly AppSettingsService $settingsService,
         private readonly SettingsStorageInterface $storage,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

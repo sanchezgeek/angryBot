@@ -60,7 +60,7 @@ class StopsDumpRestoreCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
         private ClockInterface $clock,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

@@ -106,7 +106,7 @@ class CreateStopsCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

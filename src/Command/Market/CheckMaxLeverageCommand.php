@@ -48,7 +48,7 @@ class CheckMaxLeverageCommand extends AbstractCommand
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly ByBitLinearPositionService $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

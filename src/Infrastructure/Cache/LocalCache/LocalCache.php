@@ -15,7 +15,7 @@ final readonly class LocalCache implements CacheServiceInterface
     {
     }
 
-    public function get(CacheKeyGeneratorInterface|string $key, callable $warmup = null)
+    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null)
     {
         $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;
 

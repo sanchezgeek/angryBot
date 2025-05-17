@@ -108,7 +108,7 @@ class OrderInfoCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly ExchangeServiceInterface $exchangeService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

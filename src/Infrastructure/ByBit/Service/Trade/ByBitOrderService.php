@@ -140,7 +140,7 @@ final class ByBitOrderService implements OrderServiceInterface
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
      */
-    private function sendPlaceOrderRequest(AbstractByBitApiRequest $request, Closure $apiErrorResolvers = null): string
+    private function sendPlaceOrderRequest(AbstractByBitApiRequest $request, ?Closure $apiErrorResolvers = null): string
     {
         $calledServiceMethod = debug_backtrace()[1]['function'];
 

@@ -22,7 +22,7 @@ class GenerateSupervisorConfigsCommand extends AbstractCommand
 
     public function __construct(
         private readonly GenerateSupervisorConfigsHandler $handler,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

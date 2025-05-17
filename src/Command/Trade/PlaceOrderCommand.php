@@ -200,7 +200,7 @@ class PlaceOrderCommand extends AbstractCommand
     /**
      * @param Symbol[] $symbols
      */
-    private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, string $mode = null): void
+    private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, ?string $mode = null): void
     {
         if ($mode === 'ofPosition' && !$volume instanceof Percent) {
             throw new InvalidArgumentException(
@@ -323,7 +323,7 @@ class PlaceOrderCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly OrderCostCalculator $orderCostCalculator,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

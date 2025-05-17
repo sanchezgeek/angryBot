@@ -59,7 +59,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(Symbol $symbol, Side $side, callable $qbModifier = null): array
+    public function findAllByPositionSide(Symbol $symbol, Side $side, ?callable $qbModifier = null): array
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
@@ -81,7 +81,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
-        callable $qbModifier = null
+        ?callable $qbModifier = null
     ): array {
         return $this->findActiveQB($symbol, $side, $nearTicker, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
     }
@@ -91,7 +91,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
-        callable $qbModifier = null
+        ?callable $qbModifier = null
     ): QueryBuilder {
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")

@@ -10,14 +10,14 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 trait SettingsAwareBundle
 {
-    public function registerSettings(ContainerBuilder $container, string $bundleNamespace = null, string $path = null): void
+    public function registerSettings(ContainerBuilder $container, ?string $bundleNamespace = null, ?string $path = null): void
     {
         $container->addCompilerPass(
             new SettingsCompilerPass($path, $bundleNamespace . '\Application\Settings')
         );
     }
 
-    public function registerSettingsValues(ContainerBuilder $container, string $path = null): void
+    public function registerSettingsValues(ContainerBuilder $container, ?string $path = null): void
     {
         $container->addCompilerPass(
             new SettingsDefaultValuesCompilerPass($path)

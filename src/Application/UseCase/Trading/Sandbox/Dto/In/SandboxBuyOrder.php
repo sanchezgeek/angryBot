@@ -27,7 +27,7 @@ readonly class SandboxBuyOrder implements Stringable, VolumeSignAwareInterface, 
     ) {
     }
 
-    public static function fromBuyOrder(BuyOrder $buyOrder, Price|float $withPrice = null): self
+    public static function fromBuyOrder(BuyOrder $buyOrder, Price|float|null $withPrice = null): self
     {
         $withPrice = $withPrice === null ? $buyOrder->getPrice() : Price::toFloat($withPrice);
 

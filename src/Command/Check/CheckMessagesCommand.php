@@ -34,7 +34,7 @@ class CheckMessagesCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

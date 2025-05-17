@@ -702,7 +702,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $cache;
     }
 
-    private static function formatChangedValue(int|float $value, int|float|null $specifiedCacheValue = null, int|float|null $prevIterationValue = null, callable $formatter = null, ?bool $withoutColor = null): string
+    private static function formatChangedValue(int|float $value, int|float|null $specifiedCacheValue = null, int|float|null $prevIterationValue = null, ?callable $formatter = null, ?bool $withoutColor = null): string
     {
         $formatter = $formatter ?? static fn ($val) => (string)$val;
         $result = $formatter($value);
@@ -918,7 +918,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         private readonly ClockInterface $clock,
         private readonly StopRepository $stopRepository,
         private readonly AppSettingsProviderInterface $settings,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 
