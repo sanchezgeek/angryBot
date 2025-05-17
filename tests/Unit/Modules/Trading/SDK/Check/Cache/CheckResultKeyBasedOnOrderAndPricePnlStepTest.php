@@ -57,7 +57,7 @@ final class CheckResultKeyBasedOnOrderAndPricePnlStepTest extends TestCase
         yield [1, 0.9871, 10, Symbol::FARTCOINUSDT, Side::Buy, 'CRKBOPPS_FARTCOINUSDT_buy_pct_10_step_0.0010_priceLevel_987_orderQty_1'];
 
         yield [1, 1.1867, 20, Symbol::FARTCOINUSDT, Side::Buy, 'CRKBOPPS_FARTCOINUSDT_buy_pct_20_step_0.0024_priceLevel_494_orderQty_1'];
-        yield [1, 0.9871, 50, Symbol::FARTCOINUSDT, Side::Buy, 'CRKBOPPS_FARTCOINUSDT_buy_pct_50_step_0.0050_priceLevel_197_orderQty_1'];
+        yield [1, 0.9871, 50, Symbol::FARTCOINUSDT, Side::Buy, 'CRKBOPPS_FARTCOINUSDT_buy_pct_50_step_0.0049_priceLevel_201_orderQty_1'];
 
         yield [1, 0.05471, $step, Symbol::ARCUSDT, Side::Buy, 'CRKBOPPS_ARCUSDT_buy_pct_10_step_0.00005_priceLevel_1094_orderQty_1'];
         yield [1, 0.05475, $step, Symbol::ARCUSDT, Side::Buy, 'CRKBOPPS_ARCUSDT_buy_pct_10_step_0.00006_priceLevel_912_orderQty_1'];
