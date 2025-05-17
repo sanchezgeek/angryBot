@@ -7,10 +7,10 @@
         "php": ">=8.2",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "doctrine/data-fixtures": "^1.6",
+        "doctrine/data-fixtures": "2.0.2",
         "doctrine/doctrine-bundle": "^2.8",
         "doctrine/doctrine-migrations-bundle": "^3.2",
-        "doctrine/orm": "^2.14",
+        "doctrine/orm": "3.3.3",
         "guzzlehttp/guzzle": "^7.5",
         "scienta/doctrine-json-functions": "*",
         "symfony/cache": "*",
@@ -38,7 +38,7 @@
         "symfony/browser-kit": "*",
         "symfony/css-selector": "*",
         "symfony/maker-bundle": "^1.48",
-        "symfony/phpunit-bridge": "^6.2",
+        "symfony/phpunit-bridge": "7.2.6",
         "symfony/process": "*"
     },
     "config": {
