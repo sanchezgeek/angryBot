@@ -1,87 +1,114 @@
-src/Infrastructure/Cache/PositionsCache.php
-tests/Unit/Domain/Position/Helper/PositionCloneTest.php
-src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
-tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
-regexp CTRL-F: @todo.*sandbox
+imports
+    - { todos }
 
+### ??? ###
+    src/Infrastructure/Cache/PositionsCache.php
+    cals
+    написать compByHedge
+    src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
 
-написать compByHedge
-ttl for active
-veryHardPriceAv
+        /**
+         * equiv hedge from BuyAndCheckFurtherPositionLiquidation
+         * eth Buy
+         * $liquidationPrice =
+         * $withPrice =
+         * $safePriceDistance =
+         */
 
-move orders based on initial liq distance?
-increase position (by some paams)
-cals
+### Monitoring ###
+    metrics
+        e.g. PushAllMainPositionsStopsHandler exec time deviation
 
-lP history points
+### Sandbox ###
+    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
+    regexp CTRL-F: @todo.*sandbox
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
 
-minor
+### Api fetching ###
+    @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
+    @todo | cache | all symbols?
+
+### Orders context promotion ###
+    @todo | stop | isCloseByMarketContextSet | if support
+
+### Liquidation ###
+    @todo | liquidation
+    liq strategy based on safePriceDistance (or add some to liquidation distance)
+    lP history points (and average through period)
+        to determine what delta must be used in moment
+
+### Other / Minor ###
+    @todo | liquidation
+    @todo | liquidation | null
     @todo | check | other | reserved balance
+    tests/Unit/Domain/Position/Helper/PositionCloneTest.php
+    Commands
+        increase position (by some paams)
+        buy grid for specified volume (that will be divided to some orders qnt and size)
 
+### Cache ###
+    @todo | cache
+    @todo | cache | pass specific cache ttl?
+    @todo | cache | all symbols?
 
-@todo | settings
-@todo | settings | tests
-liq strategy based on safePriceDistance
-@todo | stop
-@todo | stop/check
-@todo | stop check mainPosition stops first
-@todo | liquidation
-@todo | cache
-@todo | buy
-@todo | buy | round here?
-@todo | buy/check
-@todo | performance | rid of Percent if can
-@todo | cache | all symbols?
-@todo | exceptions
-@todo | sandbox | mb troubles with sandbox (inner check will not work)
-@todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
-@todo | liquidation | null
-@todo manual release events
-@todo | performance | settings | slow cache or db? or foreach
-@todo | stop | isCloseByMarketContextSet | if support
-@todo | liquidation | log into app_errors?
-@todo publish to async
-@todo | take early stopped part into account
-@todo StrictPercent vs CommonPercent
-@todo | pushStops
-@todo | cache | pass specific cache ttl?
-@todo | all-main | if not in warn/crit // and get without cache if in crit/warn
+### Checks ###
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
+    @todo | buy/check
+    @todo | stop/check
+    Some command to see checks failures?
+    veryHardPriceAv
 
+### Docs ###
+    !!! SafePriceDistanceSettings.md !!!
 
-!!! SafePriceDistanceSettings.md !!!
+### Async problems? ###
+    @todo manual release events
 
-additional async_high workers based on positions count (for update ticker for PushAllMainPositionsStopsHandler)
-
-
-performance
+### Performance ###
     some settings can be initialized once
+    @todo publish to async
+    + @todo | performance | rid of Percent if can
 
-hedge
+### Hedge ###
     hedge as grid creates order in strange range
+    @todo | take early stopped part into account
 
-safePriceDistance
-    safe price strategy by defined level
+### Parameters ###
+    safePriceDistance
+        safe price strategy by defined level
 
+### Settings ###
+    @todo | settings
+    @todo | settings | tests
+    @todo | performance | settings | slow cache or db? or foreach
+    default settings values
+        if ($this->settings->required(ConnectionSettings::CheckConnectionEnabled) !== true) {
 
-default settings values
-    if ($this->settings->required(ConnectionSettings::CheckConnectionEnabled) !== true) {
+### Validation ###
+    @todo StrictPercent vs CommonPercent
 
+### AllOpenedPositionsInfoCommand ###
+    @todo | AllOpenedPositionsInfoCommand
+    @todo | AllOpenedPositionsInfoCommand | when liquidation placed before entry
+    @todo | AllOpenedPositionsInfoCommand | research error
 
-parameters
-    safePriceDistance K
+### Push ###
+    + @todo | stop check mainPosition stops first
+    @todo | pushStops
+    @todo manual release events
+    @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
 
-/**
- * equiv hedge from BuyAndCheckFurtherPositionLiquidation
- * eth Buy
- * $liquidationPrice =
- * $withPrice =
- * $safePriceDistance =
- */
+        ~~~ Orders ~~~
+            @todo | stop
+            @todo | buy
+            @todo | buy | round here?
+            specify initial pnlDistance on SLs creation + periodical check new liquidation for move orders according to initial relative distance
 
-metrics
+### Buy ###
+    ttl for active
 
-
-
-
-хз что это
+### Forgotten Errors ###
+    @todo | liquidation | log into app_errors?
+    @todo | exceptions
     !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
