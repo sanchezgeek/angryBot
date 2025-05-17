@@ -74,6 +74,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
         if ($distanceWithLiquidation <= $liquidationWarningDistance) {
             $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
+            // @todo | pushStops | max (for short and min for long) between index and mark
+            // + select $triggerBy based on selected price
         } else {
             $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
         }
