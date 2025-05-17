@@ -50,8 +50,7 @@ final readonly class PushAllMainPositionsStopsHandler
 
         $stopsToSymbolsMap = [];
         foreach ($this->stopRepository->findAllActive($queryInput) as $stop) {
-            $symbolRaw = $stop->getSymbol()->value;
-            $stopsToSymbolsMap[$symbolRaw][] = $stop;
+            $stopsToSymbolsMap[$stop['symbol']][] = $stop;
         }
 
         $sort = [];
