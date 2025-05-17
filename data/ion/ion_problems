@@ -3,8 +3,3 @@
 
 cdi && cp sources/bot_ion_sources/src/Messenger/SchedulerTransport/PeriodicalJob.php executable/ionbot/src/Messenger/SchedulerTransport
 cp .env.local.testnet executable/ionbot/.env.build
-
-
-
-
-
