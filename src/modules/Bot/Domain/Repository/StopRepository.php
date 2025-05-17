@@ -8,6 +8,7 @@ use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use BackedEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Query\Expr\OrderBy;
@@ -122,7 +123,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     /**
      * @param FindStopsDto[] $data
-     * @return Stop[]
+     * @return array[][]
      */
     public function findAllActive(array $data): array
     {
@@ -144,15 +145,26 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         $query = implode(' UNION ALL ', $queries);
+
         $query = str_replace('id_0', 'id', $query); # doctrine bug?
+        $query = str_replace('price_1', 'price', $query);
+        $query = str_replace('volume_2', 'volume', $query);
+        $query = str_replace('trigger_delta_3', 'trigger_delta', $query);
+        $query = str_replace('symbol_4', 'symbol', $query);
+        $query = str_replace('position_side_5', 'position_side', $query);
+        $query = str_replace('context_6', 'context', $query);
 
-        $rsm = new ResultSetMappingBuilder($this->_em);
-        $rsm->addRootEntityFromClassMetadata(Stop::class, 's0_');
+        $params = [];
+        foreach ($parameters as $parameter) {
+            $value = $parameter->getValue();
+            $params[$parameter->getName()] = match (true) {
+                $value instanceof BackedEnum => $value->value,
+                default => $value
+            };
+        }
 
-        $query = $this->_em->createNativeQuery($query, $rsm);
-        $query->setParameters($parameters);
 
-        return $query->getResult();
+        return $this->_em->getConnection()->executeQuery($query, $params)->fetchAllAssociative();
     }
 
     public function findFirstStopUnderPosition(Position $position): ?Stop
