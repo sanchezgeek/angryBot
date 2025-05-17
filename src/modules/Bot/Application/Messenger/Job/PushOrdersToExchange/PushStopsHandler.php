@@ -145,7 +145,10 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
 
         $checkResult = $this->checks->check($stop, $checksContext);
-        !$checkResult->quiet && OutputHelper::warning($checkResult->info());
+        if (!$checkResult->quiet) {
+            $checkResult->success && OutputHelper::success($checkResult->info());
+            !$checkResult->success && OutputHelper::failed($checkResult->info());
+        }
 
         return $checkResult->success;
     }

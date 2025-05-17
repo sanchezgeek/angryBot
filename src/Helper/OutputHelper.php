@@ -60,6 +60,16 @@ class OutputHelper
         echo sprintf('@ %s', $message) . PHP_EOL;
     }
 
+    public static function success(string $message): void
+    {
+        echo sprintf('+ %s', $message) . PHP_EOL;
+    }
+
+    public static function failed(string $message): void
+    {
+        echo sprintf('! %s', $message) . PHP_EOL;
+    }
+
     public static function printIfDebug(mixed $data): void
     {
         if (!AppContext::isDebug()) {

@@ -7,19 +7,20 @@ namespace App\Trading\SDK\Check\Dto;
 use App\Helper\OutputHelper;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\Dto\Out\TradingCheckFailedReason;
+use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 
 final readonly class TradingCheckResult extends AbstractTradingCheckResult
 {
-    public static function succeed(string|object $source, string $info, bool $quiet = false): self
+    public static function succeed(string|TradingCheckInterface $source, string $info, bool $quiet = false): self
     {
-        $source = is_string($source) ? $source : OutputHelper::shortClassName($source);
+        $source = is_string($source) ? $source : $source->alias();
 
         return new self(true, $source, $info, null, $quiet);
     }
 
-    public static function failed(string|object $source, TradingCheckFailedReason $reason, string $info, bool $quiet = false): self
+    public static function failed(string|TradingCheckInterface $source, TradingCheckFailedReason $reason, string $info, bool $quiet = false): self
     {
-        $source = is_string($source) ? $source : OutputHelper::shortClassName($source);
+        $source = is_string($source) ? $source : $source->alias();
 
         return new self(false, $source, $info, $reason, $quiet);
     }

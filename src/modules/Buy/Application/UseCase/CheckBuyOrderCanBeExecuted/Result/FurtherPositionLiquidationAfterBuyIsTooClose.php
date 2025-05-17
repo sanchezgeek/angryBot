@@ -7,6 +7,7 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result;
 use App\Domain\Price\Price;
 use App\Helper\OutputHelper;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
+use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 
 final readonly class FurtherPositionLiquidationAfterBuyIsTooClose extends AbstractTradingCheckResult
 {
@@ -21,9 +22,9 @@ final readonly class FurtherPositionLiquidationAfterBuyIsTooClose extends Abstra
         parent::__construct(false, $source, $info, BuyCheckFailureEnum::FurtherLiquidationIsTooClose, $quiet);
     }
 
-    public static function create(string|object $source, Price $withPrice, Price $liquidationPrice, float $safeDistance, string $info): self
+    public static function create(string|TradingCheckInterface $source, Price $withPrice, Price $liquidationPrice, float $safeDistance, string $info): self
     {
-        $source = is_string($source) ? $source : OutputHelper::shortClassName($source);
+        $source = is_string($source) ? $source : $source->alias();
 
         return new self($withPrice, $liquidationPrice, $safeDistance, OutputHelper::shortClassName($source), $info);
     }

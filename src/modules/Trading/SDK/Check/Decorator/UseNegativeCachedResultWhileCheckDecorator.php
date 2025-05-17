@@ -30,6 +30,12 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
         $this->cache = new LocalCache(new ArrayAdapter(self::DEFAULT_CACHE_TTL, true, 0, self::MAX_ITEMS));
     }
 
+    public function alias(): string
+    {
+        return $this->decorated->alias();
+    }
+
+
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         // cache?

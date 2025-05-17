@@ -382,7 +382,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 $this->createStop($position, $ticker, $order);
             }
         } catch (ChecksNotPassedException $e) {
-            ($message = $e->getMessage()) && OutputHelper::warning($message);
+            ($message = $e->getMessage()) && OutputHelper::failed($message);
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());

@@ -42,6 +42,8 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
     use SettingsAwareTest;
     use ChecksAwareTest;
 
+    const CHECK_ALIAS = StopAndCheckFurtherMainPositionLiquidation::ALIAS;
+
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingParametersProviderInterface|MockObject $parameters;
@@ -141,16 +143,17 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
     {
         $executionPrice = $stop->isCloseByMarketContextSet() ? $ticker->markPrice : $ticker->symbol->makePrice($stop->getPrice());
 
-        $source = OutputHelper::shortClassName(StopAndCheckFurtherMainPositionLiquidation::class);
         $info = sprintf(
-            '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
+            '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
             $closingPosition,
             $stop->getId(),
             $stop->getVolume(),
             $executionPrice,
-            $safePriceDistance,
-            $mainPositionLiquidationPriceNew
+            $mainPositionLiquidationPriceNew,
+            $ticker->markPrice->deltaWith($mainPositionLiquidationPriceNew),
+            $ticker->symbol->makePrice($safePriceDistance),
         );
+        $source = self::CHECK_ALIAS;
 
         return $success ? TradingCheckResult::succeed($source, $info) : TradingCheckResult::failed($source, StopCheckFailureEnum::FurtherMainPositionLiquidationIsTooClose, $info);
     }

@@ -68,7 +68,7 @@ readonly class MarketBuyHandler
 
         $checksContext->resetState();
 
-        !$checksResult->quiet && OutputHelper::warning($checksResult->info());
+        !$checksResult->quiet && OutputHelper::success($checksResult->info());
 
         return $orderId;
     }

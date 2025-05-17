@@ -35,6 +35,8 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
+    const ALIAS = 'check-liq-before-buy';
+
     public function __construct(
         private AppSettingsProviderInterface $settings,
         private TradingParametersProviderInterface $parameters,
@@ -45,6 +47,11 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     ) {
         $this->initSandboxServices($sandboxFactory, $sandboxStateFactory);
         $this->initPositionService($positionService);
+    }
+
+    public function alias(): string
+    {
+        return self::ALIAS;
     }
 
     /**
@@ -111,10 +118,11 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $liquidationPrice = $positionAfterBuy->liquidationPrice();
 
         // @todo | liquidation | null
+        $identifierInfo = $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '';
         if ($liquidationPrice->eq(0)) {
             return TradingCheckResult::succeed(
                 $this,
-                sprintf('%s | %sqty=%s, price=%s | result position has no liquidation', $positionAfterBuy, $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '', $order->volume, $executionPrice)
+                sprintf('%s | %sqty=%s, price=%s | liq=0', $positionAfterBuy, $identifierInfo, $order->volume, $executionPrice)
             );
         }
 
@@ -126,14 +134,14 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
-            '%s | %sqty=%s, price=%s | liquidation=%s, delta=%s, safeDistance=%s',
+            '%s | %sqty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
             $positionAfterBuy,
-            $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '',
+            $identifierInfo,
             $order->volume,
             $executionPrice,
             $liquidationPrice,
             $liquidationPrice->deltaWith($withPrice),
-            $safeDistance
+            $symbol->makePrice($safeDistance)
         );
 
         return
