@@ -652,7 +652,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @todo | tests | move to helper
      */
-    public static function successConditionalStopApiCallExpectations(Symbol $symbol, array $stops, TriggerBy $triggerBy, array &$exchangeOrderIdsCollector = null): array
+    public static function successConditionalStopApiCallExpectations(Symbol $symbol, array $stops, TriggerBy $triggerBy, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {
@@ -682,7 +682,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @return ByBitApiCallExpectation[]
      */
-    protected static function successByMarketApiCallExpectations(Symbol $symbol, array $stops, array &$exchangeOrderIdsCollector = null): array
+    protected static function successByMarketApiCallExpectations(Symbol $symbol, array $stops, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {

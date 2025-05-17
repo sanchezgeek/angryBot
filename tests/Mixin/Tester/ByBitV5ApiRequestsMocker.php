@@ -129,7 +129,7 @@ trait ByBitV5ApiRequestsMocker
      *
      * @return ByBitApiCallExpectation[]
      */
-    protected static function successMarketBuyApiCallExpectations(Symbol $symbol, array $buyOrders, array &$exchangeOrderIdsCollector = null): array
+    protected static function successMarketBuyApiCallExpectations(Symbol $symbol, array $buyOrders, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($buyOrders as $buyOrder) {

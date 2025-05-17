@@ -23,7 +23,7 @@ class ReadLogsCommand extends AbstractCommand
 
     private const UNIQID_ARG = 'unique-id';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->configureSymbolArgs()

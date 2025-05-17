@@ -34,7 +34,7 @@ class EditAlarmCommand extends AbstractCommand
 
     private const ROOT_OPTION = 'root';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->configureSymbolArgs()
