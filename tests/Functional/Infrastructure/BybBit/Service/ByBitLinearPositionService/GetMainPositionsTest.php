@@ -15,6 +15,7 @@ use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\PHPUnit\TestLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class GetMainPositionsTest extends KernelTestCase
@@ -30,7 +31,10 @@ final class GetMainPositionsTest extends KernelTestCase
     {
         $this->logger = new TestLogger();
 
-        $this->service = new ByBitLinearPositionService($this->initializeApiClient());
+        $this->service = new ByBitLinearPositionService(
+            $this->initializeApiClient(),
+            new ArrayAdapter()
+        );
     }
 
     /**

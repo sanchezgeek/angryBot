@@ -60,6 +60,8 @@
             "App\\Trading\\": "src/modules/Trading",
             "App\\Stop\\": "src/modules/Stop",
             "App\\Buy\\": "src/modules/Buy",
+            "App\\Profiling\\": "src/modules/Profiling",
+
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }
     },

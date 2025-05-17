@@ -181,6 +181,8 @@ final class SchedulerFactory
 
     private function cache(): array
     {
+        return [];
+
         $start = new DateTimeImmutable('2023-09-25T00:00:01.11Z');
         $ttl = '2 seconds';
         $interval = self::TICKERS_CACHE['interval'];
@@ -195,7 +197,7 @@ final class SchedulerFactory
              * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
              * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
              */
-            PeriodicalJob::create($start, $interval, new UpdateTicker(Symbol::BTCUSDT, self::interval($ttl))),
+            PeriodicalJob::create($start, $interval, new UpdateTicker(self::interval($ttl), Symbol::BTCUSDT)),
         ];
     }
 
@@ -207,8 +209,8 @@ final class SchedulerFactory
     /**
      * @return Symbol[]
      */
-    private function getOpenedPositionsSymbols(array $except = []): array
+    private function getOpenedPositionsSymbols(): array
     {
-        return $this->positionService->getOpenedPositionsSymbols($except);
+        return $this->positionService->getOpenedPositionsSymbols();
     }
 }

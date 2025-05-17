@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Stop\Application\UseCase\Push\MainPositionsStops;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Position;
@@ -16,15 +17,21 @@ use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Value\CachedValue;
+use DateInterval;
 use RuntimeException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class PushAllMainPositionsStopsHandler
 {
+    public const TICKERS_MILLI_TTL = 2000;
+
     public function __invoke(PushAllMainPositionsStops $message): void
     {
-        $start = OutputHelper::currentTimePoint();
+        $start = OutputHelper::currentTimePoint(); // $profilingContext = ProfilingContext::create(sprintf('AllMainStops_%s', date_create_immutable()->format('H:i:s'))); ProfilingPointsStaticCollector::addPoint(ProfilingPointDto::create('start iteration', $profilingContext));
+        $this->warmupTickers();
+
         // @todo save cahce (e.g. for check) ... or have no sense? (context->currPosition already fresh)
         $positions = $this->positionService->getPositionsWithLiquidation();
         /** @var Position[] $positions */
@@ -38,7 +45,7 @@ final readonly class PushAllMainPositionsStopsHandler
         $queryInput = [];
         foreach ($positions as $position) {
             $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->value]);
-            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 3000, $position);
+            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
         }
 
         $stopsToSymbolsMap = [];
@@ -77,30 +84,52 @@ final readonly class PushAllMainPositionsStopsHandler
         krsort($sort);
 //        var_dump($sort);
 
+        $lastSort = [];
         foreach ($sort as $symbolRaw) {
-            $symbol = Symbol::from($symbolRaw);
-
+            $lastSort[] = $symbol = Symbol::from($symbolRaw);
             try {
                 $positionState = $positionsCache[$symbol->value]->get();
-            } catch (RuntimeException $e) {
-                if ($e->getMessage() === 'Not implemented') {
-//                    OutputHelper::block(sprintf('%s: slow cache', OutputHelper::shortClassName($this)), $e->getMessage(), $symbol->value);
-                    $positionState = null; // if not in warn/crit
-                    // and get without cache if in crit/warn
-                } else {
-                    throw $e;
-                }
+            } catch (RuntimeException) {
+                $positionState = null; // @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
             }
 
-            $message = new PushStops($symbol, $positions[$symbol->value]->side, $positionState);
-
-            $this->innerHandler->__invoke($message);
+            $this->innerHandler->__invoke(new PushStops($symbol, $positions[$symbol->value]->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->value, $side->title()));
         }
+        $this->lastSortStorage->setLastSort($lastSort);
 
-        OutputHelper::printTimeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start);
+        $spendTimeMsg = OutputHelper::timeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
+        OutputHelper::print($spendTimeMsg);
+    }
+
+    private function warmupTickers(): void
+    {
+        if ($lastSort = $this->lastSortStorage->getLastSort()) {
+            /** @see bot-consumers.ini -> [program:tickers_updater_async] -> numprocs=4 */
+            $chunkQnt = 3;
+
+            $chunks = [];
+            $chunkNumber = 0;
+            while ($symbol = array_shift($lastSort)) {
+                if ($chunkNumber === $chunkQnt) {
+                    $chunkNumber = 0;
+                }
+
+                $chunks[$chunkNumber] = $chunks[$chunkNumber] ?? [];
+                array_unshift($chunks[$chunkNumber], $symbol);
+                $chunkNumber++;
+            }
+
+            $ttl = DateInterval::createFromDateString(sprintf('%d milliseconds', self::TICKERS_MILLI_TTL));
+            foreach ($chunks as $chunk) {
+                $reverse = array_reverse($chunk);
+                $this->messageBus->dispatch(new UpdateTicker($ttl, ...$reverse));
+            }
+        }
     }
 
     public function __construct(
+        private MainStopsPushLastSortStorage $lastSortStorage,
+        private MessageBusInterface $messageBus,
         private AppSettingsProviderInterface $settingsProvider,
         private ByBitLinearPositionService $positionService,
         private StopRepository $stopRepository,

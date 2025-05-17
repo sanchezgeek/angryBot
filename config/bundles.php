@@ -6,6 +6,7 @@ return [
     Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => ['all' => true],
     Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle::class => ['all' => true],
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
+    \App\Profiling\ProfilingModule::class => ['all' => true],
     \App\Alarm\AlarmModule::class => ['all' => true],
     \App\Bot\BotBundle::class => ['all' => true],
     \App\Stop\StopModule::class => ['all' => true],

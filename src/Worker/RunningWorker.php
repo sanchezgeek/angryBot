@@ -17,6 +17,7 @@ enum RunningWorker: string
     case ASYNC_HIGH = 'async_high';
 
     case CACHE = 'cache';
+    case TICKERS_UPDATER = 'tickers_updater_async';
 
     case CRITICAL = 'critical';
 

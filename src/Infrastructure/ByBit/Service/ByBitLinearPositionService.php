@@ -23,12 +23,15 @@ use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\SetLeverageRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\SwitchPositionModeRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use DateInterval;
 use InvalidArgumentException;
 use LogicException;
+use Symfony\Contracts\Cache\CacheInterface;
 
 use function array_filter;
 use function array_unique;
@@ -57,8 +60,10 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
     private array $lastMarkPrices = [];
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly CacheInterface $cache,
+    ) {
         $this->apiClient = $apiClient;
     }
 
@@ -186,7 +191,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
 
-        /** @var Position[] $positions */
+        /** @var array<Position[]> $positions */
         $positions = [];
         foreach ($list as $item) {
             $side = Side::from(strtolower($item['side']));
@@ -204,6 +209,13 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             }
 
             $this->lastMarkPrices[$symbol->value] = $symbol->makePrice((float)$item['markPrice']);
+        }
+
+        foreach ($positions as $symbolRaw => $symbolPositions) {
+            $symbol = Symbol::from($symbolRaw);
+            $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
+            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
+            $this->cache->save($item);
         }
 
         return $positions;

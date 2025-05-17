@@ -61,6 +61,14 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
         $stops = $this->findStops($side, $symbol);
         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
+//        if ($message->dispatchedAt && $tickerDto->cacheSavedAt) {
+//            $diff = $message->dispatchedAt - $tickerDto->cacheSavedAt;
+//            $updatedByWorker = $tickerDto->updatedByWorker;
+//            if ($updatedByWorker !== AppContext::runningWorker()) OutputHelper::print(sprintf('%s ticker cache lifetime = %s', $symbol->value, $tickerDto->lifetime($message->dispatchedAt)));
+//            // @todo compare with markPrice from all positions
+//            if ($diff < 0 && $updatedByWorker !== AppContext::runningWorker()) OutputHelper::warning(sprintf('negative diff: %s (by %s)', $diff, $updatedByWorker->value));
+//            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->value, $diff, $updatedByWorker->value));
+//        }
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);

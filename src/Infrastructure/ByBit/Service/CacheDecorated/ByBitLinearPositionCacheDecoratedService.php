@@ -21,7 +21,6 @@ use DateInterval;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
-use function array_filter;
 use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface, PositionsCache
@@ -29,8 +28,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     private const ASSET_CATEGORY = AssetCategory::linear;
 
     /** @todo | inject into service? */
-    private const POSITION_TTL = '12 seconds';
-    private const OPENED_POSITIONS_SYMBOLS_TTL = '1 minute';
+    public const POSITION_TTL = '4 seconds';
 
     /**
      * @param ByBitLinearPositionService $positionService
@@ -43,17 +41,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     public function getOpenedPositionsSymbols(array $except = []): array
     {
-        $key = sprintf('api_%s_opened_positions_smbls', self::ASSET_CATEGORY->value);;
-
-        $all = $this->cache->get($key, function (ItemInterface $item) {
-            $item->expiresAfter(DateInterval::createFromDateString(self::OPENED_POSITIONS_SYMBOLS_TTL));
-
-            return $this->positionService->getOpenedPositionsSymbols([]);
-        });
-
-        return array_values(
-            array_filter($all, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
-        );
+        return $this->positionService->getOpenedPositionsSymbols($except);
     }
 
     public function getOpenedPositionsRawSymbols(): array
@@ -113,7 +101,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         );
     }
 
-    private static function positionsCacheKey(Symbol $symbol): string
+    public static function positionsCacheKey(Symbol $symbol): string
     {
         return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
     }

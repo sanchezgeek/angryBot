@@ -42,6 +42,13 @@ liq strategy based on safePriceDistance
 @todo | liquidation | log into app_errors?
 @todo publish to async
 @todo | take early stopped part into account
+@todo | cache | pass specific cache ttl?
+@todo | all-main | if not in warn/crit // and get without cache if in crit/warn
+
+
+!!! SafePriceDistanceSettings.md !!!
+
+additional async_high workers based on positions count (for update ticker for PushAllMainPositionsStopsHandler)
 
 
 performance
