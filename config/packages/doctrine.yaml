@@ -1,6 +1,5 @@
 doctrine:
     dbal:
-        use_savepoints: true
         connections:
             default:
                 driver: 'pdo_pgsql'
