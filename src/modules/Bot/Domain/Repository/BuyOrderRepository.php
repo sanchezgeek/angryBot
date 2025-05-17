@@ -150,6 +150,6 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
     public function getNextId(): int
     {
-        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
+        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
     }
 }

@@ -38,15 +38,15 @@ class TruncateOrdersCommand extends AbstractCommand
 
         $connection = $this->entityManager->getConnection();
         if ($mode === 'all') {
-            $connection->exec('DELETE FROM buy_order WHERE 1=1');
+            $connection->executeQuery('DELETE FROM buy_order WHERE 1=1');
             $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
-            $connection->exec('DELETE FROM stop WHERE 1=1');
+            $connection->executeQuery('DELETE FROM stop WHERE 1=1');
             $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
         } elseif ($mode === 'buy') {
-            $connection->exec('DELETE FROM buy_order WHERE 1=1');
+            $connection->executeQuery('DELETE FROM buy_order WHERE 1=1');
             $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
         } else {
-            $connection->exec('DELETE FROM stop WHERE 1=1');
+            $connection->executeQuery('DELETE FROM stop WHERE 1=1');
             $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
         }
 

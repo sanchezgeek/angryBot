@@ -37,7 +37,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     public function getNextId(): int
     {
-        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
+        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'stop_id_seq\')')->fetchOne();
     }
 
     public function save(Stop $stop): void
@@ -164,7 +164,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
 
-        return $this->_em->getConnection()->executeQuery($query, $params)->fetchAllAssociative();
+        return $this->getEntityManager()->getConnection()->executeQuery($query, $params)->fetchAllAssociative();
     }
 
     public function findFirstStopUnderPosition(Position $position): ?Stop
