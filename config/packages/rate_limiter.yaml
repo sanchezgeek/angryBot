@@ -16,11 +16,7 @@ framework:
         ticker_updated_log_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '10 seconds'
-        btcusdt_ticker_updated_log_throttling:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '3 seconds'
+            interval: '20 seconds'
         position_in_loss_alert_throttling:
             policy: 'fixed_window'
             limit: 1
