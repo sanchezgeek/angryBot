@@ -123,10 +123,14 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     /**
      * @param FindStopsDto[] $data
-     * @return array[][]
+     * @return array<array>
      */
     public function findAllActive(array $data): array
     {
+        if (!$data) {
+            return [];
+        }
+
         $queries = [];
         $key = 0;
         $parameters = new ArrayCollection();

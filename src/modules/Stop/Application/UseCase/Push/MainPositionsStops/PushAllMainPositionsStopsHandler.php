@@ -25,15 +25,17 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class PushAllMainPositionsStopsHandler
 {
-    public const TICKERS_MILLI_TTL = 2000;
+    public const int TICKERS_MILLI_TTL = 2000;
 
     public function __invoke(PushAllMainPositionsStops $message): void
     {
         $start = OutputHelper::currentTimePoint(); // $profilingContext = ProfilingContext::create(sprintf('AllMainStops_%s', date_create_immutable()->format('H:i:s'))); ProfilingPointsStaticCollector::addPoint(ProfilingPointDto::create('start iteration', $profilingContext));
         $this->warmupTickers();
 
-        // @todo save cahce (e.g. for check) ... or have no sense? (context->currPosition already fresh)
-        $positions = $this->positionService->getPositionsWithLiquidation();
+        if (!$positions = $this->positionService->getPositionsWithLiquidation()) {
+            return;
+        }
+
         /** @var Position[] $positions */
         $positions = array_combine(
             array_map(static fn(Position $position) => $position->symbol->value, $positions),
