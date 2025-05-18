@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Liquidation\Domain;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Liquidation\Domain\Assert\LiquidationIsSafeAssertion;
 use PHPUnit\Framework\TestCase;
 
@@ -19,8 +20,10 @@ final class LiquidationIsSafeAssertionTest extends TestCase
      */
     public function testResult(Side $positionSide, float $liquidationPrice, float $tickerPrice, float $safeDistance, bool $expectedResult): void
     {
-        $liquidationPrice = Price::float($liquidationPrice);
-        $tickerPrice = Price::float($tickerPrice);
+        $symbol = Symbol::BTCUSDT;
+
+        $liquidationPrice = $symbol->makePrice($liquidationPrice);
+        $tickerPrice = $symbol->makePrice($tickerPrice);
 
         self::assertEquals(
             $expectedResult,

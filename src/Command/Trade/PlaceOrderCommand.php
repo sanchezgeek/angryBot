@@ -19,7 +19,7 @@ use App\Domain\Order\Order;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
@@ -292,7 +292,7 @@ class PlaceOrderCommand extends AbstractCommand
         return $mode;
     }
 
-    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
+    private function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?SymbolPrice
     {
         try {
             $pnlValue = $this->paramFetcher->requiredPercentOption($name);

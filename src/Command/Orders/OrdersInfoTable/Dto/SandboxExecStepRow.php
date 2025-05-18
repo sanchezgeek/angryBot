@@ -6,7 +6,7 @@ namespace App\Command\Orders\OrdersInfoTable\Dto;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 class SandboxExecStepRow implements OrdersInfoTableRowAtPriceInterface
 {
@@ -14,7 +14,7 @@ class SandboxExecStepRow implements OrdersInfoTableRowAtPriceInterface
     {
     }
 
-    public function getRowUpperPrice(): Price
+    public function getRowUpperPrice(): SymbolPrice
     {
         if ($this->stepResult->isOnlySingleItem()) {
             $order = $this->stepResult->getSingleItem()->order;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Price\Helper;
 
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\Helper\PriceHelperTest
@@ -25,12 +25,12 @@ final class PriceHelper
         return \round($price, $precision);
     }
 
-    public static function max(Price $a, Price $b): Price
+    public static function max(SymbolPrice $a, SymbolPrice $b): SymbolPrice
     {
         return $a->greaterThan($b) ? $a : $b;
     }
 
-    public static function min(Price $a, Price $b): Price
+    public static function min(SymbolPrice $a, SymbolPrice $b): SymbolPrice
     {
         return $a->lessThan($b) ? $a : $b;
     }

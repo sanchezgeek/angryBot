@@ -19,17 +19,17 @@ use function sprintf;
  */
 final readonly class PriceRange implements Stringable
 {
-    public function __construct(private Price $from, private Price $to, private Symbol $symbol = Symbol::BTCUSDT)
+    public function __construct(private SymbolPrice $from, private SymbolPrice $to, private Symbol $symbol)
     {
         if ($from->greaterOrEquals($to)) {
             throw new \LogicException('$from must be greater than $to.');
         }
     }
 
-    public static function create(Price|float $from, Price|float $to, Symbol $symbol = Symbol::BTCUSDT): self
+    public static function create(SymbolPrice|float $from, SymbolPrice|float $to, Symbol $symbol): self
     {
-        $from = $symbol->makePrice(Price::toFloat($from));
-        $to = $symbol->makePrice(Price::toFloat($to));
+        $from = $symbol->makePrice(SymbolPrice::toFloat($from));
+        $to = $symbol->makePrice(SymbolPrice::toFloat($to));
 
         if ($from->greaterThan($to)) {
             [$from, $to] = [$to, $from];
@@ -46,19 +46,19 @@ final readonly class PriceRange implements Stringable
         return self::create($fromPrice, $toPrice, $position->symbol);
     }
 
-    public function isPriceInRange(Price|float $price): bool
+    public function isPriceInRange(SymbolPrice|float $price): bool
     {
-        $price = $price instanceof Price ? $price->value() : $price;
+        $price = $price instanceof SymbolPrice ? $price->value() : $price;
 
         return $price >= $this->from->value() && $price < $this->to->value();
     }
 
-    public function from(): Price
+    public function from(): SymbolPrice
     {
         return $this->from;
     }
 
-    public function to(): Price
+    public function to(): SymbolPrice
     {
         return $this->to;
     }
@@ -74,7 +74,7 @@ final readonly class PriceRange implements Stringable
     }
 
     /**
-     * @return Generator<Price>
+     * @return Generator<SymbolPrice>
      */
     public function byStepIterator(float $step, ?Side $positionSide = Side::Sell): Generator
     {
@@ -96,7 +96,7 @@ final readonly class PriceRange implements Stringable
 
     /**
      * @param int $qnt
-     * @return Generator<Price>
+     * @return Generator<SymbolPrice>
      */
     public function byQntIterator(int $qnt, ?Side $positionSide = Side::Sell): Generator
     {
@@ -118,7 +118,7 @@ final readonly class PriceRange implements Stringable
         }
     }
 
-    public function getMiddlePrice(): Price
+    public function getMiddlePrice(): SymbolPrice
     {
         return $this->symbol->makePrice(
             ($this->from->value() + $this->to->value()) / 2

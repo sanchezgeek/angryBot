@@ -9,7 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -34,7 +34,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     private ?PriceRange $warningRange = null;
 
     private ?float $additionalStopDistanceWithLiquidation = null;
-    private ?Price $additionalStopPrice = null;
+    private ?SymbolPrice $additionalStopPrice = null;
     private ?PriceRange $actualStopsPriceRange = null;
 
     public function __construct(
@@ -84,7 +84,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
-    public function additionalStopPrice(): Price
+    public function additionalStopPrice(): SymbolPrice
     {
         if ($this->additionalStopPrice !== null) {
             return $this->additionalStopPrice;
@@ -123,7 +123,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
         return PriceRange::create(
             $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
+            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+            $this->symbol
         );
     }
 
@@ -136,7 +137,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             $this->warningRange = PriceRange::create(
                 $liquidationPrice,
-                $this->position->isShort() ? $liquidationPrice->sub($warningDistance) : $liquidationPrice->add($warningDistance)
+                $this->position->isShort() ? $liquidationPrice->sub($warningDistance) : $liquidationPrice->add($warningDistance),
+                $this->symbol
             );
         }
 
@@ -331,7 +333,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             if ($e->getMessage() === 'Price cannot be less than zero.') {
                 $modifier = min($modifierInitial, $modifierMax);
 
-                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier));
+                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier), $this->symbol);
                 var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->value, $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));
 
                 return $this->actualStopsPriceRange;

@@ -9,7 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 interface SandboxStateInterface
 {
@@ -22,5 +22,5 @@ interface SandboxStateInterface
     public function getFreeBalance(): CoinAmount;
     public function getFundsAvailableForLiquidation(): CoinAmount;
     public function getAvailableBalance(): CoinAmount;
-    public function setLastPrice(Price|float $price): self;
+    public function setLastPrice(SymbolPrice|float $price): self;
 }

@@ -9,14 +9,14 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final class MoveStopsHandler
 {
     /**
-     * @var Price[]
+     * @var SymbolPrice[]
      */
     private array $lastRunAt = [];
 
@@ -86,7 +86,7 @@ final class MoveStopsHandler
         }
     }
 
-    private function getLastRunAt(Side $side): ?Price
+    private function getLastRunAt(Side $side): ?SymbolPrice
     {
         return $this->lastRunAt[$side->value] ?? null;
     }

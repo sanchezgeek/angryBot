@@ -14,7 +14,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\Helper\PositionClone;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Tests\Factory\TickerFactory;
@@ -35,7 +35,7 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
 
     private static function calcInitialResultNotCoveredSize(
         Position $initialPosition,
-        Price $wishedLiquidationPrice,
+        SymbolPrice $wishedLiquidationPrice,
         CoinAmount $fundsAvailableForLiquidation,
     ): float {
         $fundsAvailableForLiquidation = $fundsAvailableForLiquidation->value();
@@ -192,7 +192,7 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceHandler
      */
     private function reducePositionAndRecalculateLiquidation(
         Position $currentPositionState,
-        Price $currentPrice,
+        SymbolPrice $currentPrice,
         float $qty,
         ContractBalance $contractBalance,
         CoinAmount $fundsAvailableForLiquidation

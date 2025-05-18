@@ -7,7 +7,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -52,7 +52,7 @@ class SymbolsMonitorCommand extends AbstractCommand
             $items[] = [$symbol, $ticker->indexPrice];
         }
 
-        /** @var array<array<Symbol, Price>> $itemsRows */
+        /** @var array<array<Symbol, SymbolPrice>> $itemsRows */
         $itemsRows = array_chunk($items, $columnsCount);
 
         $namesLengths = [];

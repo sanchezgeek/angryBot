@@ -348,7 +348,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => '0.1',
             '$from' => '-1',
             '$to' => '28900', '$qnt' => 10,
-            'expectedMessage' => new PriceCannotBeLessThanZero(123),
+            'expectedMessage' => new PriceCannotBeLessThanZero(123, $symbol),
         ];
 
         yield '`to` must be ordersQnt must be >= 1' => [
@@ -356,7 +356,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
             '$forVolume' => '0.1',
             '$from' => '29000',
             '$to' => '-1', '$qnt' => 10,
-            'expectedMessage' => new PriceCannotBeLessThanZero(123),
+            'expectedMessage' => new PriceCannotBeLessThanZero(123, $symbol),
         ];
     }
 

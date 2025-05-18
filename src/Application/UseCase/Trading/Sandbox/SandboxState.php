@@ -13,7 +13,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use InvalidArgumentException;
 
 use function array_values;
@@ -27,7 +27,7 @@ class SandboxState implements SandboxStateInterface
     /** @var Position[] */
     private array $positions = [];
     public readonly Symbol $symbol;
-    private Price $lastPrice;
+    private SymbolPrice $lastPrice;
 
     private CoinAmount $freeBalance;
     private CoinAmount $fundsAvailableForLiquidation;
@@ -164,9 +164,9 @@ class SandboxState implements SandboxStateInterface
         return new CoinAmount($this->freeBalance->coin(), $available);
     }
 
-    public function setLastPrice(Price|float $price): self
+    public function setLastPrice(SymbolPrice|float $price): self
     {
-        $this->lastPrice = $this->symbol->makePrice(Price::toFloat($price));
+        $this->lastPrice = $this->symbol->makePrice(SymbolPrice::toFloat($price));
 
         return $this;
     }

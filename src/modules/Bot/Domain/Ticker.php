@@ -6,23 +6,23 @@ namespace App\Bot\Domain;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 final readonly class Ticker
 {
-    public Price $markPrice;
-    public Price $indexPrice;
-    public Price $lastPrice;
+    public SymbolPrice $markPrice;
+    public SymbolPrice $indexPrice;
+    public SymbolPrice $lastPrice;
 
     public function __construct(
         public Symbol $symbol,
-        float|Price $markPrice,
-        float|Price $indexPrice,
-        float|Price $lastPrice,
+        float|SymbolPrice $markPrice,
+        float|SymbolPrice $indexPrice,
+        float|SymbolPrice $lastPrice,
     ) {
-        $this->lastPrice = $lastPrice instanceof Price ? $lastPrice : $this->symbol->makePrice($lastPrice);
-        $this->markPrice = $markPrice instanceof Price ? $markPrice : $this->symbol->makePrice($markPrice);
-        $this->indexPrice = $lastPrice instanceof Price ? $indexPrice : $this->symbol->makePrice($indexPrice);
+        $this->lastPrice = $lastPrice instanceof SymbolPrice ? $lastPrice : $this->symbol->makePrice($lastPrice);
+        $this->markPrice = $markPrice instanceof SymbolPrice ? $markPrice : $this->symbol->makePrice($markPrice);
+        $this->indexPrice = $lastPrice instanceof SymbolPrice ? $indexPrice : $this->symbol->makePrice($indexPrice);
     }
 
     public function isIndexAlreadyOverStop(Side $positionSide, float $price): bool
@@ -40,12 +40,12 @@ final readonly class Ticker
         return $positionSide->isShort() ? $this->lastPrice->lessThan($this->indexPrice) : $this->lastPrice->greaterThan($this->indexPrice);
     }
 
-    public function getMinPrice(): Price
+    public function getMinPrice(): SymbolPrice
     {
         return min($this->indexPrice, $this->markPrice, $this->lastPrice);
     }
 
-    public function getMaxPrice(): Price
+    public function getMaxPrice(): SymbolPrice
     {
         return max($this->indexPrice, $this->markPrice, $this->lastPrice);
     }

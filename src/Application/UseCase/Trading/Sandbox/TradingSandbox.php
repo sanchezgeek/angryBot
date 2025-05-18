@@ -33,7 +33,7 @@ use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
@@ -373,7 +373,7 @@ class TradingSandbox implements TradingSandboxInterface
         return $stop instanceof SandboxStopOrder ? $stop : SandboxStopOrder::fromStop($stop);
     }
 
-    private function createTicker(float|Price $price): Ticker
+    private function createTicker(float|SymbolPrice $price): Ticker
     {
         return new Ticker($this->symbol, $price, $price, $price);
     }

@@ -25,7 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class PushAllMainPositionsStopsHandler
 {
-    public const int TICKERS_MILLI_TTL = 2000;
+    public const TICKERS_MILLI_TTL = 2000;
 
     public function __invoke(PushAllMainPositionsStops $message): void
     {

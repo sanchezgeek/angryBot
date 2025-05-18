@@ -7,7 +7,7 @@ namespace App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationP
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 final readonly class CalcPositionVolumeBasedOnLiquidationPriceEntryDto
 {
@@ -15,8 +15,8 @@ final readonly class CalcPositionVolumeBasedOnLiquidationPriceEntryDto
         public Position $initialPositionState,
         public ContractBalance $contractBalance,
         public CoinAmount $fundsAvailableForLiquidation,
-        public Price $wishedLiquidationPrice,
-        public Price $currentPrice, # must be markPrice?
+        public SymbolPrice $wishedLiquidationPrice,
+        public SymbolPrice $currentPrice, # must be markPrice?
     ) {
     }
 }

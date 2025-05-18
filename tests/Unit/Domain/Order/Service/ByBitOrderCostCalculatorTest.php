@@ -10,7 +10,7 @@ use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -34,7 +34,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         $leverage = new Leverage(100);
 
-        $order = new ExchangeOrder($symbol, $qty, Price::float($price));
+        $order = new ExchangeOrder($symbol, $qty, $symbol->makePrice($price));
 
         $marginAmount = $this->orderCostCalculator->orderMargin($order, $leverage);
 
@@ -46,7 +46,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
      */
     public function testLinearOrderBuyCost(
         Side $positionSide,
-        Price $price,
+        float $price,
         float $qty,
         Symbol $symbol,
         float $expectedCost,
@@ -61,28 +61,29 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
     public function linearOrderBuyCostTestData(): iterable
     {
+        $symbol = Symbol::BTCUSDT;
         yield 'LONG' => [
             '$side' => Side::Buy,
-            '$price' => Price::float(34739),
+            '$price' => 34739,
             '$qty' => 0.001,
-            '$symbol' => Symbol::BTCUSDT,
+            '$symbol' => $symbol,
             'expectedCost' => 0.38541183549999997
         ];
 
         yield 'SHORT' => [
             '$side' => Side::Sell,
-            '$price' => Price::float(34739),
+            '$price' => 34739,
             '$qty' => 0.001,
-            '$symbol' => Symbol::BTCUSDT,
+            '$symbol' => $symbol,
             'expectedCost' => 0.3857939645
         ];
     }
 
     public function testLinearOpenFee(): void
     {
-        $price = Price::float(34739);
-        $qty = 0.001;
         $symbol = Symbol::BTCUSDT;
+        $price = $symbol->makePrice(34739);
+        $qty = 0.001;
         $expectedOpenFee = 0.01910645;
 
         $order = new ExchangeOrder($symbol, $qty, $price);
@@ -97,7 +98,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
      */
     public function testLinearCloseFee(
         Side $positionSide,
-        Price $price,
+        float $price,
         float $qty,
         Symbol $symbol,
         float $expectedCloseFee,
@@ -114,7 +115,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
     {
         yield 'LONG' => [
             '$side' => Side::Buy,
-            '$price' => Price::float(34739),
+            '$price' => 34739,
             '$qty' => 0.001,
             '$symbol' => Symbol::BTCUSDT,
             'expectedCloseFee' => 0.0189153855
@@ -122,7 +123,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
         yield 'SHORT' => [
             '$side' => Side::Sell,
-            '$price' => Price::float(34739),
+            '$price' => 34739,
             '$qty' => 0.001,
             '$symbol' => Symbol::BTCUSDT,
             'expectedCloseFee' => 0.0192975145

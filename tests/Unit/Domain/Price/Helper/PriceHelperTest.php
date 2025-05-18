@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Price\Helper;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Helper\PriceHelper;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,9 +35,12 @@ final class PriceHelperTest extends TestCase
      */
     public function testMax(float $a, float $b, float $expectedResult): void
     {
-        $a = Price::float($a);
-        $b = Price::float($b);
-        $expectedResult = Price::float($expectedResult);
+        $symbol = Symbol::BTCUSDT;
+
+        // @todo | rid
+        $a = SymbolPrice::create($a, $symbol);
+        $b = SymbolPrice::create($b, $symbol);
+        $expectedResult = $symbol->makePrice($expectedResult);
 
         self::assertEquals(PriceHelper::max($a, $b), $expectedResult);
         self::assertEquals(PriceHelper::max($b, $a), $expectedResult);
@@ -60,9 +64,11 @@ final class PriceHelperTest extends TestCase
      */
     public function testMin(float $a, float $b, float $expectedResult): void
     {
-        $a = Price::float($a);
-        $b = Price::float($b);
-        $expectedResult = Price::float($expectedResult);
+        $symbol = Symbol::BTCUSDT;
+
+        $a = SymbolPrice::create($a, $symbol);
+        $b = SymbolPrice::create($b, $symbol);
+        $expectedResult = $symbol->makePrice($expectedResult);
 
         self::assertEquals(PriceHelper::min($a, $b), $expectedResult);
         self::assertEquals(PriceHelper::min($b, $a), $expectedResult);

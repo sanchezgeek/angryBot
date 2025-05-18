@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Orders\OrdersInfoTable\Dto;
 
 use App\Bot\Domain\Position;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 class PositionLiquidationRow implements OrdersInfoTableRowAtPriceInterface
 {
@@ -13,7 +13,7 @@ class PositionLiquidationRow implements OrdersInfoTableRowAtPriceInterface
     {
     }
 
-    public function getRowUpperPrice(): Price
+    public function getRowUpperPrice(): SymbolPrice
     {
         return $this->liquidatedPosition->liquidationPrice();
     }

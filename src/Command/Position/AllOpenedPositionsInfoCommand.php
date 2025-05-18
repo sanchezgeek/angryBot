@@ -20,7 +20,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
@@ -104,7 +104,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /** @var array<Position[]> */
     private array $positions;
 
-    /** @var array<string, Price> */
+    /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;
 
     private bool $currentSortSaved = false;
@@ -860,7 +860,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private static function getStopsCollectionInfo(
         array $stops,
         Position $position,
-        Price $markPrice,
+        SymbolPrice $markPrice,
         callable $formatter,
     ): string {
         $symbol = $position->symbol;

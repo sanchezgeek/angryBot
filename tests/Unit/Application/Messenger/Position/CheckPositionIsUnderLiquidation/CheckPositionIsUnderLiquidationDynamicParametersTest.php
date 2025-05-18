@@ -9,7 +9,7 @@ use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicPa
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
@@ -71,7 +71,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         Position $position,
         Ticker $ticker,
         PriceRange $expectedRangeResult,
-        Price $expectedStopPrice,
+        SymbolPrice $expectedStopPrice,
         float $expectedWarningDistance,
         float $expectedCriticalDistance,
         float|int $expectedAcceptableStoppedPart,
@@ -155,8 +155,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 30449);
-        $expectedActualStopsRange = PriceRange::create(30181.69, 30455.010000000002);
-        $expectedStopPrice = Price::float(30303.49);
+        $expectedActualStopsRange = PriceRange::create(30181.69, 30455.010000000002, $symbol);
+        $expectedStopPrice = $symbol->makePrice(30303.49);
         $warningDistance = 304.49;
         $criticalDistance = 182.69;
         $acceptableStoppedPart = 4;
@@ -165,8 +165,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         ];
 
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
-        $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
-        $expectedStopPrice = Price::float(30179.6);
+        $expectedPriceRange = PriceRange::create(30093.96, 30330.5, $symbol);
+        $expectedStopPrice = $symbol->makePrice(30179.6);
         $warningDistance = 301.0;
         $criticalDistance = 180.6;
         $acceptableStoppedPart = 66.4451827242525;
@@ -176,8 +176,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
-        $expectedPriceRange = PriceRange::create(30093.96, 30330.5);
-        $expectedStopPrice = Price::float(30179.6); /** @see LiquidationHandlerSettings::CriticalDistancePnl */
+        $expectedPriceRange = PriceRange::create(30093.96, 30330.5, $symbol);
+        $expectedStopPrice = $symbol->makePrice(30179.6); /** @see LiquidationHandlerSettings::CriticalDistancePnl */
         $warningDistance = 180.6;
         $criticalDistance = 180.6;
         $acceptableStoppedPart = 44.075304540420824;
@@ -189,8 +189,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(30050)->build();
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 1, warningPnlDistance: 1, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 30100);
-        $expectedPriceRange = PriceRange::create(30093.95, 30381.75);
-        $expectedStopPrice = Price::float(30230.6);
+        $expectedPriceRange = PriceRange::create(30093.95, 30381.75, $symbol);
+        $expectedStopPrice = $symbol->makePrice(30230.6);
         $warningDistance = 180.6;
         $criticalDistance = 180.6;
         $acceptableStoppedPart = 72.31450719822813;
@@ -204,8 +204,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
 
         $ticker = TickerFactory::withEqualPrices($symbol, 29000);
-        $expectedPriceRange = PriceRange::create(28215.0, 28785.0);
-        $expectedStopPrice = Price::float(28500);
+        $expectedPriceRange = PriceRange::create(28215.0, 28785.0, $symbol);
+        $expectedStopPrice = $symbol->makePrice(28500);
         $warningDistance = 1500.0;
         $criticalDistance = 174.0;
         $acceptableStoppedPart = 7.434782608695653 * $koefficientForInLossCases;
@@ -214,8 +214,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         ];
 
         $ticker = TickerFactory::withEqualPrices($symbol, 27500);
-        $expectedPriceRange = PriceRange::create(27225.0, 27775.0);
-        $expectedStopPrice = Price::float(27500);
+        $expectedPriceRange = PriceRange::create(27225.0, 27775.0, $symbol);
+        $expectedStopPrice = $symbol->makePrice(27500);
         $warningDistance = 1500;
         $criticalDistance = 165.0;
         $acceptableStoppedPart = 16.73913043478261 * $koefficientForInLossCases;
@@ -224,8 +224,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         ];
 
         $ticker = TickerFactory::withEqualPrices($symbol, 25200);
-        $expectedPriceRange = PriceRange::create(25151.2, 25452.0);
-        $expectedStopPrice = Price::float(25200);
+        $expectedPriceRange = PriceRange::create(25151.2, 25452.0, $symbol);
+        $expectedStopPrice = $symbol->makePrice(25200);
         $warningDistance = 1500.0;
         $criticalDistance = 151.2;
         $acceptableStoppedPart = 41.73913043478261 * $koefficientForInLossCases;
@@ -235,8 +235,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
         // !!!
         $ticker = TickerFactory::withEqualPrices($symbol, 25100);
-        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997);
-        $expectedStopPrice = Price::float(25150.6);
+        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997, $symbol);
+        $expectedStopPrice = $symbol->makePrice(25150.6);
         $warningDistance = 1500.0;
         $criticalDistance = 150.6;
         $acceptableStoppedPart = 42.168695652173916 * $koefficientForInLossCases; // !!!
@@ -246,8 +246,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 10, warningPnlDistance: 10, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $ticker = TickerFactory::withEqualPrices($symbol, 25100);
-        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997);
-        $expectedStopPrice = Price::float(25150.6);
+        $expectedPriceRange = PriceRange::create(25094.97, 25402.109999999997, $symbol);
+        $expectedStopPrice = $symbol->makePrice(25150.6);
         $warningDistance = 1500.0;
         $criticalDistance = 150.6;
         $acceptableStoppedPart = 42.168695652173916 * $koefficientForInLossCases;
@@ -259,8 +259,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $short = PositionBuilder::short()->entry(90000)->size(1)->liq(95000)->build();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 94700);
-        $expectedPriceRange = PriceRange::create(93959.64, 94718.89);
-        $expectedStopPrice = Price::float(94431.8);
+        $expectedPriceRange = PriceRange::create(93959.64, 94718.89, $symbol);
+        $expectedStopPrice = $symbol->makePrice(94431.8);
         $warningDistance = 1500.0;
         $criticalDistance = 568.2;
         $acceptableStoppedPart = 38.53739130434783 * $koefficientForInLossCases;
@@ -316,7 +316,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         Position $position,
         Ticker $ticker,
         PriceRange $expectedActualStopsRange,
-        Price $expectedAdditionalStopPrice,
+        SymbolPrice $expectedAdditionalStopPrice,
         float $warningDistance,
         float $criticalDistance,
         float|int $acceptableStoppedPart,

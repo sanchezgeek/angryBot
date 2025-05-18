@@ -46,4 +46,8 @@ class MarketBuyHandlerTest extends KernelTestCase
         $this->marketBuyHandler = self::getContainer()->get(MarketBuyHandler::class);
     }
 
+    public function testTest(): void
+    {
+        self::markTestSkipped();
+    }
 }
