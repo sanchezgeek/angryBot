@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+if [[ -z "${BOT_BIN_DATA_DIR}" ]]; then
+  echo "BOT_BIN_DATA_DIR is undefined"
+  exit 1
+else
+  DATA_DIR="${BOT_BIN_DATA_DIR}"
+fi
+
+instances=()
+for line in $(cat ${DATA_DIR}/instances.list); do
+    instances+=("$line")
+done
+
+for path in "${instances[@]}"
+  do
+    cmd="make -C ${path} up"
+    echo -e "${cmd}\n  =>"
+    out=$(eval "${cmd}")
+    echo -e "    ${out}\n"
+  done
+
+
