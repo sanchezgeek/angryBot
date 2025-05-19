@@ -69,12 +69,12 @@ final class SchedulerFactory
         $jobSchedules = match (AppContext::runningWorker()) {
             RunningWorker::BUY_ORDERS  => $this->buyOrders(),
             RunningWorker::SERVICE => $this->service(),
-            RunningWorker::CACHE => $this->cache(),
             RunningWorker::CRITICAL => $this->critical(),
             RunningWorker::SYMBOL_DEDICATED => $this->symbol(),
             RunningWorker::MAIN_POSITIONS_STOPS => $this->mainStops(),
             RunningWorker::REST_POSITIONS_STOPS => $this->restStops(),
             default => [],
+//            RunningWorker::CACHE => $this->cache(),
         };
 
         return new Scheduler($clock, $jobSchedules);
@@ -181,8 +181,6 @@ final class SchedulerFactory
 
     private function cache(): array
     {
-        return [];
-
         $start = new DateTimeImmutable('2023-09-25T00:00:01.11Z');
         $ttl = '2 seconds';
         $interval = self::TICKERS_CACHE['interval'];

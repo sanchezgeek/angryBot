@@ -19,11 +19,6 @@ imports
     metrics
         e.g. PushAllMainPositionsStopsHandler exec time deviation
 
-### Sandbox ###
-    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
-    regexp CTRL-F: @todo.*sandbox
-    @todo | sandbox | mb troubles with sandbox (inner check will not work)
-
 ### Api fetching ###
     @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
     @todo | cache | all symbols?
@@ -118,3 +113,13 @@ imports
 ### SymbolPrice ###
     @todo | price | handle exception
     @todo | ctrl-f: round(..., 2)
+
+
+### Sandbox ###
+    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
+    regexp CTRL-F: @todo.*sandbox
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
+    @todo | sandbox | research impact on balance
+    @todo | sandbox | get rid of SandboxState::getAvailableBalance or replace logic based on SandboxState::contractBalance
+    @todo | sandbox | add unrealizedPNL (isUTA)
+    @todo | sandbox | what to use? position entry or stop price

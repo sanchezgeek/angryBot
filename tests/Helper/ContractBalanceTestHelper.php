@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Helper;
 
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use LogicException;
 
 use function max;
@@ -20,6 +26,43 @@ use function sprintf;
  */
 class ContractBalanceTestHelper
 {
+    public static function recalculateContractBalance(
+        ContractBalance $prev,
+        Position $position,
+        SandboxBuyOrder|SandboxStopOrder $sandboxOrder,
+        ?float $freeOverride = null
+    ): ContractBalance {
+        $orderCostCalculator = new OrderCostCalculator(new ByBitCommissionProvider());
+
+        if ($sandboxOrder instanceof SandboxBuyOrder) {
+            $exchangeOrder = ExchangeOrder::raw($position->symbol, $sandboxOrder->volume, $sandboxOrder->price);
+            $orderCost = $orderCostCalculator->totalBuyCost($exchangeOrder, $position->leverage, $position->side);
+            $orderMargin = $orderCostCalculator->orderMargin($exchangeOrder, $position->leverage);
+
+            return new ContractBalance(
+                $prev->assetCoin,
+                $prev->total->sub($orderCost),
+                $prev->available->sub($orderCost)->sub($orderMargin),
+                $freeOverride ?? $prev->free->sub($orderCost)->sub($orderMargin),
+            );
+        } else {
+            $expectedPnl = PnlHelper::getPnlInUsdt($position, $sandboxOrder->price, $sandboxOrder->volume);
+            $exchangeOrder = ExchangeOrder::raw($position->symbol, $sandboxOrder->volume, $position->entryPrice); // @todo | sandbox | what to use? position entry or stop price
+            $orderMargin = $orderCostCalculator->orderMargin($exchangeOrder, $position->leverage);
+            $closeFee = $orderCostCalculator->closeFee($exchangeOrder, $position->leverage, $position->side);
+
+            return new ContractBalance(
+                $prev->assetCoin,
+                $prev->total->sub($closeFee)->add($orderMargin)->add($expectedPnl),
+                $prev->available->sub($closeFee)->add($orderMargin)->add($expectedPnl),
+                $freeOverride ?? $prev->free->sub($closeFee)->add($orderMargin)->add($expectedPnl),
+            );
+        }
+    }
+
+    /**
+     * @deprecated ?
+     */
     public static function contractBalanceBasedOnFree(float $free, array $positions, Ticker $ticker): ContractBalance
     {
         $coin = $ticker->symbol->associatedCoin();

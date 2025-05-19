@@ -77,7 +77,6 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $this->setMinimalSafePriceDistance($position->symbol, $position->side);
 
         $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);
-        $this->haveAvailableSpotBalance($symbol, 0);
 
         $this->haveTicker($ticker);
         $this->havePosition($symbol, $position);
@@ -129,7 +128,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 
         /** @var BuyOrder $buyOrder */
         yield 'position value less than MVA + position in loss => can buy' => [
-            '$ticker' => $ticker, '$position' => PositionFactory::short($symbol, 29000, 0.01),
+            '$ticker' => $ticker, '$position' => PositionFactory::short($symbol, 29000, 0.01, 100, 35000),
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
             'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [

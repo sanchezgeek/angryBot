@@ -19,6 +19,7 @@ use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -188,13 +189,15 @@ class TradingSandbox implements TradingSandboxInterface
 
         $this->notice(sprintf('__ +++ try to make buy %s on %s %s (buyOrder.price = %s) +++ __', $volume, $this->symbol->value, $positionSide->title(), $price), true);
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
-        $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $this->getLeverage($positionSide), $positionSide)->value();
+        $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $leverage = $this->getLeverage($positionSide), $positionSide);
+        $margin = $this->orderCostCalculator->orderMargin($orderDto, $leverage);
 
-        $availableBalance = $currentState->getAvailableBalance()->value();
-//        $availableBalance = $this->getAvailableBalance()->value();
-        if ($availableBalance < $cost) {
+        // @todo | sandbox | get rid of SandboxState::getAvailableBalance or replace logic based on SandboxState::contractBalance
+//        $availableBalance = $currentState->getAvailableBalance()->value();
+        $availableBalance = $this->getAvailableBalance()->value();
+        if ($availableBalance < $cost->value()) {
             $this->throwExceptionWhileExecute(
-                SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('avail=%s < order.cost=%s', $availableBalance, $cost))
+                SandboxInsufficientAvailableBalanceException::whenTryToBuy($order, sprintf('avail=%s < order.cost=%s', $availableBalance, $cost->value()))
             );
         }
 
@@ -220,14 +223,26 @@ class TradingSandbox implements TradingSandboxInterface
             if (!$checksResult->success) {
                 match (true) {
                     $checksResult instanceof FurtherPositionLiquidationAfterBuyIsTooClose => throw new ChecksNotPassedException(
-                        sprintf('liquidation is too near [distance = %s vs min.=%s]', $checksResult->actualDistance(), $checksResult->safeDistance)
+                        sprintf('liq. is too near [Δ=%s,safe=%s]', $checksResult->actualDistance(), $checksResult->safeDistance)
                     ),
                     default => throw new ChecksNotPassedException($checksResult->info()),
                 };
             }
         }
 
-        $this->notice(sprintf('modify free balance with %s (order cost)', -$cost)); $currentState->modifyFreeBalance(-$cost);
+        $this->notice(sprintf('modify free balance with %s (order cost)', -$cost->value())); $currentState->subFreeBalance($cost);
+        $this->notice(sprintf('modify free balance with %s (order margin)', -$margin->value())); $currentState->subFreeBalance($margin);
+        $this->notice('modify contract balance after buy');
+        $prev = $this->currentState->getContractBalance();
+        $this->currentState->setContractBalance(
+            new ContractBalance(
+                $prev->assetCoin,
+                $prev->total->sub($cost),
+                $prev->available->sub($cost)->sub($margin),
+                $prev->free->sub($cost)->sub($margin)
+            )
+        );
+
         $this->modifyPositionWithBuy($positionSide, $orderDto);
 
         return $this->considerBuyCostAsLoss ? -$cost : 0;
@@ -270,13 +285,26 @@ class TradingSandbox implements TradingSandboxInterface
 
         $orderDto = new ExchangeOrder($this->symbol, $volume, $position->entryPrice());
         $margin = $this->orderCostCalculator->orderMargin($orderDto, $position->leverage);
-        $closeFee = $this->orderCostCalculator->closeFee($orderDto, $position->leverage, $positionSide)->value();
-
+        $closeFee = $this->orderCostCalculator->closeFee($orderDto, $position->leverage, $positionSide);
         $expectedPnl = PnlHelper::getPnlInUsdt($position, $price, $volume);
 
-        $this->notice(sprintf('modify free balance with %s (expected PNL)', $expectedPnl)); $this->currentState->modifyFreeBalance($expectedPnl);
-        $this->notice(sprintf('modify free balance with %s (order margin)', $margin)); $this->currentState->modifyFreeBalance($margin);
-        $this->notice(sprintf('modify free balance with %s (close fee)', $closeFee)); $this->currentState->modifyFreeBalance(-$closeFee);
+        // @todo | sandbox | research impact on balance
+        $this->notice(sprintf('modify free balance with %s (expected PNL)', $expectedPnl)); $this->currentState->addFreeBalance($expectedPnl);
+        $this->notice(sprintf('modify free balance with %s (order margin)', $margin->value())); $this->currentState->addFreeBalance($margin);
+        $this->notice(sprintf('modify free balance with %s (close fee)', -$closeFee->value())); $this->currentState->subFreeBalance($closeFee);
+
+        // @todo | sandbox | research impact on balance
+        // do add unrealizedPNL to available contract balance after close? (isUTA)
+        $this->notice('modify contract balance after buy');
+        $prev = $this->currentState->getContractBalance();
+        $this->currentState->setContractBalance(
+            new ContractBalance(
+                $prev->assetCoin,
+                $prev->total->sub($closeFee)->add($margin)->add($expectedPnl),
+                $prev->available->sub($closeFee)->add($margin)->add($expectedPnl),
+                $prev->free->sub($closeFee)->add($margin)->add($expectedPnl),
+            )
+        );;
 
         // @todo | also need take into account `totaling funding fees` (https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-ContractUSDT_Perpetual_Contract)
 
