@@ -113,3 +113,8 @@ imports
     @todo | liquidation | log into app_errors?
     @todo | exceptions
     !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
+
+
+### SymbolPrice ###
+    @todo | price | handle exception
+    @todo | ctrl-f: round(..., 2)
