@@ -15,7 +15,7 @@ use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use Doctrine\ORM\Mapping as ORM;
@@ -75,10 +75,10 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     private bool $isOppositeStopExecuted = false;
 
-    public function __construct(int $id, Price|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
-        $this->price = $symbol->makePrice(Price::toFloat($price))->value();
+        $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
         $this->volume = $symbol->roundVolume($volume);
         $this->positionSide = $positionSide;
         $this->context = $context;

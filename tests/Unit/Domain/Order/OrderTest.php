@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Order;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -15,9 +16,11 @@ final class OrderTest extends TestCase
 {
     public function testCanCreate(): void
     {
-        $order = new Order(Price::float(30000), 0.1);
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(Price::float(30000), $order->price());
+        $order = new Order($symbol->makePrice(30000), 0.1);
+
+        self::assertEquals($symbol->makePrice(30000), $order->price());
         self::assertEquals(0.1, $order->volume());
     }
 }

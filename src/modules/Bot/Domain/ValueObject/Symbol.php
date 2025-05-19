@@ -6,7 +6,8 @@ namespace App\Bot\Domain\ValueObject;
 
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Price\Price;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use ValueError;
@@ -343,11 +344,12 @@ enum Symbol: string
         return round(pow(0.1, $pricePrecision), $pricePrecision);
     }
 
-    public function makePrice(float $value): Price
+    /**
+     * @throws PriceCannotBeLessThanZero
+     */
+    public function makePrice(float $value): SymbolPrice
     {
-        $factory = new PriceFactory($this);
-
-        return $factory->make($value);
+        return SymbolPrice::create($value, $this);
     }
 
     public function minOrderQty(): float|int

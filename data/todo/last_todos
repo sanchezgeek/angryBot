@@ -1,6 +1,10 @@
 imports
     - { todos }
 
+### Tests ###
+    ExchangeOrderTest.php
+    PositionBuilderTest.php
+
 ### ??? ###
     src/Infrastructure/Cache/PositionsCache.php
     cals
@@ -19,11 +23,6 @@ imports
     metrics
         e.g. PushAllMainPositionsStopsHandler exec time deviation
 
-### Sandbox ###
-    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
-    regexp CTRL-F: @todo.*sandbox
-    @todo | sandbox | mb troubles with sandbox (inner check will not work)
-
 ### Api fetching ###
     @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
     @todo | cache | all symbols?
@@ -38,9 +37,12 @@ imports
         to determine what delta must be used in moment
 
 ### Other / Minor ###
+    symbols_wip_from_main_before_new_m
+    main_msg_with_critical_context.patch / Тут пытался делать что-то по поводу скипа сообщений PushOrders
     @todo | liquidation
     @todo | liquidation | null
     @todo | check | other | reserved balance
+    @todo | profit | it's not about leverage ...
     tests/Unit/Domain/Position/Helper/PositionCloneTest.php
     Commands
         increase position (by some paams)
@@ -81,6 +83,7 @@ imports
     @todo | settings
     @todo | settings | tests
     @todo | performance | settings | slow cache or db? or foreach
+    @todo specify array of parameters to evaluate after edit
     default settings values
         if ($this->settings->required(ConnectionSettings::CheckConnectionEnabled) !== true) {
 
@@ -112,6 +115,21 @@ imports
     @todo | liquidation | log into app_errors?
     @todo | exceptions
     !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
+
+
+### SymbolPrice ###
+    @todo | price | handle exception
+    @todo | ctrl-f: round(..., 2)
+
+
+### Sandbox ###
+    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
+    regexp CTRL-F: @todo.*sandbox
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
+    @todo | sandbox | research impact on balance
+    @todo | sandbox | get rid of SandboxState::getAvailableBalance or replace logic based on SandboxState::contractBalance
+    @todo | sandbox | add unrealizedPNL (isUTA)
+    @todo | sandbox | what to use? position entry or stop price
 
 
 ### Upgrade ###

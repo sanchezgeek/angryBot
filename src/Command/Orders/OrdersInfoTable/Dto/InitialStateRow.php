@@ -6,7 +6,7 @@ namespace App\Command\Orders\OrdersInfoTable\Dto;
 
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Domain\Ticker;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 class InitialStateRow implements OrdersInfoTableRowAtPriceInterface
 {
@@ -14,7 +14,7 @@ class InitialStateRow implements OrdersInfoTableRowAtPriceInterface
     {
     }
 
-    public function getRowUpperPrice(): Price
+    public function getRowUpperPrice(): SymbolPrice
     {
         return $this->ticker->lastPrice;
     }

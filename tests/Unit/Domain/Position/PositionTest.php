@@ -10,7 +10,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -237,8 +237,9 @@ final class PositionTest extends TestCase
      */
     public function testIsPositionInProfit(Position $position, float $currentPrice, bool $expectedResult): void
     {
+        $currentPrice = $position->symbol->makePrice($currentPrice);
+
         self::assertEquals($expectedResult, $position->isPositionInProfit($currentPrice));
-        self::assertEquals($expectedResult, $position->isPositionInProfit(Price::float($currentPrice)));
     }
 
     public function isPositionInProfitTestDataProvider(): iterable
@@ -261,8 +262,9 @@ final class PositionTest extends TestCase
      */
     public function testIsPositionInLoss(Position $position, float $currentPrice, bool $expectedResult): void
     {
+        $currentPrice = $position->symbol->makePrice($currentPrice);
+
         self::assertEquals($expectedResult, $position->isPositionInLoss($currentPrice));
-        self::assertEquals($expectedResult, $position->isPositionInLoss(Price::float($currentPrice)));
     }
 
     public function isPositionInLossTestDataProvider(): iterable
@@ -285,9 +287,10 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationPrice(Side $side): void
     {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.001, 50, 100);
+        $symbol = Symbol::BTCUSDT;
+        $position = new Position($side, $symbol, 50000, 0.1, 5000, 51000.001, 50, 100);
 
-        self::assertEquals(Price::float(51000.001), $position->liquidationPrice());
+        self::assertEquals($symbol->makePrice(51000.001), $position->liquidationPrice());
     }
 
     /**

@@ -18,4 +18,4 @@ framework:
         unexpected_sandbox_exception_while_check_throttling:
             policy: 'fixed_window'
             limit: 1
-            interval: '2 minutes'
+            interval: '20 minutes'

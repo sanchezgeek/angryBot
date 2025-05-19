@@ -14,7 +14,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
@@ -574,7 +574,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         );
     }
 
-    private static function stopPriceThatLeanInAcceptableRange(CheckPositionIsUnderLiquidation $message, Position $position): Price
+    private static function stopPriceThatLeanInAcceptableRange(CheckPositionIsUnderLiquidation $message, Position $position): SymbolPrice
     {
         $actualStopsRange = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position)->actualStopsRange();
         $someDelta = Percent::string('2%')->of($position->liquidationDistance());
@@ -583,20 +583,20 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     }
 
     private static int $nextStopId = 1;
-    private static function delayedStop(Position $position, float $positionSizePart, Price|float $price): Stop
+    private static function delayedStop(Position $position, float $positionSizePart, SymbolPrice|float $price): Stop
     {
         $size = $position->getNotCoveredSize();
 
-        return new Stop(self::$nextStopId++, Price::toFloat($price), $position->symbol->roundVolume((new Percent($positionSizePart))->of($size)), 10, $position->symbol, $position->side);
+        return new Stop(self::$nextStopId++, SymbolPrice::toFloat($price), $position->symbol->roundVolume((new Percent($positionSizePart))->of($size)), 10, $position->symbol, $position->side);
     }
-    private static function activeCondOrder(Position $position, float $positionSizePart, Price|float $price): ActiveStopOrder
+    private static function activeCondOrder(Position $position, float $positionSizePart, SymbolPrice|float $price): ActiveStopOrder
     {
         return new ActiveStopOrder(
             $position->symbol,
             $position->side,
             uuid_create(),
             $position->symbol->roundVolume((new Percent($positionSizePart))->of($position->getNotCoveredSize())),
-            Price::toFloat($price),
+            SymbolPrice::toFloat($price),
             TriggerBy::IndexPrice->value,
         );
     }

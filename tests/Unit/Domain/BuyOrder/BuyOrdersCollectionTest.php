@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\BuyOrder;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
@@ -58,14 +59,16 @@ final class BuyOrdersCollectionTest extends TestCase
 
     public function testGrabFromRange(): void
     {
+        $symbol = Symbol::BTCUSDT;
+
         $collection = new BuyOrdersCollection();
 
-        $collection->add(BuyOrderBuilder::short(1, 29000, 0.001)->build());
-        $collection->add(BuyOrderBuilder::short(3, 29010, 0.001)->build());
-        $collection->add(BuyOrderBuilder::short(2, 29020, 0.02)->build());
-        $collection->add(BuyOrderBuilder::short(4, 29050, 0.01)->build());
+        $collection->add(BuyOrderBuilder::short(1, 29000, 0.001, $symbol)->build());
+        $collection->add(BuyOrderBuilder::short(3, 29010, 0.001, $symbol)->build());
+        $collection->add(BuyOrderBuilder::short(2, 29020, 0.02, $symbol)->build());
+        $collection->add(BuyOrderBuilder::short(4, 29050, 0.01, $symbol)->build());
 
-        $range = PriceRange::create(29010, 29021);
+        $range = PriceRange::create(29010, 29021, $symbol);
 
         self::assertEquals(
             new BuyOrdersCollection(

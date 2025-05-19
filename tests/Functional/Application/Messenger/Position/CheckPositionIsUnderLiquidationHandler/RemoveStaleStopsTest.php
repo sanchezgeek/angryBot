@@ -108,8 +108,8 @@ class RemoveStaleStopsTest extends KernelTestCase
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol);
 
         # long
-        $criticalPriceRange = PriceRange::create(29000, 30150);
-        $actualStopsPriceRange = PriceRange::create(30178.99, 30284.67);
+        $criticalPriceRange = PriceRange::create(29000, 30150, $symbol);
+        $actualStopsPriceRange = PriceRange::create(30178.99, 30284.67, $symbol);
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 100500);
 
@@ -136,8 +136,8 @@ class RemoveStaleStopsTest extends KernelTestCase
         ];
 
         # short
-        $criticalPriceRange = PriceRange::create(30001, 29800);
-        $actualStopsPriceRange = PriceRange::create(29700, 29600);
+        $criticalPriceRange = PriceRange::create(30001, 29800, $symbol);
+        $actualStopsPriceRange = PriceRange::create(29700, 29600, $symbol);
         $short = PositionBuilder::short()->entry(30000)->size(1)->liq(30001)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 100500);
 

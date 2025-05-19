@@ -5,51 +5,41 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use RuntimeException;
-
 use Stringable;
 
 use function abs;
-use function round;
 use function sprintf;
 
 /**
  * @see \App\Tests\Unit\Domain\Price\PriceTest
  *
- * @todo | ctrl-f: round(..., 2) | Need to pass precision in __construct on creation (in order to using not only in BTCUSDT context)
+ * @todo | ctrl-f: round(..., 2)
  */
-final class Price implements Stringable
+final readonly class SymbolPrice implements Stringable
 {
-    private float $value;
-    public ?int $precision = null;
-
     /**
      * @throws PriceCannotBeLessThanZero
-     * @todo | Get precision on construct to further use. Maybe even external (with some getter)
-     *         While accurate value must be calculated somewhere else and passed here
      */
-    private function __construct(float $value, int $precision)
+    private function __construct(private float $value, public Symbol $symbol)
     {
-        if ($value < 0) {
-            throw new PriceCannotBeLessThanZero($value);
+        if ($this->value < 0) {
+            throw new PriceCannotBeLessThanZero($value, $this->symbol);
         }
-
-        $this->value = $value;
-        $this->precision = $precision;
     }
 
     /**
-     * @todo | CS | rename to `fromFloat`?
+     * @throws PriceCannotBeLessThanZero
      */
-    public static function float(float $value, ?int $precision = null): self
+    public static function create(float $value, Symbol $source): self
     {
-        $precision = $precision ?? 2;
-        return new self($value, $precision);
+        return new self($value, $source);
     }
 
     /**
@@ -57,40 +47,46 @@ final class Price implements Stringable
      */
     public function value(): float
     {
-        return PriceHelper::round($this->value, $this->precision ?? 2);
+        return PriceHelper::round($this->value, $this->symbol->pricePrecision() ?? 2);
     }
 
-    public function add(Price|float $addValue): self
+    /**
+     * @throws PriceCannotBeLessThanZero
+     */
+    public function add(SymbolPrice|float $addValue): self
     {
-        return self::float($this->value + self::toFloat($addValue), $this->precision);
+        return self::create($this->value + self::toFloat($addValue), $this->symbol);
     }
 
-    public function sub(Price|float $subValue): self
+    /**
+     * @throws PriceCannotBeLessThanZero
+     */
+    public function sub(SymbolPrice|float $subValue): self
     {
-        return self::float($this->value - self::toFloat($subValue), $this->precision);
+        return self::create($this->value - self::toFloat($subValue), $this->symbol);
     }
 
-    public function eq(Price|float $otherPrice): bool
+    public function eq(SymbolPrice|float $otherPrice): bool
     {
         return $this->value === self::toFloat($otherPrice);
     }
 
-    public function greaterThan(Price|float $otherPrice): bool
+    public function greaterThan(SymbolPrice|float $otherPrice): bool
     {
         return $this->value > self::toFloat($otherPrice);
     }
 
-    public function greaterOrEquals(Price|float $otherPrice): bool
+    public function greaterOrEquals(SymbolPrice|float $otherPrice): bool
     {
         return $this->value >= self::toFloat($otherPrice);
     }
 
-    public function lessThan(Price|float $otherPrice): bool
+    public function lessThan(SymbolPrice|float $otherPrice): bool
     {
         return $this->value < self::toFloat($otherPrice);
     }
 
-    public function lessOrEquals(Price|float $otherPrice): bool
+    public function lessOrEquals(SymbolPrice|float $otherPrice): bool
     {
         return $this->value <= self::toFloat($otherPrice);
     }
@@ -107,7 +103,7 @@ final class Price implements Stringable
 
     public function getTargetPriceByPnlPercent(float $pnlPercent, Position $position): self
     {
-        return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $position);
+        return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $position->side);
     }
 
     public function isPriceOverTakeProfit(Side $positionSide, float $takeProfitPrice): bool
@@ -120,22 +116,22 @@ final class Price implements Stringable
         return $this->isPriceInLossOfOther($positionSide, $stopPrice);
     }
 
-    public function isPriceInLossOfOther(Side $positionSide, Price|float $other): bool
+    public function isPriceInLossOfOther(Side $positionSide, SymbolPrice|float $other): bool
     {
         return $positionSide->isShort() ? $this->value > $other : $this->value < $other;
     }
 
-    public function differenceWith(Price $otherPrice): PriceMovement
+    public function differenceWith(SymbolPrice $otherPrice): PriceMovement
     {
         return PriceMovement::fromToTarget($otherPrice, $this);
     }
 
-    public function deltaWith(Price|float $otherPrice): float
+    public function deltaWith(SymbolPrice|float $otherPrice): float
     {
-        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)), $this->precision);
+        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)), $this->symbol->pricePrecision());
     }
 
-    public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, Price|float $diff): self
+    public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, SymbolPrice|float $diff): self
     {
         return match ($direction) {
             PriceMovementDirection::TO_LOSS => $positionSide->isShort() ? $this->add($diff) : $this->sub($diff),
@@ -147,11 +143,6 @@ final class Price implements Stringable
     public static function toFloat(self|float $value): float
     {
         return $value instanceof self ? $value->value : $value;
-    }
-
-    public static function toObj(self|float $value, ?int $precision = null): self
-    {
-        return $value instanceof self ? $value : self::float($value, $precision);
     }
 
     public function __toString(): string

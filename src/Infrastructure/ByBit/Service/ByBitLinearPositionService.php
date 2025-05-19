@@ -9,7 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -222,7 +222,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
-     * @return array<string, Price>
+     * @return array<string, SymbolPrice>
      */
     public function getLastMarkPrices(): array
     {

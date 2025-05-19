@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Price\Helper;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 readonly class PriceFormatter
 {
@@ -13,9 +13,9 @@ readonly class PriceFormatter
     {
     }
 
-    public function format(Price|float $price): string
+    public function format(SymbolPrice|float $price): string
     {
-        $price = Price::toFloat($price);
+        $price = SymbolPrice::toFloat($price);
 
         $pricePrecision = $this->symbol->pricePrecision();
 

@@ -20,7 +20,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -69,7 +69,7 @@ final class CheckPositionIsUnderLiquidationHandler
     ### all symbols data
     /** @var Position[] */
     private array $positions;
-    /** @var array<string, Price> */
+    /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;
     /** @var ActiveStopOrder[] */
     private array $activeConditionalStopOrders;
@@ -406,7 +406,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
-    private function getLastRunMarkPrice(Position $position): ?Price
+    private function getLastRunMarkPrice(Position $position): ?SymbolPrice
     {
         if ($this->cache === null) {
             return null;

@@ -46,7 +46,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeCacheDecor
             new ActiveStopOrder($symbol, Side::Buy, uuid_create(), 0.01, 25000, TriggerBy::IndexPrice->value),
             new ActiveStopOrder($symbol, Side::Sell, uuid_create(), 0.1, 30000, TriggerBy::LastPrice->value),
         ];
-        $priceRange = PriceRange::create(100500, 200500);
+        $priceRange = PriceRange::create(100500, 200500, $symbol);
 
         $this->innerService
             ->expects(self::once())->method('activeConditionalOrders')->with($symbol, $priceRange)

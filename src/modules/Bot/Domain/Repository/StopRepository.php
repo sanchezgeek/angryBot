@@ -167,7 +167,6 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
             };
         }
 
-
         return $this->getEntityManager()->getConnection()->executeQuery($query, $params)->fetchAllAssociative();
     }
 

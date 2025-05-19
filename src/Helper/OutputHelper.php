@@ -87,9 +87,25 @@ class OutputHelper
         }
     }
 
-    public static function ordersDebug(array $orders): void
+    public static function ordersDebug(array $orders, bool $print = false): array
     {
-        var_dump(array_map(static fn(Stop|BuyOrder $order) => sprintf('%s | %s%s', $order->getPrice(), $order instanceof Stop ? 's.' : 'b.', $order->getId()), $orders));
+        $map = array_map(
+            static fn(Stop|BuyOrder $order) => sprintf(
+                '%s / %s | %s%s, %s',
+                $order->getPrice(),
+                $order->getVolume(),
+                $order instanceof Stop ? 's.' : 'b.',
+                $order->getId(),
+                $order->getSymbol()->value,
+            ),
+            $orders
+        );
+
+        if ($print) {
+            var_dump($map);
+        }
+
+        return $map;
     }
 
     public static function shortClassName(string|object $className): string

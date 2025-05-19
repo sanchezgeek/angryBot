@@ -11,7 +11,7 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
 use LogicException;
 
@@ -71,10 +71,10 @@ class PositionBuilder
         return $builder;
     }
 
-    public function entry(float|Price $entry): self
+    public function entry(float|SymbolPrice $entry): self
     {
         $builder = clone $this;
-        $builder->entry = Price::toFloat($entry);
+        $builder->entry = SymbolPrice::toFloat($entry);
 
         return $builder;
     }
@@ -95,10 +95,10 @@ class PositionBuilder
         return $builder;
     }
 
-    public function liq(float|Price $liquidation): self
+    public function liq(float|SymbolPrice $liquidation): self
     {
         $builder = clone $this;
-        $builder->liquidation = Price::toFloat($liquidation);
+        $builder->liquidation = SymbolPrice::toFloat($liquidation);
 
         return $builder;
     }

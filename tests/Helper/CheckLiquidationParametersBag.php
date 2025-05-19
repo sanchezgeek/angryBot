@@ -11,7 +11,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -187,7 +187,8 @@ class CheckLiquidationParametersBag
 
         return PriceRange::create(
             $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
+            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+            $this->position->symbol
         );
     }
 
@@ -215,7 +216,7 @@ class CheckLiquidationParametersBag
     /**
      * @see LiquidationDynamicParameters::additionalStopPrice
      */
-    public function additionalStopPrice(): Price
+    public function additionalStopPrice(): SymbolPrice
     {
         $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
 

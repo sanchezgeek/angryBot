@@ -19,7 +19,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
@@ -111,7 +111,7 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    public static function printLiquidationStats(string $desc, Price $liq): void
+    public static function printLiquidationStats(string $desc, SymbolPrice $liq): void
     {
         OutputHelper::print(sprintf('%s | liq = %s', $desc, $liq));
     }

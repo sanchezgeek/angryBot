@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Position\CalcPositionVolumeBasedOnLiquidationPrice;
 
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 final readonly class CalcPositionVolumeBasedOnLiquidationPriceResult
 {
     public function __construct(
         public float $resultVolume,
         public float $diff,
-        public ?Price $realLiquidationPrice = null,
+        public ?SymbolPrice $realLiquidationPrice = null,
     ) {
     }
 }

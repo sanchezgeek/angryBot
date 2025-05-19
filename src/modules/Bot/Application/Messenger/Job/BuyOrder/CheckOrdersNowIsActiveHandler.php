@@ -10,7 +10,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -28,7 +28,7 @@ final class CheckOrdersNowIsActiveHandler
     {
         /** @var $positions array<Position[]> */
         $positions = $this->positionService->getAllPositions();
-        /** @var $lastMarkPrices array<string, Price> */
+        /** @var $lastMarkPrices array<string, SymbolPrice> */
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
 
         $symbols = [];
@@ -55,9 +55,9 @@ final class CheckOrdersNowIsActiveHandler
     private static function getComparator(Side $positionSide): callable
     {
         if ($positionSide === Side::Buy) {
-            return static fn(float $buyOrderPrice, Price $currentPrice) => $currentPrice->lessOrEquals($buyOrderPrice);
+            return static fn(float $buyOrderPrice, SymbolPrice $currentPrice) => $currentPrice->lessOrEquals($buyOrderPrice);
         }
 
-        return static fn(float $buyOrderPrice, Price $currentPrice) => $currentPrice->greaterOrEquals($buyOrderPrice);
+        return static fn(float $buyOrderPrice, SymbolPrice $currentPrice) => $currentPrice->greaterOrEquals($buyOrderPrice);
     }
 }
