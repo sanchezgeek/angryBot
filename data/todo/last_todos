@@ -1,6 +1,10 @@
 imports
     - { todos }
 
+### Tests ###
+    ExchangeOrderTest.php
+    PositionBuilderTest.php
+
 ### ??? ###
     src/Infrastructure/Cache/PositionsCache.php
     cals
@@ -33,6 +37,8 @@ imports
         to determine what delta must be used in moment
 
 ### Other / Minor ###
+    symbols_wip_from_main_before_new_m
+    main_msg_with_critical_context.patch / Тут пытался делать что-то по поводу скипа сообщений PushOrders
     @todo | liquidation
     @todo | liquidation | null
     @todo | check | other | reserved balance

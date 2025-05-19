@@ -1,0 +1,511 @@
+diff --git a/.env b/.env
+index 91a6caa..b1bc8fb 100644
+--- a/.env
++++ b/.env
+@@ -43,7 +43,7 @@ MESSENGER_TRANSPORT_DSN=doctrine://default
+ # MESSENGER_TRANSPORT_DSN=redis://localhost:6379/messages
+ ###< symfony/messenger ###
+ 
+-ACCOUNTS_UIDS='{}'
++ACCOUNTS_UIDS='{"main": 16104825, "sub1": 27197689, "sub2": 145737011}'
+ 
+ # for testnet debug
+ ACC_NAME=''
+diff --git a/config/services.yaml b/config/services.yaml
+index 7b1defc..00b0ac9 100644
+--- a/config/services.yaml
++++ b/config/services.yaml
+@@ -105,3 +105,11 @@ services:
+     #            class: App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
+     #            arguments:
+     #                $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
++
++
++
++#    App\Infrastructure\Symfony\Monolog\WorkerLogsProcessor:
++#        tags:
++#            - {name: monolog.processor, handler: 'main'}
++#            - {name: monolog.processor, channel: 'app_error'}
++#            - {name: monolog.processor, channel: 'connection_error'}
+diff --git a/src/Application/EventListener/Stop/CreateOppositeBuyOrdersListener.php b/src/Application/EventListener/Stop/CreateOppositeBuyOrdersListener.php
+index cf33486..85d9663 100644
+--- a/src/Application/EventListener/Stop/CreateOppositeBuyOrdersListener.php
++++ b/src/Application/EventListener/Stop/CreateOppositeBuyOrdersListener.php
+@@ -20,7 +20,7 @@ final class CreateOppositeBuyOrdersListener
+      * @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
+      */
+     public const SHORT_OPPOSITE_PRICE_DISTANCE = 300;
+-    public const LONG_OPPOSITE_PRICE_DISTANCE = 400;
++    public const LONG_OPPOSITE_PRICE_DISTANCE = 900;
+ 
+     public function __construct(private readonly CreateBuyOrderHandler $createBuyOrderHandler) {}
+ 
+diff --git a/src/Application/Messenger/Position/CheckPositionIsUnderLiquidation.php b/src/Application/Messenger/Position/CheckPositionIsUnderLiquidation.php
+index 443ee46..797d9a2 100644
+--- a/src/Application/Messenger/Position/CheckPositionIsUnderLiquidation.php
++++ b/src/Application/Messenger/Position/CheckPositionIsUnderLiquidation.php
+@@ -5,11 +5,12 @@ declare(strict_types=1);
+ namespace App\Application\Messenger\Position;
+ 
+ use App\Bot\Domain\ValueObject\Symbol;
++use App\Infrastructure\Symfony\Messenger\AbstractMessageWithCriticalContext;
+ 
+ /**
+  * @codeCoverageIgnore
+  */
+-final readonly class CheckPositionIsUnderLiquidation
++final class CheckPositionIsUnderLiquidation extends AbstractMessageWithCriticalContext
+ {
+-    public function __construct(public Symbol $symbol) {}
++    public function __construct(public readonly Symbol $symbol) {}
+ }
+diff --git a/src/Application/Messenger/Position/CheckPositionIsUnderLiquidationHandler.php b/src/Application/Messenger/Position/CheckPositionIsUnderLiquidationHandler.php
+index 6bf1021..10217c2 100644
+--- a/src/Application/Messenger/Position/CheckPositionIsUnderLiquidationHandler.php
++++ b/src/Application/Messenger/Position/CheckPositionIsUnderLiquidationHandler.php
+@@ -26,6 +26,7 @@ use App\Helper\FloatHelper;
+ use App\Helper\VolumeHelper;
+ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+ use Doctrine\ORM\QueryBuilder;
++use Psr\Log\LoggerInterface;
+ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+ use Throwable;
+ 
+@@ -76,6 +77,15 @@ final class CheckPositionIsUnderLiquidationHandler
+         $symbol = $message->symbol;
+         $coin = $symbol->associatedCoin();
+ 
++//        $this->appErrorLogger->critical('main');
++
++        if (
++            $this->lastDistanceWithLiquidation !== null
++            && $this->lastDistanceWithLiquidation > 5000
++        ) {
++//            $message->setIsNotCriticalToProceed(sprintf('%s: not in critical range', __CLASS__));
++        }
++
+         if (!($position = $this->getPosition($symbol))) {
+             return;
+         }
+@@ -223,8 +233,11 @@ final class CheckPositionIsUnderLiquidationHandler
+         return $position;
+     }
+ 
++    private ?float $lastDistanceWithLiquidation = null;
++
+     private function switchPositionService(Ticker $currentTicker, float $distanceWithLiquidation): void
+     {
++        $this->lastDistanceWithLiquidation = $distanceWithLiquidation;
+         $safeDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(228.229, $currentTicker->markPrice);
+ 
+         if ($distanceWithLiquidation > $safeDistance) {
+@@ -245,6 +258,7 @@ final class CheckPositionIsUnderLiquidationHandler
+         private readonly OrderServiceInterface $orderService,
+         private readonly StopServiceInterface $stopService,
+         private readonly StopRepositoryInterface $stopRepository,
++        private readonly LoggerInterface $appErrorLogger,
+         private readonly ?int $distanceForCalcTransferAmount = null,
+     ) {
+         $this->selectedPositionService = $this->cachedPositionService;
+diff --git a/src/Command/Messenger/CheckMessagesCommand.php b/src/Command/Messenger/CheckMessagesCommand.php
+index 134b754..f318637 100644
+--- a/src/Command/Messenger/CheckMessagesCommand.php
++++ b/src/Command/Messenger/CheckMessagesCommand.php
+@@ -8,6 +8,7 @@ use Symfony\Component\Console\Command\Command;
+ use Symfony\Component\Console\Input\InputInterface;
+ use Symfony\Component\Console\Output\OutputInterface;
+ 
++use Symfony\Component\Console\Style\SymfonyStyle;
+ use function sprintf;
+ 
+ #[AsCommand(name: 'messenger:check')]
+@@ -15,11 +16,18 @@ class CheckMessagesCommand extends Command
+ {
+     protected function execute(InputInterface $input, OutputInterface $output): int
+     {
++        $io = new SymfonyStyle($input, $output);
++
+         $connection = $this->entityManager->getConnection();
+ 
+         $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetch();
+ 
+-        $output->writeln(sprintf('count: %d', $result['count']));
++        $count = (int) $result['count'];
++        $output->writeln(sprintf('count: %d', $count));
++
++        if ($count && $io->ask('remove?')) {
++            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1')->fetch();
++        }
+ 
+         return Command::SUCCESS;
+     }
+diff --git a/src/Infrastructure/EventListener/Symfony/Messenger/WorkerExceptionEventListener.php b/src/Infrastructure/EventListener/Symfony/Messenger/WorkerExceptionEventListener.php
+index 915dbaa..3fdbfa1 100644
+--- a/src/Infrastructure/EventListener/Symfony/Messenger/WorkerExceptionEventListener.php
++++ b/src/Infrastructure/EventListener/Symfony/Messenger/WorkerExceptionEventListener.php
+@@ -6,12 +6,15 @@ namespace App\Infrastructure\EventListener\Symfony\Messenger;
+ 
+ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
+ use App\Clock\ClockInterface;
++use App\Helper\OutputHelper;
++use App\Infrastructure\Symfony\Messenger\MessageWithCriticalContext;
+ use App\Worker\AppContext;
+ use App\Worker\RunningWorker;
+ use Psr\Log\LoggerInterface;
+ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+ use Symfony\Component\Messenger\Exception\HandlerFailedException;
++use Symfony\Component\Messenger\Stamp\HandledStamp;
+ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+ use Throwable;
+ 
+@@ -80,12 +83,28 @@ final class WorkerExceptionEventListener
+ 
+     private function processConnectionError(Throwable $error, WorkerMessageFailedEvent $fromEvent): void
+     {
++        $handledByStamp = $fromEvent->getEnvelope()->last(HandledStamp::class);
++        if ($handledByStamp) {
++            var_dump($handledByStamp->getHandlerName());
++        } else {
++            OutputHelper::notice('no handled stamp');
++        }
+         $alreadyLogged = false;
+         if ($reasonToForceLog = $this->getReasonToForceConnectionErrorLog($fromEvent)) {
+             $this->logConnectionError($error, ['forcedByReason' => $reasonToForceLog]);
+             $alreadyLogged = true;
+         }
+ 
++        $message = $this->getMessengerMessage($fromEvent);
++        if (
++            !$alreadyLogged
++            && $message instanceof MessageWithCriticalContext
++            && !$message->isCriticalToProceed()
++        ) {
++            OutputHelper::notice($message->getComment());
++            return;
++        }
++
+         $now = $this->clock->now()->getTimestamp();
+ 
+         if ($this->resetAt && $now >= $this->resetAt) {
+@@ -129,16 +148,31 @@ final class WorkerExceptionEventListener
+         ]);
+     }
+ 
++    private function getMessengerMessage(WorkerMessageFailedEvent $fromEvent): object
++    {
++        return $fromEvent->getEnvelope()->getMessage();
++    }
++
+     private function getReasonToForceConnectionErrorLog(WorkerMessageFailedEvent $ofEvent): array
+     {
++        $messengerMessage = $this->getMessengerMessage($ofEvent);
++
++        if ($messengerMessage instanceof MessageWithCriticalContext && !$messengerMessage->isCriticalToProceed()) {
++            OutputHelper::notice($messengerMessage->getComment());
++            return [];
++        }
++
+         $reason = [];
+ 
+-        $isCriticalWorker = AppContext::runningWorker() === RunningWorker::ASYNC_CRITICAL;
+-        $messageClass = get_class($ofEvent->getEnvelope()->getMessage());
+-        $isCriticalMessage = in_array($messageClass, self::MESSAGES_CRITICAL_TO_PROCEED);
++        if ($isCriticalWorker = AppContext::runningWorker() === RunningWorker::ASYNC_CRITICAL) {
++            $reason['worker'] = AppContext::runningWorker()->name;
++        }
+ 
+-        $isCriticalWorker && $reason['worker'] = AppContext::runningWorker()->name;
+-        $isCriticalMessage && $reason['envelope.message'] = $messageClass;
++        $messageClass = get_class($messengerMessage);
++        if ($isCriticalMessage = in_array($messageClass, self::MESSAGES_CRITICAL_TO_PROCEED)) {
++            $messageClass = explode('\\', $messageClass);
++            $reason['envelope.message'] = end($messageClass);
++        }
+ 
+         return $reason;
+     }
+diff --git a/src/Messenger/SchedulerTransport/SchedulerFactory.php b/src/Messenger/SchedulerTransport/SchedulerFactory.php
+index 4169f1e..eb7a502 100644
+--- a/src/Messenger/SchedulerTransport/SchedulerFactory.php
++++ b/src/Messenger/SchedulerTransport/SchedulerFactory.php
+@@ -105,7 +105,7 @@ final class SchedulerFactory
+         $interval = 'PT3S';
+ 
+         if (($procNum = AppContext::procNum()) > 0) {
+-            $start = $start->add(self::interval(sprintf('%d milliseconds', $procNum * 900)));
++            $start = $start->add(self::interval(sprintf('%d milliseconds', $procNum * 800)));
+         } // else {// $ttl = '6 seconds'; $interval = 'PT5S';}
+ 
+         return [
+diff --git a/src/modules/Alarm/Application/Messenger/Job/CheckAlarmHandler.php b/src/modules/Alarm/Application/Messenger/Job/CheckAlarmHandler.php
+index df6d6f8..abed4b1 100644
+--- a/src/modules/Alarm/Application/Messenger/Job/CheckAlarmHandler.php
++++ b/src/modules/Alarm/Application/Messenger/Job/CheckAlarmHandler.php
+@@ -9,8 +9,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+ #[AsMessageHandler]
+ final readonly class CheckAlarmHandler
+ {
+-    private const UP = null;
+-    private const DOWN = null;
++    private const UP = 61900;
++    private const DOWN = 58200;
+ 
+     public function __invoke(CheckAlarm $dto): void
+     {
+diff --git a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrders.php b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrders.php
+index 50e0d6c..1dd3232 100644
+--- a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrders.php
++++ b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrders.php
+@@ -6,13 +6,14 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
+ 
+ use App\Bot\Domain\ValueObject\Symbol;
+ use App\Domain\Position\ValueObject\Side;
++use App\Infrastructure\Symfony\Messenger\AbstractMessageWithCriticalContext;
+ 
+ /**
+  * @codeCoverageIgnore
+  */
+-final readonly class PushBuyOrders
++final class PushBuyOrders extends AbstractMessageWithCriticalContext
+ {
+-    public function __construct(public Symbol $symbol, public Side $side)
++    public function __construct(public readonly Symbol $symbol, public readonly Side $side)
+     {
+     }
+ }
+diff --git a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php
+index c748462..25afec5 100644
+--- a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php
++++ b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php
+@@ -26,6 +26,7 @@ use App\Bot\Domain\Repository\StopRepository;
+ use App\Bot\Domain\Strategy\StopCreate;
+ use App\Bot\Domain\Ticker;
+ use App\Clock\ClockInterface;
++use App\Domain\BuyOrder\BuyOrdersCollection;
+ use App\Domain\Order\ExchangeOrder;
+ use App\Domain\Order\Service\OrderCostCalculator;
+ use App\Domain\Position\ValueObject\Side;
+@@ -140,21 +141,38 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+     /**
+      * @return BuyOrder[]
+      */
+-    public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): array
++    public function findOrdersNearTicker(Side $side, Position $position, Ticker $ticker): BuyOrdersCollection
+     {
+         $volumeOrdering = $this->canTakeProfit($position, $ticker) ? 'DESC' : 'ASC'; // To get the cheapest orders (if can afford buy less qty)
+ 
+-        return $this->buyOrderRepository->findActiveInRange(
++        // replace with convertPnlToAbsDelta
++        $range = PriceRange::create($ticker->indexPrice->value() - 200, $ticker->indexPrice->value() + 200);
++
++        $buyOrders = $this->buyOrderRepository->findActiveInRange(
+             side: $side,
+-            from: ($position->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
+-            to: ($position->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
+-            qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
++            from: $range->from()->value(),
++            to: $range->to()->value(),
++            qbModifier: static function (QueryBuilder $qb) use ($side, $volumeOrdering) {
+                 QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
+                 QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
+             },
+         );
++
++        return new BuyOrdersCollection(...$buyOrders);
++
++//        return $this->buyOrderRepository->findActiveInRange(
++//            side: $side,
++//            from: ($position->isShort() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() - 20),
++//            to: ($position->isShort() ? $ticker->indexPrice->value() + 20 : $ticker->indexPrice->value() + 15),
++//            qbModifier: static function(QueryBuilder $qb) use ($side, $volumeOrdering) {
++//                QueryHelper::addOrder($qb, 'volume', $volumeOrdering);
++//                QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'DESC' : 'ASC');
++//            },
++//        );
+     }
+ 
++    private ?int $lastOrdersCountNearTicker = null;
++
+     public function __invoke(PushBuyOrders $message): void
+     {
+         if ($this->marketService->isNowFundingFeesPaymentTime()) {
+@@ -164,6 +182,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+         $side = $message->side;
+         $symbol = $message->symbol;
+ 
++        if ($this->lastOrdersCountNearTicker === 0) {
++            $message->setIsNotCriticalToProceed(sprintf('%s: lastOrdersCountNearTicker = 0', __CLASS__));
++        }
++
+         $ticker = $this->exchangeService->ticker($symbol);
+         if (!$this->canBuy($ticker)) {
+             return;
+@@ -178,8 +200,20 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+             $ignoreBuy = true;
+         }
+ 
++        // @todo | Maybe in case of support position do find not only in range (same logic as in PushStopsHandler [after some confirm])
++        // => for convenience it could be some class (e.g. strategy enum?) that might be transformed to appropriate result condition (SQL or php) by end client
+         $orders = $this->findOrdersNearTicker($side, $position, $ticker);
+ 
++        $this->lastOrdersCountNearTicker = $orders->totalCount();
++
++        $rangeForExecBuy = $position->isShort()
++            ? PriceRange::create($ticker->indexPrice->value() - 15, $ticker->indexPrice->value() + 20)
++            : PriceRange::create($ticker->indexPrice->value() - 20, $ticker->indexPrice->value() + 15)
++        ;
++
++        $orders = $orders->grabFromRange($rangeForExecBuy);
++
++
+         /** @var BuyOrder $lastBuy To use, for example, after catch `CannotAffordOrderCost` exception */
+         $lastBuy = null;
+         try {
+@@ -258,6 +292,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+                 return;
+             }
+ 
++            /**
++             * @todo Тут можно добавить проверку "будущей" ликвидации (после выполнения ордера)
++             *  Если на данный момент ликвидация на каком-то большом расстоянии - не делать? В смысле покупку не делать?
++             *   Хотя там же может быть немаленький BuyOrder ... короче наверное надо всегда
++             */
+             # mainPosition BuyOrder => grab profit from Support
+             $priceToCalcLiqDiff = $position->isShort() ? max($position->entryPrice, $ticker->markPrice->value()) : min($position->entryPrice, $ticker->markPrice->value());
+             if (self::FIX_SUPPORT_ENABLED && ($hedge = $position->getHedge())?->isMainPosition($position)
+@@ -269,9 +308,9 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+                 && ($mainPositionPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->mainPosition)) < 30 # to prevent use supportPosition profit through the way to mainPosition :)
+                 && ($supportPnlPercent = $ticker->lastPrice->getPnlPercentFor($hedge->supportPosition)) > 228.228
+                 && (
+-                    $lastBuy->isForceBuyOrder()
+-                    || abs($priceToCalcLiqDiff - $position->liquidationPrice) > 2500               # position liquidation too far
+-                    || $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)   # or support size enough
++//                    $lastBuy->isForceBuyOrder() ||
++                    abs($priceToCalcLiqDiff - $position->liquidationPrice) > 1000               # position liquidation too far
++                    && $this->hedgeService->isSupportSizeEnoughForSupportMainPosition($hedge)   # or support size enough
+                 )
+             ) {
+                 $volume = VolumeHelper::forceRoundUp($e->qty / ($supportPnlPercent * 0.75 / 100));
+@@ -325,11 +364,21 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
+                 unset($order);
+             }
+         } catch (BuyIsNotSafeException $e) {
++            // mark BO as "not safe" and suggest do it force? (log in new stream)
+         } catch (ApiRateLimitReached $e) {
+             $this->logWarning($e);
+             $this->sleep($e->getMessage());
+         } catch (UnknownByBitApiErrorException|UnexpectedApiErrorException $e) {
+             $this->logCritical($e);
++//        } catch (Throwable $e) {
++            /**
++             * Нашёл, когда проверял `phpunit PushStopsCommonCasesTest.php` с другой triggerDelta у `stop.id = 15`
++             * Тут наверное просто $appErrorsLogger. И кстати вот почему только restart помогает в некоторых случаях (потому что воркер не падает)
++             * Ну float tD вроде проверил
++             * Аналогично для PushBuyOrdersHandler
++             * var_dump($e->getMessage());die;
++             * $this->logCritical($e);
++             */
+         } finally {
+             if (isset($order)) {
+                 $this->buyOrderRepository->save($order);
+diff --git a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStops.php b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStops.php
+index 33494d7..45c8200 100644
+--- a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStops.php
++++ b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStops.php
+@@ -6,13 +6,14 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
+ 
+ use App\Bot\Domain\ValueObject\Symbol;
+ use App\Domain\Position\ValueObject\Side;
++use App\Infrastructure\Symfony\Messenger\AbstractMessageWithCriticalContext;
+ 
+ /**
+  * @codeCoverageIgnore
+  */
+-final readonly class PushStops
++final class PushStops extends AbstractMessageWithCriticalContext
+ {
+-    public function __construct(public Symbol $symbol, public Side $side)
++    public function __construct(public readonly Symbol $symbol, public readonly Side $side)
+     {
+     }
+ }
+diff --git a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStopsHandler.php b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStopsHandler.php
+index 7832c97..933f336 100644
+--- a/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStopsHandler.php
++++ b/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushStopsHandler.php
+@@ -48,18 +48,35 @@ final class PushStopsHandler extends AbstractOrdersPusher
+ 
+     private const SL_DEFAULT_TRIGGER_DELTA = 25;
+ 
++    private ?\DateTimeImmutable $lastSuccessRunAt = null;
++    private ?Ticker $lastTickerData = null;
++    private ?Position $lastPositionData = null;
++
+     public function __invoke(PushStops $message): void
+     {
+         $positionService = $this->positionService; $orderService = $this->orderService;
+         $side = $message->side; $symbol = $message->symbol;
+         $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
+ 
++        # move to some middleware (or at least interface to get state to operate with)
++        # or, handler can provide some
++        # checks also can be performed in WorkerExceptionListener (but handler must provide some data so listener can do checks)
++        if (
++            ($this->lastSuccessRunAt && $this->lastTickerData && $this->lastPositionData)
++            && $this->clock->now()->diff($this->lastSuccessRunAt)->s < 10 # last run was not so far
++            && $this->lastPositionData->priceDistanceWithLiquidation($this->lastTickerData) > 5000 # ... and liquidation is too far
++        ) {
++            $message->setIsNotCriticalToProceed(sprintf('%s: priceDistanceWithLiquidation > 5000', __CLASS__));
++        }
++
+         if (!($position = $this->positionService->getPosition($symbol, $side))) {
+             return;
+         }
++        $this->lastPositionData = $position;
+ 
+         $stops = $this->findStops($side, $symbol);
+         $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
++        $this->lastTickerData = $ticker;
+         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+ 
+         $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+@@ -114,6 +131,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
+         }
+ 
+         $stopsClosedByMarket && $this->processOrdersClosedByMarket($position, $stopsClosedByMarket);
++
++        $this->lastSuccessRunAt = $this->clock->now();
+     }
+ 
+     private function pushStopToExchange(Ticker $ticker, Stop $stop, callable $pushStopCallback): void
+diff --git a/tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php b/tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php
+index 338ba07..46d370b 100644
+--- a/tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php
++++ b/tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php
+@@ -30,6 +30,9 @@ use function uuid_create;
+ /**
+  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\AbstractOrdersPusher
+  * @covers \App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler
++ *
++ * string "@ MarketBuyHandler: got "Call to a member function isMainPosition on null" exception while make `buyIsSafe` check"
++ * * x3
+  */
+ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
+ {
+diff --git a/tests/Unit/Domain/Position/Helper/PositionCloneTest.php b/tests/Unit/Domain/Position/Helper/PositionCloneTest.php
+index eb021a1..ea48624 100644
+--- a/tests/Unit/Domain/Position/Helper/PositionCloneTest.php
++++ b/tests/Unit/Domain/Position/Helper/PositionCloneTest.php
+@@ -30,4 +30,9 @@ class PositionCloneTest extends TestCase
+         $expectedPosition = new Position($position->side, $position->symbol, $position->entryPrice, 0.11, 5500, $side->isLong() ? $position->entryPrice - $liquidationDistance : $position->entryPrice + $liquidationDistance, 55, 55, 100);
+         self::assertEquals($expectedPosition, $result);
+     }
+-}
+\ No newline at end of file
++
++    public function testDummy(): void
++    {
++        self::markTestSkipped('test different cases');
++    }
++}
