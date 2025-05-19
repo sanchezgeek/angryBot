@@ -42,6 +42,7 @@ imports
     @todo | liquidation
     @todo | liquidation | null
     @todo | check | other | reserved balance
+    @todo | profit | it's not about leverage ...
     tests/Unit/Domain/Position/Helper/PositionCloneTest.php
     Commands
         increase position (by some paams)

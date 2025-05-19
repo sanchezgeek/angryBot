@@ -89,7 +89,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     public function findActiveForPush(
         Symbol $symbol,
         Side $side,
-        float $currentPrice,
+        ?float $currentPrice = null,
         bool $exceptOppositeOrders = false,
         callable $qbModifier = null
     ): array {
@@ -102,13 +102,15 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
                     $qbModifier($qb);
                 }
 
-                $priceField = $qb->getRootAliases()[0] . '.price';
-                if ($side->isShort()) {
-                    $qb->andWhere(\sprintf('%s >= :currentPrice', $priceField));
-                } else {
-                    $qb->andWhere(\sprintf('%s <= :currentPrice', $priceField));
+                if ($currentPrice !== null) {
+                    $priceField = $qb->getRootAliases()[0] . '.price';
+                    if ($side->isShort()) {
+                        $qb->andWhere(\sprintf('%s >= :currentPrice', $priceField));
+                    } else {
+                        $qb->andWhere(\sprintf('%s <= :currentPrice', $priceField));
+                    }
+                    $qb->setParameter(':currentPrice', $currentPrice);
                 }
-                $qb->setParameter(':currentPrice', $currentPrice);
 
                 $stateField = $qb->getRootAliases()[0] . '.state';
                 $qb->andWhere(\sprintf('%s = :activeState', $stateField));

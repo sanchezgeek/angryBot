@@ -90,6 +90,9 @@ final class PnlHelper
         return SymbolPrice::create($fromPrice->add($sign * $delta)->value(), $fromPrice->symbol);
     }
 
+    /**
+     * @todo | profit | it's not about leverage. It's about fact profit that position give with certain contract size. Probably always must be = 100
+     */
     protected static function getPositionLeverage(?Position $position = null): float
     {
         return 100; // @todo | use $position->positionLeverage ??;

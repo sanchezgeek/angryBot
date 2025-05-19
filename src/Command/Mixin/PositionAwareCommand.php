@@ -36,11 +36,11 @@ trait PositionAwareCommand
         return $position;
     }
 
-    protected function getPositionSide(): Side
+    protected function getPositionSide(bool $required = true): ?Side
     {
         $argName = self::POSITION_SIDE_ARGUMENT_NAME;
         $providedPositionSideValue = $this->paramFetcher->getStringArgument($argName);
-        if (!$positionSide = Side::tryFrom($providedPositionSideValue)) {
+        if (!($positionSide = Side::tryFrom($providedPositionSideValue)) && $required) {
             throw new InvalidArgumentException(
                 sprintf('Invalid $%s provided ("%s" given)', $argName, $providedPositionSideValue),
             );
