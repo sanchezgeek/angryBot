@@ -71,7 +71,7 @@ class ResetActiveFlagCommand extends AbstractCommand
         private readonly ByBitLinearExchangeService $exchangeService,
         PositionServiceInterface $positionService,
         private readonly BuyOrderRepository $repository,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 
