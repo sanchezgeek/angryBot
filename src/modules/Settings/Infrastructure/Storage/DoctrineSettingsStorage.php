@@ -6,24 +6,22 @@ namespace App\Settings\Infrastructure\Storage;
 
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Settings\Application\Service\SettingsCache;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
-use DateInterval;
 use InvalidArgumentException;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
 {
-    private const CACHE_TTL = '1 minute';
+    private const CACHE_TTL = 60;
 
     public function __construct(
         private SettingValueRepository $repository,
-        private CacheInterface $settingsCache,
+        private SettingsCache $settingsCache,
     ) {
     }
 
@@ -40,18 +38,15 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function getSettingStoredValues(AppSettingInterface $setting): array
     {
-        $cacheKey = md5(sprintf('doctrineAllSettingValues_for_%s', $setting->getSettingKey()));
-
-        return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($setting) {
-            $item->expiresAfter(DateInterval::createFromDateString(self::CACHE_TTL));
-
+        $warmup = function () use ($setting) {
             $result = [];
             foreach ($this->repository->findBy(['key' => $setting->getSettingKey()]) as $settingValue) {
                 $result[] = AssignedSettingValueFactory::fromEntity($setting, $settingValue, 'from db');
             }
-
             return $result;
-        });
+        };
+
+        return $this->settingsCache->get(md5(sprintf('doctrineAllSettingValues_for_%s', $setting->getSettingKey())), $warmup, self::CACHE_TTL);
     }
 
     /**

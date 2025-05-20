@@ -6,11 +6,13 @@ namespace App\Tests\Mixin\Settings;
 
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Settings\Application\Service\SettingsCache;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
@@ -85,7 +87,7 @@ trait SettingsAwareTest
         $settingsStorage = $this->createMock(SettingsStorageInterface::class);
 
         $settingsService = new AppSettingsService(
-            new ArrayAdapter(),
+            new SettingsCache(new SymfonyCacheWrapper(new ArrayAdapter())),
             new SymfonyAppErrorLogger($this->createMock(LoggerInterface::class)),
             $settingsStorage,
             [$storedParametersProvider],

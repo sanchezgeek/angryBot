@@ -15,8 +15,6 @@ use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use DateInterval;
 use Exception;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 final class AppSettingsService implements AppSettingsProviderInterface
 {
@@ -84,13 +82,11 @@ final class AppSettingsService implements AppSettingsProviderInterface
             sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
         );
 
-        return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($settingValueAccessor, $required, $ttl) {
-            $item->expiresAfter(DateInterval::createFromDateString($ttl));
-
-            $foundValue = $this->doGet($settingValueAccessor, $required);
-
-            return $foundValue?->value;
-        });
+        return $this->settingsCache->get(
+            $cacheKey,
+            fn () => $this->doGet($settingValueAccessor, $required)?->value,
+            DateInterval::createFromDateString($ttl)
+        );
     }
 
     public function getAllSettingAssignedValuesCollection(AppSettingInterface $setting): AssignedSettingValueCollection
@@ -156,7 +152,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
      * @param iterable<StoredSettingsProviderInterface> $storedValuesProviders
      */
     public function __construct(
-        private readonly CacheInterface $settingsCache,
+        private readonly SettingsCache $settingsCache,
         private readonly AppErrorLoggerInterface $appErrorLogger,
         private readonly SettingsStorageInterface $storage,
         private readonly iterable $storedValuesProviders
