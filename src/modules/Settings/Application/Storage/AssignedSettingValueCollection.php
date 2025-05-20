@@ -21,15 +21,23 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
         $this->values = $values;
     }
 
-    public function isSettingHasFallbackValue(): bool
+    public function getFallbackValueIfPresented(): ?AssignedSettingValue
     {
         foreach ($this->values as $value) {
             if (!$value->symbol && !$value->side) {
-                return true;
+                return $value;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    /**
+     * @return AssignedSettingValue[]
+     */
+    public function getItems(): array
+    {
+        return $this->values;
     }
 
     public function getIterator(): Traversable

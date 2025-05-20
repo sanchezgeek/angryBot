@@ -18,7 +18,7 @@ use Exception;
 
 final class AppSettingsService implements AppSettingsProviderInterface
 {
-    private const CACHE_TTL = '5 minutes';
+    private const CACHE_TTL = 300;
 
     /**
      * @throws Exception
@@ -76,16 +76,12 @@ final class AppSettingsService implements AppSettingsProviderInterface
     {
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;
-
-        $ttl = $setting instanceof SettingCacheTtlAware ? $setting->cacheTtl() : self::CACHE_TTL;
-        $cacheKey = md5(
-            sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
-        );
+        $cacheKey = sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null');
 
         return $this->settingsCache->get(
-            $cacheKey,
+            md5($cacheKey),
             fn () => $this->doGet($settingValueAccessor, $required)?->value,
-            DateInterval::createFromDateString($ttl)
+            $setting instanceof SettingCacheTtlAware ? DateInterval::createFromDateString($setting->cacheTtl()) : self::CACHE_TTL
         );
     }
 
