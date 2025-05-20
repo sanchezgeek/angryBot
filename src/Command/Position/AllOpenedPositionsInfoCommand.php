@@ -20,8 +20,8 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
@@ -103,6 +103,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     /** @var array<Position[]> */
     private array $positions;
+    /** @var float[] */
+    private array $ims;
 
     /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;
@@ -215,6 +217,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
         $this->lastMarkPrices = $positionService->getLastMarkPrices();
+        $this->initializeIms();
+
         $symbols = $this->getOpenedPositionsSymbols();
         $totalUnrealizedPnl = $this->getTotalUnrealizedProfit();
 
@@ -395,7 +399,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-            sprintf('%.1f', $main->initialMargin->value() + $support?->initialMargin->value() ?? 0),
+            sprintf('%.1f', $this->ims[$main->symbol->value]),
         ]);
 
         # PNL%
@@ -641,16 +645,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     public function getSymbolsInitialMarginMap(): array
     {
-        $result = [];
-        foreach ($this->positions as $symbolRaw => $positions) {
-            $im = 0;
-            foreach ($positions as $position) {
-                $im += $position->initialMargin->value();
-            }
-            $result[$symbolRaw] = (string)$im;
-        }
+        return array_map(static fn(float $im) => (string)$im, $this->ims);
+    }
 
-        return $result;
+    public function initializeIms(): void
+    {
+        foreach ($this->positions as $symbolRaw => $positions) {
+            $symbolIm = 0;
+            foreach ($positions as $position) {
+                $k = $position->leverage->value() / 100;
+                $symbolIm += $position->initialMargin->value() * $k;
+            }
+            $this->ims[$symbolRaw] = $symbolIm;
+        }
     }
 
     /**
