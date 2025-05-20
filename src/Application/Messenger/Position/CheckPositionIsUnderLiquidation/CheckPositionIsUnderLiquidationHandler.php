@@ -66,7 +66,6 @@ final class CheckPositionIsUnderLiquidationHandler
 
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
 
-    ### all symbols data
     /** @var Position[] */
     private array $positions;
     /** @var array<string, SymbolPrice> */
@@ -426,7 +425,13 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
-        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(130);
+        $lastPriceCrossingThresholdDefaultCacheTtl = $this->settings->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::LastPriceCrossingThresholdDefaultCacheTtl, $position->symbol, $position->side)
+        );
+
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))
+            ->set($ticker->markPrice)
+            ->expiresAfter($lastPriceCrossingThresholdDefaultCacheTtl);
 
         $this->cache->save($cacheItem);
     }

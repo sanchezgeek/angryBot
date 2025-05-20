@@ -11,6 +11,9 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    #[SettingParametersAttribute(type: SettingType::Integer)]
+    case LastPriceCrossingThresholdDefaultCacheTtl = 'liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl';
+
     #[SettingParametersAttribute(type: SettingType::Float)]
     case CriticalPartOfLiquidationDistance = 'liquidationHandlerSettings.CriticalPartOfLiquidationDistance';
 

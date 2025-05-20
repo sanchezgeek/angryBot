@@ -30,6 +30,7 @@ services:
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
 # Liquidation\Application\Settings\LiquidationHandlerSettings
+                liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.acceptableStoppedPartFallback: 4
