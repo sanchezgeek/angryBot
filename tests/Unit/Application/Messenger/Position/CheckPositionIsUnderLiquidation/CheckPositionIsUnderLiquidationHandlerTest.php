@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
@@ -82,7 +83,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             $this->orderService,
             $this->stopService,
             $this->stopRepository,
-            self::getTestAppErrorsLogger(),
+            self::getContainer()->get(AppErrorLoggerInterface::class),
             null,
             self::getContainerSettingsProvider(),
             self::getContainer()->get(LiquidationDynamicParametersFactory::class),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -136,9 +137,7 @@ final class CheckPositionIsUnderLiquidationHandler
             try {
                 $this->handleMessage($message);
             } catch (Throwable $e) {
-                $this->appErrorLogger->critical(
-                    sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s: %s', $message->symbol->value, $e->getMessage())
-                );
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s', $message->symbol->value));
             }
         }
     }
@@ -202,7 +201,7 @@ final class CheckPositionIsUnderLiquidationHandler
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
                 OutputHelper::print($msg);
-                $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to transfer from spot to contract while process %s', $message->symbol->value));
             }
         }
 
@@ -451,7 +450,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly OrderServiceInterface $orderService,
         private readonly StopServiceInterface $stopService,
         private readonly StopRepositoryInterface $stopRepository,
-        private readonly LoggerInterface $appErrorLogger,
+        private readonly AppErrorLoggerInterface $appErrorLogger,
         private readonly ?CacheInterface $cache,
         private readonly AppSettingsProviderInterface $settings,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
