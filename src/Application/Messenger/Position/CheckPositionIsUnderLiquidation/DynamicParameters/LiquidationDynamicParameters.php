@@ -31,6 +31,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
     private Symbol $symbol;
     private ?float $warningDistance = null;
+    private ?PriceRange $criticalRange = null;
     private ?PriceRange $warningRange = null;
 
     private ?float $additionalStopDistanceWithLiquidation = null;
@@ -118,14 +119,18 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalRange(): PriceRange
     {
-        $criticalDistance = $this->criticalDistance();
-        $liquidationPrice = $this->position->liquidationPrice();
+        if ($this->criticalRange === null) {
+            $criticalDistance = $this->criticalDistance();
+            $liquidationPrice = $this->position->liquidationPrice();
 
-        return PriceRange::create(
-            $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
-            $this->symbol
-        );
+            $this->criticalRange = PriceRange::create(
+                $liquidationPrice,
+                $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+                $this->symbol
+            );
+        }
+
+        return $this->criticalRange;
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
@@ -300,9 +305,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );
 
-        $modifierInitial = ($actualStopsRangeFromAdditionalStop / 100) * $position->liquidationDistance();
+        $modifierInitial = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
         $modifierMax = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
-        $modifierMin = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
+        $modifierMin = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
 
         try {
             $modifier = $modifierInitial;

@@ -29,7 +29,7 @@ class CheckLiquidationParametersBag
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     /**
-     * @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS
+     * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]
      */
     private const CRITICAL_DISTANCE_PNLS = [
         Symbol::BTCUSDT->value => 60,
@@ -242,10 +242,10 @@ class CheckLiquidationParametersBag
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );
 
-        $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
-
-        $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
+        $modifier = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
         $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
+        $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
+
         if ($modifier < $min) {
             $modifier = $min;
         } elseif ($modifier > $max) {

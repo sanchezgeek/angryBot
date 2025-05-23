@@ -109,6 +109,7 @@ enum Symbol: string
     case FTNUSDT = 'FTNUSDT';
     case PAXGUSDT = 'PAXGUSDT';
     case XMRUSDT = 'XMRUSDT';
+    case WCTUSDT = 'WCTUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -198,6 +199,7 @@ enum Symbol: string
         self::FTNUSDT->value => 4,
         self::PAXGUSDT->value => 2,
         self::XMRUSDT->value => 2,
+        self::WCTUSDT->value => 4,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -288,6 +290,7 @@ enum Symbol: string
         self::FTNUSDT->value => 0.1,
         self::PAXGUSDT->value => 0.001,
         self::XMRUSDT->value => 0.01,
+        self::WCTUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [

@@ -15,9 +15,12 @@ use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
+use App\Settings\Application\Storage\AssignedSettingValueCollection;
+use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'settings:show')]
@@ -25,35 +28,50 @@ class ShowSettingsCommand extends AbstractCommand
 {
     use SymbolAwareCommand;
 
+    private const ONLY_OVERRIDES_OPTION = 'only-overrides';
+
     protected function configure(): void
     {
         $this
             ->configureSymbolArgs(defaultValue: null)
+            ->addOption(self::ONLY_OVERRIDES_OPTION, 'o', InputOption::VALUE_NEGATABLE, 'Show only overridden values')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
+        $onlyOverrides = $this->paramFetcher->getBoolOption(self::ONLY_OVERRIDES_OPTION);
 
         $rows = [];
         foreach ($this->settingsLocator->getRegisteredSettingsGroups() as $group) {
-            $rows[] = DataRow::separated([
-                Cell::restColumnsMerged(sprintf('%s', OutputHelper::shortClassName($group)))->addStyle(new CellStyle(fontColor: Color::YELLOW, align: CellAlign::CENTER))
-            ]);
-            $groupCases = $group::cases();
-            foreach ($groupCases as $settKey => $setting) {
+            $groupValuesRows = [];
+            foreach ($groupCases = $group::cases() as $settKey => $setting) {
                 $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);
 
                 if ($symbol) {
                     $values = $values->filterByAccessor(SettingAccessor::withAlternativesAllowed($setting, $symbol));
                 }
 
-                if (!$values->isSettingHasFallbackValue()) {
-                    $rows[] = DataRow::default([$setting->getSettingKey(), Cell::align(CellAlign::CENTER, '---'), Cell::align(CellAlign::CENTER, '---')]);
+                // from initially fetched collection
+                $settingFallbackValue = $values->getFallbackValueIfPresented();
+
+                $valuesToForeach = $onlyOverrides ? array_filter($values->getItems(), static fn(AssignedSettingValue $value) => !$value->isDefault()) : $values;
+                if (!$valuesToForeach) {
+                    continue;
                 }
 
-                foreach ($values as $assignedValue) {
+                if (!$settingFallbackValue) {
+                    $groupValuesRows[] = DataRow::default([$setting->getSettingKey(), Cell::align(CellAlign::CENTER, '---'), Cell::align(CellAlign::CENTER, '---')]);
+                }
+
+                // add removed fallback (default value must be shown)
+                if ($settingFallbackValue && $onlyOverrides && reset($valuesToForeach) != $settingFallbackValue) {
+                    $valuesToForeach = array_merge([$settingFallbackValue], $valuesToForeach);
+                }
+
+                $printedSettingRows = [];
+                foreach ($valuesToForeach as $assignedValue) {
                     $isFallbackValue = $assignedValue->isFallbackValue();
 
                     $fullKey = $assignedValue->fullKey;
@@ -67,7 +85,7 @@ class ShowSettingsCommand extends AbstractCommand
                         $style = CellStyle::right();
                     }
 
-                    $rows[] = DataRow::default(
+                    $printedSettingRows[] = DataRow::default(
                         [
                             Cell::default($settingKey)->addStyle($style),
                             (string)$assignedValue,
@@ -77,9 +95,21 @@ class ShowSettingsCommand extends AbstractCommand
                         ]
                     );
                 }
-                if ($settKey !== array_key_last($groupCases)) {
-                    $rows[] = new SeparatorRow();
+
+                if ($printedSettingRows && $settKey !== array_key_last($groupCases)) {
+                    $printedSettingRows[] = new SeparatorRow();
                 }
+
+                $groupValuesRows = array_merge($groupValuesRows, $printedSettingRows);
+            }
+
+            if ($groupValuesRows) {
+                $groupHeaderCell = Cell::restColumnsMerged(sprintf('%s', OutputHelper::shortClassName($group)))->addStyle(new CellStyle(fontColor: Color::YELLOW, align: CellAlign::CENTER));
+                $groupHeaderRows = [
+                    (!$rows || get_class(end($rows)) !== SeparatorRow::class) ? DataRow::separated([$groupHeaderCell]) : DataRow::default([$groupHeaderCell])
+                ];
+
+                $rows = array_merge($rows, $groupHeaderRows, $groupValuesRows);
             }
         }
 

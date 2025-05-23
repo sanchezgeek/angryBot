@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiquidationHandler;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
@@ -62,7 +63,7 @@ class RemoveStaleStopsTest extends KernelTestCase
             self::getContainer()->get(OrderServiceInterface::class),
             self::getContainer()->get(StopServiceInterface::class),
             self::getContainer()->get(StopRepositoryInterface::class),
-            self::getTestAppErrorsLogger(),
+            self::getContainer()->get(AppErrorLoggerInterface::class),
             null,
             self::getContainerSettingsProvider(),
             $liquidationDynamicParametersFactory

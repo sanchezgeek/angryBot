@@ -78,7 +78,7 @@ class ShowParametersCommand extends AbstractCommand
 
         $constructorInput = [];
         foreach ($arguments['constructorArguments'] as $argumentName) {
-            $constructorInput[$argumentName] = $this->parseInputValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
+            $constructorInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
         }
 
         $methodInput = [];

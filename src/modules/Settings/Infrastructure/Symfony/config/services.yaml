@@ -33,3 +33,12 @@ services:
     _instanceof:
         App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface:
             public: true
+
+    settings.cacheWrapper:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@settings.cache'
+
+    App\Settings\Application\Service\SettingsCache:
+        arguments:
+            $cache: '@settings.cacheWrapper'

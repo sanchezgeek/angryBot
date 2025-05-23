@@ -9,5 +9,5 @@ use Throwable;
 interface AppErrorLoggerInterface
 {
     public function error(string $message, array $data = []): void;
-    public function exception(Throwable $e): void;
+    public function exception(Throwable $e, ?string $additionalInfo = null): void;
 }

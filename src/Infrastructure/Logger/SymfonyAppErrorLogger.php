@@ -18,9 +18,13 @@ readonly class SymfonyAppErrorLogger implements AppErrorLoggerInterface
         $this->logger = $appErrorLogger;
     }
 
-    public function exception(Throwable $e): void
+    public function exception(Throwable $e, ?string $additionalInfo = null): void
     {
-        $message = $e->getMessage();
+        if ($additionalInfo) {
+            $message = sprintf('%s | %s', $additionalInfo, $e->getMessage());
+        } else {
+            $message = $e->getMessage();
+        }
 
         if ($e instanceof LoggableExceptionInterface) {
             $context = $e->data();

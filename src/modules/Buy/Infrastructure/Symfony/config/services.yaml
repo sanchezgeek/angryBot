@@ -3,7 +3,7 @@ framework:
         check_further_position_liquidation_after_buy:
             policy: 'fixed_window'
             limit: 1
-            interval: '45 seconds'
+            interval: '60 seconds'
 
 services:
     _defaults:
