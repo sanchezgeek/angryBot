@@ -12,6 +12,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "3.3.3",
         "guzzlehttp/guzzle": "^7.5",
+        "runtime/frankenphp-symfony": "^0.2.0",
         "scienta/doctrine-json-functions": "*",
         "symfony/cache": "*",
         "symfony/console": "*",
