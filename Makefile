@@ -7,6 +7,8 @@ else
 PHP_CONT := ${DOCKER_COMP} exec php
 endif
 
+API_CONT := ${DOCKER_COMP} exec php_api
+
 # Executables
 PHP      = $(PHP_CONT) php
 COMPOSER = $(PHP_CONT) composer
@@ -55,6 +57,19 @@ logs: ## Show live logs
 
 sh: ## Connect to the PHP FPM container
 	@$(PHP_CONT) sh
+
+api-sh: ## Connect to the API-PHP container
+	@$(API_CONT) bash
+
+run-front:
+	@$(API_CONT) bash -c "bin/console ca:cl"
+	rm -rf ./public/build ./public/assets
+	npm run dev --prefix ./frontend
+
+build-front:
+	npm run build --prefix ./frontend
+	mv ./public/build/assets ./public/admin/assets
+	@$(API_CONT) bash -c "bin/console ca:cl"
 
 ## —— Composer 🧙 ——————————————————————————————————————————————————————————
 composer: ## Run composer, pass the parameter "c=" to run a given command, example: make composer c='req symfony/orm-pack'

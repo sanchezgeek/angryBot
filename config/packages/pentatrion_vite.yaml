@@ -1,0 +1,5 @@
+pentatrion_vite:
+#    public_directory: public/build
+#    build_directory: build
+    throw_on_missing_entry: true
+#    proxy_origin: https://localhost:5173/build/

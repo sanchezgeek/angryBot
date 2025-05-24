@@ -12,6 +12,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "3.3.3",
         "guzzlehttp/guzzle": "^7.5",
+        "pentatrion/vite-bundle": "^8.1",
         "runtime/frankenphp-symfony": "^0.2.0",
         "scienta/doctrine-json-functions": "*",
         "symfony/cache": "*",
@@ -63,6 +64,7 @@
             "App\\Stop\\": "src/modules/Stop",
             "App\\Buy\\": "src/modules/Buy",
             "App\\Profiling\\": "src/modules/Profiling",
+            "App\\Admin\\": "src/modules/Admin",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

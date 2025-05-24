@@ -7,6 +7,7 @@ imports:
     - { resource: ../src/modules/Buy/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Liquidation/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Profiling/Infrastructure/Symfony/config/services.yaml }
+    - { resource: ../src/modules/Admin/Infrastructure/Symfony/config/services.yaml }
 
 # This file is the entry point to configure your own services.
 # Files in the packages/ subdirectory configure your dependencies.

@@ -1,0 +1,12 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Admin\:
+        resource: '../../../'
+
+twig:
+    file_name_pattern: '*.twig'
+    paths:
+        'src/modules/Admin/UI/templates': 'admin'
