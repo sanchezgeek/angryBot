@@ -21,11 +21,6 @@ class SettingValueRepository extends ServiceEntityRepository
         parent::__construct($registry, SettingValue::class);
     }
 
-//    public function getNextId(): int
-//    {
-//        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'setting_value_id_seq\')')->fetchOne();
-//    }
-
     public function save(SettingValue $settingValue): void
     {
         $save = function () use ($settingValue) {

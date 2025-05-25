@@ -1,0 +1,7 @@
+doctrine:
+    orm:
+        mappings:
+            Screener:
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/modules/Screener/Domain/Entity'
+                prefix: 'App\Screener\Domain\Entity'

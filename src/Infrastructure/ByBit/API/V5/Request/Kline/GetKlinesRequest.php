@@ -2,23 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\ByBit\API\V5\Request\Market;
+namespace App\Infrastructure\ByBit\API\V5\Request\Kline;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
-use LogicException;
+use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @see \App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Market\GetTickersRequestTest
  *
- * @link https://bybit-exchange.github.io/docs/v5/market/tickers
+ * @link https://bybit-exchange.github.io/docs/v5/market/kline
  */
-final readonly class GetTickersRequest extends AbstractByBitApiRequest
+final readonly class GetKlinesRequest extends AbstractByBitApiRequest
 {
-    public const URL = '/v5/market/tickers';
+    public const URL = '/v5/market/kline';
 
     public function method(): string
     {
@@ -39,12 +38,17 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
     {
         $data = [
             'category' => $this->category->value,
+            'symbol' => $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol,
+            'interval' => $this->interval,
         ];
 
-        if ($this->symbol) {
-            $data['symbol'] = $this->symbol->value;
-        } else {
-            $data['settleCoin'] = $this->settleCoin->value;
+        if ($this->from && $this->to) {
+            $data['start'] = $this->from->getTimestamp() * 1000;
+            $data['to'] = $this->to->getTimestamp() * 1000;
+        }
+
+        if ($this->limit !== null) {
+            $data['limit'] = $this->limit;
         }
 
         return $data;
@@ -52,15 +56,11 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private ?Symbol $symbol = null,
-        private ?Coin $settleCoin = null
+        private Symbol|string $symbol,
+        private int $interval,
+        private DateTimeImmutable $from,
+        private DateTimeImmutable $to,
+        private ?int $limit = null
     ) {
-        if (!$this->symbol && !$this->settleCoin) {
-            throw new LogicException('When $symbol not specified $settleCoin must be specified instead');
-        }
-
-        if ($this->symbol && $this->settleCoin) {
-            throw new LogicException('When $symbol specified $settleCoin not used');
-        }
     }
 }
