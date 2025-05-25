@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Screener\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -36,10 +35,9 @@ final class PriceChangeDynamicParametersTest extends KernelTestCase
         $expectedPriceChange = $currentPrice * ($expectedPercent / 100);
         $parameters = new PriceChangeDynamicParameters($this->appSettingsProvider);
 
-        self::assertEquals(Percent::notStrict($expectedPercent), $parameters->alarmDeltaPercent($currentPrice));
-        self::assertEquals($expectedPriceChange, $parameters->alarmDelta($currentPrice));
+        self::assertEquals(Percent::notStrict($expectedPercent), $parameters->significantPricePercent($currentPrice, 1));
+        self::assertEquals($expectedPriceChange, $parameters->significantPriceDelta($currentPrice, 1));
     }
-
 
     public function defaultValueCases(): iterable
     {

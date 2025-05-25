@@ -5,8 +5,8 @@ framework:
     rate_limiter:
         price_change_alarm_throttling:
             policy: 'fixed_window'
-            limit: 3
-            interval: '3 hours'
+            limit: 1
+            interval: '1 hour'
 
 services:
     _defaults:

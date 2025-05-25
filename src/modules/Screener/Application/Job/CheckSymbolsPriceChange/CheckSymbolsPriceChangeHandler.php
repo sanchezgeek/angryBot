@@ -4,45 +4,71 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
+use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
+use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Service\SettingAccessor;
 use DateInterval;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 #[AsMessageHandler]
 final class CheckSymbolsPriceChangeHandler
 {
-    private const ALERT_RETRY_COUNT = 3;
+    private const ALERT_RETRY_COUNT = 1;
 
     public function __invoke(CheckSymbolsPriceChange $message): void
     {
-        $date = date_create_immutable()->sub($message->timeIntervalWithPrev ?? new DateInterval('P1D'));
+        if ($this->settings->required(SettingAccessor::exact(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled)) !== true) {
+            return;
+        }
+
+//        $date = date_create_immutable()->sub(new DateInterval(sprintf('P%dD', $message->daysDelta)));
+        $daysDelta = $message->daysDelta;
+        $date = date_create_immutable()->setTime(0, 0);
+        if ($daysDelta) {
+            $date = $date->sub(new DateInterval(sprintf('P%dD', $daysDelta)));
+        }
+
+        $partOfDayPassed = (date_create_immutable()->getTimestamp() - $date->getTimestamp()) / 86400;
 
         $tickers = $this->exchangeService->getAllTickersRaw($message->settleCoin);
         foreach ($tickers as $symbolRaw => $ticker) {
+            if ($this->isSymbolSkipped($symbolRaw)) {
+                continue;
+            }
+
             $currentPrice = $ticker['last'];
             $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbolRaw, $date);
-            $alarmDelta = $this->parameters->alarmDelta($currentPrice, Symbol::tryFrom($symbolRaw));
+            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, Symbol::tryFrom($symbolRaw));
             $delta = abs($prevPrice - $currentPrice);
 
-            if ($delta > $alarmDelta) {
-                if (!$this->priceChangeAlarmThrottlingLimiter->create($symbolRaw)->consume()->isAccepted()) {
+            if ($delta > $significantPriceDelta) {
+                if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbolRaw, $daysDelta))->consume()->isAccepted()) {
                     continue;
                 }
+
                 for ($i = 0; $i < self::ALERT_RETRY_COUNT; $i++) {
-                    $this->appErrorLogger->error(
+                    $changePercent = Percent::fromPart($delta / $prevPrice)->setOutputFloatPrecision(2);
+                    $significantPriceDeltaPercent = Percent::fromPart($significantPriceDelta / $prevPrice)->setOutputFloatPrecision(2);
+
+                    $this->notifications->notify(
                         sprintf(
-                            '%s price = %s, delta with %s (on %s) = %s (greater than %s)',
+                            '%s [daysDelta=%.2f from %s].price=%s, curr.price = %s, Δ = %s (%s) (> %s [%s])',
                             $symbolRaw,
-                            $currentPrice,
-                            $prevPrice,
+                            $partOfDayPassed,
                             $date->format('m-d H:i:s'),
+                            $prevPrice,
+                            $currentPrice,
                             $delta,
-                            $alarmDelta
+                            $changePercent,
+                            $significantPriceDelta,
+                            $significantPriceDeltaPercent
                         )
                     );
                 }
@@ -50,11 +76,17 @@ final class CheckSymbolsPriceChangeHandler
         }
     }
 
+    private function isSymbolSkipped(string $symbol): bool
+    {
+        return $symbol === 'BTCPERP' || str_contains($symbol, 'BTCUSDT-') || str_contains($symbol, 'BTC-');
+    }
+
     public function __construct(
+        private readonly AppSettingsProviderInterface $settings,
         private readonly PriceChangeDynamicParameters $parameters,
         private readonly ByBitLinearExchangeService $exchangeService,
         private readonly PreviousSymbolPriceProvider $previousSymbolPriceManager,
-        private readonly LoggerInterface $appErrorLogger,
+        private readonly AppNotificationLoggerInterface $notifications,
         private readonly RateLimiterFactory $priceChangeAlarmThrottlingLimiter,
     ) {
     }

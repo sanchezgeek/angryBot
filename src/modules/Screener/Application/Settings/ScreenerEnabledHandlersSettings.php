@@ -9,10 +9,10 @@ use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use App\Settings\Domain\Enum\SettingType;
 
-enum PriceChangeSettings: string implements AppSettingInterface, AppSettingsGroupInterface
+enum ScreenerEnabledHandlersSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
-    #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
-    case SignificantDelta_OneDay_PricePercent = 'priceChange.significantDelta.oneDay.pricePercent';
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case SignificantPriceChange_Screener_Enabled = 'screener.significantPriceChange.enabled';
 
     public function getSettingKey(): string
     {

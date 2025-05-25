@@ -137,10 +137,15 @@ final class SchedulerFactory
 
     private function service(): array
     {
+        $priceCheckInterval = 'PT10M';
+
         return [
-            # service
-//            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT10M', AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, new DateInterval('P1D')))),
+            # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
+
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 
