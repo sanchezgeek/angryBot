@@ -2,6 +2,9 @@ imports:
     - { resource: settings.yaml }
     - { resource: doctrine.yaml }
 
+parameters:
+    settings.dump.dir: '%kernel.project_dir%/data/dump/settings'
+
 services:
     _defaults:
         autowire: true
@@ -42,3 +45,7 @@ services:
     App\Settings\Application\Service\SettingsCache:
         arguments:
             $cache: '@settings.cacheWrapper'
+
+    App\Settings\UI\Symfony\Command\Settings\Dump\SettingsDumpRestoreCommand:
+        arguments:
+            $defaultSettingsPath: '%settings.dump.dir%'
