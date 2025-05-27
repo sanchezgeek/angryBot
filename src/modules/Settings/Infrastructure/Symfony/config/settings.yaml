@@ -29,7 +29,7 @@ services:
 # Liquidation\Application\Settings\LiquidationHandlerSettings
                 liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
-                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
+                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '50%'
                 liquidationHandlerSettings.acceptableStoppedPartFallback: 4
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
