@@ -815,11 +815,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
         );
 
-        $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
-        $actualStopsRange = $liquidationParameters->actualStopsRange();
-        $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
-        $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)
-        $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol);
+        $mainPosStopsApplicableRange = null;
+        if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
+            $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
+            $actualStopsRange = $liquidationParameters->actualStopsRange();
+            $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
+            $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)
+            $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol);
+        }
 
         /**
          * @var Stop[] $autoStops
@@ -894,7 +897,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $formatter($stoppedPartPct, count($stops), $firstStopDistancePnlPct, $firstStopDistanceColor);
     }
 
-    private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, PriceRange $mainPosStopsApplicableRange): bool
+    private static function isMainPositionStopNotLyingInsideApplicableRange(Stop $stop, Position $position, ?PriceRange $mainPosStopsApplicableRange = null): bool
     {
         if (!$position->isPositionWithoutHedge() && !$position->isMainPosition()) {
             return false;
