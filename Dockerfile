@@ -35,6 +35,7 @@ RUN apk add --no-cache \
 		gettext \
 		git \
 		supervisor \
+		bash \
 	;
 
 RUN set -eux; \
@@ -122,4 +123,3 @@ RUN rm "$PHP_INI_DIR/conf.d/app.prod.ini"; \
 #RUN set -eux; install-php-extensions xdebug
 
 RUN rm -f .env.local.php
-
