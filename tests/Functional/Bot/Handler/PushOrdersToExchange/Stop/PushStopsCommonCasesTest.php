@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 use App\Application\EventListener\Stop\CreateOppositeBuyOrdersListener;
 use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
@@ -24,6 +23,8 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -71,7 +72,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
 
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
-    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
+    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
+    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
 
     protected function setUp(): void
     {
@@ -94,6 +96,9 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         array $stopsExpectedAfterHandle,
         array $buyOrdersExpectedAfterHandle,
     ): void {
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
+
         $this->haveTicker($ticker);
         $this->havePosition($position->symbol, $position);
         $this->expectsToMakeApiCalls(...$expectedMarketBuyApiCalls);

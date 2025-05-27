@@ -20,13 +20,13 @@ class CheckMessagesCommand extends Command
 
         $connection = $this->entityManager->getConnection();
 
-        $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetch();
+        $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetchAssociative();
 
         $count = (int) $result['count'];
         $output->writeln(sprintf('count: %d', $count));
 
         if ($count && $io->ask('remove?')) {
-            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1')->fetch();
+            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1');
         }
 
         return Command::SUCCESS;

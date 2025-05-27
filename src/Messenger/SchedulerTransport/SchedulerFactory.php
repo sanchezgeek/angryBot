@@ -22,9 +22,11 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
+use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
+use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
@@ -40,20 +42,20 @@ use function sprintf;
  */
 final class SchedulerFactory
 {
-    private const VERY_FAST = '700 milliseconds';
-    private const FAST = '1 second';
-    private const MEDIUM = '1200 milliseconds';
-    private const SLOW = '2 seconds';
-    private const MEDIUM_SLOW = '3 seconds';
-    private const VERY_SLOW = '4 seconds';
-    private const VERY_VERY_SLOW = '8 seconds';
+    private const string VERY_FAST = '700 milliseconds';
+    private const string FAST = '1 second';
+    private const string MEDIUM = '1200 milliseconds';
+    private const string SLOW = '2 seconds';
+    private const string MEDIUM_SLOW = '3 seconds';
+    private const string VERY_SLOW = '4 seconds';
+    private const string VERY_VERY_SLOW = '8 seconds';
 
-    private const PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
+    private const string PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
 
-    private const PUSH_MAIN_POSITIONS_SL_SPEED = self::VERY_SLOW;
-    private const PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
+    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::MEDIUM_SLOW;
+    private const string PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
 
-    private const DEDICATED_SYMBOL_SL_SPEED = self::VERY_SLOW;
+    private const string DEDICATED_SYMBOL_SL_SPEED = self::VERY_SLOW;
 
     private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
 //    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
@@ -135,9 +137,15 @@ final class SchedulerFactory
 
     private function service(): array
     {
+        $priceCheckInterval = 'PT10M';
+
         return [
-            # service
-//            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
+            # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
+
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 

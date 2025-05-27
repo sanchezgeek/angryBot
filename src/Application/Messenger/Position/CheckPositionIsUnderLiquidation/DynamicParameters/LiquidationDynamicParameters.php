@@ -30,6 +30,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     private Symbol $symbol;
+    private ?float $warningDistanceRaw = null;
     private ?float $warningDistance = null;
     private ?PriceRange $criticalRange = null;
     private ?PriceRange $warningRange = null;
@@ -163,27 +164,37 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function warningDistance(): float
+    {// @todo | performance | settings | slow cache or db? or foreach // $start = OutputHelper::currentTimePoint();
+        if ($this->warningDistance !== null) {
+            return $this->warningDistance;
+        }
+
+        if ($this->position->isLiquidationPlacedBeforeEntry()) { # worst scenario
+            $this->warningDistance =
+                $this->warningDistanceRaw();
+        } else {
+            $this->warningDistance = max(
+                $this->warningDistanceRaw(),
+                new Percent($this->criticalPartOfLiquidationDistance())->of($this->position->liquidationDistance())
+            );
+        }
+
+        return $this->warningDistance;
+    }
+
+    #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function warningDistanceRaw(): float
     {
-        // @todo | performance | settings | slow cache or db? or foreach
-//            $start = OutputHelper::currentTimePoint();
-        if ($this->warningDistance === null) {
+        if ($this->warningDistanceRaw === null) {
             if ($this->handledMessage?->warningPnlDistance && !AppContext::isTest()) {
                 throw new RuntimeException('Specifying of warningPnlDistance allowed only in test environment');
             }
 
             $priceToCalcAbsoluteDistance = $this->ticker->markPrice;
-            $warningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->warningDistancePnlPercent(), $priceToCalcAbsoluteDistance);
-
-            if (!$this->position->isLiquidationPlacedBeforeEntry()) { # normal scenario
-                $this->warningDistance = max($warningDistance, (new Percent($this->criticalPartOfLiquidationDistance()))->of($this->position->liquidationDistance()));
-            } else { # bad scenario
-                $this->warningDistance = $warningDistance;
-            }
+            $this->warningDistanceRaw = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->warningDistancePnlPercent(), $priceToCalcAbsoluteDistance);
         }
-//        OutputHelper::print($this->symbol->value);
-//        OutputHelper::printTimeDiff($start);
 
-        return $this->warningDistance;
+        return $this->warningDistanceRaw;
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]

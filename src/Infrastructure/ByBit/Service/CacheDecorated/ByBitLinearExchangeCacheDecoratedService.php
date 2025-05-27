@@ -27,9 +27,10 @@ use Symfony\Contracts\Cache\CacheInterface;
 
 final readonly class ByBitLinearExchangeCacheDecoratedService implements ExchangeServiceInterface, TickersCache
 {
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
+    private const string DEFAULT_TICKER_TTL = '1000 milliseconds';
 
-    private const DEFAULT_TICKER_TTL = '1000 milliseconds';
+    private ?CacheInterface $externalCache;
 
     /**
      * @param ByBitLinearExchangeService $exchangeService
@@ -39,8 +40,13 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
         private CacheInterface $localCache,
-        private mixed $externalCache = null # mixed - to not autowire in test env (@see services_test.yaml)
+        ?CacheInterface $externalCache = null  # mixed - to not autowire in test env (@see services_test.yaml)
     ) {
+        if (AppContext::isExternalTickersCacheEnabled()) {
+            $this->externalCache = $externalCache;
+        } else {
+            $this->externalCache = null;
+        }
     }
 
     /**
@@ -140,11 +146,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private function getTickerCacheItemFromExternalCache(Symbol $symbol): ?CacheItem
     {
-        if ($this->externalCache) {
-            return $this->externalCache->getItem($this->tickerCacheKey($symbol));
-        }
-
-        return null;
+        return $this->externalCache?->getItem($this->tickerCacheKey($symbol));
     }
 
     private static function thisAccName(): string

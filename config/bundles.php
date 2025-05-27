@@ -8,8 +8,10 @@ return [
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
     Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
     Pentatrion\ViteBundle\PentatrionViteBundle::class => ['all' => true],
-//    App\Profiling\ProfilingModule::class => ['all' => true],
+
+    App\Profiling\ProfilingModule::class => ['all' => true],
     App\Alarm\AlarmModule::class => ['all' => true],
+    App\Screener\ScreenerModule::class => ['all' => true],
     App\Bot\BotBundle::class => ['all' => true],
     App\Stop\StopModule::class => ['all' => true],
     App\Liquidation\LiquidationModule::class => ['all' => true],

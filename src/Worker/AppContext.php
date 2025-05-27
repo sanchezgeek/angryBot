@@ -86,4 +86,9 @@ final class AppContext
     {
         return (bool)($_ENV['HAS_PERMISSION_TO_FUND_BALANCE'] ?? null) === true;
     }
+
+    public static function isExternalTickersCacheEnabled(): bool
+    {
+        return (bool)($_ENV['EXTERNAL_TICKERS_CACHE_ENABLED'] ?? null) === true;
+    }
 }

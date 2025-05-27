@@ -9,5 +9,6 @@ make build ENV_BUILD_FILEPATH=${1:-.env.build}
 make start
 make composer "c=install"
 make sf c="d:m:m -n"
+make sf c="settings:dump:restore --auto"
 make refresh
 make restart
