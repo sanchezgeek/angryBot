@@ -2,6 +2,7 @@
 
 namespace App\Command\Position;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -30,7 +31,6 @@ use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\SeparatorRow;
@@ -40,7 +40,6 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\Settings\Application\Service\SettingAccessor;
 use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -816,19 +815,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
         );
 
-        $criticalPartOfLiquidationDistance = $this->settings->required(SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalPartOfLiquidationDistance, $symbol, $positionSide));
-
-        // @todo | AllOpenedPositionsInfoCommand | when liquidation placed before entry
-
-        $modifier = (new Percent($criticalPartOfLiquidationDistance))->of($position->liquidationDistance());
-        try {
-            $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
-        } catch (Exception $e) {
-            // @todo | AllOpenedPositionsInfoCommand | research error
-            OutputHelper::print($e->getMessage());
-            $bound = 0;
-        }
-        $mainPosStopsApplicableRange = PriceRange::create($markPrice, $bound, $symbol);
+        $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
+        $actualStopsRange = $liquidationParameters->actualStopsRange();
+        $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
+        $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)
+        $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol);
 
         /**
          * @var Stop[] $autoStops
