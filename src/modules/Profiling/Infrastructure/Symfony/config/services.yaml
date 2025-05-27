@@ -1,0 +1,12 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Profiling\:
+        resource: '../../../'
+        exclude: '../../../SDK'
+
+    App\Profiling\Application\Storage\ProfilingPointStorage:
+        arguments:
+            $filePath: '%kernel.project_dir%/data/profiling/time-points.json'

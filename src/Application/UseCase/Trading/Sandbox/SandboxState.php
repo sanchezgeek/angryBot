@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
+use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
+use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use InvalidArgumentException;
 
 use function array_values;
@@ -27,12 +32,11 @@ class SandboxState implements SandboxStateInterface
     /** @var Position[] */
     private array $positions = [];
     public readonly Symbol $symbol;
-    private Price $lastPrice;
+    private SymbolPrice $lastPrice;
 
+    public ContractBalance $contractBalance;
     private CoinAmount $freeBalance;
     private CoinAmount $fundsAvailableForLiquidation;
-
-//    public ContractBalance $contractBalance;
 
     public function __construct(
         Ticker $ticker,
@@ -40,7 +44,7 @@ class SandboxState implements SandboxStateInterface
         CoinAmount $fundsAvailableForLiquidation,
         Position ...$positions
     ) {
-//        $this->contractBalance = $contractBalance;
+        $this->contractBalance = $contractBalance;
 
         $this->symbol = $ticker->symbol;
         $this->setLastPrice($ticker->lastPrice);
@@ -122,10 +126,31 @@ class SandboxState implements SandboxStateInterface
         }
     }
 
-    public function modifyFreeBalance(CoinAmount|float $amount): self
+    public function addFreeBalance(CoinAmount|float $amount): self
     {
         $this->freeBalance = $this->freeBalance->add($amount);
+        // @todo | sandbox | research impact on balance
         $this->fundsAvailableForLiquidation = $this->fundsAvailableForLiquidation->add($amount);
+        return $this;
+    }
+
+    public function subFreeBalance(CoinAmount|float $amount): self
+    {
+        $this->freeBalance = $this->freeBalance->sub($amount);
+        // @todo | sandbox | research impact on balance
+        $this->fundsAvailableForLiquidation = $this->fundsAvailableForLiquidation->sub($amount);
+        return $this;
+    }
+
+    public function getContractBalance(): ContractBalance
+    {
+        return $this->contractBalance;
+    }
+
+    public function setContractBalance(ContractBalance $contractBalance): self
+    {
+        $this->contractBalance = $contractBalance;
+
         return $this;
     }
 
@@ -139,8 +164,12 @@ class SandboxState implements SandboxStateInterface
         return $this->fundsAvailableForLiquidation;
     }
 
+    /**
+     * @todo | sandbox | get rid of SandboxState::getAvailableBalance or replace logic based on SandboxState::contractBalance
+     */
     public function getAvailableBalance(): CoinAmount
     {
+        // @todo | sandbox | add unrealizedPNL (isUTA)
         $lastPrice = $this->lastPrice;
 
         try {
@@ -164,9 +193,9 @@ class SandboxState implements SandboxStateInterface
         return new CoinAmount($this->freeBalance->coin(), $available);
     }
 
-    public function setLastPrice(Price|float $price): self
+    public function setLastPrice(SymbolPrice|float $price): self
     {
-        $this->lastPrice = $this->symbol->makePrice(Price::toFloat($price));
+        $this->lastPrice = $this->symbol->makePrice(SymbolPrice::toFloat($price));
 
         return $this;
     }

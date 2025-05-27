@@ -21,6 +21,11 @@ final readonly class LiquidationDynamicParametersFactory implements LiquidationD
         Position $position,
         Ticker $ticker,
     ): LiquidationDynamicParameters {
-        return new LiquidationDynamicParameters($this->settingsProvider, $handledMessage, $position, $ticker);
+        return new LiquidationDynamicParameters(
+            settingsProvider: $this->settingsProvider,
+            position: $position,
+            ticker: $ticker,
+            handledMessage: $handledMessage
+        );
     }
 }

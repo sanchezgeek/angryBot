@@ -11,7 +11,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Helper\Json;
 use App\Infrastructure\Cache\TickersCache;
@@ -99,7 +99,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         $markPrice = (float)$data['result'][0]['mark_price'];
         $indexPrice = (float)$data['result'][0]['index_price'];
 
-        $ticker = new Ticker($symbol, Price::float($markPrice), Price::float($indexPrice), Price::float($lastPrice));
+        $ticker = new Ticker($symbol, $markPrice, $indexPrice, $lastPrice);
 
         $this->events->dispatch(new TickerUpdated($ticker));
 

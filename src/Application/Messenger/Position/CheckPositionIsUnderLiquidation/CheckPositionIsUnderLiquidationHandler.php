@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
@@ -20,7 +21,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -66,10 +67,9 @@ final class CheckPositionIsUnderLiquidationHandler
 
     public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
 
-    ### all symbols data
     /** @var Position[] */
     private array $positions;
-    /** @var array<string, Price> */
+    /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;
     /** @var ActiveStopOrder[] */
     private array $activeConditionalStopOrders;
@@ -137,9 +137,7 @@ final class CheckPositionIsUnderLiquidationHandler
             try {
                 $this->handleMessage($message);
             } catch (Throwable $e) {
-                $this->appErrorLogger->critical(
-                    sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s: %s', $message->symbol->value, $e->getMessage())
-                );
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s', $message->symbol->value));
             }
         }
     }
@@ -203,7 +201,7 @@ final class CheckPositionIsUnderLiquidationHandler
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
                 OutputHelper::print($msg);
-                $this->appErrorLogger->critical($msg, ['file' => __FILE__, 'line' => __LINE__]);
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to transfer from spot to contract while process %s', $message->symbol->value));
             }
         }
 
@@ -406,7 +404,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
-    private function getLastRunMarkPrice(Position $position): ?Price
+    private function getLastRunMarkPrice(Position $position): ?SymbolPrice
     {
         if ($this->cache === null) {
             return null;
@@ -426,7 +424,13 @@ final class CheckPositionIsUnderLiquidationHandler
             return;
         }
 
-        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))->set($ticker->markPrice)->expiresAfter(130);
+        $lastPriceCrossingThresholdDefaultCacheTtl = $this->settings->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::LastPriceCrossingThresholdDefaultCacheTtl, $position->symbol, $position->side)
+        );
+
+        $cacheItem = $this->cache->getItem(self::lastRunMarkPriceCacheKey($position))
+            ->set($ticker->markPrice)
+            ->expiresAfter($lastPriceCrossingThresholdDefaultCacheTtl);
 
         $this->cache->save($cacheItem);
     }
@@ -446,7 +450,7 @@ final class CheckPositionIsUnderLiquidationHandler
         private readonly OrderServiceInterface $orderService,
         private readonly StopServiceInterface $stopService,
         private readonly StopRepositoryInterface $stopRepository,
-        private readonly LoggerInterface $appErrorLogger,
+        private readonly AppErrorLoggerInterface $appErrorLogger,
         private readonly ?CacheInterface $cache,
         private readonly AppSettingsProviderInterface $settings,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,

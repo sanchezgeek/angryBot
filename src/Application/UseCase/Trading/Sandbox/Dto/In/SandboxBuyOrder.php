@@ -11,7 +11,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use Stringable;
 
 use function sprintf;
@@ -27,16 +27,16 @@ readonly class SandboxBuyOrder implements Stringable, VolumeSignAwareInterface, 
     ) {
     }
 
-    public static function fromBuyOrder(BuyOrder $buyOrder, Price|float $withPrice = null): self
+    public static function fromBuyOrder(BuyOrder $buyOrder, SymbolPrice|float $withPrice = null): self
     {
-        $withPrice = $withPrice === null ? $buyOrder->getPrice() : Price::toFloat($withPrice);
+        $withPrice = $withPrice === null ? $buyOrder->getPrice() : SymbolPrice::toFloat($withPrice);
 
         return new self($buyOrder->getSymbol(), $buyOrder->getPositionSide(), $withPrice, $buyOrder->getVolume(), $buyOrder);
     }
 
-    public static function fromMarketBuyEntryDto(MarketBuyEntryDto $marketBuyDto, Price $price): self
+    public static function fromMarketBuyEntryDto(MarketBuyEntryDto $marketBuyDto, SymbolPrice $price): self
     {
-        return new self($marketBuyDto->symbol, $marketBuyDto->positionSide, Price::toFloat($price), $marketBuyDto->volume, $marketBuyDto?->sourceBuyOrder);
+        return new self($marketBuyDto->symbol, $marketBuyDto->positionSide, SymbolPrice::toFloat($price), $marketBuyDto->volume, $marketBuyDto?->sourceBuyOrder);
     }
 
     public function desc(): string

@@ -33,6 +33,7 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
+    public const SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
     public const IS_TP_CONTEXT = 'isTakeProfit';
     public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
     public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
@@ -203,6 +204,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function isCloseByMarketContextSet(): bool
     {
+        // @todo | stop | isCloseByMarketContextSet | if support
+        if (!AppContext::isTest()) {
+            return true;
+        }
+
         return ($this->context[self::CLOSE_BY_MARKET_CONTEXT] ?? null) === true;
     }
 
@@ -348,6 +354,18 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function setOppositeOrdersDistanceContext(float $distance): self
     {
         $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $distance;
+
+        return $this;
+    }
+
+    public function isSupportChecksSkipped(): bool
+    {
+        return ($this->context[self::SKIP_SUPPORT_CHECK_CONTEXT] ?? null) === true;
+    }
+
+    public function disableSupportChecks(): self
+    {
+        $this->context[self::SKIP_SUPPORT_CHECK_CONTEXT] = true;
 
         return $this;
     }

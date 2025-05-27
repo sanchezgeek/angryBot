@@ -20,8 +20,8 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
@@ -69,6 +69,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const WITH_SAVED_SORT_OPTION = 'sorted';
     private const USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
+    private const USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
     private const SAVE_SORT_OPTION = 'save-sort';
     private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
     private const MOVE_UP_OPTION = 'move-up';
@@ -102,8 +103,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     /** @var array<Position[]> */
     private array $positions;
+    /** @var float[] */
+    private array $ims;
 
-    /** @var array<string, Price> */
+    /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;
 
     private bool $currentSortSaved = false;
@@ -214,6 +217,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
         $this->lastMarkPrices = $positionService->getLastMarkPrices();
+        $this->initializeIms();
+
         $symbols = $this->getOpenedPositionsSymbols();
         $totalUnrealizedPnl = $this->getTotalUnrealizedProfit();
 
@@ -394,7 +399,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-            sprintf('%.1f', $main->initialMargin->value() + $support?->initialMargin->value() ?? 0),
+            sprintf('%.1f', $this->ims[$main->symbol->value]),
         ]);
 
         # PNL%
@@ -640,16 +645,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     public function getSymbolsInitialMarginMap(): array
     {
-        $result = [];
-        foreach ($this->positions as $symbolRaw => $positions) {
-            $im = 0;
-            foreach ($positions as $position) {
-                $im += $position->initialMargin->value();
-            }
-            $result[$symbolRaw] = (string)$im;
-        }
+        return array_map(static fn(float $im) => (string)$im, $this->ims);
+    }
 
-        return $result;
+    public function initializeIms(): void
+    {
+        foreach ($this->positions as $symbolRaw => $positions) {
+            $symbolIm = 0;
+            foreach ($positions as $position) {
+                $k = $position->leverage->value() / 100;
+                $symbolIm += $position->initialMargin->value() * $k;
+            }
+            $this->ims[$symbolRaw] = $symbolIm;
+        }
     }
 
     /**
@@ -809,10 +817,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         );
 
         $criticalPartOfLiquidationDistance = $this->settings->required(SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalPartOfLiquidationDistance, $symbol, $positionSide));
+
+        // @todo | AllOpenedPositionsInfoCommand | when liquidation placed before entry
+
         $modifier = (new Percent($criticalPartOfLiquidationDistance))->of($position->liquidationDistance());
         try {
             $bound = $position->isShort() ? $position->liquidationPrice()->sub($modifier) : $position->liquidationPrice()->add($modifier);
         } catch (Exception $e) {
+            // @todo | AllOpenedPositionsInfoCommand | research error
+            OutputHelper::print($e->getMessage());
             $bound = 0;
         }
         $mainPosStopsApplicableRange = PriceRange::create($markPrice, $bound, $symbol);
@@ -854,7 +867,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private static function getStopsCollectionInfo(
         array $stops,
         Position $position,
-        Price $markPrice,
+        SymbolPrice $markPrice,
         callable $formatter,
     ): string {
         $symbol = $position->symbol;

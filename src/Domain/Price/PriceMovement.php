@@ -18,28 +18,28 @@ use function abs;
  */
 readonly class PriceMovement
 {
-    private function __construct(private Price $fromPrice, private Price $toTargetPrice)
+    private function __construct(private SymbolPrice $fromPrice, private SymbolPrice $toTargetPrice)
     {
     }
 
-    public static function fromToTarget(Price $fromPrice, Price $toTargetPrice): self
+    public static function fromToTarget(SymbolPrice $fromPrice, SymbolPrice $toTargetPrice): self
     {
         return new self($fromPrice, $toTargetPrice);
     }
 
     public function absDelta(): float
     {
-        return FloatHelper::round(abs(Price::toFloat($this->fromPrice) - Price::toFloat($this->toTargetPrice)), $this->fromPrice->precision);
+        return FloatHelper::round(abs($this->fromPrice->value() - $this->toTargetPrice->value()), $this->fromPrice->symbol->pricePrecision());
     }
 
     public function deltaForPositionProfit(Side $positionSide): float
     {
         $delta = $positionSide->isShort()
-            ? Price::toFloat($this->fromPrice) - Price::toFloat($this->toTargetPrice)
-            : Price::toFloat($this->toTargetPrice) - Price::toFloat($this->fromPrice)
+            ? SymbolPrice::toFloat($this->fromPrice) - SymbolPrice::toFloat($this->toTargetPrice)
+            : SymbolPrice::toFloat($this->toTargetPrice) - SymbolPrice::toFloat($this->fromPrice)
         ;
 
-        return FloatHelper::round($delta, $this->fromPrice->precision);
+        return FloatHelper::round($delta, $this->fromPrice->symbol->pricePrecision());
     }
 
     public function deltaForPositionLoss(Side $positionSide): float
@@ -47,7 +47,7 @@ readonly class PriceMovement
         return -$this->deltaForPositionProfit($positionSide);
     }
 
-    public function absPercentDelta(float|Price $forPrice = null): Percent
+    public function absPercentDelta(float|SymbolPrice $forPrice = null): Percent
     {
         $forPrice ??= $this->fromPrice;
         $delta = $this->absDelta();
@@ -55,7 +55,7 @@ readonly class PriceMovement
         return PnlHelper::convertAbsDeltaToPnlPercentOnPrice($delta, $forPrice);
     }
 
-    public function percentDeltaForPositionProfit(Side $relativeToPositionSide, float|Price $price = null): Percent
+    public function percentDeltaForPositionProfit(Side $relativeToPositionSide, float|SymbolPrice $price = null): Percent
     {
         $price ??= $this->fromPrice;
 
@@ -66,7 +66,7 @@ readonly class PriceMovement
     /**
      * If, e.g., need to get "+" in case of movement to position losses. Good example in StopInfoCommand (in sense increasing of liquidation)
      */
-    public function percentDeltaForPositionLoss(Side $relativeToPositionSide, float|Price $price = null): Percent
+    public function percentDeltaForPositionLoss(Side $relativeToPositionSide, float|SymbolPrice $price = null): Percent
     {
         $price ??= $this->fromPrice;
 

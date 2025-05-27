@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Liquidation\Domain\Assert;
 
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 /**
  * @see \App\Tests\Unit\Modules\Liquidation\Domain\LiquidationIsSafeAssertionTest
@@ -15,8 +15,8 @@ final class LiquidationIsSafeAssertion
 {
     public static function assert(
         Side $positionSide,
-        Price $liquidationPrice,
-        Price $withPrice,
+        SymbolPrice $liquidationPrice,
+        SymbolPrice $withPrice,
         float $safeDistance,
     ): bool {
         if ($positionSide->isShort()) {

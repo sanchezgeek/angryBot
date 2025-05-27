@@ -6,7 +6,10 @@ namespace App\Domain\Stop;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use Exception;
 use IteratorAggregate;
 use LogicException;
 
@@ -14,7 +17,6 @@ use function array_filter;
 use function array_key_first;
 use function array_map;
 use function array_sum;
-use function array_values;
 use function sprintf;
 
 /**
@@ -59,6 +61,14 @@ final class StopsCollection implements IteratorAggregate
     public function has(int $id): bool
     {
         return isset($this->items[$id]);
+    }
+
+    /**
+     * @return Stop[]
+     */
+    public function getItems(): array
+    {
+        return $this->items;
     }
 
     public function getIterator(): \Generator
@@ -136,6 +146,20 @@ final class StopsCollection implements IteratorAggregate
         }
 
         return $stops;
+    }
+
+    public function grabBySymbolAndSide(Symbol $symbol, ?Side $side = null): array
+    {
+        return array_filter($this->items, static fn(Stop $stop) => $stop->getSymbol() === $symbol && (!$side || $stop->getPositionSide() === $side));
+    }
+
+    public function getOneById(int $id): Stop
+    {
+        if (!$stop = $this->items[$id] ?? null) {
+            throw new Exception(sprintf('Cannot find stop by id=%d', $id));
+        }
+
+        return $stop;
     }
 
     private function getItemsPrices(): array

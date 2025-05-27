@@ -8,14 +8,14 @@ use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 interface StopServiceInterface
 {
     public function create(
         Symbol $symbol,
         Side $positionSide,
-        Price|float $price,
+        SymbolPrice|float $price,
         float $volume,
         ?float $triggerDelta = null,
         array $context = [],

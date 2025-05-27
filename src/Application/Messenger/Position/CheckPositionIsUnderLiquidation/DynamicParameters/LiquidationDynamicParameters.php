@@ -9,11 +9,12 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
@@ -26,28 +27,29 @@ use RuntimeException;
 
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface
 {
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     private Symbol $symbol;
     private ?float $warningDistance = null;
+    private ?PriceRange $criticalRange = null;
     private ?PriceRange $warningRange = null;
 
     private ?float $additionalStopDistanceWithLiquidation = null;
-    private ?Price $additionalStopPrice = null;
+    private ?SymbolPrice $additionalStopPrice = null;
     private ?PriceRange $actualStopsPriceRange = null;
 
     public function __construct(
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::SettingsProvider, skipUserInput: true)]
         private readonly AppSettingsProviderInterface $settingsProvider,
 
-        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
-        private readonly CheckPositionIsUnderLiquidation $handledMessage,
-
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPositionState, skipUserInput: true)]
         private readonly Position $position,
 
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentTicker, skipUserInput: true)]
         private readonly Ticker $ticker,
+
+        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
+        private readonly ?CheckPositionIsUnderLiquidation $handledMessage = null,
     ) {
         if ($this->ticker->symbol !== $this->position->symbol) {
             throw new LogicException('Something wrong');
@@ -67,24 +69,23 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function checkStopsOnDistance(): float
     {
-        $message = $this->handledMessage;
         $ticker = $this->ticker;
 
-        if ($message->checkStopsOnPnlPercent !== null) {
-            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($message->checkStopsOnPnlPercent, $ticker->markPrice);
+        if ($override = $this->handledMessage?->checkStopsOnPnlPercent) {
+            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($override, $ticker->markPrice);
         }
 
-        return $ticker->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
+        return $this->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
     }
 
 //    #[AppDynamicParameter(group: 'liquidation-handler')]
     public function additionalStopTriggerDelta(): float
     {
-        return FloatHelper::modify($this->position->symbol->stopDefaultTriggerDelta() * 3, 0.1);
+        return FloatHelper::modify($this->symbol->stopDefaultTriggerDelta() * 3, 0.1);
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
-    public function additionalStopPrice(): Price
+    public function additionalStopPrice(): SymbolPrice
     {
         if ($this->additionalStopPrice !== null) {
             return $this->additionalStopPrice;
@@ -118,13 +119,18 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalRange(): PriceRange
     {
-        $criticalDistance = $this->criticalDistance();
-        $liquidationPrice = $this->position->liquidationPrice();
+        if ($this->criticalRange === null) {
+            $criticalDistance = $this->criticalDistance();
+            $liquidationPrice = $this->position->liquidationPrice();
 
-        return PriceRange::create(
-            $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
-        );
+            $this->criticalRange = PriceRange::create(
+                $liquidationPrice,
+                $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+                $this->symbol
+            );
+        }
+
+        return $this->criticalRange;
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
@@ -136,7 +142,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             $this->warningRange = PriceRange::create(
                 $liquidationPrice,
-                $this->position->isShort() ? $liquidationPrice->sub($warningDistance) : $liquidationPrice->add($warningDistance)
+                $this->position->isShort() ? $liquidationPrice->sub($warningDistance) : $liquidationPrice->add($warningDistance),
+                $this->symbol
             );
         }
 
@@ -147,7 +154,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     public function warningDistancePnlPercent(): float
     {
         return max(
-            $this->handledMessage->warningPnlDistance ?? $this->settingsProvider->required(
+            $this->handledMessage?->warningPnlDistance ?? $this->settingsProvider->required(
                 SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnl, $this->symbol, $this->position->side)
             ),
             $this->criticalDistancePnl() // foolproof
@@ -157,8 +164,10 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function warningDistance(): float
     {
+        // @todo | performance | settings | slow cache or db? or foreach
+//            $start = OutputHelper::currentTimePoint();
         if ($this->warningDistance === null) {
-            if ($this->handledMessage->warningPnlDistance && !AppContext::isTest()) {
+            if ($this->handledMessage?->warningPnlDistance && !AppContext::isTest()) {
                 throw new RuntimeException('Specifying of warningPnlDistance allowed only in test environment');
             }
 
@@ -171,6 +180,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 $this->warningDistance = $warningDistance;
             }
         }
+//        OutputHelper::print($this->symbol->value);
+//        OutputHelper::printTimeDiff($start);
 
         return $this->warningDistance;
     }
@@ -178,7 +189,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalPartOfLiquidationDistance(): float|int
     {
-        return $this->handledMessage->criticalPartOfLiquidationDistance ?? $this->settingsProvider->required(
+        return $this->handledMessage?->criticalPartOfLiquidationDistance ?? $this->settingsProvider->required(
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::CriticalPartOfLiquidationDistance, $this->symbol, $this->position->side)
         );
     }
@@ -186,8 +197,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function percentOfLiquidationDistanceToAddStop(): Percent
     {
-        if ($this->handledMessage->percentOfLiquidationDistanceToAddStop) {
-            return new Percent($this->handledMessage->percentOfLiquidationDistanceToAddStop, false);
+        if ($override = $this->handledMessage?->percentOfLiquidationDistanceToAddStop) {
+            return new Percent($override, false);
         }
 
         return $this->settingsProvider->required(
@@ -236,8 +247,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function acceptableStoppedPart(): float
     {
-        if ($this->handledMessage->acceptableStoppedPart) {
-            return $this->handledMessage->acceptableStoppedPart;
+        if ($override = $this->handledMessage?->acceptableStoppedPart) {
+            return $override;
         }
 
         $ticker = $this->ticker;
@@ -247,7 +258,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         if ($position->isPositionInLoss($ticker->markPrice)) {
             $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
             $initialDistanceWithLiquidation = $position->liquidationDistance();
-            $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+            $distanceLeftInPercent = ($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation) * 100;
             $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
             $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
@@ -265,7 +276,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         } elseif ($distanceWithLiquidation <= $this->warningDistance()) {
             $additionalStopDistanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
             $initialDistanceWithLiquidation = $this->warningDistance();
-            $distanceLeftInPercent = Percent::fromPart($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation)->value();
+            $distanceLeftInPercent = ($additionalStopDistanceWithLiquidation / $initialDistanceWithLiquidation) * 100;
             $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
             $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
@@ -294,28 +305,20 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );
 
-        try {
-            // @todo | performance | rid of Percent if can
-            $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
+        $modifierInitial = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
+        $modifierMax = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
+        $modifierMin = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
 
-            $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
-            $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
-            if ($modifier < $min) {
-                $modifier = $min;
-            } elseif ($modifier > $max) {
-                $modifier = $max;
+        try {
+            $modifier = $modifierInitial;
+
+            if ($modifier < $modifierMin) {
+                $modifier = $modifierMin;
+            } elseif ($modifier > $modifierMax) {
+                $modifier = $modifierMax;
             }
             $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
-
-//            if (self::isDebug()) {
-//                var_dump(
-//                    $min,
-//                    $max,
-//                    $position->liquidationDistance(),
-//                    $modifier,
-//                    $additionalStopPrice
-//                );die;
-//            }
+//            if (self::isDebug()) var_dump($modifierMin, $modifierMax, $position->liquidationDistance(), $modifier, $additionalStopPrice);die;
 
             $markPrice = $this->ticker->markPrice;
             $criticalDistance = $this->criticalDistance();
@@ -331,13 +334,11 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             return $this->actualStopsPriceRange = PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);
         } catch (\Exception $e) {
+            // @todo | liquidation | log into app_errors?
             if ($e->getMessage() === 'Price cannot be less than zero.') {
-                $modifier = min(
-                    (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance()),
-                    PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice)
-                );
+                $modifier = min($modifierInitial, $modifierMax);
 
-                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier));
+                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier), $this->symbol);
                 var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->value, $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));
 
                 return $this->actualStopsPriceRange;

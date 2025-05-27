@@ -6,11 +6,9 @@ namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
-use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Trait\LoggerTrait;
 use Psr\Log\LoggerInterface;
 use Throwable;

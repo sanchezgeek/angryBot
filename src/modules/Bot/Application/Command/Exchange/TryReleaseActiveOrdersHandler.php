@@ -16,7 +16,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -86,7 +86,7 @@ final class TryReleaseActiveOrdersHandler
         $ticker = $this->exchangeService->ticker($symbol);
         $defaultReleaseOverDistance = StopHelper::defaultReleaseStopsDistance($ticker->indexPrice);
 
-        /** @var Price[] $compareWithPrices */
+        /** @var SymbolPrice[] $compareWithPrices */
         $compareWithPrices = [];
         $compareWithPrices[Side::Sell->value] = PriceHelper::max($ticker->indexPrice, $ticker->markPrice);
         $compareWithPrices[Side::Buy->value] = PriceHelper::min($ticker->indexPrice, $ticker->markPrice);

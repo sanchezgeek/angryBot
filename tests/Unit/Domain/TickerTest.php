@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Domain;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -18,12 +18,14 @@ class TickerTest extends TestCase
 {
     public function testCreateTicker(): void
     {
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 200500.249, 100500.229, 90500.1);
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(Symbol::BTCUSDT, $ticker->symbol);
-        self::assertEquals(Price::float(90500.1), $ticker->lastPrice);
-        self::assertEquals(Price::float(100500.229), $ticker->markPrice);
-        self::assertEquals(Price::float(200500.249), $ticker->indexPrice);
+        $ticker = TickerFactory::create($symbol, 200500.249, 100500.229, 90500.1);
+
+        self::assertEquals($symbol, $ticker->symbol);
+        self::assertEquals($symbol->makePrice(90500.1), $ticker->lastPrice);
+        self::assertEquals($symbol->makePrice(100500.229), $ticker->markPrice);
+        self::assertEquals($symbol->makePrice(200500.249), $ticker->indexPrice);
 
         self::assertEquals(90500.1, $ticker->lastPrice->value());
         self::assertEquals(100500.23, $ticker->markPrice->value());

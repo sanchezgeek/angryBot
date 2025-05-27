@@ -23,7 +23,7 @@ use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -143,7 +143,7 @@ class HedgePositionCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    protected function getPriceFromPnlPercentOption(string $name, Side $positionSide): ?Price
+    protected function getPriceFromPnlPercentOption(string $name, Side $positionSide): ?SymbolPrice
     {
         $ticker = $this->exchangeService->ticker($this->getSymbol());
 

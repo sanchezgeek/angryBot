@@ -8,7 +8,11 @@ use App\Bot\Domain\ValueObject\Symbol;
 
 readonly final class UpdateTicker
 {
-    public function __construct(public Symbol $symbol, public ?\DateInterval $ttl = null)
+    /** @var Symbol[] */
+    public array $symbols;
+
+    public function __construct(public ?\DateInterval $ttl = null, Symbol ...$symbols)
     {
+        $this->symbols = $symbols;
     }
 }

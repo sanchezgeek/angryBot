@@ -8,6 +8,7 @@ use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
 {
@@ -20,7 +21,7 @@ abstract class ByBitLinearPositionServiceTestAbstract extends KernelTestCase
     {
         $this->service = new ByBitLinearPositionService(
             $this->initializeApiClient(),
-            self::getTestAppErrorsLogger(),
+            new ArrayAdapter(),
         );
     }
 }

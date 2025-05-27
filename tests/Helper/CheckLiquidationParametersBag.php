@@ -11,7 +11,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -26,10 +26,10 @@ class CheckLiquidationParametersBag
     /**
      * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
      */
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 2.3;
+    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     /**
-     * @see CheckPositionIsUnderLiquidationParams::CRITICAL_DISTANCE_PNLS
+     * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]
      */
     private const CRITICAL_DISTANCE_PNLS = [
         Symbol::BTCUSDT->value => 60,
@@ -187,7 +187,8 @@ class CheckLiquidationParametersBag
 
         return PriceRange::create(
             $liquidationPrice,
-            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance)
+            $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+            $this->position->symbol
         );
     }
 
@@ -215,7 +216,7 @@ class CheckLiquidationParametersBag
     /**
      * @see LiquidationDynamicParameters::additionalStopPrice
      */
-    public function additionalStopPrice(): Price
+    public function additionalStopPrice(): SymbolPrice
     {
         $additionalStopDistanceWithLiquidation = $this->additionalStopDistanceWithLiquidation(true);
 
@@ -241,10 +242,10 @@ class CheckLiquidationParametersBag
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );
 
-        $modifier = (new Percent($actualStopsRangeFromAdditionalStop))->of($position->liquidationDistance());
-
-        $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(50, $additionalStopPrice);
+        $modifier = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
         $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
+        $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
+
         if ($modifier < $min) {
             $modifier = $min;
         } elseif ($modifier > $max) {

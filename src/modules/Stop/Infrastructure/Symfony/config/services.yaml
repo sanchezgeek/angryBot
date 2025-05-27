@@ -15,3 +15,23 @@ services:
 
     App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain:
         factory: [ '@App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChainFactory', 'full' ]
+
+    fullStopChecks:
+        alias: App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain
+
+    App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler:
+        arguments:
+            $checks: '@fullStopChecks'
+
+    pushStops.mainPosition:
+        class: App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler
+        arguments:
+            $checks: null
+
+    App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStopsHandler:
+        arguments:
+            $innerHandler: '@pushStops.mainPosition'
+
+    App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStopsHandler:
+        arguments:
+            $innerHandler: '@App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler'

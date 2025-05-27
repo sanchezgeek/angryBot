@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Tests\Factory;
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -17,11 +17,10 @@ class TickerFactoryTest extends TestCase
 {
     public function testFactory(): void
     {
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 100500, 100600, 100700);
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(
-            new Ticker(Symbol::BTCUSDT, Price::float(100600), Price::float(100500), Price::float(100700)),
-            $ticker
-        );
+        $ticker = TickerFactory::create($symbol, 100500, 100600, 100700);
+
+        self::assertEquals(new Ticker($symbol, 100600, 100500, 100700), $ticker);
     }
 }

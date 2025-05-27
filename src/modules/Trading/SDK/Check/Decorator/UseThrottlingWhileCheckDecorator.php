@@ -19,6 +19,11 @@ final readonly class UseThrottlingWhileCheckDecorator implements TradingCheckInt
     ) {
     }
 
+    public function alias(): string
+    {
+        return $this->decorated->alias();
+    }
+
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         // @todo | performance | also use?

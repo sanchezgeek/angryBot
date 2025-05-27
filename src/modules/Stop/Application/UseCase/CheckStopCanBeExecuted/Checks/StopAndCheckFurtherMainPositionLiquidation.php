@@ -34,6 +34,8 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
+    public const ALIAS = 'check-mainPos-before-stop-support';
+
     public function __construct(
         private AppSettingsProviderInterface $settings,
         private TradingParametersProviderInterface $parameters,
@@ -46,6 +48,11 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
         $this->initPositionService($positionService);
     }
 
+    public function alias(): string
+    {
+        return self::ALIAS;
+    }
+
     /**
      * @inheritDoc
      *
@@ -55,6 +62,11 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
         $stop = self::extractStopFromEntryDto($orderDto);
+
+        if ($stop->isSupportChecksSkipped()) {
+            return false;
+        }
+
         $symbol = $stop->getSymbol();
         $side = $stop->getPositionSide();
 
@@ -86,10 +98,11 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
         $this->enrichContextWithCurrentSandboxState($context);
 
         $stop = self::extractStopFromEntryDto($orderDto);
+        $symbol = $stop->getSymbol();
 
         $closingPosition = $context->currentSandboxState->getPosition($stop->getPositionSide());
 
-        $sandbox = $this->sandboxFactory->empty($stop->getSymbol());
+        $sandbox = $this->sandboxFactory->empty($symbol);
         $sandbox->setState($context->currentSandboxState);
 
         $sandboxOrder = SandboxStopOrder::fromStop($stop, $orderDto->priceValueWillBeingUsedAtExecution());
@@ -113,7 +126,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
         if ($mainPositionLiquidation->eq(0)) {
             return TradingCheckResult::succeed(
                 $this,
-                sprintf('%s | id=%d, qty=%s, price=%s | liquidation=%s', $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $mainPositionLiquidation)
+                sprintf('%s | id=%d, qty=%s, price=%s | liq=0', $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice)
             );
         }
 
@@ -127,8 +140,14 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
         $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
-            '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
-            $closingPosition, $stop->getId(), $stop->getVolume(), $executionPrice, $safeDistance, $mainPositionLiquidation
+            '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
+            $closingPosition,
+            $stop->getId(),
+            $stop->getVolume(),
+            $executionPrice,
+            $mainPositionLiquidation,
+            $mainPositionLiquidation->deltaWith($withPrice),
+            $symbol->makePrice($safeDistance),
         );
 
         return

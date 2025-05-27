@@ -12,7 +12,7 @@ use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Helper\FloatHelper;
 use Exception;
 use LogicException;
@@ -58,12 +58,12 @@ final class Position implements Stringable
         return FloatHelper::round(abs($this->entryPrice - $this->liquidationPrice), $this->symbol->pricePrecision());
     }
 
-    public function liquidationPrice(): Price
+    public function liquidationPrice(): SymbolPrice
     {
         return $this->symbol->makePrice($this->liquidationPrice);
     }
 
-    public function entryPrice(): Price
+    public function entryPrice(): SymbolPrice
     {
         return $this->symbol->makePrice($this->entryPrice);
     }
@@ -104,11 +104,6 @@ final class Position implements Stringable
         return ($hedge = $this->getHedge()) && $hedge->isSupportPosition($this);
     }
 
-    public function isShortWithoutLiquidation(): bool
-    {
-        return $this->isShort() && !$this->liquidationPrice;
-    }
-
     public function isMainPosition(): bool
     {
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
@@ -117,6 +112,11 @@ final class Position implements Stringable
     public function isPositionWithoutHedge(): bool
     {
         return $this->getHedge() === null;
+    }
+
+    public function isShortWithoutLiquidation(): bool
+    {
+        return $this->isShort() && !$this->liquidationPrice;
     }
 
     public function getNotCoveredSize(): ?float
@@ -156,14 +156,14 @@ final class Position implements Stringable
         ;
     }
 
-    public function isPositionInProfit(Price|float $currentPrice): bool
+    public function isPositionInProfit(SymbolPrice $currentPrice): bool
     {
-        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isProfitFor($this->side);
+        return $currentPrice->differenceWith($this->entryPrice())->isProfitFor($this->side);
     }
 
-    public function isPositionInLoss(Price|float $currentPrice): bool
+    public function isPositionInLoss(SymbolPrice $currentPrice): bool
     {
-        return Price::toObj($currentPrice, $this->entryPrice()->precision)->differenceWith($this->entryPrice())->isLossFor($this->side);
+        return $currentPrice->differenceWith($this->entryPrice())->isLossFor($this->side);
     }
 
     public function getVolumePart(float $percent): float

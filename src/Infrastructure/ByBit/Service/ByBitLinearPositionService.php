@@ -9,7 +9,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -23,13 +23,15 @@ use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\SetLeverageRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Position\SwitchPositionModeRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
+use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use DateInterval;
 use InvalidArgumentException;
 use LogicException;
-use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 use function array_filter;
 use function array_unique;
@@ -60,7 +62,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
     public function __construct(
         ByBitApiClientInterface $apiClient,
-        private readonly LoggerInterface $appErrorLogger,
+        private readonly CacheInterface $cache,
     ) {
         $this->apiClient = $apiClient;
     }
@@ -119,6 +121,58 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
+     * @return Position[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getPositionsWithLiquidation(): array
+    {
+        $allPositions = $this->getAllPositions();
+
+        $result = [];
+        foreach ($allPositions as $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+//                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
+                // @todo | liquidation | null
+                if ($position->liquidationPrice !== 0.00) {
+                    $result[] = $position;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return Position[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getPositionsWithoutLiquidation(): array
+    {
+        $allPositions = $this->getAllPositions();
+
+        $result = [];
+        foreach ($allPositions as $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+//                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
+                // @todo | liquidation | null
+                if ($position->liquidationPrice === 0.00) {
+                    $result[] = $position;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @return array<Position[]>
      *
      * @throws UnknownByBitApiErrorException
@@ -137,10 +191,11 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
 
-        /** @var Position[] $positions */
+        /** @var array<Position[]> $positions */
         $positions = [];
         foreach ($list as $item) {
             $side = Side::from(strtolower($item['side']));
+            // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
             $symbol = Symbol::from($item['symbol']);
 
             $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
@@ -156,11 +211,18 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $this->lastMarkPrices[$symbol->value] = $symbol->makePrice((float)$item['markPrice']);
         }
 
+        foreach ($positions as $symbolRaw => $symbolPositions) {
+            $symbol = Symbol::from($symbolRaw);
+            $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
+            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
+            $this->cache->save($item);
+        }
+
         return $positions;
     }
 
     /**
-     * @return array<string, Price>
+     * @return array<string, SymbolPrice>
      */
     public function getLastMarkPrices(): array
     {
@@ -259,6 +321,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\AddStopTest
      */

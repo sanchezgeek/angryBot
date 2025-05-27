@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Modules\Buy\Application\UseCase\CheckBuyOrderCanBeExecu
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
-use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
@@ -46,6 +45,8 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
     use SandboxUnitTester;
     use RateLimiterAwareTest;
     use ChecksAwareTest;
+
+    const CHECK_ALIAS = BuyAndCheckFurtherPositionLiquidation::ALIAS;
 
     private TradingParametersProviderInterface|MockObject $parameters;
 
@@ -182,14 +183,14 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
 
     private static function success(string $info): TradingCheckResult
     {
-        return TradingCheckResult::succeed(OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $info);
+        return TradingCheckResult::succeed(self::CHECK_ALIAS, $info);
     }
 
     private static function liquidationTooCloseResult(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose
     {
         $info = self::info($ticker, $position, $orderDto, $safePriceDistance, $liquidationPrice);
 
-        return FurtherPositionLiquidationAfterBuyIsTooClose::create(OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $ticker->markPrice, $ticker->symbol->makePrice($liquidationPrice), $safePriceDistance, $info);
+        return FurtherPositionLiquidationAfterBuyIsTooClose::create(self::CHECK_ALIAS, $ticker->markPrice, $ticker->symbol->makePrice($liquidationPrice), $safePriceDistance, $info);
     }
 
     private static function info(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): string
@@ -197,7 +198,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         // @todo | liquidation | null
         if ($liquidationPrice === 0.00) {
             return sprintf(
-                '%s | id=%d, qty=%s, price=%s | result position has no liquidation',
+                '%s | id=%d, qty=%s, price=%s | liq=0',
                 $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice
             );
         }
@@ -205,8 +206,8 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $liquidationPrice = $ticker->symbol->makePrice($liquidationPrice);
 
         return sprintf(
-            '%s | id=%d, qty=%s, price=%s | liquidation=%s, delta=%s, safeDistance=%s',
-            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $safePriceDistance
+            '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
+            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $ticker->symbol->makePrice($safePriceDistance)
         );
     }
 

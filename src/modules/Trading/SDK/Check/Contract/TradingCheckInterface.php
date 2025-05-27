@@ -23,4 +23,6 @@ interface TradingCheckInterface
      * @throws UnexpectedSandboxExecutionException
      */
     public function check(CheckOrderDto $orderDto, TradingCheckContext $context): AbstractTradingCheckResult;
+
+    public function alias(): string;
 }

@@ -8,16 +8,15 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\PositionFactory;
-use DomainException;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \App\Domain\Price\Price
+ * @covers \App\Domain\Price\SymbolPrice
  */
 final class PriceTest extends TestCase
 {
@@ -26,7 +25,7 @@ final class PriceTest extends TestCase
      */
     public function testCanCreateAndGetValue(float $value, float $expectedValue): void
     {
-        $price = Price::float($value);
+        $price = SymbolPrice::create($value, Symbol::BTCUSDT);
 
         self::assertEquals($expectedValue, $price->value());
     }
@@ -49,25 +48,27 @@ final class PriceTest extends TestCase
     /**
      * @dataProvider failCreateCases
      */
-    public function testFailCreate(float $value, Exception $expectedException): void
+    public function testFailCreate(Symbol $symbol, float $value, Exception $expectedException): void
     {
         $this->expectExceptionObject($expectedException);
 
-        Price::float($value);
+        SymbolPrice::create($value, $symbol);
     }
 
     private function failCreateCases(): iterable
     {
+        $symbol = Symbol::BTCUSDT;
+
         return [
-            [-1, new PriceCannotBeLessThanZero(-1)],
-            [-0.009, new PriceCannotBeLessThanZero(-0.009)],
+            [$symbol, -1, new PriceCannotBeLessThanZero(-1, $symbol)],
+            [$symbol, -0.009, new PriceCannotBeLessThanZero(-0.009, $symbol)],
         ];
     }
 
     /**
      * @dataProvider addTestDataProvider
      */
-    public function testCanAdd(Price $initialPrice, float $addValue, Price $expectedResult): void
+    public function testCanAdd(SymbolPrice $initialPrice, float $addValue, SymbolPrice $expectedResult): void
     {
         # with float
         $result = $initialPrice->add($addValue);
@@ -76,7 +77,7 @@ final class PriceTest extends TestCase
         self::assertTrue($result->eq($expectedResult));
 
         # with object
-        $addValue = Price::float($addValue);
+        $addValue = $initialPrice->symbol->makePrice($addValue);
         $result = $initialPrice->add($addValue);
 
         self::assertNotSame($initialPrice, $result);
@@ -85,18 +86,20 @@ final class PriceTest extends TestCase
 
     private function addTestDataProvider(): iterable
     {
-        yield [Price::float(123.45), 1, Price::float(124.45)];
-        yield [Price::float(123.45), 1.002, Price::float(124.452)];
-        yield [Price::float(123.45), 2.1, Price::float(125.55)];
-        yield [Price::float(123.45), 2.101, Price::float(125.551)];
-        yield [Price::float(123), 2.1, Price::float(125.1)];
-        yield [Price::float(123), 2.101, Price::float(125.101)];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(123.45), 1, $symbol->makePrice(124.45)];
+        yield [$symbol->makePrice(123.45), 1.002, $symbol->makePrice(124.452)];
+        yield [$symbol->makePrice(123.45), 2.1, $symbol->makePrice(125.55)];
+        yield [$symbol->makePrice(123.45), 2.101, $symbol->makePrice(125.551)];
+        yield [$symbol->makePrice(123), 2.1, $symbol->makePrice(125.1)];
+        yield [$symbol->makePrice(123), 2.101, $symbol->makePrice(125.101)];
     }
 
     /**
      * @dataProvider subTestDataProvider
      */
-    public function testCanSub(Price $initialPrice, Price|float $subValue, Price $expectedResult): void
+    public function testCanSub(SymbolPrice $initialPrice, SymbolPrice|float $subValue, SymbolPrice $expectedResult): void
     {
         # with float
         $result = $initialPrice->sub($subValue);
@@ -105,7 +108,7 @@ final class PriceTest extends TestCase
         self::assertTrue($result->eq($expectedResult));
 
         # with object
-        $subValue = Price::float($subValue);
+        $subValue = $initialPrice->symbol->makePrice($subValue);
         $result = $initialPrice->sub($subValue);
 
         self::assertNotSame($initialPrice, $result);
@@ -114,81 +117,91 @@ final class PriceTest extends TestCase
 
     private function subTestDataProvider(): iterable
     {
-        yield [Price::float(123.45), 1, Price::float(122.45)];
-        yield [Price::float(123.452), 1.001, Price::float(122.451)];
-        yield [Price::float(123.46), 2.1, Price::float(121.36)];
-        yield [Price::float(123.46), 2.101, Price::float(121.359)];
-        yield [Price::float(123), 2.1, Price::float(120.9)];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(123.45), 1, $symbol->makePrice(122.45)];
+        yield [$symbol->makePrice(123.452), 1.001, $symbol->makePrice(122.451)];
+        yield [$symbol->makePrice(123.46), 2.1, $symbol->makePrice(121.36)];
+        yield [$symbol->makePrice(123.46), 2.101, $symbol->makePrice(121.359)];
+        yield [$symbol->makePrice(123), 2.1, $symbol->makePrice(120.9)];
     }
 
     /**
      * @dataProvider greaterThanTestDataProvider
      */
-    public function testGreaterThan(Price $a, Price $b, bool $expectedResult): void
+    public function testGreaterThan(SymbolPrice $a, SymbolPrice $b, bool $expectedResult): void
     {
         self::assertSame($expectedResult, $a->greaterThan($b));
     }
 
     private function greaterThanTestDataProvider(): iterable
     {
-        yield [Price::float(123), Price::float(456), false];
-        yield [Price::float(455.999), Price::float(456), false];
-        yield [Price::float(456), Price::float(456), false];
-        yield [Price::float(456.001), Price::float(456), true];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(123), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(455.999), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(456.001), $symbol->makePrice(456), true];
     }
 
     /**
      * @dataProvider greaterOrEqualsTestDataProvider
      */
-    public function testGreaterOrEquals(Price $a, Price $b, bool $expectedResult): void
+    public function testGreaterOrEquals(SymbolPrice $a, SymbolPrice $b, bool $expectedResult): void
     {
         self::assertSame($expectedResult, $a->greaterOrEquals($b));
     }
 
     private function greaterOrEqualsTestDataProvider(): iterable
     {
-        yield [Price::float(123), Price::float(456), false];
-        yield [Price::float(455.999), Price::float(456), false];
-        yield [Price::float(456), Price::float(456), true];
-        yield [Price::float(456.01), Price::float(456), true];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(123), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(455.999), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456), true];
+        yield [$symbol->makePrice(456.01), $symbol->makePrice(456), true];
     }
 
     /**
      * @dataProvider lessThanTestDataProvider
      */
-    public function testLessThan(Price $a, Price $b, bool $expectedResult): void
+    public function testLessThan(SymbolPrice $a, SymbolPrice $b, bool $expectedResult): void
     {
         self::assertSame($expectedResult, $a->lessThan($b));
     }
 
     private function lessThanTestDataProvider(): iterable
     {
-        yield [Price::float(456), Price::float(123), false];
-        yield [Price::float(456), Price::float(455.999), false];
-        yield [Price::float(456), Price::float(456), false];
-        yield [Price::float(456), Price::float(456.001), true];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(456), $symbol->makePrice(123), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(455.999), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456.001), true];
     }
 
     /**
      * @dataProvider lessOrEqualsTestDataProvider
      */
-    public function testLessOrEquals(Price $a, Price $b, bool $expectedResult): void
+    public function testLessOrEquals(SymbolPrice $a, SymbolPrice $b, bool $expectedResult): void
     {
         self::assertSame($expectedResult, $a->lessOrEquals($b));
     }
 
     private function lessOrEqualsTestDataProvider(): iterable
     {
-        yield [Price::float(456), Price::float(123), false];
-        yield [Price::float(456), Price::float(455.999), false];
-        yield [Price::float(456), Price::float(456), true];
-        yield [Price::float(456), Price::float(456.001), true];
+        $symbol = Symbol::BTCUSDT;
+
+        yield [$symbol->makePrice(456), $symbol->makePrice(123), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(455.999), false];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456), true];
+        yield [$symbol->makePrice(456), $symbol->makePrice(456.001), true];
     }
 
     /**
      * @dataProvider priceIsOverTakeProfitTestCases
      */
-    public function testIsPriceOverTakeProfit(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
+    public function testIsPriceOverTakeProfit(SymbolPrice $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
     {
         $result = $price->isPriceOverTakeProfit($positionSide, $takeProfitPrice);
 
@@ -197,29 +210,31 @@ final class PriceTest extends TestCase
 
     private function priceIsOverTakeProfitTestCases(): iterable
     {
+        $symbol = Symbol::BTCUSDT;
+
         yield 'over SHORT TP (+)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Sell,
             'takeProfit.price' => 200500,
             'expectedResult' => true,
         ];
 
         yield 'over SHORT TP (-)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Sell,
             'takeProfit.price' => 200499,
             'expectedResult' => false,
         ];
 
         yield 'over LONG TP (+)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Buy,
             'takeProfit.price' => 200500,
             'expectedResult' => true,
         ];
 
         yield 'over LONG TP (-)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Buy,
             'takeProfit.price' => 200501,
             'expectedResult' => false,
@@ -229,7 +244,7 @@ final class PriceTest extends TestCase
     /**
      * @dataProvider priceInLossOfOther
      */
-    public function testIsPriceInLossOfOther(Price $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
+    public function testIsPriceInLossOfOther(SymbolPrice $price, Side $positionSide, float $takeProfitPrice, bool $expectedResult): void
     {
         $result = $price->isPriceInLossOfOther($positionSide, $takeProfitPrice);
 
@@ -238,29 +253,31 @@ final class PriceTest extends TestCase
 
     private function priceInLossOfOther(): iterable
     {
+        $symbol = Symbol::BTCUSDT;
+
         yield 'over SHORT SL (+)' => [
-            'price' => Price::float(200501.01),
+            'price' => $symbol->makePrice(200501.01),
             'stop.positionSide' => Side::Sell,
             'stop.price' => 200500,
             'expectedResult' => true,
         ];
 
         yield 'over SHORT SL (-)' => [
-            'price' => Price::float(200501),
+            'price' => $symbol->makePrice(200501),
             'stop.positionSide' => Side::Sell,
             'stop.price' => 200501,
             'expectedResult' => false,
         ];
 
         yield 'over LONG SL (+)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Buy,
             'stop.price' => 200500.01,
             'expectedResult' => true,
         ];
 
         yield 'over LONG SL (-)' => [
-            'price' => Price::float(200500),
+            'price' => $symbol->makePrice(200500),
             'stop.positionSide' => Side::Buy,
             'stop.price' => 200500,
             'expectedResult' => false,
@@ -269,8 +286,10 @@ final class PriceTest extends TestCase
 
     public function testDifferenceWith(): void
     {
-        $currentPrice = Price::float(100500);
-        $fromPrice = Price::float(200500);
+        $symbol = Symbol::BTCUSDT;
+
+        $currentPrice = $symbol->makePrice(100500);
+        $fromPrice = $symbol->makePrice(200500);
 
         self::assertEquals(PriceMovement::fromToTarget($fromPrice, $currentPrice), $currentPrice->differenceWith($fromPrice));
     }
@@ -278,77 +297,85 @@ final class PriceTest extends TestCase
     /**
      * @dataProvider isPriceInRangeTestCases
      */
-    public function testIsPriceInRange(float $price, PriceRange $priceRange, $expectedResult): void
+    public function testIsPriceInRange(SymbolPrice $price, PriceRange $priceRange, $expectedResult): void
     {
-        $result = Price::float($price)->isPriceInRange($priceRange);
+        $result = $price->isPriceInRange($priceRange);
 
         self::assertEquals($expectedResult, $result);
     }
 
     public function isPriceInRangeTestCases(): array
     {
+        $symbol = Symbol::BTCUSDT;
+
         return [
-            [100500, PriceRange::create(100500, 200500), true],
-            [200000, PriceRange::create(100500, 200500), true],
-            [200500, PriceRange::create(100500, 200500), true],
-            [100499, PriceRange::create(100500, 200500), false],
-            [200501, PriceRange::create(100500, 200500), false],
+            [$symbol->makePrice(100500), PriceRange::create(100500, 200500, $symbol), true],
+            [$symbol->makePrice(200000), PriceRange::create(100500, 200500, $symbol), true],
+            [$symbol->makePrice(200500), PriceRange::create(100500, 200500, $symbol), true],
+            [$symbol->makePrice(100499), PriceRange::create(100500, 200500, $symbol), false],
+            [$symbol->makePrice(200501), PriceRange::create(100500, 200500, $symbol), false],
         ];
     }
 
     public function testGetPnlInPercents(): void
     {
-        ## SHORT
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100);
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(-120, Price::float(30360)->getPnlPercentFor($position));
-        self::assertEquals(-20, Price::float(30060)->getPnlPercentFor($position));
-        self::assertEquals(0, Price::float(30000)->getPnlPercentFor($position));
-        self::assertEquals(20, Price::float(29940)->getPnlPercentFor($position));
-        self::assertEquals(100, Price::float(29700)->getPnlPercentFor($position));
+        ## SHORT
+        $position = PositionFactory::short($symbol, 30000, 1, 100);
+
+        self::assertEquals(-120, $symbol->makePrice(30360)->getPnlPercentFor($position));
+        self::assertEquals(-20, $symbol->makePrice(30060)->getPnlPercentFor($position));
+        self::assertEquals(0, $symbol->makePrice(30000)->getPnlPercentFor($position));
+        self::assertEquals(20, $symbol->makePrice(29940)->getPnlPercentFor($position));
+        self::assertEquals(100, $symbol->makePrice(29700)->getPnlPercentFor($position));
 
         ## LONG
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::long($symbol, 30000, 1, 100);
 
-        self::assertEquals(120, Price::float(30360)->getPnlPercentFor($position));
-        self::assertEquals(20, Price::float(30060)->getPnlPercentFor($position));
-        self::assertEquals(0, Price::float(30000)->getPnlPercentFor($position));
-        self::assertEquals(-20, Price::float(29940)->getPnlPercentFor($position));
-        self::assertEquals(-100, Price::float(29700)->getPnlPercentFor($position));
+        self::assertEquals(120, $symbol->makePrice(30360)->getPnlPercentFor($position));
+        self::assertEquals(20, $symbol->makePrice(30060)->getPnlPercentFor($position));
+        self::assertEquals(0, $symbol->makePrice(30000)->getPnlPercentFor($position));
+        self::assertEquals(-20, $symbol->makePrice(29940)->getPnlPercentFor($position));
+        self::assertEquals(-100, $symbol->makePrice(29700)->getPnlPercentFor($position));
     }
 
     public function testGetTargetPriceByPnlPercent(): void
     {
-        ## SHORT
-        $position = PositionFactory::short(Symbol::BTCUSDT, 100500, 1, 100);
-        $price = Price::float(30000);
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(Price::float(30360), $price->getTargetPriceByPnlPercent(-120, $position));
-        self::assertEquals(Price::float(30300), $price->getTargetPriceByPnlPercent(-100, $position));
-        self::assertEquals(Price::float(30060), $price->getTargetPriceByPnlPercent(-20, $position));
-        self::assertEquals(Price::float(30000), $price->getTargetPriceByPnlPercent(0, $position));
-        self::assertEquals(Price::float(29940), $price->getTargetPriceByPnlPercent(20, $position));
-        self::assertEquals(Price::float(29700), $price->getTargetPriceByPnlPercent(100, $position));
-        self::assertEquals(Price::float(29640), $price->getTargetPriceByPnlPercent(120, $position));
+        ## SHORT
+        $position = PositionFactory::short($symbol, 100500, 1, 100);
+        $price = $symbol->makePrice(30000);
+
+        self::assertEquals($symbol->makePrice(30360), $price->getTargetPriceByPnlPercent(-120, $position));
+        self::assertEquals($symbol->makePrice(30300), $price->getTargetPriceByPnlPercent(-100, $position));
+        self::assertEquals($symbol->makePrice(30060), $price->getTargetPriceByPnlPercent(-20, $position));
+        self::assertEquals($symbol->makePrice(30000), $price->getTargetPriceByPnlPercent(0, $position));
+        self::assertEquals($symbol->makePrice(29940), $price->getTargetPriceByPnlPercent(20, $position));
+        self::assertEquals($symbol->makePrice(29700), $price->getTargetPriceByPnlPercent(100, $position));
+        self::assertEquals($symbol->makePrice(29640), $price->getTargetPriceByPnlPercent(120, $position));
 
         ## LONG
-        $position = PositionFactory::long(Symbol::BTCUSDT, 100500, 1, 100);
+        $position = PositionFactory::long($symbol, 100500, 1, 100);
 
-        self::assertEquals(Price::float(30360), $price->getTargetPriceByPnlPercent(120, $position));
-        self::assertEquals(Price::float(30300), $price->getTargetPriceByPnlPercent(100, $position));
-        self::assertEquals(Price::float(30060), $price->getTargetPriceByPnlPercent(20, $position));
-        self::assertEquals(Price::float(30000), $price->getTargetPriceByPnlPercent(0, $position));
-        self::assertEquals(Price::float(29940), $price->getTargetPriceByPnlPercent(-20, $position));
-        self::assertEquals(Price::float(29700), $price->getTargetPriceByPnlPercent(-100, $position));
-        self::assertEquals(Price::float(29640), $price->getTargetPriceByPnlPercent(-120, $position));
+        self::assertEquals($symbol->makePrice(30360), $price->getTargetPriceByPnlPercent(120, $position));
+        self::assertEquals($symbol->makePrice(30300), $price->getTargetPriceByPnlPercent(100, $position));
+        self::assertEquals($symbol->makePrice(30060), $price->getTargetPriceByPnlPercent(20, $position));
+        self::assertEquals($symbol->makePrice(30000), $price->getTargetPriceByPnlPercent(0, $position));
+        self::assertEquals($symbol->makePrice(29940), $price->getTargetPriceByPnlPercent(-20, $position));
+        self::assertEquals($symbol->makePrice(29700), $price->getTargetPriceByPnlPercent(-100, $position));
+        self::assertEquals($symbol->makePrice(29640), $price->getTargetPriceByPnlPercent(-120, $position));
     }
 
     public function testModifyByDirection(): void
     {
-        self::assertEquals(Price::float(50000.2), Price::float(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_LOSS, 0.2));
-        self::assertEquals(Price::float(50000.2), Price::float(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_PROFIT, 0.2));
+        $symbol = Symbol::BTCUSDT;
 
-        self::assertEquals(Price::float(49999.8), Price::float(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_LOSS, 0.2));
-        self::assertEquals(Price::float(49999.8), Price::float(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_PROFIT, 0.2));
+        self::assertEquals($symbol->makePrice(50000.2), $symbol->makePrice(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_LOSS, 0.2));
+        self::assertEquals($symbol->makePrice(50000.2), $symbol->makePrice(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_PROFIT, 0.2));
+
+        self::assertEquals($symbol->makePrice(49999.8), $symbol->makePrice(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_LOSS, 0.2));
+        self::assertEquals($symbol->makePrice(49999.8), $symbol->makePrice(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_PROFIT, 0.2));
     }
 }

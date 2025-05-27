@@ -22,10 +22,14 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
+use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
+use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
+use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
-use App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs;
+use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
+use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -43,13 +47,15 @@ final class SchedulerFactory
     private const MEDIUM = '1200 milliseconds';
     private const SLOW = '2 seconds';
     private const MEDIUM_SLOW = '3 seconds';
-    private const VERY_SLOW = '5 seconds';
-    private const VERY_VERY_SLOW = '9 seconds';
+    private const VERY_SLOW = '4 seconds';
+    private const VERY_VERY_SLOW = '8 seconds';
 
-    private const SPEED_CONF = [
-        'sl'  => self::MEDIUM_SLOW,
-        'buy' => self::VERY_VERY_SLOW,
-    ];
+    private const PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
+
+    private const PUSH_MAIN_POSITIONS_SL_SPEED = self::VERY_SLOW;
+    private const PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
+
+    private const DEDICATED_SYMBOL_SL_SPEED = self::VERY_SLOW;
 
     private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
 //    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
@@ -64,11 +70,13 @@ final class SchedulerFactory
     {
         $jobSchedules = match (AppContext::runningWorker()) {
             RunningWorker::BUY_ORDERS  => $this->buyOrders(),
-            RunningWorker::UTILS => $this->utils(),
-            RunningWorker::CACHE => $this->cache(),
+            RunningWorker::SERVICE => $this->service(),
             RunningWorker::CRITICAL => $this->critical(),
             RunningWorker::SYMBOL_DEDICATED => $this->symbol(),
+            RunningWorker::MAIN_POSITIONS_STOPS => $this->mainStops(),
+            RunningWorker::REST_POSITIONS_STOPS => $this->restStops(),
             default => [],
+//            RunningWorker::CACHE => $this->cache(),
         };
 
         return new Scheduler($clock, $jobSchedules);
@@ -86,21 +94,33 @@ final class SchedulerFactory
         $symbol = Symbol::from($_ENV['PROCESSED_SYMBOL']);
         $processedOrders = $_ENV['PROCESSED_ORDERS'];
 
-        var_dump(sprintf('%s %s started', $symbol->value, $processedOrders));
+        OutputHelper::print(sprintf('%s %s started', $symbol->value, $processedOrders));
 
         if ($processedOrders === 'Stop') {
             return [
-                PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::SPEED_CONF['sl']), new PushStops($symbol, Side::Sell)),
-                PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::SPEED_CONF['sl']), new PushStops($symbol, Side::Buy)),
+                PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::DEDICATED_SYMBOL_SL_SPEED), new PushStops($symbol, Side::Sell)),
+                PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::DEDICATED_SYMBOL_SL_SPEED), new PushStops($symbol, Side::Buy)),
             ];
         } elseif ($processedOrders === 'BuyOrder') {
             return [
-                PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Sell)),
-                PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Buy)),
+                PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Sell)),
+                PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Buy)),
             ];
         }
 
         return [];
+    }
+
+    private function mainStops(): array
+    {
+        OutputHelper::print('main positions stops worker started');
+        return [PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_MAIN_POSITIONS_SL_SPEED), new PushAllMainPositionsStops())];
+    }
+
+    private function restStops(): array
+    {
+        OutputHelper::print('rest positions stops worker started');
+        return [PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_REST_POSITIONS_SL_SPEED), new PushAllRestPositionsStops())];
     }
 
     private function buyOrders(): array
@@ -108,23 +128,28 @@ final class SchedulerFactory
         $items = [];
 
         foreach ($this->getOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::SPEED_CONF['buy']), new PushBuyOrders($symbol, Side::Buy));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Sell));
+            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Buy));
         }
 
         return $items;
     }
 
-    private function utils(): array
+    private function service(): array
     {
-        $cleanupPeriod = '45S';
+        $priceCheckInterval = 'PT10M';
 
-        $items = [
-            # service
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', AsyncMessage::for(new CheckMessengerMessages())),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', AsyncMessage::for(new CheckApiKeyDeadlineDay())),
+        return [
+            # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
 
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
+
+            // $cleanupPeriod = '45S';
             // PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
             // PeriodicalJob::create('2023-02-24T23:49:07Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Buy, 30, 6, true))),
@@ -160,8 +185,6 @@ final class SchedulerFactory
             // -- active Conditional orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(force: true))),
         ];
-
-        return $items;
     }
 
     private function cache(): array
@@ -180,7 +203,7 @@ final class SchedulerFactory
              * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
              * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
              */
-            PeriodicalJob::create($start, $interval, new UpdateTicker(Symbol::BTCUSDT, self::interval($ttl))),
+            PeriodicalJob::create($start, $interval, new UpdateTicker(self::interval($ttl), Symbol::BTCUSDT)),
         ];
     }
 
@@ -192,8 +215,8 @@ final class SchedulerFactory
     /**
      * @return Symbol[]
      */
-    private function getOpenedPositionsSymbols(array $except = []): array
+    private function getOpenedPositionsSymbols(): array
     {
-        return $this->positionService->getOpenedPositionsSymbols($except);
+        return $this->positionService->getOpenedPositionsSymbols();
     }
 }

@@ -60,6 +60,16 @@ class OutputHelper
         echo sprintf('@ %s', $message) . PHP_EOL;
     }
 
+    public static function success(string $message): void
+    {
+        echo sprintf('+ %s', $message) . PHP_EOL;
+    }
+
+    public static function failed(string $message): void
+    {
+        echo sprintf('! %s', $message) . PHP_EOL;
+    }
+
     public static function printIfDebug(mixed $data): void
     {
         if (!AppContext::isDebug()) {
@@ -77,9 +87,25 @@ class OutputHelper
         }
     }
 
-    public static function ordersDebug(array $orders): void
+    public static function ordersDebug(array $orders, bool $print = false): array
     {
-        var_dump(array_map(static fn(Stop|BuyOrder $order) => sprintf('%s | %s%s', $order->getPrice(), $order instanceof Stop ? 's.' : 'b.', $order->getId()), $orders));
+        $map = array_map(
+            static fn(Stop|BuyOrder $order) => sprintf(
+                '%s / %s | %s%s, %s',
+                $order->getPrice(),
+                $order->getVolume(),
+                $order instanceof Stop ? 's.' : 'b.',
+                $order->getId(),
+                $order->getSymbol()->value,
+            ),
+            $orders
+        );
+
+        if ($print) {
+            var_dump($map);
+        }
+
+        return $map;
     }
 
     public static function shortClassName(string|object $className): string
@@ -96,5 +122,22 @@ class OutputHelper
         $class = explode('\\', $className);
 
         return end($class) . ($methodName ? '::' . $methodName : '');
+    }
+
+    public static function currentTimePoint(): float
+    {
+        return microtime(true);
+    }
+
+    public static function printTimeDiff(string $desc, float $start): void
+    {
+        self::print(self::timeDiff($desc, $start));
+    }
+
+    public static function timeDiff(string $desc, float $start): string
+    {
+        $end = microtime(true);
+
+        return sprintf('~~~ %s time diff: %s ~~~', $desc, $end - $start);
     }
 }

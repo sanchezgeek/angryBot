@@ -7,8 +7,7 @@ namespace App\Trading\SDK\Check\Decorator;
 use App\Application\Cache\CacheServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Helper\OutputHelper;
-use App\Infrastructure\Cache\LocalCache\LocalCache;
+use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Trading\SDK\Check\Cache\CheckResultKeyBasedOnOrderAndPricePnlStep;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
@@ -27,8 +26,14 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
 
     public function __construct(private readonly TradingCheckInterface $decorated)
     {
-        $this->cache = new LocalCache(new ArrayAdapter(self::DEFAULT_CACHE_TTL, true, 0, self::MAX_ITEMS));
+        $this->cache = new SymfonyCacheWrapper(new ArrayAdapter(self::DEFAULT_CACHE_TTL, true, 0, self::MAX_ITEMS));
     }
+
+    public function alias(): string
+    {
+        return $this->decorated->alias();
+    }
+
 
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {

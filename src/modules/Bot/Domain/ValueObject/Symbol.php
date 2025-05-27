@@ -6,7 +6,8 @@ namespace App\Bot\Domain\ValueObject;
 
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Price\Price;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use ValueError;
@@ -106,6 +107,11 @@ enum Symbol: string
     case MOODENGUSDT = 'MOODENGUSDT';
     case KAITOUSDT = 'KAITOUSDT';
     case FTNUSDT = 'FTNUSDT';
+    case PAXGUSDT = 'PAXGUSDT';
+    case XMRUSDT = 'XMRUSDT';
+    case WCTUSDT = 'WCTUSDT';
+    case SYRUPUSDT = 'SYRUPUSDT';
+    case CVCUSDT = 'CVCUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -193,6 +199,11 @@ enum Symbol: string
         self::MOODENGUSDT->value => 5,
         self::KAITOUSDT->value => 4,
         self::FTNUSDT->value => 4,
+        self::PAXGUSDT->value => 2,
+        self::XMRUSDT->value => 2,
+        self::WCTUSDT->value => 4,
+        self::SYRUPUSDT->value => 5,
+        self::CVCUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -281,6 +292,11 @@ enum Symbol: string
         self::MOODENGUSDT->value => 1,
         self::KAITOUSDT->value => 1,
         self::FTNUSDT->value => 0.1,
+        self::PAXGUSDT->value => 0.001,
+        self::XMRUSDT->value => 0.01,
+        self::WCTUSDT->value => 1,
+        self::SYRUPUSDT->value => 1,
+        self::CVCUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
@@ -337,11 +353,12 @@ enum Symbol: string
         return round(pow(0.1, $pricePrecision), $pricePrecision);
     }
 
-    public function makePrice(float $value): Price
+    /**
+     * @throws PriceCannotBeLessThanZero
+     */
+    public function makePrice(float $value): SymbolPrice
     {
-        $factory = new PriceFactory($this);
-
-        return $factory->make($value);
+        return SymbolPrice::create($value, $this);
     }
 
     public function minOrderQty(): float|int

@@ -7,7 +7,6 @@ namespace App\Tests\Factory;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
 
 final class TickerFactory
 {

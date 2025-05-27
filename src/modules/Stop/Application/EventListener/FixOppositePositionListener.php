@@ -42,6 +42,9 @@ final class FixOppositePositionListener
     ) {
     }
 
+    /**
+     * @todo publish to async
+     */
     public function __invoke(StopPushedToExchange $event): void
     {
         $stop = $event->stop;
@@ -111,8 +114,9 @@ final class FixOppositePositionListener
         $oppositePositionStopVolume = PnlHelper::getVolumeForGetWishedProfit($loss, $oppositePosition->entryPrice()->deltaWith($supplyStopPrice));
         if ($stoppedPosition->isMainPosition()) {
             // otherwise fixed support volume occasionally might be not enough to cover all losses of main position
-            $stoppedPart = Percent::fromPart($closedVolume / $stoppedPosition->size);
-            $maximalVolumeOfOppositePositionToClose = $stoppedPart->of($oppositePosition->size);
+            $stoppedPart = $closedVolume / $stoppedPosition->size;
+            // @todo | take early stopped part into account
+            $maximalVolumeOfOppositePositionToClose = $stoppedPart * $oppositePosition->size;
 
             if ($oppositePositionStopVolume > $maximalVolumeOfOppositePositionToClose) {
                 $oppositePositionStopVolume = $maximalVolumeOfOppositePositionToClose;

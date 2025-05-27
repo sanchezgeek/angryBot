@@ -33,12 +33,12 @@ final readonly class Hedge
 
     public function isSupportPosition(Position $position): bool
     {
-        return $this->supportPosition->side === $position->side;
+        return !$this->isEquivalentHedge() && $this->supportPosition->side === $position->side;
     }
 
     public function isMainPosition(Position $position): bool
     {
-        return $this->mainPosition->side === $position->side;
+        return !$this->isEquivalentHedge() && $this->mainPosition->side === $position->side;
     }
 
     /**

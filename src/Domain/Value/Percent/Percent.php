@@ -35,6 +35,11 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         parent::__construct($value);
     }
 
+    public static function notStrict(float $percent): self
+    {
+        return new self($percent, false);
+    }
+
     /**
      * @throws InvalidArgumentException
      */

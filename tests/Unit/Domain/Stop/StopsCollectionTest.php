@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Stop;
 
+use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -49,19 +50,21 @@ final class StopsCollectionTest extends TestCase
 
     public function testGrabFromRange(): void
     {
+        $symbol = Symbol::BTCUSDT;
+
         $collection = new StopsCollection();
 
-        $collection->add(StopBuilder::short(1, 29000, 0.001)->build());
-        $collection->add(StopBuilder::short(3, 29010, 0.001)->build());
-        $collection->add(StopBuilder::short(2, 29020, 0.02)->build());
-        $collection->add(StopBuilder::short(4, 29050, 0.01)->build());
+        $collection->add(StopBuilder::short(1, 29000, 0.001, $symbol)->build());
+        $collection->add(StopBuilder::short(3, 29010, 0.001, $symbol)->build());
+        $collection->add(StopBuilder::short(2, 29020, 0.02, $symbol)->build());
+        $collection->add(StopBuilder::short(4, 29050, 0.01, $symbol)->build());
 
-        $range = PriceRange::create(29005, 29021);
+        $range = PriceRange::create(29005, 29021, $symbol);
 
         self::assertEquals(
             new StopsCollection(
-                StopBuilder::short(3, 29010, 0.001)->build(),
-                StopBuilder::short(2, 29020, 0.02)->build(),
+                StopBuilder::short(3, 29010, 0.001, $symbol)->build(),
+                StopBuilder::short(2, 29020, 0.02, $symbol)->build(),
             ),
             $collection->grabFromRange($range)
         );

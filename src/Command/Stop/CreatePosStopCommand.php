@@ -14,7 +14,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;

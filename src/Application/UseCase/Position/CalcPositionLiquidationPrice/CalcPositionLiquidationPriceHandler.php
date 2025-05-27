@@ -7,7 +7,7 @@ namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 use App\Bot\Domain\Position;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
 use App\Worker\AppContext;
 use LogicException;
@@ -31,7 +31,7 @@ final readonly class CalcPositionLiquidationPriceHandler
         $liquidationDistance = $freeBalanceLiquidationDistance + self::getMaintenanceMarginLiquidationDistance($position);
 
         if ($position->isLong() && $liquidationDistance >= $position->entryPrice) {
-            return new CalcPositionLiquidationPriceResult($position->entryPrice(), Price::float(0));
+            return new CalcPositionLiquidationPriceResult($position->entryPrice(), $position->symbol->makePrice(0));
         }
 
         $estimatedLiquidationPrice = $position->entryPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $liquidationDistance);
@@ -77,9 +77,7 @@ final readonly class CalcPositionLiquidationPriceHandler
             return $position->entryPrice / $position->leverage->value() / 2;
         }
 
-        $maintenanceMargin = Percent::string('50%')->of($position->initialMargin);
-
-        return $maintenanceMargin->value() / $position->size;
+        return ($position->initialMargin->value() / 2) / $position->size;
     }
 
     private static function checkPrerequisites(Position $position): void

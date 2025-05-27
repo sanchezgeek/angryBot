@@ -28,7 +28,6 @@ final class LogLoggableEventListener implements EventSubscriberInterface
         ClockInterface $clock,
         LoggerInterface $logger,
         private readonly RateLimiterFactory $tickerUpdatedLogThrottlingLimiter,
-        private readonly RateLimiterFactory $btcusdtTickerUpdatedLogThrottlingLimiter,
     ) {
         $this->clock = $clock;
         $this->logger = $logger;
@@ -47,8 +46,7 @@ final class LogLoggableEventListener implements EventSubscriberInterface
 
         if ($event instanceof TickerUpdated || $event instanceof TickerUpdateSkipped) {
             $symbol = $event instanceof TickerUpdated ? $event->ticker->symbol : $event->foundCachedTickerDto->ticker->symbol;
-            $throttlerFactory = $symbol !== Symbol::BTCUSDT ? $this->tickerUpdatedLogThrottlingLimiter : $this->btcusdtTickerUpdatedLogThrottlingLimiter;
-            if (!$throttlerFactory->create($symbol->value)->consume()->isAccepted()) {
+            if (!$this->tickerUpdatedLogThrottlingLimiter->create($symbol->value)->consume()->isAccepted()) {
                 return;
             }
         }

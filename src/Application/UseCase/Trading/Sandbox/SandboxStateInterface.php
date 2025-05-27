@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 interface SandboxStateInterface
 {
@@ -18,9 +19,12 @@ interface SandboxStateInterface
     public function getPosition(Side $side): ?Position;
     public function getMainPosition(): ?Position;
     public function setPositionAndActualizeOpposite(Position|ClosedPosition $input): void;
-    public function modifyFreeBalance(CoinAmount|float $amount): self;
+    public function addFreeBalance(CoinAmount|float $amount): self;
+    public function subFreeBalance(CoinAmount|float $amount): self;
+    public function getContractBalance(): ContractBalance;
+    public function setContractBalance(ContractBalance $contractBalance): self;
     public function getFreeBalance(): CoinAmount;
     public function getFundsAvailableForLiquidation(): CoinAmount;
     public function getAvailableBalance(): CoinAmount;
-    public function setLastPrice(Price|float $price): self;
+    public function setLastPrice(SymbolPrice|float $price): self;
 }

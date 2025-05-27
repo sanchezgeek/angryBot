@@ -252,7 +252,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
                     $exception = $orderExecutionResult->failReason?->exception;
 
                     if ($exception instanceof ChecksNotPassedException) {
-                        $additionalInfo[] = sprintf('won\'t be executed (%s)', $orderExecutionResult->failReason->exception->getMessage());
+                        $additionalInfo[] = sprintf('skip (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     } elseif ($exception instanceof SandboxInsufficientAvailableBalanceException) {
                         $additionalInfo[] =  sprintf('cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     }

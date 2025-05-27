@@ -32,7 +32,9 @@ final class SettingsDefaultValuesCompilerPass implements CompilerPassInterface
     {
         $defaultSettingsValuesBag = $container->getDefinition(self::DEFAULT_SETTINGS_VALUES_BAG_SERVICE_ID);
 
-        $yaml = Yaml::parseFile($this->settingsYamlPath);
+        if (!$yaml = Yaml::parseFile($this->settingsYamlPath)) {
+            return;
+        }
 
         foreach ($yaml as $key => $value) {
             $defaultSettingsValuesBag->addMethodCall('set', [$key, $value]);

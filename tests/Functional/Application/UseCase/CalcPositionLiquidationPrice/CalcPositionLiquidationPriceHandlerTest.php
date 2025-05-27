@@ -9,7 +9,7 @@ use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLi
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Helper\FloatHelper;
 use App\Tests\Factory\PositionFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

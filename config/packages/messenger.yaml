@@ -14,6 +14,7 @@ framework:
             async_high: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_high'
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
             cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
+            tickers_updater_async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=tickers_updater_async'
             failed: 'doctrine://default?queue_name=failed'
             sync: 'sync://'
             cron:
@@ -23,13 +24,15 @@ framework:
 
         routing:
             # service
-            App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages: service
-            App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs: service
-
+#            App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages: service
+#            App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs: service
             # account
-            App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
+#            App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
+
+            App\Bot\Application\Messenger\Job\Cache\UpdateTicker: tickers_updater_async
 
             # market
+            App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange: async
             App\Application\Messenger\Market\TransferFundingFees: async_high
 
             # orders

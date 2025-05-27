@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\Position\CalcPositionLiquidationPrice;
 
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 final readonly class CalcPositionLiquidationPriceResult
 {
     public function __construct(
-        private Price $positionEntryPrice,
-        private Price $estimatedLiquidationPrice,
+        private SymbolPrice $positionEntryPrice,
+        private SymbolPrice $estimatedLiquidationPrice,
     ) {
     }
 
-    public function estimatedLiquidationPrice(): Price
+    public function estimatedLiquidationPrice(): SymbolPrice
     {
         return $this->estimatedLiquidationPrice;
     }
@@ -24,7 +24,7 @@ final readonly class CalcPositionLiquidationPriceResult
         return $this->positionEntryPrice->deltaWith($this->estimatedLiquidationPrice);
     }
 
-    public function positionEntryPrice(): Price
+    public function positionEntryPrice(): SymbolPrice
     {
         return $this->positionEntryPrice;
     }

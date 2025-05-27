@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
@@ -38,7 +38,7 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
-    protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?Price
+    protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?SymbolPrice
     {
         try {
             $pnlValue = $this->paramFetcher->requiredPercentOption($name);

@@ -15,12 +15,10 @@ use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use DateInterval;
 use Exception;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 final class AppSettingsService implements AppSettingsProviderInterface
 {
-    private const CACHE_TTL = '5 minutes';
+    private const CACHE_TTL = 300;
 
     /**
      * @throws Exception
@@ -78,19 +76,13 @@ final class AppSettingsService implements AppSettingsProviderInterface
     {
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;
+        $cacheKey = sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null');
 
-        $ttl = $setting instanceof SettingCacheTtlAware ? $setting->cacheTtl() : self::CACHE_TTL;
-        $cacheKey = md5(
-            sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor?->symbol->value ?? 'null', $settingValueAccessor?->side->value ?? 'null')
+        return $this->settingsCache->get(
+            md5($cacheKey),
+            fn () => $this->doGet($settingValueAccessor, $required)?->value,
+            $setting instanceof SettingCacheTtlAware ? DateInterval::createFromDateString($setting->cacheTtl()) : self::CACHE_TTL
         );
-
-        return $this->settingsCache->get($cacheKey, function (ItemInterface $item) use ($settingValueAccessor, $required, $ttl) {
-            $item->expiresAfter(DateInterval::createFromDateString($ttl));
-
-            $foundValue = $this->doGet($settingValueAccessor, $required);
-
-            return $foundValue?->value;
-        });
     }
 
     public function getAllSettingAssignedValuesCollection(AppSettingInterface $setting): AssignedSettingValueCollection
@@ -156,7 +148,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
      * @param iterable<StoredSettingsProviderInterface> $storedValuesProviders
      */
     public function __construct(
-        private readonly CacheInterface $settingsCache,
+        private readonly SettingsCache $settingsCache,
         private readonly AppErrorLoggerInterface $appErrorLogger,
         private readonly SettingsStorageInterface $storage,
         private readonly iterable $storedValuesProviders

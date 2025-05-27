@@ -30,6 +30,7 @@ services:
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
 # Liquidation\Application\Settings\LiquidationHandlerSettings
+                liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
                 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
                 liquidationHandlerSettings.acceptableStoppedPartFallback: 4
@@ -39,18 +40,18 @@ services:
 
                 # @todo Must be based on current price? or volatility
                 liquidationHandlerSettings.actualStopsRangeFromAdditionalStop: 50
-                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BTCUSDT]: 8
+                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BTCUSDT]: 15
                 liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=ETHUSDT]: 20
                 liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BNBUSDT]: 20
 
                 # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
-                liquidationHandlerSettings.warningDistancePnl: 400
-                liquidationHandlerSettings.warningDistancePnl[symbol=BTCUSDT]: 120
-                liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 200
-                liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 500
-                liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 500
+                liquidationHandlerSettings.warningDistancePnl: 300
+                liquidationHandlerSettings.warningDistancePnl[symbol=BTCUSDT]: 80
+                liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 150
+                liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 400
+                liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 350
 
-                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
+                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics (+ based on some `aggressive` / `conservative` [selected automatically in some situation and by config in common cases])
                 liquidationHandlerSettings.criticalDistancePnl: 200
                 liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT]: 60
                 liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT][side=sell]: 60 # as example of default for symbol and side

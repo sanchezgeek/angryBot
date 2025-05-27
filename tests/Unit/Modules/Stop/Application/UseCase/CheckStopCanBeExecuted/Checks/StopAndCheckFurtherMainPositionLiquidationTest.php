@@ -42,6 +42,8 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
     use SettingsAwareTest;
     use ChecksAwareTest;
 
+    const CHECK_ALIAS = StopAndCheckFurtherMainPositionLiquidation::ALIAS;
+
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;
     private TradingParametersProviderInterface|MockObject $parameters;
@@ -109,7 +111,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
 
         # SHORT
         $main = PositionBuilder::short()->entry(100000)->size(1)->liq(101000)->build();
-        $support = PositionBuilder::long()->entry(80000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::long()->entry(80000)->size(0.5)->build($main);
         $stop = StopBuilder::long(1, 100000, 0.001, $symbol)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
@@ -120,7 +122,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
 
         # LONG
         $main = PositionBuilder::long()->entry(80000)->size(1)->liq(79000)->build();
-        $support = PositionBuilder::short()->entry(100000)->size(0.5)->opposite($main)->build();
+        $support = PositionBuilder::short()->entry(100000)->size(0.5)->build($main);
         $stop = StopBuilder::short(1, 80000, 0.001)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, $stop->getPrice());
 
@@ -141,16 +143,17 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
     {
         $executionPrice = $stop->isCloseByMarketContextSet() ? $ticker->markPrice : $ticker->symbol->makePrice($stop->getPrice());
 
-        $source = OutputHelper::shortClassName(StopAndCheckFurtherMainPositionLiquidation::class);
         $info = sprintf(
-            '%s | id=%d, qty=%s, price=%s | safeDistance=%s, liquidation=%s',
+            '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
             $closingPosition,
             $stop->getId(),
             $stop->getVolume(),
             $executionPrice,
-            $safePriceDistance,
-            $mainPositionLiquidationPriceNew
+            $mainPositionLiquidationPriceNew,
+            $ticker->markPrice->deltaWith($mainPositionLiquidationPriceNew),
+            $ticker->symbol->makePrice($safePriceDistance),
         );
+        $source = self::CHECK_ALIAS;
 
         return $success ? TradingCheckResult::succeed($source, $info) : TradingCheckResult::failed($source, StopCheckFailureEnum::FurtherMainPositionLiquidationIsTooClose, $info);
     }

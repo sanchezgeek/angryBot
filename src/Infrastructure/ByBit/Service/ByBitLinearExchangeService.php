@@ -10,6 +10,7 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -17,7 +18,9 @@ use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
+use App\Infrastructure\ByBit\API\V5\Request\Kline\GetKlinesRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetInstrumentInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
@@ -25,6 +28,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use ValueError;
 
@@ -176,5 +180,53 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             (float)$data['list'][0]['leverageFilter']['maxLeverage'],
             (float)$data['list'][0]['priceFilter']['tickSize'],
         );
+    }
+
+    /**
+     * @return array<string, array{last: float, index: float, mark: float}> SymbolRaw -> Ticker
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getAllTickersRaw(Coin $settleCoin): array
+    {
+        $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $result = [];
+        foreach ($list as $item) {
+            $result[$item['symbol']] = [
+                'mark' => (float)$item['markPrice'],
+                'last' => (float)$item['lastPrice'],
+                'index' => (float)$item['indexPrice'],
+            ];
+        }
+
+        return $result;
+    }
+
+    public function getKlines(Symbol|string $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
+    {
+        $request = new GetKlinesRequest(self::ASSET_CATEGORY, $symbol, $interval, $from, $to, $limit);
+        $data = $this->sendRequest($request)->data();
+
+        $result = [];
+        foreach (array_reverse($data['list']) as $item) {
+            $result[] = [
+                'time' => $item[0] / 1000,
+                'open' => (float)$item[1],
+                'high' => (float)$item[2],
+                'low' => (float)$item[3],
+                'close' => (float)$item[4],
+            ];
+        }
+
+        return $result;
     }
 }

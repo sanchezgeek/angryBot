@@ -6,11 +6,11 @@ namespace App\Bot\Application\Helper;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrdersHandler;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\Price;
+use App\Domain\Price\SymbolPrice;
 
 class StopHelper
 {
-    public static function priceModifierIfCurrentPriceOverStop(Price $currentPrice): float
+    public static function priceModifierIfCurrentPriceOverStop(SymbolPrice $currentPrice): float
     {
         return 0.0005 * $currentPrice->value();
     }
@@ -23,7 +23,7 @@ class StopHelper
     /**
      * @see TryReleaseActiveOrdersHandler $additionalTriggerDelta$defaultReleaseOverDistance
      */
-    public static function defaultReleaseStopsDistance(Price $currentPrice): float
+    public static function defaultReleaseStopsDistance(SymbolPrice $currentPrice): float
     {
         return $currentPrice->value() * 0.0015;
     }
