@@ -22,9 +22,11 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
+use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
+use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
@@ -135,9 +137,15 @@ final class SchedulerFactory
 
     private function service(): array
     {
+        $priceCheckInterval = 'PT10M';
+
         return [
-            # service
-//            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
+            # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
+
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 

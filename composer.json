@@ -62,6 +62,7 @@
             "App\\Stop\\": "src/modules/Stop",
             "App\\Buy\\": "src/modules/Buy",
             "App\\Profiling\\": "src/modules/Profiling",
+            "App\\Screener\\": "src/modules/Screener",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

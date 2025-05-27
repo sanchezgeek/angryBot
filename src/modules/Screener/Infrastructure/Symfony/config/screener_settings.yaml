@@ -1,0 +1,4 @@
+### \App\Screener\Application\Settings\ScreenerSettings
+
+### \App\Screener\Application\Settings\ScreenerEnabledHandlersSettings
+screener.significantPriceChange.enabled: false

@@ -115,6 +115,9 @@ err: ## Get app errors (@see WorkerExceptionEventListener::logError)
 conn_err: ## Get connection errors (@see WorkerExceptionEventListener::logError)
 	@$(PHP_CONT) tail -f -n1 /srv/app/var/log/connection_errors.log
 
+notifications: ## Get app notifications
+	@$(PHP_CONT) tail -f -n1 /srv/app/var/log/app_notifications.log
+
 out-warn: ## Get consumers "warning" output
 	@$(PHP_CONT) tail -f /srv/app/var/log/bot-supervizord-out.log | grep '@ '
 

@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+ACTIONS_STR=${1}
+
+IFS=',' read -ra ACTIONS <<< "$ACTIONS_STR"
+
+if [[ -z "${BOT_LOGS_DIR}" ]]; then
+  echo "BOT_LOGS_DIR is undefined"
+  exit 1
+else
+  LOGS_DIR="${BOT_LOGS_DIR}"
+fi
+LOG_PATH="${LOGS_DIR}/${ACTIONS_STR}.$(/usr/bin/uuidgen).log"
+
+read -p "Remove old? " -n 1 -r
+echo    # (optional) move to a new line
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+  rm -rf ${LOGS_DIR}/${ACTIONS_STR}.*.log
+fi
+
+
+if [[ -z "${BOT_BIN_DIR}" ]]; then
+  echo "BOT_BIN_DIRS is undefined"
+else
+  BIN_DIR="${BOT_BIN_DIR}"
+fi
+
+instances=()
+for line in $(cat ${BIN_DIR}/data/instances.list); do
+    instances+=("$line")
+done
+
+for path in "${instances[@]}"
+  do
+	for ACTION in "${ACTIONS[@]}"; do
+		cmd="make -C ${path} ${ACTION} >> ${LOG_PATH} &"
+		echo $cmd;
+		$(eval "${cmd}")
+	done
+  done
+
+tail -f ${LOG_PATH} | while read line ; do afplay -t 0.3 ${BIN_DIR}/data/notify.mp3 -d1 2>&1 1>/dev/null ; echo $line ; done
