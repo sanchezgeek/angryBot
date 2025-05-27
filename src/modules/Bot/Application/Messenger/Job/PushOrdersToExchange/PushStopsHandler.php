@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Bot\Application\Settings\Enum\PriceRangeLeadingToUseMarkPriceOptions;
+use App\Bot\Application\Settings\PushStopSettingsWrapper;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -26,6 +29,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -34,18 +38,12 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
 
-use function abs;
-
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCornerCasesTest */
 /** @see \App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit\PushTakeProfitOrdersTest */
 #[AsMessageHandler]
 final class PushStopsHandler extends AbstractOrdersPusher
 {
-    // @todo | need to review (based on other values through handling)
-    public const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
-    public const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
-
     public function __invoke(PushStops $message): void
     {
         // @todo | stop check mainPosition stops first
@@ -69,17 +67,20 @@ final class PushStopsHandler extends AbstractOrdersPusher
 //            if ($diff < 0 && $updatedByWorker !== AppContext::runningWorker()) OutputHelper::warning(sprintf('negative diff: %s (by %s)', $diff, $updatedByWorker->value));
 //            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->value, $diff, $updatedByWorker->value));
 //        }
-        $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
-        if ($distanceWithLiquidation <= $liquidationWarningDistance) {
+        $liquidationParameters = $this->liquidationDynamicParameters($position, $ticker);
+        $distanceToUseMarkPrice = $this->pushStopSettings->rangeToUseWhileChooseMarkPriceAsTriggerPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
+            ? $liquidationParameters->warningDistanceRaw()
+            : $liquidationParameters->criticalDistance();
+
+        $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+        if ($distanceWithLiquidation <= $distanceToUseMarkPrice) {
             $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
             // @todo | pushStops | max (for short and min for long) between index and mark
             // + select $triggerBy based on selected price
         } else {
             $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
         }
-        $liquidationCriticalDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT, $currentPrice);
 
         $checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);
         foreach ($stops as $stop) {
@@ -100,11 +101,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 if (!$currentPriceOverStop || !$this->stopCanBePushed($stop, $checksContext)) continue;
                 $callback = self::closeByMarketCallback($orderService, $position, $stop, $stopsClosedByMarket);
             } else {
-                $stopMustBePushedByTriggerDelta = abs($stopPrice - $currentPrice->value()) <= $stop->getTriggerDelta();
+                $stopMustBePushedByTriggerDelta = $currentPrice->deltaWith($stopPrice, round: false) <= $stop->getTriggerDelta();
                 if ((!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) || !$this->stopCanBePushed($stop, $checksContext)) continue;
 
                 if ($currentPriceOverStop) {
-                    if ($distanceWithLiquidation <= $liquidationCriticalDistance) {
+                    if ($distanceWithLiquidation <= $liquidationParameters->criticalDistance()) {
                         $callback = self::closeByMarketCallback($orderService, $position, $stop, $stopsClosedByMarket);
                     } else {
                         $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
@@ -205,9 +206,16 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
     }
 
+    private function liquidationDynamicParameters(Position $position, Ticker $ticker): LiquidationDynamicParameters
+    {
+        return new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
+    }
+
     public function __construct(
         private readonly StopRepository $repository,
         private readonly OrderServiceInterface $orderService,
+        private readonly AppSettingsProviderInterface $settingsProvider,
+        private readonly PushStopSettingsWrapper $pushStopSettings,
 
         private readonly MessageBusInterface $messageBus,
         ExchangeServiceInterface $exchangeService,

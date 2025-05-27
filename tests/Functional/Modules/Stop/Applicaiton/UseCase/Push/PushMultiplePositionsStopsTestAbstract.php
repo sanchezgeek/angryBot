@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Stop\Helper\PnlHelper;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -32,17 +30,9 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
     use MessageConsumerTrait;
     use SettingsAwareTest;
 
-    private const BTCUSDT_LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
-
     public static function baseSetup(): TradingSetup
     {
         $setup = new TradingSetup();
-
-//        $ethTicker = TickerFactory::create(Symbol::ETHUSDT, 2100,  2100,  2100);
-//        $ethusdtLong = PositionBuilder::long()->symbol(Symbol::ETHUSDT)->size(1.1)->entry(2050)->build();
-//
-////        $setup->addTicker($ethTicker);
-//        $setup->addPosition($ethusdtLong);
 
         /**
          * DRY from @see PushStopsCommonCasesTest::pushStopsTestCases
@@ -64,7 +54,6 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
             150 => StopBuilder::long(150, 29100, 0.001)->withTD(5)->build()->disableSupportChecks(),
         ];
 
-//        $setup->addTicker($btcTicker);
         $setup->addPosition($btcLong);
         $setup->addPosition($btcShort);
 
@@ -76,7 +65,6 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
         $adaLong = PositionBuilder::long()->symbol(Symbol::ADAUSDT)->size(100)->entry(0.5)->build();
         $adaShort = PositionBuilder::short()->symbol(Symbol::ADAUSDT)->size(100)->entry(1.01)->build($adaLong);
 
-//        $setup->addTicker($adaTicker);
         $setup->addPosition($adaLong);
         $setup->addPosition($adaShort);
 
@@ -96,7 +84,6 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
             230 => StopBuilder::long(230, 23.696, 12, $symbol)->withTD($defaultTd)->build()->disableSupportChecks(),
         ];
 
-//        $setup->addTicker($linkTicker);
         $setup->addPosition($linkLong);
         $setup->addPosition($linkShort);
 

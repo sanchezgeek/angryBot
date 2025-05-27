@@ -98,8 +98,7 @@ final readonly class PushAllMainPositionsStopsHandler
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
-        $spendTimeMsg = OutputHelper::timeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
-        OutputHelper::print($spendTimeMsg);
+        OutputHelper::printTimeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
     }
 
     private function warmupTickers(): void

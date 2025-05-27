@@ -15,6 +15,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -27,7 +28,8 @@ use App\Tests\Utils\TradingSetup\TradingSetup;
 
 final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
-    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
+    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
+    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
 
     const CATEGORY = AssetCategory::linear;
 
@@ -42,7 +44,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     /**
      * @dataProvider cases
      */
-    public function testTest(
+    public function testPushAllMainPositionsStops(
         TradingSetup $setup,
         array $apiCalls,
         array $stopsAfterHandle
@@ -58,6 +60,9 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
 
         $positionsApiResponse = (new PositionResponseBuilder(self::CATEGORY));
         foreach ($setup->getPositions() as $position) {
+            $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+            $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
+
             $this->havePosition($position->symbol, $position); // fallback for PositionServiceInterface
             $ticker = $tickersMap[$position->symbol->value];
             $positionsApiResponse->withPosition($position, $ticker->markPrice->value());

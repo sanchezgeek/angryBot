@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Infrastructure\Symfony\Configuration;
 
+use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use App\Settings\Application\Service\SettingsLocator;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -35,7 +36,14 @@ final class SettingsCompilerPass implements CompilerPassInterface
         $finder->files()->in($this->settingsDirPath);
         if ($finder->hasResults()) {
             foreach ($finder as $file) {
-                $className = $this->namespace . '\\' . str_replace('.php', '', $file->getFilename());
+                $subDirPath = str_replace($this->settingsDirPath, '', $file->getPath());
+                $namespace = $subDirPath ? $this->namespace . str_replace('/', '\\', $subDirPath) :  $this->namespace;
+                $className = $namespace . '\\' . str_replace('.php', '', $file->getFilename());
+
+                if (!in_array(AppSettingsGroupInterface::class, class_implements($className), true)) {
+                    continue;
+                }
+
                 /** @see SettingsLocator::registerGroup */
                 // @todo use finder to find only implementations?
                 $locator->addMethodCall('registerGroup', [$className]);

@@ -138,6 +138,6 @@ class OutputHelper
     {
         $end = microtime(true);
 
-        return sprintf('~~~ %s time diff: %s ~~~', $desc, $end - $start);
+        return sprintf('~~~ %s time diff: %.10f ~~~', $desc, $end - $start);
     }
 }
