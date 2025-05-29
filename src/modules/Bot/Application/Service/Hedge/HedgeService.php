@@ -72,7 +72,7 @@ final class HedgeService
         return $hedge->mainPosition->symbol->roundVolume($applicableSupportProfit->value() / $hedge->getPositionsDistance());
     }
 
-    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, Percent $mainPositionIMPercentToSupport = null): bool
+    public function isSupportSizeEnoughForSupportMainPosition(Hedge $hedge, ?Percent $mainPositionIMPercentToSupport = null): bool
     {
         // @todo | what to do on short distance between positions? => 1/2 of main
 

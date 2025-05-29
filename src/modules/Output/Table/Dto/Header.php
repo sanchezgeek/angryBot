@@ -11,7 +11,7 @@ final readonly class Header
 
     public function __construct(
         string $name,
-        string $caption = null,
+        ?string $caption = null,
     ) {
         $this->name = $name;
         $this->caption = $caption ?? $this->name;

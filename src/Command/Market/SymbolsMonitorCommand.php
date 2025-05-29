@@ -85,7 +85,7 @@ class SymbolsMonitorCommand extends AbstractCommand
     public function __construct(
         private readonly ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

@@ -78,7 +78,7 @@ class CoverLossesCommand extends AbstractCommand
         private readonly PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly HedgeService $hedgeService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

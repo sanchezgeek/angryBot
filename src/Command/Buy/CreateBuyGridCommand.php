@@ -182,7 +182,7 @@ class CreateBuyGridCommand extends AbstractCommand
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         private readonly ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

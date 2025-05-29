@@ -13,7 +13,7 @@ use function sprintf;
 
 final class BadApiResponseException extends RuntimeException
 {
-    private function __construct(AbstractByBitApiRequest $req, string $details, string $context = null)
+    private function __construct(AbstractByBitApiRequest $req, string $details, ?string $context = null)
     {
         $message = sprintf('Bad response received: %s | Check `%s %s` API contract.', lcfirst($details), $req->method(), $req->url());
 
@@ -24,12 +24,12 @@ final class BadApiResponseException extends RuntimeException
         parent::__construct($message);
     }
 
-    public static function common(AbstractByBitApiRequest $request, string $key, string $context = null): self
+    public static function common(AbstractByBitApiRequest $request, string $key, ?string $context = null): self
     {
         return new self($request, sprintf('cannot find %s key in response', $key), $context);
     }
 
-    public static function invalidItemType(AbstractByBitApiRequest $request, string $key, mixed $value, string $expectedType, string $context = null): self
+    public static function invalidItemType(AbstractByBitApiRequest $request, string $key, mixed $value, string $expectedType, ?string $context = null): self
     {
         return new self(
             $request,
@@ -38,7 +38,7 @@ final class BadApiResponseException extends RuntimeException
         );
     }
 
-    public static function cannotFindKey(AbstractByBitApiRequest $request, string $key, string $context = null): self
+    public static function cannotFindKey(AbstractByBitApiRequest $request, string $key, ?string $context = null): self
     {
         return new self($request, sprintf('cannot find %s key in response', $key), $context);
     }

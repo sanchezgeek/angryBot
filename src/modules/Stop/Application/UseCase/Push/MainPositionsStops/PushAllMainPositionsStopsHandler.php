@@ -25,7 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class PushAllMainPositionsStopsHandler
 {
-    public const TICKERS_MILLI_TTL = 2000;
+    public const int TICKERS_MILLI_TTL = 2000;
 
     public function __invoke(PushAllMainPositionsStops $message): void
     {
@@ -98,8 +98,7 @@ final readonly class PushAllMainPositionsStopsHandler
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
-        $spendTimeMsg = OutputHelper::timeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
-        OutputHelper::print($spendTimeMsg);
+        OutputHelper::printTimeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
     }
 
     private function warmupTickers(): void

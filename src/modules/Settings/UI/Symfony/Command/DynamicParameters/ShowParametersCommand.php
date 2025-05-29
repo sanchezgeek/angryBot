@@ -108,7 +108,7 @@ class ShowParametersCommand extends AbstractCommand
     public function __construct(
         private readonly AppDynamicParametersLocator $parametersLocator,
         private readonly AppDynamicParameterEvaluator $parameterEvaluator,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

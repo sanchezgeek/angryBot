@@ -424,7 +424,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
         private readonly TradingSandboxFactory $tradingSandboxFactory,
         private readonly TradingParametersProviderInterface $furtherMainPositionLiquidationCheckParameters,
         private readonly BuyChecksChainFactory $buyChecksChainFactory,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

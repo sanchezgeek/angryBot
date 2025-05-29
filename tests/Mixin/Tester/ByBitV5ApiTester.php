@@ -77,7 +77,7 @@ trait ByBitV5ApiTester
         return $apiHost . $request->url();
     }
 
-    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, string $key = null): void
+    protected function matchGet(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, ?string $key = null): void
     {
         $currentNumber = count($this->expectedApiRequestsAfterTest);
         $key ??= sprintf('%d_%s-GET-%s', $currentNumber, uuid_create(), self::shortClassName($expectedRequest));
@@ -90,7 +90,7 @@ trait ByBitV5ApiTester
         }
     }
 
-    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, string $key = null): void
+    protected function matchPost(AbstractByBitApiRequest $expectedRequest, MockResponse $resultResponse, bool $needTrackRequestCallToFurtherCheck = true, ?string $key = null): void
     {
         $currentNumber = count($this->expectedApiRequestsAfterTest);
         $key ??= sprintf('%d_%s-POST-%s', $currentNumber, uuid_create(), self::shortClassName($expectedRequest));

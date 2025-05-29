@@ -307,7 +307,7 @@ class OpenCommand extends AbstractCommand
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

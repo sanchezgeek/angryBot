@@ -21,7 +21,7 @@ class TestCaseDataBase
     {
     }
 
-    public function with(array $data, string $appendName = null, $format = '%s | ..'): self
+    public function with(array $data, ?string $appendName = null, $format = '%s | ..'): self
     {
         $clone = clone $this;
 

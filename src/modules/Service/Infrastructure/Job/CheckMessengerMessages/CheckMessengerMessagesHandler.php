@@ -17,11 +17,11 @@ final class CheckMessengerMessagesHandler
     {
         $connection = $this->entityManager->getConnection();
 
-        $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetch();
+        $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetchAssociative();
         $count = (int) $result['count'];
         if ($count > self::LIMIT) {
             $this->appErrorLogger->error(sprintf('Found %d messages in messenger_messages.', $count));
-            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1')->fetch();
+            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1');
         }
     }
 

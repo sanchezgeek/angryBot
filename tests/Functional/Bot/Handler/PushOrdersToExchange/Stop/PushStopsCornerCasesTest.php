@@ -11,6 +11,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Application\Settings\PushStopSettingsWrapper;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -19,6 +20,8 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -55,8 +58,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
-    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT;
-    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = PushStopsHandler::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT;
+    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
+    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;
@@ -88,6 +91,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
             $this->orderServiceMock,
+            self::getContainerSettingsProvider(),
+            self::getContainer()->get(PushStopSettingsWrapper::class),
             $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,
@@ -106,6 +111,9 @@ final class PushStopsCornerCasesTest extends KernelTestCase
      */
     public function testCloseByMarketWhenAddConditionalStopMethodCallThrewSomeException(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
     {
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
+
         $this->haveTicker($ticker);
         $this->havePosition($position);
         $this->applyDbFixtures(new StopFixture($stop));
@@ -160,6 +168,9 @@ final class PushStopsCornerCasesTest extends KernelTestCase
      */
     public function testCloseByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRange(Ticker $ticker, Position $position, Stop $stop): void
     {
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
+
         $this->haveTicker($ticker);
         $this->havePosition($position);
         $this->applyDbFixtures(new StopFixture($stop));

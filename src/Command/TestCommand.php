@@ -27,7 +27,7 @@ class TestCommand extends AbstractCommand
     public function __construct(
         private readonly ByBitLinearExchangeService $exchangeService,
         private readonly AppNotificationLoggerInterface $notificationLogger,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

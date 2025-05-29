@@ -131,7 +131,7 @@ class SandboxTestCommand extends AbstractCommand
         return Command::SUCCESS;
     }
 
-    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, ContractBalance $prevContractBalance = null): array
+    private function printCurrentStats(TradingSandbox $sandbox, string $description, bool $printRealPositionStats = false, ?ContractBalance $prevContractBalance = null): array
     {
         $currentState = $sandbox->getCurrentState();
 
@@ -237,7 +237,7 @@ class SandboxTestCommand extends AbstractCommand
         private readonly PositionsCache $positionsCache,
         private readonly TradingSandboxFactory $tradingSandboxFactory,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

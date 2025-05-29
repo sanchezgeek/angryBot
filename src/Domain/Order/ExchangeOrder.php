@@ -14,7 +14,7 @@ final class ExchangeOrder // implements OrderInterface
     private float $providedVolume;
     private SymbolPrice $price;
 
-    public function __construct(Symbol $symbol, float $volume, SymbolPrice|float $price, float $providedVolume = null)
+    public function __construct(Symbol $symbol, float $volume, SymbolPrice|float $price, ?float $providedVolume = null)
     {
         $this->symbol = $symbol;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price));

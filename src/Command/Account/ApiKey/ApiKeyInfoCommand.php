@@ -29,7 +29,7 @@ class ApiKeyInfoCommand extends AbstractCommand
      */
     public function __construct(
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
-        string $name = null,
+        ?string $name = null,
     ) {
 
         parent::__construct($name);

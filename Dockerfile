@@ -10,7 +10,7 @@ FROM composer/composer:2-bin AS composer
 FROM mlocati/php-extension-installer:latest AS php_extension_installer
 
 # Prod image
-FROM php:8.2-fpm-alpine AS app_php
+FROM php:8.4-fpm-alpine AS app_php
 
 # Allow to use development versions of Symfony
 ARG STABILITY="stable"
@@ -35,6 +35,7 @@ RUN apk add --no-cache \
 		gettext \
 		git \
 		supervisor \
+		bash \
 	;
 
 RUN set -eux; \
@@ -122,4 +123,3 @@ RUN rm "$PHP_INI_DIR/conf.d/app.prod.ini"; \
 #RUN set -eux; install-php-extensions xdebug
 
 RUN rm -f .env.local.php
-

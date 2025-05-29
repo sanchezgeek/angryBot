@@ -41,7 +41,7 @@ class ChangeLeverageCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly PositionsCache $positionsCache,
         private readonly ByBitLinearPositionService $positionSvc,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

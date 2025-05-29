@@ -53,7 +53,7 @@ class RemoveStaleStopsCommand extends AbstractCommand
         private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

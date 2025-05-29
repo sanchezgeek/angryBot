@@ -12,7 +12,7 @@ final readonly class UniqueIdGeneratorStub implements UniqueIdGeneratorInterface
 {
     private string $uniqueId;
 
-    public function __construct(string $uniqueId = null)
+    public function __construct(?string $uniqueId = null)
     {
         $this->uniqueId = $uniqueId ?: uniqid('some-uniq.', true);
     }

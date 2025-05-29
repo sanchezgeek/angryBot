@@ -12,11 +12,9 @@ use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use RuntimeException;
-
 use Stringable;
 
 use function abs;
-use function round;
 use function sprintf;
 
 /**
@@ -128,9 +126,11 @@ final readonly class SymbolPrice implements Stringable
         return PriceMovement::fromToTarget($otherPrice, $this);
     }
 
-    public function deltaWith(SymbolPrice|float $otherPrice): float
+    public function deltaWith(SymbolPrice|float $otherPrice, bool $round = true): float
     {
-        return PriceHelper::round(abs($this->value() - self::toFloat($otherPrice)), $this->symbol->pricePrecision());
+        $delta = abs($this->value() - self::toFloat($otherPrice));
+
+        return $round ? PriceHelper::round($delta, $this->symbol->pricePrecision()) : $delta;
     }
 
     public function modifyByDirection(Side $positionSide, PriceMovementDirection $direction, SymbolPrice|float $diff): self

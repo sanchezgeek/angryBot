@@ -16,7 +16,7 @@ class FloatHelperTest extends TestCase
     /**
      * @dataProvider roundTestDataProvider
      */
-    public function testRound(float $raw, float $expectedResult, int $precision = null): void
+    public function testRound(float $raw, float $expectedResult, ?int $precision = null): void
     {
         $result = FloatHelper::round($raw, $precision);
 

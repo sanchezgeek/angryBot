@@ -29,7 +29,7 @@ readonly class SandboxStopOrder implements Stringable, VolumeSignAwareInterface,
     ) {
     }
 
-    public static function fromStop(Stop $stop, SymbolPrice|float $withPrice = null): self
+    public static function fromStop(Stop $stop, SymbolPrice|float|null $withPrice = null): self
     {
         $withPrice = $withPrice === null ? $stop->getPrice() : SymbolPrice::toFloat($withPrice);
 

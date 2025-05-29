@@ -83,7 +83,7 @@ class SymfonyHttpClientStub extends MockHttpClient
      *
      * @return string Registered request `key`
      */
-    public function matchGet(string $url, array $params, ResponseInterface $response, bool $registerRequestCall = true, string $key = null): string
+    public function matchGet(string $url, array $params, ResponseInterface $response, bool $registerRequestCall = true, ?string $key = null): string
     {
         $key ??= uuid_create() . '-GET-api-call';
 
@@ -99,7 +99,7 @@ class SymfonyHttpClientStub extends MockHttpClient
     /**
      * @return string Registered request description
      */
-    public function matchPost(string $url, ResponseInterface $response, array $requestBody, bool $registerRequestCall = true, string $key = null): string
+    public function matchPost(string $url, ResponseInterface $response, array $requestBody, bool $registerRequestCall = true, ?string $key = null): string
     {
         $key ??= uuid_create() . '-POST-api-call';
 

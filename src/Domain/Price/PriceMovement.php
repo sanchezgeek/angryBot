@@ -8,7 +8,6 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
-
 use App\Helper\FloatHelper;
 
 use function abs;
@@ -47,7 +46,7 @@ readonly class PriceMovement
         return -$this->deltaForPositionProfit($positionSide);
     }
 
-    public function absPercentDelta(float|SymbolPrice $forPrice = null): Percent
+    public function absPercentDelta(float|SymbolPrice|null $forPrice = null): Percent
     {
         $forPrice ??= $this->fromPrice;
         $delta = $this->absDelta();
@@ -55,7 +54,7 @@ readonly class PriceMovement
         return PnlHelper::convertAbsDeltaToPnlPercentOnPrice($delta, $forPrice);
     }
 
-    public function percentDeltaForPositionProfit(Side $relativeToPositionSide, float|SymbolPrice $price = null): Percent
+    public function percentDeltaForPositionProfit(Side $relativeToPositionSide, float|SymbolPrice|null $price = null): Percent
     {
         $price ??= $this->fromPrice;
 
@@ -66,7 +65,7 @@ readonly class PriceMovement
     /**
      * If, e.g., need to get "+" in case of movement to position losses. Good example in StopInfoCommand (in sense increasing of liquidation)
      */
-    public function percentDeltaForPositionLoss(Side $relativeToPositionSide, float|SymbolPrice $price = null): Percent
+    public function percentDeltaForPositionLoss(Side $relativeToPositionSide, float|SymbolPrice|null $price = null): Percent
     {
         $price ??= $this->fromPrice;
 

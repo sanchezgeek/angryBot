@@ -18,9 +18,6 @@ services:
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition: '200%'
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition: '200%'
 
-                # push Stop
-                push.stop.cover_loss_after_close_by_market.enabled: true
-
                 # push BuyOrder
                 push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
@@ -32,7 +29,7 @@ services:
 # Liquidation\Application\Settings\LiquidationHandlerSettings
                 liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
                 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
-                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '30%'
+                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '50%'
                 liquidationHandlerSettings.acceptableStoppedPartFallback: 4
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false

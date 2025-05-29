@@ -24,7 +24,7 @@ final class FloatHelper
 {
     public const DEFAULT_ROUND_PRECISION = 3;
 
-    public static function round(float $value, int $precision = null): float
+    public static function round(float $value, ?int $precision = null): float
     {
         $precision = $precision ?? self::DEFAULT_ROUND_PRECISION;
 
@@ -41,7 +41,7 @@ final class FloatHelper
     /**
      * @todo | test
      */
-    public static function modify(int|float $number, float $subPercentPart, float $addPercentPart = null, bool $force = false): int|float
+    public static function modify(int|float $number, float $subPercentPart, ?float $addPercentPart = null, bool $force = false): int|float
     {
         if (!$force && AppContext::isTest()) {
             return $number;

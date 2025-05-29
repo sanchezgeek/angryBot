@@ -135,7 +135,7 @@ class MakeLiquidationWishedDistanceCommand extends AbstractCommand
         private readonly ByBitExchangeAccountService $exchangeAccountService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         PositionServiceInterface $positionService,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

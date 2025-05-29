@@ -15,7 +15,7 @@ final readonly class PeriodicalJob implements JobScheduleInterface
         $interval = $interval instanceof \DateInterval ? $interval : new \DateInterval($interval);
         $start = $start instanceof \DateTimeImmutable ? $start : new \DateTimeImmutable($start);
 
-        return new self(new \DatePeriod($start, $interval, 9999999999999), $job);
+        return new self(new \DatePeriod($start, $interval, 2147483630), $job);
     }
 
     public function getNextRun(\DateTimeImmutable $lastTick): ?\DateTimeImmutable

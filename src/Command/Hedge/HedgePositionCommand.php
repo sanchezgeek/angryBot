@@ -174,7 +174,7 @@ class HedgePositionCommand extends AbstractCommand
         private readonly OrderServiceInterface $tradeService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

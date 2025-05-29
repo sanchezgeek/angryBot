@@ -25,7 +25,7 @@ final class TriggerDomainEventsListener implements EventSubscriberInterface
     {
         // @todo $this->initializeRollbackListenerIfNeeded($eventArgs);
 
-        $identityMap = $eventArgs->getEntityManager()->getUnitOfWork()->getIdentityMap();
+        $identityMap = $eventArgs->getObjectManager()->getUnitOfWork()->getIdentityMap();
 
         foreach ($identityMap as $className => $entities) {
             foreach ($entities as $entity) {

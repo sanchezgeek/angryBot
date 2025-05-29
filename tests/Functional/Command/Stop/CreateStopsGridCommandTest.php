@@ -360,7 +360,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
     }
 
-    private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, float $tD = null): Stop
+    private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, ?float $tD = null): Stop
     {
         $tD = $tD ?: $symbol->stopDefaultTriggerDelta();
 

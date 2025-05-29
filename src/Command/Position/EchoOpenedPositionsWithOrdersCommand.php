@@ -71,7 +71,7 @@ class EchoOpenedPositionsWithOrdersCommand extends AbstractCommand
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderRepository $buyOrderRepository,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

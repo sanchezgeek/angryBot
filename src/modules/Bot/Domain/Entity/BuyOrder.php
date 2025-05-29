@@ -142,7 +142,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return $this;
     }
 
-    public function getContext(string $name = null): mixed
+    public function getContext(?string $name = null): mixed
     {
         return $name ? ($this->context[$name] ?? null) : $this->context;
     }

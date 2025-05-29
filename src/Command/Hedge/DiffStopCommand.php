@@ -105,7 +105,7 @@ class DiffStopCommand extends AbstractCommand
         private readonly CalcPositionLiquidationPriceHandler $calcPositionLiquidationPriceHandler,
         private readonly PositionServiceInterface $positionService,
         private readonly HedgeService $hedgeService,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

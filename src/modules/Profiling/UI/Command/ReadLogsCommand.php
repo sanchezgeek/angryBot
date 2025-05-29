@@ -23,7 +23,7 @@ class ReadLogsCommand extends AbstractCommand
 
     private const UNIQID_ARG = 'unique-id';
 
-    protected function configure()
+    protected function configure(): void
     {
         $this
             ->configureSymbolArgs()
@@ -54,7 +54,7 @@ class ReadLogsCommand extends AbstractCommand
 
     public function __construct(
         private readonly ProfilingPointStorage $storage,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

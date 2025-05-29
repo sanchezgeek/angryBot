@@ -12,13 +12,13 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class SymfonyCacheWrapper implements CacheServiceInterface
 {
-    private const DEFAULT_CACHE_TTL = 60;
+    private const int DEFAULT_CACHE_TTL = 60;
 
     public function __construct(private CacheInterface $cache)
     {
     }
 
-    public function get(CacheKeyGeneratorInterface|string $key, callable $warmup = null, DateInterval|int|null $ttl = null): mixed
+    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
     {
         $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;
 

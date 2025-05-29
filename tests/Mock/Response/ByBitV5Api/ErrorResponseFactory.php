@@ -31,7 +31,7 @@ final class ErrorResponseFactory
         return self::make($body);
     }
 
-    public static function knownError(ApiV5Errors $err, string $msg = null): MockResponse
+    public static function knownError(ApiV5Errors $err, ?string $msg = null): MockResponse
     {
         $body = array_replace_recursive(self::SAMPLE_FAILED_RESPONSE, [
             'retCode' => $err->code(),

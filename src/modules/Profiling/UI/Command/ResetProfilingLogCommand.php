@@ -21,7 +21,7 @@ class ResetProfilingLogCommand extends AbstractCommand
 
     public function __construct(
         private readonly ProfilingPointStorage $storage,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

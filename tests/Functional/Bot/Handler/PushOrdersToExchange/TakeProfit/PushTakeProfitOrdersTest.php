@@ -11,6 +11,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
+use App\Bot\Application\Settings\PushStopSettingsWrapper;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -77,6 +78,8 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
             $this->orderServiceMock,
+            self::getContainerSettingsProvider(),
+            self::getContainer()->get(PushStopSettingsWrapper::class),
             $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,

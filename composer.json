@@ -4,41 +4,42 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "doctrine/data-fixtures": "^1.6",
+        "doctrine/data-fixtures": "1.8.1",
         "doctrine/doctrine-bundle": "^2.8",
         "doctrine/doctrine-migrations-bundle": "^3.2",
-        "doctrine/orm": "^2.14",
+        "doctrine/orm": "3.3.3",
         "guzzlehttp/guzzle": "^7.5",
         "scienta/doctrine-json-functions": "*",
-        "symfony/cache": "6.2.*",
-        "symfony/console": "6.2.*",
-        "symfony/doctrine-messenger": "6.2.*",
-        "symfony/dotenv": "6.2.*",
-        "symfony/finder": "6.2.*",
+        "symfony/cache": "*",
+        "symfony/console": "*",
+        "symfony/doctrine-messenger": "*",
+        "symfony/dotenv": "*",
+        "symfony/finder": "*",
         "symfony/flex": "^2",
-        "symfony/framework-bundle": "6.2.*",
-        "symfony/http-client": "6.2.*",
-        "symfony/lock": "6.2.*",
-        "symfony/messenger": "6.2.*",
+        "symfony/framework-bundle": "*",
+        "symfony/http-client": "*",
+        "symfony/lock": "*",
+        "symfony/messenger": "*",
         "symfony/monolog-bundle": "^3.8",
-        "symfony/rate-limiter": "6.2.*",
-        "symfony/runtime": "6.2.*",
-        "symfony/serializer": "6.2.*",
-        "symfony/uid": "6.2.*",
-        "symfony/validator": "6.2.*",
-        "symfony/yaml": "6.2.*"
+        "symfony/rate-limiter": "*",
+        "symfony/runtime": "*",
+        "symfony/serializer": "*",
+        "symfony/uid": "*",
+        "symfony/validator": "*",
+        "symfony/yaml": "*"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^9.5",
-        "symfony/browser-kit": "6.2.*",
-        "symfony/css-selector": "6.2.*",
+        "rector/rector": "*",
+        "symfony/browser-kit": "*",
+        "symfony/css-selector": "*",
         "symfony/maker-bundle": "^1.48",
         "symfony/phpunit-bridge": "^6.2",
-        "symfony/process": "6.2.*"
+        "symfony/process": "*"
     },
     "config": {
         "allow-plugins": {
@@ -98,7 +99,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "6.2.*"
+            "require": "7.4.*"
         }
     }
 }

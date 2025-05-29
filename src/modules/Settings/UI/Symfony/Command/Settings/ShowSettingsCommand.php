@@ -126,7 +126,7 @@ class ShowSettingsCommand extends AbstractCommand
     public function __construct(
         private readonly SettingsLocator $settingsLocator,
         private readonly AppSettingsService $settingsProvider,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }

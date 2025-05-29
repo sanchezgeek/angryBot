@@ -57,7 +57,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
-        callable $qbModifier = null
+        ?callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('bo')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
@@ -91,7 +91,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         Side $side,
         ?float $currentPrice = null,
         bool $exceptOppositeOrders = false,
-        callable $qbModifier = null
+        ?callable $qbModifier = null
     ): array {
         return $this->findActive(
             symbol: $symbol,
@@ -152,6 +152,6 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
     public function getNextId(): int
     {
-        return $this->_em->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
+        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
     }
 }

@@ -331,7 +331,7 @@ class EditStopsCommand extends AbstractCommand
         PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly LoggerInterface $appErrorLogger,
-        string $name = null,
+        ?string $name = null,
     ) {
         $this->withPositionService($positionService);
 

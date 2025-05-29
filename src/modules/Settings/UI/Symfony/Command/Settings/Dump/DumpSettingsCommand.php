@@ -45,7 +45,6 @@ class DumpSettingsCommand extends AbstractCommand
         $filepath = sprintf('%s/settings-%s.json', $dir, $this->clock->now()->format('Y-m-d_H:i:s'));
 
         $values = $this->settingValueRepository->findAll();
-        var_dump($values);
 
         $dump = [];
         foreach ($values as $value) {
@@ -64,7 +63,7 @@ class DumpSettingsCommand extends AbstractCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly SettingValueRepository $settingValueRepository,
         private readonly ClockInterface $clock,
-        string $name = null,
+        ?string $name = null,
     ) {
         parent::__construct($name);
     }
