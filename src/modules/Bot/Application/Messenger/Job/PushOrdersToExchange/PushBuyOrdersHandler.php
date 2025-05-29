@@ -23,6 +23,7 @@ use App\Bot\Application\Settings\PushBuyOrderSettings;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Factory\PositionFactory;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
@@ -228,9 +229,8 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         }
 
         if (!$position) {
-            // @todo | checks | mb troubles with sandbox
             // @todo | sandbox | mb troubles with sandbox (inner check will not work)
-            $position = new Position($side, $symbol, $index->value(), 0.05, 1000, 0, 13, 100);
+            $position = PositionFactory::fakeWithNoLiquidation($symbol, $side, $index);
         }
 
         $this->checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);

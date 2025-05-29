@@ -57,7 +57,7 @@ final class SchedulerFactory
 
     private const string DEDICATED_SYMBOL_SL_SPEED = self::VERY_SLOW;
 
-    private const TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
+    private const array TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
 //    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
 //    private const TICKERS_CACHE = ['interval' => 'PT10S', 'delay' => 3300];
 

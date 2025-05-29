@@ -32,6 +32,7 @@ imports
 
 ### Liquidation ###
     @todo | liquidation
+    @todo | liquidation | too big additional stop
     liq strategy based on safePriceDistance (or add some to liquidation distance)
     lP history points (and average through period)
         to determine what delta must be used in moment
