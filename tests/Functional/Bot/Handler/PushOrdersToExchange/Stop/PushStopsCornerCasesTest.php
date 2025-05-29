@@ -152,13 +152,13 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             'stop' => StopBuilder::short(5, 29051, 0.011)->withTD(10)->build(),
             'expectedTriggerBy' => TriggerBy::IndexPrice,
         ];
-//
-//        yield '[BTCUSDT SHORT] liquidation in warning range => use MarkPrice' => [
-//            'ticker' => $ticker,
-//            'position' => PositionFactory::short(self::SYMBOL, 20000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance),
-//            'stop' => StopBuilder::short(5, 29061, 0.011)->withTD(10)->build(),
-//            'expectedTriggerBy' => TriggerBy::MarkPrice,
-//        ];
+
+        yield '[BTCUSDT SHORT] liquidation in warning range => use MarkPrice' => [
+            'ticker' => $ticker,
+            'position' => PositionFactory::short(self::SYMBOL, 20000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance),
+            'stop' => StopBuilder::short(5, 29061, 0.011)->withTD(10)->build(),
+            'expectedTriggerBy' => TriggerBy::MarkPrice,
+        ];
     }
 
     /**

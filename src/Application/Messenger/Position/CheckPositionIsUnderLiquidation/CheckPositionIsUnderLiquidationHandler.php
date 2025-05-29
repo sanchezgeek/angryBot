@@ -231,6 +231,7 @@ final class CheckPositionIsUnderLiquidationHandler
                     $stopPrice = $this->dynamicParameters->additionalStopPrice();
 
                     # Recalculate qty to min. Otherwise, created further BuyOrders can lead to excessive increase in position size
+                    // @todo | liquidation | too big additional stop | FLM: 557.9%|1[a.-4383.2%] stop added (need some new logic for calc volume or rather fix opposite buy orders creation logic)
                     $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $stopQty, $stopPrice);
                     $stopQty = $exchangeOrder->getVolume();
 
