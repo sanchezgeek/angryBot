@@ -2,10 +2,10 @@
 
 namespace App\Settings\UI\Symfony\Command\Settings\Dump;
 
-use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Helper\Json;
+use App\Settings\Application\Service\SettingsCache;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,10 +16,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-
 use Symfony\Component\Finder\Finder;
-
-use Symfony\Component\Finder\SplFileInfo;
 
 use function array_map;
 use function file_get_contents;
@@ -30,9 +27,9 @@ class SettingsDumpRestoreCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
 
-    public const PATH_ARG = 'path';
-    public const AUTO_OPTION = 'auto';
-    public const PURGE_OPTION = 'purge';
+    public const string PATH_ARG = 'path';
+    public const string AUTO_OPTION = 'auto';
+    public const string PURGE_OPTION = 'purge';
 
     protected function configure(): void
     {
@@ -84,6 +81,7 @@ class SettingsDumpRestoreCommand extends AbstractCommand
         });
 
         $this->io->note(sprintf('Settings restored. Qnt: %d', count($values)));
+        $this->settingsCache->clear();
 
         if ($auto) {
             unlink($filepath);
@@ -95,6 +93,7 @@ class SettingsDumpRestoreCommand extends AbstractCommand
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly SettingValueRepository $settingValueRepository,
+        private readonly SettingsCache $settingsCache,
         private readonly string $defaultSettingsPath,
         ?string $name = null,
     ) {
