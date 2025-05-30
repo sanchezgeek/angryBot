@@ -85,10 +85,10 @@ services:
         tags:
             - { name: 'cache.pool', namespace: 'shared' }
 
-    app.cache_shared_apcu_adapter:
-        parent: 'cache.adapter.apcu'
-        tags:
-            - { name: 'cache.pool', namespace: 'shared' }
+#    app.cache_shared_apcu_adapter:
+#        parent: 'cache.adapter.apcu'
+#        tags:
+#            - { name: 'cache.pool', namespace: 'shared' }
 
 ### events
     App\Bot\Application\Events\LogLoggableEventListener:
