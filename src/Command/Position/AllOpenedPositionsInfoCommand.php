@@ -52,6 +52,9 @@ use Symfony\Contracts\Cache\CacheInterface;
 use function array_merge;
 use function sprintf;
 
+/**
+ * @todo | UI | opened-positions | Capture specific position state to cache?
+ */
 #[AsCommand(name: 'p:opened')]
 class AllOpenedPositionsInfoCommand extends AbstractCommand
 {
@@ -64,6 +67,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
     private const SortCacheKey = 'opened_positions_sort';
     private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
+    private const Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
 
     private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const WITH_SAVED_SORT_OPTION = 'sorted';
@@ -177,12 +181,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $iteration++;
             $this->cacheCollector = [];
 
-            $cache = $this->getCacheRecordToShowDiffWith($previousIterationCache);
+            $cache = $this->getCacheRecordToShowDiffWith();
 
-            $prevCache = null;
-            if ($this->showDiffWithOption !== 'last') {
-                $prevCache = $previousIterationCache;
-            }
+            $prevCache = $previousIterationCache;
 
             $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
             $saveCacheComment = $cacheComment && $iteration === 1;
@@ -201,6 +202,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
                 $this->cache->save($item);
                 $this->addSavedDataCacheKey($cachedDataCacheKey);
+                if ($saveCacheComment) {
+                    $this->addManuallySavedDataCacheKey($cachedDataCacheKey);
+                }
                 OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
             }
             $previousIterationCache = $this->cacheCollector;
@@ -678,18 +682,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $result;
     }
 
-    private function getCacheRecordToShowDiffWith(?array $lastCache): ?array
+    private function getCacheRecordToShowDiffWith(): ?array
     {
         $cache = null;
         if ($this->showDiffWithOption) {
             $selectedDataKey = $this->showDiffWithOption;
             if ($selectedDataKey === 'last') {
-                if ($lastCache) {
-                    # in case of update enabled
-                    return $lastCache;
-                }
-
-                assert($savedKeys = $this->getSavedDataCacheKeys(), new Exception('Saved cache not found'));
+                assert($savedKeys = $this->getManuallySavedDataCacheKeys(), new Exception('Trying to get last manually saved cache: saved cache not found'));
                 $selectedDataKey = $savedKeys[array_key_last($savedKeys)];
             }
 
@@ -782,6 +781,21 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         $this->cache->save($this->cache->getItem(self::SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
     }
+
+    private function getManuallySavedDataCacheKeys(): array
+    {
+        $cacheItem = $this->cache->getItem(self::Manually_SavedDataKeysCacheKey);
+
+        return $cacheItem->isHit() ? $cacheItem->get() : [];
+    }
+
+    private function addManuallySavedDataCacheKey(string $cacheKey): void
+    {
+        $savedDataKeys = $this->getManuallySavedDataCacheKeys();
+        $savedDataKeys[] = $cacheKey;
+
+        $this->cache->save($this->cache->getItem(self::Manually_SavedDataKeysCacheKey)->set($savedDataKeys)->expiresAfter(null));
+    }
     private function removeSavedDataCacheBefore(string $cacheKey): void
     {
         $savedDataKeys = $this->getSavedDataCacheKeys();
@@ -818,6 +832,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $mainPosStopsApplicableRange = null;
         if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
+            // @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
             $actualStopsRange = $liquidationParameters->actualStopsRange();
             $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
             $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)

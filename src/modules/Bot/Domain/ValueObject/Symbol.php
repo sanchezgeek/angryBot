@@ -112,6 +112,9 @@ enum Symbol: string
     case WCTUSDT = 'WCTUSDT';
     case SYRUPUSDT = 'SYRUPUSDT';
     case CVCUSDT = 'CVCUSDT';
+    case MASAUSDT = 'MASAUSDT';
+    case LPTUSDT = 'LPTUSDT';
+    case NEIROETHUSDT = 'NEIROETHUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -204,6 +207,9 @@ enum Symbol: string
         self::WCTUSDT->value => 4,
         self::SYRUPUSDT->value => 5,
         self::CVCUSDT->value => 5,
+        self::MASAUSDT->value => 5,
+        self::LPTUSDT->value => 3,
+        self::NEIROETHUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -297,6 +303,9 @@ enum Symbol: string
         self::WCTUSDT->value => 1,
         self::SYRUPUSDT->value => 1,
         self::CVCUSDT->value => 1,
+        self::MASAUSDT->value => 1,
+        self::LPTUSDT->value => 0.1,
+        self::NEIROETHUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [

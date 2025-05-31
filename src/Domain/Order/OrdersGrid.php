@@ -79,7 +79,7 @@ final class OrdersGrid
             throw new DomainException(sprintf('$forVolume must be greater than zero ("%.2f" given).', $forVolume));
         }
 
-        if ($qnt <= 1) {
+        if ($qnt < 1) {
             throw new DomainException(sprintf('$qnt must be >= 1 (%d given)', $qnt));
         }
 

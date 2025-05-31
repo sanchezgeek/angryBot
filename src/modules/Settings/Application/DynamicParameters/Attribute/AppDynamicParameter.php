@@ -9,6 +9,9 @@ use Attribute;
 #[Attribute]
 final class AppDynamicParameter
 {
+    /**
+     * @todo | UI | parameters | add some description and print in `show` command
+     */
     public function __construct(public string $group, public ?string $name = null)
     {
     }

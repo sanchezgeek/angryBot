@@ -112,11 +112,6 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
 ### commands
-    App\Command\Position\OpenCommand:
-        class: App\Command\Position\OpenCommand
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
-
     App\Command\Position\AllOpenedPositionsInfoCommand:
         class: App\Command\Position\AllOpenedPositionsInfoCommand
         arguments:
