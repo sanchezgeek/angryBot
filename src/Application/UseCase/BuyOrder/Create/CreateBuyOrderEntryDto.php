@@ -7,13 +7,13 @@ namespace App\Application\UseCase\BuyOrder\Create;
 use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 
-final readonly class CreateBuyOrderEntryDto
+final class CreateBuyOrderEntryDto
 {
     public function __construct(
-        public Symbol $symbol,
-        public Side $side,
-        public float $volume,
-        public float $price,
+        public readonly Symbol $symbol,
+        public readonly Side $side,
+        public readonly float $volume,
+        public readonly float $price,
         public array $context = [],
     ) {
     }

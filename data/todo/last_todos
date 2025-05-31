@@ -136,3 +136,16 @@ imports
 
 ### Upgrade ###
     postgres 16
+
+
+### DRY ###
+    @todo | DRY | with OpenPositionHandler
+
+    `AkaLimitOrder` entity + some threshold for not lost the trade
+
+
+### Uncategorized ###
+    @todo | open-position | add triggerDelta?
+    @todo | open-position | `withOpposite`
+        @todo | DRY | with OpenPositionHandler
+    @todo | open-position | research

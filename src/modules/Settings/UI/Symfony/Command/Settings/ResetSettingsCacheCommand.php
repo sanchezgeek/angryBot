@@ -11,7 +11,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'settings:cache:reset')]
-class ClearSettingsCacheCommand extends AbstractCommand
+class ResetSettingsCacheCommand extends AbstractCommand
 {
     use SymbolAwareCommand;
 

@@ -11,6 +11,13 @@ services:
     App\Trading\Application\Parameters\TradingDynamicParameters:
         public: true
 
+    _instanceof:
+        App\Trading\Application\Order\ContextShortcut\Processor\ShortcutContextProcessorInterface:
+            tags: ['trading.order.contextShortcutProcessor']
+
+    App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor:
+        arguments:
+            $processors: !tagged_iterator trading.order.contextShortcutProcessor
 
 # @todo move to sandbox module
 framework:

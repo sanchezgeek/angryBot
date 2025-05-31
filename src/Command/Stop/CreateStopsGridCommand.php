@@ -145,6 +145,8 @@ class CreateStopsGridCommand extends AbstractCommand
 
             /** @todo | Context =( */
             $stopsHasOppositeBuyOrders = ($context[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false;
+
+            /** @todo | DRY | with OpenPositionHandler */
             $roundVolumeToMin = $stopsHasOppositeBuyOrders;
 
             $orders = iterator_to_array($stopsGrid->ordersByQnt($forVolume, $qnt));

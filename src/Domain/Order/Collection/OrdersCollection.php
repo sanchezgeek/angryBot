@@ -20,6 +20,13 @@ final class OrdersCollection implements OrdersCollectionInterface
         $this->orders = $orders;
     }
 
+    public function merge(OrdersCollectionInterface $other): self
+    {
+        $this->orders = array_merge($this->orders, $other->getOrders());
+
+        return $this;
+    }
+
     /**
      * @return Order[]
      */
