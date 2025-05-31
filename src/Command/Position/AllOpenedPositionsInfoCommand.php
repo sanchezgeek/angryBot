@@ -52,6 +52,9 @@ use Symfony\Contracts\Cache\CacheInterface;
 use function array_merge;
 use function sprintf;
 
+/**
+ * @todo | UI | opened-positions | Capture specific position state to cache?
+ */
 #[AsCommand(name: 'p:opened')]
 class AllOpenedPositionsInfoCommand extends AbstractCommand
 {
@@ -818,6 +821,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         $mainPosStopsApplicableRange = null;
         if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
+            // @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
             $actualStopsRange = $liquidationParameters->actualStopsRange();
             $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
             $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)

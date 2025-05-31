@@ -98,7 +98,7 @@ final readonly class PushAllMainPositionsStopsHandler
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
-        OutputHelper::printTimeDiff(sprintf('%s: from begin to end', OutputHelper::shortClassName($this)), $start); // $profilingContext->registerNewPoint($spendTimeMsg);
+        self::timeDiffInfo('from begin to end', $start); // $profilingContext->registerNewPoint($spendTimeMsg);
     }
 
     private function warmupTickers(): void
@@ -125,6 +125,17 @@ final readonly class PushAllMainPositionsStopsHandler
                 $this->messageBus->dispatch(new UpdateTicker($ttl, ...$reverse));
             }
         }
+    }
+
+    private static function timeDiffInfo(string $desc, float $startPoint, bool $print = true): string
+    {
+        $diff = OutputHelper::timeDiff(sprintf('PushMainStops: %s', $desc), $startPoint);
+
+        if ($print) {
+            OutputHelper::print($diff);
+        }
+
+        return $diff;
     }
 
     public function __construct(

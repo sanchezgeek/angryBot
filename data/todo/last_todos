@@ -38,6 +38,10 @@ imports
         to determine what delta must be used in moment
 
 ### Other / Minor ###
+    #####!!!! UI !!!!!#####
+            @todo | UI | opened-positions | Capture specific position state to cache?
+            @todo | UI | parameters | add some description and print in `show` command
+
     symbols_wip_from_main_before_new_m
     main_msg_with_critical_context.patch / Тут пытался делать что-то по поводу скипа сообщений PushOrders
     @todo | liquidation
@@ -140,6 +144,7 @@ imports
 
 ### DRY ###
     @todo | DRY | with OpenPositionHandler
+    @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
 
     `AkaLimitOrder` entity + some threshold for not lost the trade
 
