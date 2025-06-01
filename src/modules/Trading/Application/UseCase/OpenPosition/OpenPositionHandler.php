@@ -14,6 +14,7 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
@@ -47,6 +48,7 @@ final class OpenPositionHandler
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
+        private readonly BuyOrderRepository $buyOrderRepository,
         private readonly PositionServiceInterface $positionService,
         private readonly ContextShortcutRootProcessor $contextShortcutRootProcessor
     ) {
@@ -121,10 +123,8 @@ final class OpenPositionHandler
             if ($resultPosition->isSupportPosition()) {
                 $buyOrder->isForceBuyOrder(); // @todo | open-position | research
             }
+            $this->buyOrderRepository->save($buyOrder);
         }
-
-        $this->entityManager->flush();
-        $this->entityManager->commit();
     }
 
     /**
