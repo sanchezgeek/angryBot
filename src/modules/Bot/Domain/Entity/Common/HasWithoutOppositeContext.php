@@ -6,7 +6,7 @@ namespace App\Bot\Domain\Entity\Common;
 
 trait HasWithoutOppositeContext
 {
-    public const WITHOUT_OPPOSITE_ORDER_CONTEXT = 'withoutOppositeOrder';
+    public const string WITHOUT_OPPOSITE_ORDER_CONTEXT = 'withoutOppositeOrder';
 
     public function isWithOppositeOrder(): bool
     {

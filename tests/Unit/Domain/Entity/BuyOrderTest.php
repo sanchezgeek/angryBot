@@ -200,14 +200,14 @@ final class BuyOrderTest extends TestCase
     public function testGetStopDistance(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
-        self::assertNull($buyOrder->getStopDistance());
+        self::assertNull($buyOrder->getOppositeOrderDistance());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::STOP_DISTANCE_CONTEXT => 100500]);
-        self::assertSame(100500.0, $buyOrder->getStopDistance());
+        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => 100500]);
+        self::assertSame(100500.0, $buyOrder->getOppositeOrderDistance());
 
         $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
-        $buyOrder->setStopDistanceContext(123.1);
-        self::assertSame(123.1, $buyOrder->getStopDistance());
+        $buyOrder->setOppositeOrdersDistance(123.1);
+        self::assertSame(123.1, $buyOrder->getOppositeOrderDistance());
     }
 
     /**

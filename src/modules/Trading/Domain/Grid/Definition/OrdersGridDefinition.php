@@ -29,8 +29,8 @@ final readonly class OrdersGridDefinition
         Side $positionSide,
         Symbol $symbol
     ): self {
-        $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w]+)?$/';
-        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w]+)?$/';
+        $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
         $isEquivRange = preg_match($equivRangePattern, $definition);
         $isAccurateRange = preg_match($accurateRangePattern, $definition);

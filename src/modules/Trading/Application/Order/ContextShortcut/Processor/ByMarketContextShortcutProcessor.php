@@ -12,14 +12,12 @@ final class ByMarketContextShortcutProcessor extends AbstractShortcutContextProc
 {
     private const string KNOWN_CONTEXT = 'bM';
 
-    public function supports(
-        string $shortcut,
-        OrderType $orderType
-    ): bool {
-        return $shortcut === self::KNOWN_CONTEXT && $orderType === OrderType::Stop;
+    public function supports(string $shortcut, BuyOrder|Stop|OrderType $orderType): bool
+    {
+        return $shortcut === self::KNOWN_CONTEXT && self::getOrderType($orderType) === OrderType::Stop;
     }
 
-    protected function rawContextPart(string $shortcut, OrderType $orderType): array
+    protected function rawContextPart(string $shortcut, BuyOrder|Stop $order): array
     {
         return [Stop::CLOSE_BY_MARKET_CONTEXT => true];
     }

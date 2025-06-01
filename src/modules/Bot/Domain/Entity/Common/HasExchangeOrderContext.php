@@ -6,7 +6,7 @@ namespace App\Bot\Domain\Entity\Common;
 
 trait HasExchangeOrderContext
 {
-    public const EXCHANGE_ORDER_ID_CONTEXT = 'exchange.orderId';
+    public const string EXCHANGE_ORDER_ID_CONTEXT = 'exchange.orderId';
 
     /**
      * @internal For use by Stop and BuyOrder | For tests

@@ -403,7 +403,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $context[Stop::CLOSE_BY_MARKET_CONTEXT] = true;
         }
 
-        if ($specifiedStopDistance = $buyOrder->getStopDistance()) {
+        if ($specifiedStopDistance = $buyOrder->getOppositeOrderDistance()) {
             $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
             $this->stopService->create($position->symbol, $side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
             return;

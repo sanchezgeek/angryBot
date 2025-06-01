@@ -297,7 +297,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stops = [
             1 => StopBuilder::short(1, 3.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
             5 => StopBuilder::short(5, 3.684, 11, $symbol)->withTD($defaultTd)->build()->setIsWithoutOppositeOrder(), # before ticker => push | without oppositeBuy
-            10 => StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()->setOppositeOrdersDistanceContext(0.06), # by tD | with oppositeBuy
+            10 => StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()->setOppositeOrdersDistance(0.06), # by tD | with oppositeBuy
             15 => StopBuilder::short(15, 3.696, 12, $symbol)->withTD($defaultTd)->build(),
             // @todo takeProfit order
         ];
@@ -319,7 +319,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
                 # just push
                 StopBuilder::short(10, 3.695, 12, $symbol)->withTD($defaultTd)->build()
-                    ->setOppositeOrdersDistanceContext(0.06)
+                    ->setOppositeOrdersDistance(0.06)
                     ->setExchangeOrderId($exchangeOrderIds[1]),
 
                 ### unchanged ###
@@ -496,7 +496,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         # custom opposite orders distance
         $exchangeOrderIds = [];
         $stops = [
-            StopBuilder::short(10, 391.22, 0.01, $symbol)->build()->setOppositeOrdersDistanceContext(10),
+            StopBuilder::short(10, 391.22, 0.01, $symbol)->build()->setOppositeOrdersDistance(10),
         ];
         $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
         $oppositeOrders = [
@@ -558,7 +558,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         # custom opposite orders distance
         $exchangeOrderIds = [];
         $stops = [
-            StopBuilder::long(20, 391.19, 0.05, $symbol)->build()->setOppositeOrdersDistanceContext(10),
+            StopBuilder::long(20, 391.19, 0.05, $symbol)->build()->setOppositeOrdersDistance(10),
         ];
         $expectedStopAddApiCalls = self::successConditionalStopApiCallExpectations($symbol, [$stops[0]], TriggerBy::IndexPrice, $exchangeOrderIds);
         $oppositeOrders = [
@@ -584,7 +584,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         $stopVolume = $stop->getVolume();
 
         $defaultDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->oppositeBuyOrderPnlDistance($stop), $stop->getSymbol()->makePrice($stopPrice));
-        $distance = $stop->getOppositeBuyOrderDistance() ?? FloatHelper::modify($defaultDistance, 0.1, 0.2);
+        $distance = $stop->getOppositeOrderDistance() ?? FloatHelper::modify($defaultDistance, 0.1, 0.2);
 
         $priceModifier = $side->isLong() ? $distance : -$distance;
         $oppositeSlPriceDistanceOnCreatedBuyOrders = $distance * CreateOppositeBuyOrdersListener::OPPOSITE_SL_PRICE_MODIFIER;
@@ -619,7 +619,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             $order->setOppositeStopId($stop->getId());
             $order->setIsOppositeBuyOrderAfterStopLossContext();
             $order->setIsForceBuyOrderContext();
-            $order->setStopDistanceContext($oppositeSlPriceDistanceOnCreatedBuyOrders);
+            $order->setOppositeOrdersDistance($oppositeSlPriceDistanceOnCreatedBuyOrders);
         }
 
         return $orders;
