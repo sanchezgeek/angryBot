@@ -65,6 +65,8 @@
             "App\\Profiling\\": "src/modules/Profiling",
             "App\\Screener\\": "src/modules/Screener",
             "App\\Admin\\": "src/modules/Admin",
+            "App\\Api\\": "src/modules/Api",
+            "App\\Chart\\": "src/modules/Chart",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

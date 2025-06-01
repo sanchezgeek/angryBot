@@ -1,0 +1,23 @@
+settings_api:
+    prefix: /api/settings
+    type: attribute
+    resource:
+        path: ../../src/modules/Settings/UI/Symfony/Controller/
+        namespace: App\Settings\UI\Symfony\Controller
+
+positions_api:
+    prefix: /api/positions
+    type: attribute
+    resource:
+        path: ../../src/modules/Trading/UI/Symfony/Controller/
+        namespace: App\Trading\UI\Symfony\Controller
+
+chart_api:
+    prefix: /api/chart
+    type: attribute
+    resource:
+        path: ../../src/modules/Chart/UI/Symfony/Controller/
+        namespace: App\Chart\UI\Symfony\Controller
+
+#    resource: "../../src/modules/Api/Infrastructure/Symfony/config/routes.yaml"
+    

@@ -17,6 +17,16 @@ const routes: Array<RouteRecordRaw> = [
     redirect: { name: 'dashboard' },
     children: [
       {
+        name: 'opened-positions-page',
+        path: 'dashboard/opened-positions',
+        component: () => import('../pages/positions/OpenedPositionsPage.vue'),
+      },
+      {
+        name: 'symbol-page',
+        path: 'dashboard/symbol-page/:symbol?',
+        component: () => import('../pages/symbolDashboard/SymbolDashboardPage.vue'),
+      },
+      {
         name: 'setting',
         path: 'dashboard/setting',
         component: () => import('../pages/setting/SettingPage.vue'),

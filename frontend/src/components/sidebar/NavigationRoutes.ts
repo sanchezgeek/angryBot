@@ -19,6 +19,20 @@ export default {
       },
     },
     {
+      name: 'opened-positions-page',
+      displayName: 'menu.opened-positions-page',
+      meta: {
+        icon: 'group',
+      },
+    },
+    {
+      name: 'symbol-page',
+      displayName: 'menu.symbol-page',
+      meta: {
+        icon: 'group',
+      },
+    },
+    {
       name: 'setting',
       displayName: 'menu.setting',
       meta: {
