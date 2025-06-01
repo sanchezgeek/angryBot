@@ -61,6 +61,7 @@ sh: ## Connect to the PHP FPM container
 api-sh: ## Connect to the API-PHP container
 	@$(API_CONT) bash
 
+# @todo cp env.example
 run-front:
 	@$(API_CONT) bash -c "bin/console ca:cl"
 	rm -rf ./public/build ./public/assets

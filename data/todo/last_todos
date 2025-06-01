@@ -164,3 +164,15 @@ imports
 
 ### openedPositions ###
     save current passed distance
+
+
+
+
+### Admin ###
+    @todo cp env.example
+    @todo Key for identify setting => fullKey?
+    @todo | symbols/sides
+
+### Domain Ref ###
+    PNL
+
