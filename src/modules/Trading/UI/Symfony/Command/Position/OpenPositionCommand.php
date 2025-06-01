@@ -8,6 +8,9 @@ use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Helper\OutputHelper;
+use App\Settings\Application\Service\AppSettingsService;
+use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Settings\OpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
 use App\Trading\Application\UseCase\OpenPosition\Exception\DefaultGridDefinitionNotFound;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionEntryDto;
@@ -15,6 +18,7 @@ use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,12 +36,15 @@ class OpenPositionCommand extends AbstractCommand
     public const string REOPEN_OPTION = 'reopen';
     public const string PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 'depositPercentToRisk';
 
+    public const string REMOVE_EXISTED_STOPS_OPTION = 'remove-existed-stops';
     public const string WITH_STOPS_OPTION = 'with-stops';
     public const string STOPS_GRID_DEFINITION = 'stops-grid';
+    public const string REMEMBER_STOPS_GRID_DEFINITION = 'remember-stops-grid';
     public const string STOPS_GRID_DEFINITION_DEFAULT = 'default';
 
     public const string SPLIT_BUY_WITH_BUY_ORDERS = 'split-buy';
     public const string BUY_ORDERS_GRID_DEFINITION = 'buy-grid';
+    public const string REMEMBER_BUY_GRID_DEFINITION = 'remember-buy-grid';
     public const string BUY_ORDERS_GRID_DEFINITION_DEFAULT = 'default';
 
     private Symbol $symbol;
@@ -54,9 +61,12 @@ class OpenPositionCommand extends AbstractCommand
 
             ->addOption(self::WITH_STOPS_OPTION, null, InputOption::VALUE_OPTIONAL, 'With stops?', true)
             ->addOption(self::STOPS_GRID_DEFINITION, null, InputOption::VALUE_REQUIRED, 'Stop grids definition', self::STOPS_GRID_DEFINITION_DEFAULT)
+            ->addOption(self::REMEMBER_STOPS_GRID_DEFINITION, null, InputOption::VALUE_OPTIONAL, 'Stop grids definition (with remember)')
+            ->addOption(self::REMOVE_EXISTED_STOPS_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove existed stops?', false)
 
             ->addOption(self::SPLIT_BUY_WITH_BUY_ORDERS, null, InputOption::VALUE_NEGATABLE, 'Buy some part with delayed BuyOrders?')
             ->addOption(self::BUY_ORDERS_GRID_DEFINITION, null, InputOption::VALUE_REQUIRED, 'BuyOrders grid definition', self::BUY_ORDERS_GRID_DEFINITION_DEFAULT)
+            ->addOption(self::REMEMBER_BUY_GRID_DEFINITION, null, InputOption::VALUE_OPTIONAL, 'BuyOrders grid definition (with remember)')
 //            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta')
         ;
     }
@@ -76,12 +86,12 @@ class OpenPositionCommand extends AbstractCommand
         $positionSide = $this->getPositionSide();
 
         try {$buyOrdersGridsDef = $this->getBuyOrdersGridDefinition();} catch (DefaultGridDefinitionNotFound $e) {
-            $this->io->error(sprintf("%s\nYou need to specify it manually with `%s` option", $e->getMessage(), self::BUY_ORDERS_GRID_DEFINITION));
+            $this->io->error(sprintf("%s\nYou need to specify it manually with `%s` or `%s` options", $e->getMessage(), self::BUY_ORDERS_GRID_DEFINITION, self::REMEMBER_BUY_GRID_DEFINITION));
             return Command::FAILURE;
         }
 
         try {$stopsGridsDef = $this->getStopsGridDefinition();} catch (DefaultGridDefinitionNotFound $e) {
-            $this->io->error(sprintf("%s\nYou need to specify it manually with `%s` option", $e->getMessage(), self::STOPS_GRID_DEFINITION));
+            $this->io->error(sprintf("%s\nYou need to specify it manually with `%s` or `%s` options", $e->getMessage(), self::STOPS_GRID_DEFINITION, self::REMEMBER_STOPS_GRID_DEFINITION));
             return Command::FAILURE;
         }
 
@@ -90,6 +100,7 @@ class OpenPositionCommand extends AbstractCommand
             positionSide: $positionSide,
             percentOfDepositToRisk: $this->paramFetcher->requiredPercentOption(self::PERCENT_OF_DEPOSIT_TO_RISK_OPTION, true),
             withStops: $this->paramFetcher->getBoolOption(self::WITH_STOPS_OPTION),
+            removeExistedStops: $this->paramFetcher->getBoolOption(self::REMOVE_EXISTED_STOPS_OPTION),
             closeAndReopenCurrentPosition: $this->paramFetcher->getBoolOption(self::REOPEN_OPTION),
             dryRun: $this->paramFetcher->getBoolOption(self::DEBUG_OPTION),
             outputEnabled: true,
@@ -125,6 +136,21 @@ class OpenPositionCommand extends AbstractCommand
         $positionSide = $this->getPositionSide();
         $priceToRelate = $this->ticker->indexPrice;
 
+        if ($rememberDefinition = $this->paramFetcher->getStringOption(self::REMEMBER_BUY_GRID_DEFINITION, false)) {
+            $defParsed = OrdersGridDefinitionCollection::create($rememberDefinition, $priceToRelate, $positionSide, $symbol);
+
+            $choose = $this->io->ask('Remember `buy-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")?');
+            $settingsAccessor = match ($choose) {
+                'symbol' => SettingAccessor::exact(OpenPositionSettings::SplitToBuyOrders_DefaultGridsDefinition, $symbol),
+                'both' => SettingAccessor::exact(OpenPositionSettings::SplitToBuyOrders_DefaultGridsDefinition, $symbol, $positionSide),
+                default => throw new InvalidArgumentException('Select one of "symbol" or "both'),
+            };
+
+            $this->settingsService->set($settingsAccessor, $rememberDefinition);
+
+            return $defParsed;
+        }
+
         $definition = $this->paramFetcher->getStringOption(self::BUY_ORDERS_GRID_DEFINITION);
         if ($definition !== self::BUY_ORDERS_GRID_DEFINITION_DEFAULT) {
             return OrdersGridDefinitionCollection::create($definition, $priceToRelate, $positionSide, $symbol);
@@ -146,6 +172,21 @@ class OpenPositionCommand extends AbstractCommand
         $positionSide = $this->getPositionSide();
         $priceToRelate = $this->ticker->indexPrice;
 
+        if ($rememberDefinition = $this->paramFetcher->getStringOption(self::REMEMBER_STOPS_GRID_DEFINITION, false)) {
+            $defParsed = OrdersGridDefinitionCollection::create($rememberDefinition, $priceToRelate, $positionSide, $symbol);
+
+            $choose = $this->io->ask('Remember `stops-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")?');
+            $settingsAccessor = match ($choose) {
+                'symbol' => SettingAccessor::exact(OpenPositionSettings::Stops_DefaultGridDefinition, $symbol),
+                'both' => SettingAccessor::exact(OpenPositionSettings::Stops_DefaultGridDefinition, $symbol, $positionSide),
+                default => throw new InvalidArgumentException('Select one of "symbol" or "both'),
+            };
+
+            $this->settingsService->set($settingsAccessor, $rememberDefinition);
+
+            return $defParsed;
+        }
+
         $definition = $this->paramFetcher->getStringOption(self::STOPS_GRID_DEFINITION);
         if ($definition !== self::STOPS_GRID_DEFINITION_DEFAULT) {
             return OrdersGridDefinitionCollection::create($definition, $priceToRelate, $positionSide, $symbol);
@@ -155,6 +196,7 @@ class OpenPositionCommand extends AbstractCommand
     }
 
     public function __construct(
+        private readonly AppSettingsService $settingsService,
         private readonly OpenPositionHandler $openPositionHandler,
         private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
         private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,

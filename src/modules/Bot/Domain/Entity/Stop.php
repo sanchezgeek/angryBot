@@ -9,6 +9,7 @@ use App\Bot\Domain\Entity\Common\HasOriginalPriceContext;
 use App\Bot\Domain\Entity\Common\HasSupportContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
+use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
@@ -33,22 +34,23 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
-    public const SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
-    public const IS_TP_CONTEXT = 'isTakeProfit';
-    public const CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
-    public const OPPOSITE_ORDERS_DISTANCE_CONTEXT = 'oppositeOrdersDistance';
-    public const IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
-    public const FIX_OPPOSITE_MAIN_ON_LOSS = 'fixOppositeMainOnLossEnabled';
-    public const FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
-    public const CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
+    public const string SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
+    public const string IS_TP_CONTEXT = 'isTakeProfit';
+    public const string CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
+    public const string IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER = 'additionalStopFromLiquidationHandler';
+    public const string FIX_OPPOSITE_MAIN_ON_LOSS = 'fixOppositeMainOnLossEnabled';
+    public const string FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
+    public const string CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
 
-    public const TP_TRIGGER_DELTA = 50;
+    /** @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols */
+    public const int TP_TRIGGER_DELTA = 50;
 
     use HasVolume;
     use HasOriginalPriceContext;
     use HasExchangeOrderContext;
     use HasSupportContext;
     use HasWithoutOppositeContext;
+    use WithOppositeOrderDistanceContext;
 
     use RecordEvents;
 
@@ -344,18 +346,6 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function isOrderPushedToExchange(): bool
     {
         return $this->getExchangeOrderId() !== null;
-    }
-
-    public function getOppositeBuyOrderDistance(): ?float
-    {
-        return $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] ?? null;
-    }
-
-    public function setOppositeOrdersDistanceContext(float $distance): self
-    {
-        $this->context[self::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $distance;
-
-        return $this;
     }
 
     public function isSupportChecksSkipped(): bool

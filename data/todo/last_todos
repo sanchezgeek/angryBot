@@ -154,3 +154,13 @@ imports
     @todo | open-position | `withOpposite`
         @todo | DRY | with OpenPositionHandler
     @todo | open-position | research
+
+### Domain ###
+    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+
+### Statistics ###
+    save ticker every minute
+        check if symbol hedge other on some distance
+
+### openedPositions ###
+    save current passed distance

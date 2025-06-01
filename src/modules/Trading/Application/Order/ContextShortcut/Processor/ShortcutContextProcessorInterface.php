@@ -16,12 +16,12 @@ interface ShortcutContextProcessorInterface
     /**
      * @throws UnapplicableContextShortcutProcessorException
      */
-    public function getRawContextPart(string $shortcut, OrderType $orderType): array;
+    public function getRawContextPart(string $shortcut, BuyOrder|Stop $order): array;
 
     /**
      * @throws UnapplicableContextShortcutProcessorException
      */
-    public function modifyRawContextArray(string $shortcut, OrderType $orderType, array &$contextRaw): void;
+    public function modifyRawContextArray(string $shortcut, BuyOrder|Stop|OrderType $order, array &$contextRaw): void;
 
     /**
      * @throws UnapplicableContextShortcutProcessorException

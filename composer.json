@@ -36,7 +36,6 @@
     "require-dev": {
         "mockery/mockery": "^1.6",
         "phpunit/phpunit": "^9.5",
-        "rector/rector": "*",
         "symfony/browser-kit": "*",
         "symfony/css-selector": "*",
         "symfony/maker-bundle": "^1.48",

@@ -12,14 +12,12 @@ final class WithoutOppositeOrderContextShortcutProcessor extends AbstractShortcu
 {
     private const string KNOWN_CONTEXT = 'wOO';
 
-    public function supports(
-        string $shortcut,
-        OrderType $orderType
-    ): bool {
+    public function supports(string $shortcut, BuyOrder|Stop|OrderType $orderType): bool
+    {
         return $shortcut === self::KNOWN_CONTEXT;
     }
 
-    protected function rawContextPart(string $shortcut, OrderType $orderType): array
+    protected function rawContextPart(string $shortcut, BuyOrder|Stop $order): array
     {
         return [Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
     }

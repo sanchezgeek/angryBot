@@ -107,7 +107,7 @@ class HedgePositionCommand extends AbstractCommand
 
             // @todo | calc real distance for each order in handler (or maybe in cmd, but for each BO)
             if ($stopDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
-                $context[BuyOrder::STOP_DISTANCE_CONTEXT] = $stopDistance;
+                $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $stopDistance;
             }
 
             $context[BuyOrder::FORCE_BUY_CONTEXT] = true;

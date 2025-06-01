@@ -7,6 +7,7 @@ namespace App\Bot\Domain\Entity;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\Entity\Common\HasVolume;
 use App\Bot\Domain\Entity\Common\HasWithoutOppositeContext;
+use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
@@ -29,22 +30,22 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 {
     use HasWithoutOppositeContext;
 
-    public const SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
-    public const SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
-    public const WITH_SHORT_STOP_CONTEXT = 'withShortStop';
-    public const FORCE_BUY_CONTEXT = 'forceBuy';
-    public const ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
+    public const string SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
+    public const string SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
+    public const string WITH_SHORT_STOP_CONTEXT = 'withShortStop';
+    public const string FORCE_BUY_CONTEXT = 'forceBuy';
+    public const string ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
 
     /**
      * @todo | It's only about BuyOrder? No =( If no ByBit is used as an exchange
      */
-    public const ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
-    public const IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
-    public const OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
-    public const STOP_DISTANCE_CONTEXT = 'stopDistance';
+    public const string ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT = 'onlyAfterExchangeOrderExecuted';
+    public const string IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
+    public const string OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
 
     use HasVolume;
     use HasExchangeOrderContext;
+    use WithOppositeOrderDistanceContext;
 
     use RecordEvents;
 
@@ -213,18 +214,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function setOppositeStopId(int $stopId): self
     {
         $this->context[self::OPPOSITE_SL_ID_CONTEXT] = $stopId;
-
-        return $this;
-    }
-
-    public function getStopDistance(): ?float
-    {
-        return $this->context[self::STOP_DISTANCE_CONTEXT] ?? null;
-    }
-
-    public function setStopDistanceContext(float $stopDistance): self
-    {
-        $this->context[self::STOP_DISTANCE_CONTEXT] = $stopDistance;
 
         return $this;
     }

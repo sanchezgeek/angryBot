@@ -17,7 +17,7 @@ abstract class AbstractShortcutContextProcessor implements ShortcutContextProces
      */
     final protected function checkIsApplicable(string $shortcut, OrderType|Stop|BuyOrder $orderType): void
     {
-        $orderType = $orderType instanceof OrderType ? $orderType : OrderType::fromEntity($orderType);
+        $orderType = self::getOrderType($orderType);
 
         if (!$this->supports($shortcut, $orderType)) {
             throw new UnapplicableContextShortcutProcessorException(
@@ -26,25 +26,30 @@ abstract class AbstractShortcutContextProcessor implements ShortcutContextProces
         }
     }
 
-    final public function getRawContextPart(string $shortcut, OrderType $orderType): array
+    final public function getRawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order): array
     {
-        $this->checkIsApplicable($shortcut, $orderType);
+        $this->checkIsApplicable($shortcut, $order);
 
-        return $this->rawContextPart($shortcut, $orderType);
+        return $this->rawContextPart($shortcut, $order);
     }
 
-    final public function modifyRawContextArray(string $shortcut, OrderType $orderType, array &$contextRaw): void
+    final public function modifyRawContextArray(string $shortcut, BuyOrder|Stop|OrderType $order, array &$contextRaw): void
     {
-        $contextRaw = array_merge($contextRaw, $this->getRawContextPart($shortcut, $orderType));
+        $contextRaw = array_merge($contextRaw, $this->getRawContextPart($shortcut, $order));
     }
 
     public function modifyOrder(string $shortcut, BuyOrder|Stop $order): void
     {
-        $this->checkIsApplicable($shortcut,$order);
+        $this->checkIsApplicable($shortcut, $order);
 
         $this->doModifyOrder($shortcut, $order);
     }
 
-    abstract protected function rawContextPart(string $shortcut, OrderType $orderType);
+    abstract protected function rawContextPart(string $shortcut, BuyOrder|Stop $order);
     abstract protected function doModifyOrder(string $shortcut, BuyOrder|Stop $order);
+
+    protected static function getOrderType(BuyOrder|Stop|OrderType $orderType): OrderType
+    {
+        return $orderType instanceof OrderType ? $orderType : OrderType::fromEntity($orderType);
+    }
 }

@@ -54,7 +54,7 @@ final class CreateOppositeBuyOrdersListener
         $stopVolume = $stop->getVolume();
         $stopPrice = $symbol->makePrice($stop->getPrice()); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
-        if (($distance = $stop->getOppositeBuyOrderDistance()) === null) {
+        if (($distance = $stop->getOppositeOrderDistance()) === null) {
             $pnlDistance = $this->getOppositeOrderPnlDistance($stop);
             $distance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlDistance, $stopPrice), 0.1, 0.2);
         }
@@ -76,7 +76,7 @@ final class CreateOppositeBuyOrdersListener
             $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
             // @todo | stop | либо за цену первоначального стопа?
         } else {
-            $context[BuyOrder::STOP_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
+            $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = FloatHelper::modify($distance * self::OPPOSITE_SL_PRICE_MODIFIER, 0.1);
         }
 
         $bigStopVolume = $symbol->roundVolume($symbol->minOrderQty() * 6);

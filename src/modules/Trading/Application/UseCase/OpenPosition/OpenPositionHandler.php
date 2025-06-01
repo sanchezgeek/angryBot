@@ -21,11 +21,11 @@ use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
+use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -53,7 +53,6 @@ final class OpenPositionHandler
     }
 
     /**
-     * @throws SizeCannotBeLessOrEqualsZeroException
      * @throws CannotAffordOrderCostException
      * @throws AutoReopenPositionDenied
      * @throws Exception
@@ -64,7 +63,7 @@ final class OpenPositionHandler
         $symbol = $this->entryDto->symbol;
         $positionSide = $entryDto->positionSide;
 
-        $this->ticker = $ticker = $this->exchangeService->ticker($symbol);
+        $this->ticker = $this->exchangeService->ticker($symbol);
         $this->currentlyOpenedPosition = $this->positionService->getPosition($symbol, $positionSide);
 
         $totalSize = $this->getTotalSize();
@@ -90,28 +89,19 @@ final class OpenPositionHandler
             $this->entityManager->flush();
         }
 
-        // fake position to make some calc
-        // @todo will be needed if relativePnlPercent is used
-        // $fakeOpenedPosition = new Position($positionSide, $symbol, $entryPrice, $totalSize, $positionValue, 0, $initialMargin, $leverage);
-
-        if ($entryDto->stopsGridsDefinition) {
-            $this->createStopsGrid($entryDto->stopsGridsDefinition, $totalSize);
-        }
-
-# calc size of buy orders
-        /** @var CreateBuyOrderEntryDto[] $buyOrdersDtoArray */
-        $buyOrdersDtoArray = [];
-        if ($entryDto->buyGridsDefinition !== null) {
-            $buyOrdersDtoArray = $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
-        }
-
         $buyGridOrdersVolumeSum = 0;
-        foreach ($buyOrdersDtoArray as $orderDto) {
-            $buyGridOrdersVolumeSum += $orderDto->volume;
+        $buyOrders = $entryDto->buyGridsDefinition === null ? [] : $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
+        foreach ($buyOrders as $buyOrder) {
+            $buyGridOrdersVolumeSum += $buyOrder->getVolume();
         }
 
 # do market buy
         $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
+
+        if ($entryDto->stopsGridsDefinition) {
+            $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
+        }
+
         $this->tradeService->marketBuy($symbol, $positionSide, $marketBuyVolume);
 
         $this->entityManager->flush();
@@ -123,18 +113,19 @@ final class OpenPositionHandler
             throw new RuntimeException(sprintf('[%s] Something went wrong: position not found after marketBuy', OutputHelper::shortClassName($this)));
         }
 
-# create buy orders grid
-        $commonBuyOrdersContext = [BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]; // without stops (stops already created for whole position size)
-        if ($resultPosition->isSupportPosition()) {
-            $commonBuyOrdersContext[BuyOrder::FORCE_BUY_CONTEXT] = true; // @todo | open-position | research
+        foreach ($buyOrders as $buyOrder) {
+            if (!$buyOrder->getOppositeOrderDistance()) {
+                $buyOrder->setIsWithoutOppositeOrder(); // only if opposite distance was not provided while orders creation
+            }
+
+            if ($resultPosition->isSupportPosition()) {
+                $buyOrder->isForceBuyOrder(); // @todo | open-position | research
+            }
         }
 
-        foreach ($buyOrdersDtoArray as $orderDto) {
-            $orderDto->context = array_merge($orderDto->context, $commonBuyOrdersContext);
-            $this->createBuyOrderHandler->handle($orderDto);
-        }
+        $this->entityManager->flush();
+        $this->entityManager->commit();
     }
-
 
     /**
      * @throws AutoReopenPositionDenied
@@ -174,7 +165,10 @@ final class OpenPositionHandler
     }
 
     /**
+     * @return BuyOrder[]
+     *
      * @throws PriceCannotBeLessThanZero
+     * @throws UnapplicableContextShortcutProcessorException
      */
     private function createBuyOrdersGrid(OrdersGridDefinitionCollection $ordersGridDefinitionsCollection, float $totalSize): array
     {
@@ -185,22 +179,22 @@ final class OpenPositionHandler
         foreach ($ordersGridDefinitionsCollection as $ordersGridDefinition) {
             $forVolume = $ordersGridDefinition->definedPercent->of($totalSize);
             $randStep = $symbol->minimalPriceMove() * 10;
-            $ordersContext = $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Add);
 
             $orders = new OrdersLimitedWithMaxVolume(
-                new OrdersWithMinExchangeVolume(
-                    $symbol,
-                    new OrdersCollection(
-                        ...new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount)
-                    )
-                ),
+                new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(
+                    ...new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount)
+                )),
                 $forVolume
             );
 
             foreach ($orders as $order) {
                 $rand = FloatHelper::modify($randStep, 0.3);
                 $orderPrice = $order->price()->add($rand);
-                $result[] = new CreateBuyOrderEntryDto($symbol, $positionSide, $order->volume(), $orderPrice->value(), $ordersContext);
+
+                $buyOrder = $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($symbol, $positionSide, $order->volume(), $orderPrice->value()))->buyOrder;
+                $this->contextShortcutRootProcessor->modifyOrderWithShortcuts($ordersGridDefinition->contextsDefs, $buyOrder);
+
+                $result[] = $buyOrder;
             }
         }
 

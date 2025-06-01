@@ -77,7 +77,7 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
         $linkStopsBefore = [
             200 => StopBuilder::short(200, 23.685, 10, $symbol)->withTD($defaultTd)->build()->setExchangeOrderId($existedExchangeOrderId = uuid_create()), # must not be pushed (not active)
             205 => StopBuilder::short(205, 23.684, 11, $symbol)->withTD($defaultTd)->build()->setIsWithoutOppositeOrder(), # before ticker => push | without oppositeBuy
-            210 => StopBuilder::short(210, 23.689, 12, $symbol)->withTD($defaultTd)->build()->setOppositeOrdersDistanceContext(0.06), # by tD | with oppositeBuy
+            210 => StopBuilder::short(210, 23.689, 12, $symbol)->withTD($defaultTd)->build()->setOppositeOrdersDistance(0.06), # by tD | with oppositeBuy
             215 => StopBuilder::short(215, 23.696, 12, $symbol)->withTD($defaultTd)->build(),
             // @todo takeProfit order
 

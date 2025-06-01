@@ -29,15 +29,15 @@ final readonly class OrdersGridDefinition
         Side $positionSide,
         Symbol $symbol
     ): self {
-        $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w]+)?$/';
-        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w]+)?$/';
+        $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
         $isEquivRange = preg_match($equivRangePattern, $definition);
         $isAccurateRange = preg_match($accurateRangePattern, $definition);
 
         if (!$isEquivRange && !$isAccurateRange) {
             throw new InvalidArgumentException(
-                sprintf('Invalid `buyGridsDefinition` definition "%s" ("%s" or "%s" expected)', $definition, $equivRangePattern, $accurateRangePattern),
+                sprintf('Invalid definition "%s" ("%s" or "%s" expected)', $definition, $equivRangePattern, $accurateRangePattern),
             );
         }
 
