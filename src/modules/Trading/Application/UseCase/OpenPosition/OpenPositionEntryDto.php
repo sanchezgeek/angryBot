@@ -17,7 +17,7 @@ final readonly class OpenPositionEntryDto
         public Percent $percentOfDepositToRisk,
         public bool $withStops,
         public bool $closeAndReopenCurrentPosition,
-        public bool $removeExistedStops = true,
+        public bool $removeExistedStops = false,
         public bool $dryRun = false,
         public bool $outputEnabled = false,
         public ?OrdersGridDefinitionCollection $buyGridsDefinition = null,

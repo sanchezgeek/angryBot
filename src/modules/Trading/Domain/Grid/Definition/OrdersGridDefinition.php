@@ -37,7 +37,7 @@ final readonly class OrdersGridDefinition
 
         if (!$isEquivRange && !$isAccurateRange) {
             throw new InvalidArgumentException(
-                sprintf('Invalid `buyGridsDefinition` definition "%s" ("%s" or "%s" expected)', $definition, $equivRangePattern, $accurateRangePattern),
+                sprintf('Invalid definition "%s" ("%s" or "%s" expected)', $definition, $equivRangePattern, $accurateRangePattern),
             );
         }
 

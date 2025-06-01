@@ -21,7 +21,6 @@ use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
@@ -53,7 +52,6 @@ final class OpenPositionHandler
     }
 
     /**
-     * @throws SizeCannotBeLessOrEqualsZeroException
      * @throws CannotAffordOrderCostException
      * @throws AutoReopenPositionDenied
      * @throws Exception
@@ -64,7 +62,7 @@ final class OpenPositionHandler
         $symbol = $this->entryDto->symbol;
         $positionSide = $entryDto->positionSide;
 
-        $this->ticker = $ticker = $this->exchangeService->ticker($symbol);
+        $this->ticker = $this->exchangeService->ticker($symbol);
         $this->currentlyOpenedPosition = $this->positionService->getPosition($symbol, $positionSide);
 
         $totalSize = $this->getTotalSize();
