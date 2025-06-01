@@ -116,6 +116,7 @@ enum Symbol: string
     case LPTUSDT = 'LPTUSDT';
     case NEIROETHUSDT = 'NEIROETHUSDT';
     case SOLVUSDT = 'SOLVUSDT';
+    case FLOCKUSDT = 'FLOCKUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -212,6 +213,7 @@ enum Symbol: string
         self::LPTUSDT->value => 3,
         self::NEIROETHUSDT->value => 5,
         self::SOLVUSDT->value => 5,
+        self::FLOCKUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -309,6 +311,7 @@ enum Symbol: string
         self::LPTUSDT->value => 0.1,
         self::NEIROETHUSDT->value => 1,
         self::SOLVUSDT->value => 1,
+        self::FLOCKUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
