@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Infrastructure\Storage;
 
+use App\Domain\Shared\Helper\StringHelper;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsCache;
@@ -33,7 +34,13 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
         $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
 
-        return $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]);
+        return $this->repository->findOneBy(
+            [
+                'key' => $settingAccessor->setting->getSettingKey(),
+                'symbol' => $settingAccessor->symbol,
+                'positionSide' => $settingAccessor->side,
+            ]
+        );
     }
 
     public function getSettingStoredValues(AppSettingInterface $setting): array

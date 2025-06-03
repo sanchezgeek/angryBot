@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\EventListener\Stop;
 
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
@@ -12,12 +11,10 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\EventListener\FixOppositePositionListener;
 use App\Stop\Application\Settings\FixOppositePositionSettings;
@@ -31,7 +28,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 {
     use SettingsAwareTest;
 
-    const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
+    const int APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -44,15 +41,10 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         $this->positionService = $this->createMock(PositionServiceInterface::class);
         $this->stopService = $this->createMock(StopServiceInterface::class);
 
-        $orderCostCalculator = new OrderCostCalculator(new ByBitCommissionProvider());
-        $exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
-
         $this->overrideSetting(FixOppositePositionSettings::FixOppositePosition_If_OppositePositionPnl_GreaterThan, sprintf('%d%%', self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT));
 
         $this->listener = new FixOppositePositionListener(
             self::getContainerSettingsProvider(),
-            $orderCostCalculator,
-            $exchangeAccountService,
             $this->exchangeService,
             $this->positionService,
             $this->stopService,
