@@ -13,7 +13,8 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -216,7 +217,7 @@ class SandboxTestCommand extends AbstractCommand
         return $this->exchangeAccountService->getContractWalletBalance($this->getSymbol()->associatedCoin());
     }
 
-    private function getInfoMsg(Symbol $symbol, Side $positionSide, array $orders): string
+    private function getInfoMsg(SymbolInterface $symbol, Side $positionSide, array $orders): string
     {
         $ordersPart = [];
         foreach ($orders as $order) {

@@ -164,3 +164,30 @@ imports
 
 ### openedPositions ###
     save current passed distance
+
+### Symbol###
+
+    ->value
+    ->name -> ->value
+
+    @todo | symbol | some way to get values based on symbol -> move to settings?
+
+
+    @todo | symbol | provider / factory ...
+    @todo | symbol | use ->eq()
+        ctr-f:
+            $symbol !==
+            === $symbol
+            getSymbol() ===
+            === .*->getSymbol()
+
+            StopsCollection
+            getOpenedPositionsSymbols
+
+
+
+
+    ctrl-f:
+        SymbolEnum::tryFrom
+        SymbolEnum::try
+        SymbolEnum::fromShortName

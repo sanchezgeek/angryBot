@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBitV5Api;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
@@ -73,7 +74,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
     }
 
     public function withTicker(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $indexPrice,
         ?float $lastPrice = null,
         ?float $markPrice = null,

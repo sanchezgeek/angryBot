@@ -11,7 +11,8 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
@@ -59,8 +60,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     #[ORM\Column]
     private float $volume;
 
-    #[ORM\Column(type: 'string', enumType: Symbol::class)]
-    private Symbol $symbol;
+    #[ORM\Column(type: 'string', enumType: SymbolEnum::class)]
+    private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
@@ -76,7 +77,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     private bool $isOppositeStopExecuted = false;
 
-    public function __construct(int $id, SymbolPrice|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
@@ -94,7 +95,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     /**
      * @todo | new column
      */
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }

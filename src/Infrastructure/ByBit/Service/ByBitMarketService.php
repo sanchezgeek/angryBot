@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
@@ -27,7 +28,7 @@ final class ByBitMarketService implements MarketServiceInterface
         $this->apiClient = $apiClient;
     }
 
-    public function getPreviousPeriodFundingRate(Symbol $symbol): float
+    public function getPreviousPeriodFundingRate(SymbolInterface $symbol): float
     {
         $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol);
 

@@ -6,7 +6,8 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitExchangeAccoun
 
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;
@@ -33,7 +34,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
         ?Ticker $ticker = null,
     ): void {
         $this->matchGet(new GetWalletBalanceRequest(AccountType::UNIFIED, $coin), $apiResponse);
-        $this->havePosition(Symbol::BTCUSDT, ...$positions);
+        $this->havePosition(SymbolEnum::BTCUSDT, ...$positions);
         if ($ticker) $this->haveTicker($ticker);
 
         // Act
@@ -64,8 +65,8 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
 
 // --- with only short is opened --- //
     # arrange
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 94324, 94324, 94324);
-        $short = PositionFactory::short(Symbol::BTCUSDT, 93281.22, 0.776, 100, 115812.71);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSDT, 94324, 94324, 94324);
+        $short = PositionFactory::short(SymbolEnum::BTCUSDT, 93281.22, 0.776, 100, 115812.71);
         $total = 17875.96740505;
         $totalPositionIM = 764.57558218;
         $totalUnrealized = 100;
@@ -84,9 +85,9 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
 
 // --- with hedge is opened and there is some free balance --- //
     # arrange
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 94324, 94324, 94324);
-        $short = PositionFactory::short(Symbol::BTCUSDT, 93842.43, 1.196, 100, 112012.66);
-        $long = PositionFactory::long(Symbol::BTCUSDT, 67388.54, 0.446, 100, 0);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSDT, 94324, 94324, 94324);
+        $short = PositionFactory::short(SymbolEnum::BTCUSDT, 93842.43, 1.196, 100, 112012.66);
+        $long = PositionFactory::long(SymbolEnum::BTCUSDT, 67388.54, 0.446, 100, 0);
         $total = 2289.13194391;
         $totalPositionIM = 1240.6823246;
         $totalUnrealized = 50;

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -33,7 +34,7 @@ final class PlaceOrderRequestTest extends TestCase
     {
         // Arrange
         $category = AssetCategory::linear;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         // Act
         $request = PlaceOrderRequest::marketBuy($category, $symbol, $side, 0.01);
@@ -63,7 +64,7 @@ final class PlaceOrderRequestTest extends TestCase
     {
         // Arrange
         $category = AssetCategory::linear;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $expectedOrderSide = $positionSide->getOpposite();
 
@@ -95,7 +96,7 @@ final class PlaceOrderRequestTest extends TestCase
     {
         // Arrange
         $category = AssetCategory::linear;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $expectedOrderSide = $positionSide->getOpposite();
         $expectedTriggerDirection = $this->getLimitTPTriggerDirection($positionSide);
@@ -129,7 +130,7 @@ final class PlaceOrderRequestTest extends TestCase
     {
         // Arrange
         $category = AssetCategory::linear;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $expectedOrderSide = $positionSide->getOpposite();
         $expectedTriggerDirection = $this->getConditionalStopTriggerDirection($positionSide);

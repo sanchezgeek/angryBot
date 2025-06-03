@@ -13,7 +13,8 @@ use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 
 trait SandboxUnitTester
@@ -47,7 +48,7 @@ trait SandboxUnitTester
         return new SandboxState($ticker, new ContractBalance($ticker->symbol->associatedCoin(), 100500, 100500, 100500), $ticker->symbol->associatedCoinAmount(100500), ...$positions);
     }
 
-    protected function mockFactoryToReturnSandbox(Symbol $requestedSymbol, TradingSandboxInterface $sandboxMock): void
+    protected function mockFactoryToReturnSandbox(SymbolInterface $requestedSymbol, TradingSandboxInterface $sandboxMock): void
     {
         $this->tradingSandboxFactory->expects(self::once())->method('empty')->with($requestedSymbol)->willReturn($sandboxMock);
     }

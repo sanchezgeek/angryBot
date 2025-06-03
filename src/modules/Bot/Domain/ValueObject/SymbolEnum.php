@@ -8,7 +8,6 @@ use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use ValueError;
 
@@ -19,7 +18,7 @@ use function pow;
 use function round;
 use function strlen;
 
-enum Symbol: string
+enum SymbolEnum: string implements SymbolInterface
 {
     case BTCUSDT = 'BTCUSDT';
     case BTCUSD = 'BTCUSD';

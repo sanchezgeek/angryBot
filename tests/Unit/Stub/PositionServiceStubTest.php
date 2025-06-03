@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Stub;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Tests\Factory\PositionFactory;
-use App\Tests\Factory\TickerFactory;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use PHPUnit\Framework\TestCase;
 
@@ -22,8 +21,7 @@ final class PositionServiceStubTest extends TestCase
     public function testAddStopMethodCalls(): void
     {
         // Arrange
-        $position = PositionFactory::short(Symbol::BTCUSDT);
-        $ticker = TickerFactory::create(Symbol::BTCUSDT);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT);
 
         $mockedExchangeOrdersIds = [uuid_create(), uuid_create(), uuid_create()];
 

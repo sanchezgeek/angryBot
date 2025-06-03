@@ -6,7 +6,8 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder as PB;
@@ -41,7 +42,7 @@ class MakeBuyTest extends AbstractTestOfTradingSandbox
 
     public function buyTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 68000);
         $initialFree = 178.9803;
 

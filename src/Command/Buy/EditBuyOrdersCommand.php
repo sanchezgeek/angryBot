@@ -5,7 +5,8 @@ namespace App\Command\Buy;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -163,7 +164,7 @@ class EditBuyOrdersCommand extends AbstractCommand
     }
 
     public static function formatRemoveCmdByUniqueId(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         string $uniqueId,
         bool $quiet = false

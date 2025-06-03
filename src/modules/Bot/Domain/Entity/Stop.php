@@ -13,7 +13,8 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -67,8 +68,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(nullable: true)]
     private float $triggerDelta;
 
-    #[ORM\Column(type: 'string', enumType: Symbol::class)]
-    private Symbol $symbol;
+    #[ORM\Column(type: 'symbol', enumType: SymbolEnum::class)]
+    private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
@@ -79,7 +80,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice($price)->value();
@@ -95,10 +96,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this->id;
     }
 
-    /**
-     * @todo | new column
-     */
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }
@@ -308,6 +306,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         ];
     }
 
+    /**
+     * @todo | symbol | provider / factory ...
+     */
     public static function fromArray(array $data): self
     {
         return new self(
@@ -315,7 +316,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
             $data['price'],
             $data['volume'],
             $data['triggerDelta'],
-            Symbol::from($data['symbol']),
+            SymbolEnum::from($data['symbol']),
             Side::from($data['positionSide']),
             $data['context']
         );

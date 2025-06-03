@@ -8,7 +8,8 @@ use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPosi
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Helper\FloatHelper;
@@ -38,7 +39,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $criticalPartOfLiqDistance = 10;
         $settingsMock = $this->settingsProviderMock([LiquidationHandlerSettings::CriticalPartOfLiquidationDistance->getSettingKey() => $criticalPartOfLiqDistance]);
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 35000);
 
@@ -150,7 +151,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
 // manual
         #### corner cases
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
 

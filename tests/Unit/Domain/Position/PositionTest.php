@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Leverage;
@@ -42,7 +43,7 @@ final class PositionTest extends TestCase
     public function testShortPosition(): void
     {
         $side = Side::Sell;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $entry = 100500;
         $size = 1050.1;
         $value = 100005000;
@@ -71,7 +72,7 @@ final class PositionTest extends TestCase
     public function testShortPositionWithOpposite(): void
     {
         $side = Side::Sell;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $entry = 100500;
         $size = 1050.1;
         $value = 100005000;
@@ -102,7 +103,7 @@ final class PositionTest extends TestCase
     public function testLongPosition(): void
     {
         $side = Side::Buy;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $entry = 100500;
         $size = 1050;
         $value = 100005000;
@@ -130,7 +131,7 @@ final class PositionTest extends TestCase
     public function testLongPositionWithOpposite(): void
     {
         $side = Side::Buy;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $entry = 100500;
         $size = 1050;
         $value = 100005000;
@@ -170,22 +171,22 @@ final class PositionTest extends TestCase
     {
         return [
             [
-                '$position' => PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100),
+                '$position' => PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100),
                 '$volumePart' => 50,
                 'expectedVolume' => 0.25,
             ],
             [
-                '$position' => PositionFactory::short(Symbol::BTCUSDT, 30000, 0.1, 100),
+                '$position' => PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.1, 100),
                 '$volumePart' => 10,
                 'expectedVolume' => 0.01,
             ],
             [
-                '$position' => PositionFactory::short(Symbol::BTCUSDT, 30000, 0.1, 100),
+                '$position' => PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.1, 100),
                 '$volumePart' => 3,
                 'expectedVolume' => 0.003,
             ],
             [
-                '$position' => PositionFactory::short(Symbol::BTCUSDT, 29000, 0.5, 100),
+                '$position' => PositionFactory::short(SymbolEnum::BTCUSDT, 29000, 0.5, 100),
                 '$volumePart' => 10,
                 'expectedVolume' => 0.05,
             ],
@@ -197,7 +198,7 @@ final class PositionTest extends TestCase
      */
     public function testFailGetVolumePart(float $percent): void
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100);
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage(sprintf('Percent value must be in 0..100 range. "%.2f" given.', $percent));
@@ -212,19 +213,19 @@ final class PositionTest extends TestCase
 
     public function testCanGetDeltaToLiquidation(): void
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
 
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,30450);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSDT, 30600,30450);
         self::assertEquals(550, $position->priceDistanceWithLiquidation($ticker));
 
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, 30600,31450);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSDT, 30600,31450);
         self::assertEquals(450, $position->priceDistanceWithLiquidation($ticker));
     }
 
     public function testFailGetDeltaToLiquidation(): void
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
-        $ticker = TickerFactory::create(Symbol::BTCUSD, 30600,30450);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSD, 30600,30450);
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->value, $position->symbol->value));
@@ -244,13 +245,13 @@ final class PositionTest extends TestCase
 
     public function isPositionInProfitTestDataProvider(): iterable
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
 
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => true];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => false];
 
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $position = PositionFactory::long(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
 
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
@@ -269,13 +270,13 @@ final class PositionTest extends TestCase
 
     public function isPositionInLossTestDataProvider(): iterable
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
 
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
         yield ['position' => $position, 'currentPrice' => 30001, 'expectedResult' => true];
 
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 0.5, 100, 31000);
+        $position = PositionFactory::long(SymbolEnum::BTCUSDT, 30000, 0.5, 100, 31000);
 
         yield ['position' => $position, 'currentPrice' => 29999, 'expectedResult' => true];
         yield ['position' => $position, 'currentPrice' => 30000, 'expectedResult' => false];
@@ -287,7 +288,7 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationPrice(Side $side): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = new Position($side, $symbol, 50000, 0.1, 5000, 51000.001, 50, 100);
 
         self::assertEquals($symbol->makePrice(51000.001), $position->liquidationPrice());
@@ -298,10 +299,10 @@ final class PositionTest extends TestCase
      */
     public function testLiquidationDistance(Side $side): void
     {
-        $position = new Position($side, Symbol::BTCUSDT, 50000, 0.1, 5000, 51000.01, 50, 100);
+        $position = new Position($side, SymbolEnum::BTCUSDT, 50000, 0.1, 5000, 51000.01, 50, 100);
         self::assertEquals(1000.01, $position->liquidationDistance());
 
-        $position = new Position($side, Symbol::BTCUSDT, 51000.01, 0.1, 5000, 50000, 50, 100);
+        $position = new Position($side, SymbolEnum::BTCUSDT, 51000.01, 0.1, 5000, 50000, 50, 100);
         self::assertEquals(1000.01, $position->liquidationDistance());
     }
 }

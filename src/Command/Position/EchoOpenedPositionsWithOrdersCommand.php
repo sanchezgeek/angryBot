@@ -7,7 +7,8 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Position\ValueObject\Side;
@@ -25,7 +26,7 @@ class EchoOpenedPositionsWithOrdersCommand extends AbstractCommand
     {
         $symbols = $this->positionService->getOpenedPositionsSymbols();
 
-        /** @var array<array{symbol: Symbol, side: Side}> $result */
+        /** @var array<array{symbol: SymbolInterface, side: Side}> $result */
         $result = [];
         foreach ($symbols as $symbol) {
             $result = array_merge($result, $this->getPositionsWithOrders($symbol));
@@ -39,9 +40,9 @@ class EchoOpenedPositionsWithOrdersCommand extends AbstractCommand
     }
 
     /**
-     * @return array<array{symbol: Symbol, side: Side}>
+     * @return array<array{symbol: SymbolInterface, side: Side}>
      */
-    private function getPositionsWithOrders(Symbol $symbol): array
+    private function getPositionsWithOrders(SymbolInterface $symbol): array
     {
         $positions = $this->positionService->getPositions($symbol);
 

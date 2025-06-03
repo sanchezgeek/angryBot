@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Price\Helper;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
 
 readonly class PriceFormatter
 {
-    public function __construct(private Symbol $symbol)
+    public function __construct(private SymbolInterface $symbol)
     {
     }
 

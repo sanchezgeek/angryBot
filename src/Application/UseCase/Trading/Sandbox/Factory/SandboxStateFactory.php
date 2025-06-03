@@ -8,7 +8,8 @@ use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 
 /**
@@ -23,7 +24,7 @@ final readonly class SandboxStateFactory implements SandboxStateFactoryInterface
     ) {
     }
 
-    public function byCurrentTradingAccountState(Symbol $symbol): SandboxState
+    public function byCurrentTradingAccountState(SymbolInterface $symbol): SandboxState
     {
         $ticker = $this->exchangeService->ticker($symbol);
         $positions = $this->positionService->getPositions($symbol);

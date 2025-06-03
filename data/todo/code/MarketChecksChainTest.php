@@ -6,7 +6,8 @@ namespace data\todo\code;
 
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyChecksCollection;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\TickerFactory;
 use data\code\MarketBuyCheckInterface;
@@ -19,8 +20,8 @@ final class MarketChecksChainTest extends TestCase
 {
     public function testCallAllChecks(): void
     {
-        $order = new MarketBuyEntryDto(Symbol::BNBUSDT, Side::Sell, 0.001, true);
-        $ticker = TickerFactory::withEqualPrices(Symbol::BTCUSDT, 100500);
+        $order = new MarketBuyEntryDto(SymbolEnum::BNBUSDT, Side::Sell, 0.001, true);
+        $ticker = TickerFactory::withEqualPrices(SymbolEnum::BTCUSDT, 100500);
 
         $firstCheck = $this->createMock(MarketBuyCheckInterface::class);
         $secondCheck = $this->createMock(MarketBuyCheckInterface::class);

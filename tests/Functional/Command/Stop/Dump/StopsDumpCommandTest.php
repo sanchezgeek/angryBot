@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
@@ -57,7 +58,7 @@ final class StopsDumpCommandTest extends KernelTestCase
      * @todo add symbol in command args
      */
     public function testCanDumpStops(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         array $initialStops,
         string $expectedContent,
@@ -92,7 +93,7 @@ final class StopsDumpCommandTest extends KernelTestCase
 
     private function dumpStopsTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT; $side = Side::Sell;
+        $symbol = SymbolEnum::BTCUSDT; $side = Side::Sell;
 
         $initialStops = [
             new Stop(1, 28891.1, 0.003, 10, $symbol, $side->getOpposite()),

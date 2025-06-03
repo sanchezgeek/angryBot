@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Stop\Helper;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Tests\Factory\PositionFactory;
@@ -20,7 +21,7 @@ final class PnlHelperTest extends TestCase
         $volume = 0.05;
 
         ## SHORT
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 1, 100);
         self::assertEquals(-50.0, PnlHelper::getPnlInUsdt($position, 31000, $volume));
         self::assertEquals(-15.0, PnlHelper::getPnlInUsdt($position, 30300, $volume));
         self::assertEquals(-7.5, PnlHelper::getPnlInUsdt($position, 30150, $volume));
@@ -29,7 +30,7 @@ final class PnlHelperTest extends TestCase
         self::assertEquals(15.0, PnlHelper::getPnlInUsdt($position, 29700, $volume));
         self::assertEquals(50.0, PnlHelper::getPnlInUsdt($position, 29000, $volume));## SHORT
 
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::long(SymbolEnum::BTCUSDT, 30000, 1, 100);
         self::assertEquals(50.0, PnlHelper::getPnlInUsdt($position, 31000, $volume));
         self::assertEquals(15.0, PnlHelper::getPnlInUsdt($position, 30300, $volume));
         self::assertEquals(7.5, PnlHelper::getPnlInUsdt($position, 30150, $volume));
@@ -42,7 +43,7 @@ final class PnlHelperTest extends TestCase
     public function testGetPnlInPercents(): void
     {
         ## SHORT
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 1, 100);
         self::assertEquals(-120, PnlHelper::getPnlInPercents($position, 30360));
         self::assertEquals(-100, PnlHelper::getPnlInPercents($position, 30300));
         self::assertEquals(-50, PnlHelper::getPnlInPercents($position, 30150));
@@ -56,7 +57,7 @@ final class PnlHelperTest extends TestCase
         self::assertEquals(150, PnlHelper::getPnlInPercents($position, 29550));
 
         ## LONG
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::long(SymbolEnum::BTCUSDT, 30000, 1, 100);
         self::assertEquals(120, PnlHelper::getPnlInPercents($position, 30360));
         self::assertEquals(100, PnlHelper::getPnlInPercents($position, 30300));
         self::assertEquals(50, PnlHelper::getPnlInPercents($position, 30150));
@@ -72,7 +73,7 @@ final class PnlHelperTest extends TestCase
 
     public function testGetTargetPriceByPnlPercentFromPositionEntry(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         ## SHORT
         $position = PositionFactory::short($symbol, 30000, 1, 100);
@@ -106,7 +107,7 @@ final class PnlHelperTest extends TestCase
     public function testGetTargetPriceByPnlPercent(): void
     {
         ## SHORT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionFactory::short($symbol, 100500, 1, 100);
         $fromPrice = $symbol->makePrice(30000);
 

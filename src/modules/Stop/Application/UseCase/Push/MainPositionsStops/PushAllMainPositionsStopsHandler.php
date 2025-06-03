@@ -12,7 +12,8 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -87,7 +88,7 @@ final readonly class PushAllMainPositionsStopsHandler
 
         $lastSort = [];
         foreach ($sort as $symbolRaw) {
-            $lastSort[] = $symbol = Symbol::from($symbolRaw);
+            $lastSort[] = $symbol = SymbolEnum::from($symbolRaw);
             try {
                 $positionState = $positionsCache[$symbol->value]->get();
             } catch (RuntimeException) {

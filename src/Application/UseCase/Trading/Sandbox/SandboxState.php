@@ -11,7 +11,8 @@ use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentEx
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -31,7 +32,7 @@ class SandboxState implements SandboxStateInterface
 {
     /** @var Position[] */
     private array $positions = [];
-    public readonly Symbol $symbol;
+    public readonly SymbolInterface $symbol;
     private SymbolPrice $lastPrice;
 
     public ContractBalance $contractBalance;
@@ -56,7 +57,7 @@ class SandboxState implements SandboxStateInterface
         }
     }
 
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }

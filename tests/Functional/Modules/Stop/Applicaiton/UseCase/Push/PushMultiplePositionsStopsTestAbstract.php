@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -37,7 +38,7 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
         /**
          * DRY from @see PushStopsCommonCasesTest::pushStopsTestCases
          */
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $btcLong = PositionBuilder::long()->symbol($symbol)->size(0.5)->entry(28000)->build();
         $btcShort = PositionBuilder::short()->symbol($symbol)->entry(29000)->size(1)->liq(29182.25)->build($btcLong);
 
@@ -61,14 +62,14 @@ abstract class PushMultiplePositionsStopsTestAbstract extends KernelTestCase
             $setup->addStop($stop);
         }
 
-        $adaTicker = TickerFactory::create(Symbol::ADAUSDT, 0.6, 0.6, 0.6);
-        $adaLong = PositionBuilder::long()->symbol(Symbol::ADAUSDT)->size(100)->entry(0.5)->build();
-        $adaShort = PositionBuilder::short()->symbol(Symbol::ADAUSDT)->size(100)->entry(1.01)->build($adaLong);
+        $adaTicker = TickerFactory::create(SymbolEnum::ADAUSDT, 0.6, 0.6, 0.6);
+        $adaLong = PositionBuilder::long()->symbol(SymbolEnum::ADAUSDT)->size(100)->entry(0.5)->build();
+        $adaShort = PositionBuilder::short()->symbol(SymbolEnum::ADAUSDT)->size(100)->entry(1.01)->build($adaLong);
 
         $setup->addPosition($adaLong);
         $setup->addPosition($adaShort);
 
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $linkTicker = TickerFactory::create($symbol, 23.685, 23.687, 23.688);
         $linkLong = PositionBuilder::long()->symbol($symbol)->size(10)->entry(15)->build();
         $linkShort = PositionBuilder::short()->symbol($symbol)->size(11)->entry(20)->liq($linkTicker->markPrice->value() + $symbol->minimalPriceMove() * 300)->build($linkLong);

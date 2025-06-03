@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order\Service;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -28,7 +29,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
     public function testLinearOrderMargin(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $qty = 0.001;
         $price = 34739;
 
@@ -48,7 +49,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
         Side $positionSide,
         float $price,
         float $qty,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $expectedCost,
     ): void {
         $leverage = new Leverage(100);
@@ -61,7 +62,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
     public function linearOrderBuyCostTestData(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         yield 'LONG' => [
             '$side' => Side::Buy,
             '$price' => 34739,
@@ -81,7 +82,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
 
     public function testLinearOpenFee(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $price = $symbol->makePrice(34739);
         $qty = 0.001;
         $expectedOpenFee = 0.01910645;
@@ -100,7 +101,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
         Side $positionSide,
         float $price,
         float $qty,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $expectedCloseFee,
     ): void {
         $leverage = new Leverage(100);
@@ -117,7 +118,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
             '$side' => Side::Buy,
             '$price' => 34739,
             '$qty' => 0.001,
-            '$symbol' => Symbol::BTCUSDT,
+            '$symbol' => SymbolEnum::BTCUSDT,
             'expectedCloseFee' => 0.0189153855
         ];
 
@@ -125,7 +126,7 @@ final class ByBitOrderCostCalculatorTest extends TestCase
             '$side' => Side::Sell,
             '$price' => 34739,
             '$qty' => 0.001,
-            '$symbol' => Symbol::BTCUSDT,
+            '$symbol' => SymbolEnum::BTCUSDT,
             'expectedCloseFee' => 0.0192975145
         ];
     }

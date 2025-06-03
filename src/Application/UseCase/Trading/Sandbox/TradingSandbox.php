@@ -24,7 +24,8 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
@@ -61,7 +62,7 @@ class TradingSandbox implements TradingSandboxInterface
     public function __construct(
         private readonly OrderCostCalculator $orderCostCalculator,
         private readonly CalcPositionLiquidationPriceHandler $liquidationCalculator,
-        private readonly Symbol $symbol,
+        private readonly SymbolInterface $symbol,
         private readonly bool $isDebugEnabled = false,
     ) {
     }

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -39,13 +40,13 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
 
         yield [
             '$apiResponse' => (new PositionResponseBuilder($category))
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::AAVEUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::AAVEUSDT)->build())
                 ->build(),
-            '$expectedSymbols' => [Symbol::BTCUSDT, Symbol::XRPUSDT, Symbol::AAVEUSDT],
+            '$expectedSymbols' => [SymbolEnum::BTCUSDT, SymbolEnum::XRPUSDT, SymbolEnum::AAVEUSDT],
         ];
     }
 
@@ -68,33 +69,33 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
         $category = AssetCategory::linear;
 
         yield [
-            '$except' => [Symbol::BTCUSDT],
+            '$except' => [SymbolEnum::BTCUSDT],
             '$apiResponse' => (new PositionResponseBuilder($category))->build(),
             '$expectedSymbols' => [],
         ];
 
         yield [
-            '$except' => [Symbol::BTCUSDT],
+            '$except' => [SymbolEnum::BTCUSDT],
             '$apiResponse' => (new PositionResponseBuilder($category))
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::AAVEUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::AAVEUSDT)->build())
                 ->build(),
-            '$expectedSymbols' => [Symbol::XRPUSDT, Symbol::AAVEUSDT],
+            '$expectedSymbols' => [SymbolEnum::XRPUSDT, SymbolEnum::AAVEUSDT],
         ];
 
         yield [
-            '$except' => [Symbol::TONUSDT],
+            '$except' => [SymbolEnum::TONUSDT],
             '$apiResponse' => (new PositionResponseBuilder($category))
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::BTCUSDT)->build())
-                ->withPosition(PositionBuilder::long()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::XRPUSDT)->build())
-                ->withPosition(PositionBuilder::short()->symbol(Symbol::AAVEUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
+                ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::XRPUSDT)->build())
+                ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::AAVEUSDT)->build())
                 ->build(),
-            '$expectedSymbols' => [Symbol::BTCUSDT, Symbol::XRPUSDT, Symbol::AAVEUSDT],
+            '$expectedSymbols' => [SymbolEnum::BTCUSDT, SymbolEnum::XRPUSDT, SymbolEnum::AAVEUSDT],
         ];
     }
 }

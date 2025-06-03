@@ -17,7 +17,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
@@ -178,7 +179,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
     /**
      * @return Stop[]
      */
-    private function findStops(Side $side, Symbol $symbol): array
+    private function findStops(Side $side, SymbolInterface $symbol): array
     {
         return $this->repository->findActive(
             symbol: $symbol,

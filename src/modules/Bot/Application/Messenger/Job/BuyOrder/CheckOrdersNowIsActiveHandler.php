@@ -8,7 +8,8 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,12 +34,12 @@ final class CheckOrdersNowIsActiveHandler
 
         $symbols = [];
         foreach ($positions as $symbolRaw => $symbolPositions) {
-            $symbols[] = Symbol::from($symbolRaw);
+            $symbols[] = SymbolEnum::from($symbolRaw);
         }
         $idleOrders = $this->buyOrderRepository->getIdleOrders(...$symbols);
 
         foreach ($positions as $symbolRaw => $symbolPositions) {
-            $symbol = Symbol::from($symbolRaw);
+            $symbol = SymbolEnum::from($symbolRaw);
             $idlePositionOrders = array_filter($idleOrders, static fn(BuyOrder $order) => $order->getSymbol() === $symbol);
 
             foreach ($idlePositionOrders as $buyOrder) {

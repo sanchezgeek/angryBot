@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\UseCase\OpenPosition\OrdersGrids;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -25,7 +26,7 @@ final readonly class OpenPositionStopsGridsDefinitions
     /**
      * @throws DefaultGridDefinitionNotFound
      */
-    public function create(Symbol $symbol, Side $positionSide, SymbolPrice $priceToRelate): OrdersGridDefinitionCollection
+    public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate): OrdersGridDefinitionCollection
     {
         $symbolSideDef = $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol, $positionSide));
         $symbolDef = $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol));

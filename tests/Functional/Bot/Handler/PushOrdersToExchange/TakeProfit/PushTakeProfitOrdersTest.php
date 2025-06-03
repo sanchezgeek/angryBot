@@ -16,7 +16,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -47,7 +48,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
     use RateLimiterAwareTest;
     use SettingsAwareTest;
 
-    private const SYMBOL = Symbol::BTCUSDT;
+    private const SYMBOL = SymbolEnum::BTCUSDT;
 
     protected MessageBusInterface $messageBus;
     protected EventDispatcherInterface $eventDispatcher;

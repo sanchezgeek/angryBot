@@ -4,7 +4,8 @@ namespace App\Trading\UI\Symfony\Command\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Helper\OutputHelper;
@@ -47,7 +48,7 @@ class OpenPositionCommand extends AbstractCommand
     public const string REMEMBER_BUY_GRID_DEFINITION = 'remember-buy-grid';
     public const string BUY_ORDERS_GRID_DEFINITION_DEFAULT = 'default';
 
-    private Symbol $symbol;
+    private SymbolInterface $symbol;
     private Ticker $ticker;
 
     protected function configure(): void

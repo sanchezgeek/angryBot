@@ -4,7 +4,8 @@ namespace App\Command\Market;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Price\SymbolPrice;
@@ -52,7 +53,7 @@ class SymbolsMonitorCommand extends AbstractCommand
             $items[] = [$symbol, $ticker->indexPrice];
         }
 
-        /** @var array<array<Symbol, SymbolPrice>> $itemsRows */
+        /** @var array<array<SymbolInterface, SymbolPrice>> $itemsRows */
         $itemsRows = array_chunk($items, $columnsCount);
 
         $namesLengths = [];

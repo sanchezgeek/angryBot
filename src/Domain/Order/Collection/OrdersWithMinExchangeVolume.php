@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Order\Collection;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
 use IteratorAggregate;
@@ -18,7 +19,7 @@ final class OrdersWithMinExchangeVolume implements OrdersCollectionInterface
     private null|array $orders = null;
 
     public function __construct(
-        private readonly Symbol $symbol,
+        private readonly SymbolInterface $symbol,
         private readonly OrdersCollectionInterface $sourceOrdersCollection,
     ) {
     }

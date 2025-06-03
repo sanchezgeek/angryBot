@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
 use App\Application\Notification\AppNotificationLoggerInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
@@ -45,7 +46,8 @@ final class CheckSymbolsPriceChangeHandler
 
             $currentPrice = $ticker['last'];
             $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbolRaw, $date);
-            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, Symbol::tryFrom($symbolRaw));
+            // @todo | symbol | provider / factory ...
+            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, SymbolEnum::tryFrom($symbolRaw));
             $delta = abs($prevPrice - $currentPrice);
 
             if ($delta > $significantPriceDelta) {

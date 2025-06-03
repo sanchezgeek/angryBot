@@ -7,7 +7,8 @@ namespace App\Tests\Functional\Application\UseCase\CalcPositionLiquidationPrice;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\SymbolPrice;
 use App\Helper\FloatHelper;
@@ -50,7 +51,7 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
 
     public function simpleCalcTestData(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $freeContractBalance = 20;
 
         # SHORT
@@ -83,7 +84,7 @@ class CalcPositionLiquidationPriceHandlerTest extends KernelTestCase
 
     public function calcForPositionWithSupportTestData(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         # SHORT #1
         $main = PositionFactory::short($symbol, 63422.060, 0.374);

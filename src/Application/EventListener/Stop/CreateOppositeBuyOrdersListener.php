@@ -9,7 +9,8 @@ use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -27,13 +28,16 @@ final class CreateOppositeBuyOrdersListener
     public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
     private const MAIN_SYMBOLS = [
-        Symbol::BTCUSDT,
-        Symbol::ETHUSDT
+        SymbolEnum::BTCUSDT,
+        SymbolEnum::ETHUSDT
     ];
 
+    /**
+     * @todo | symbol | some way to get values based on symbol -> move to settings?
+     */
     public const DISTANCES = [
         // @todo | settings
-        Symbol::ARCUSDT->value => 400,
+        SymbolEnum::ARCUSDT->value => 400,
     ];
 
     public function __construct(

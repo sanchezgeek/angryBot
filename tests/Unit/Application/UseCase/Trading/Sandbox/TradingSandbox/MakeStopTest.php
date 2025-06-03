@@ -6,7 +6,8 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder as PB;
@@ -41,7 +42,7 @@ class MakeStopTest extends AbstractTestOfTradingSandbox
 
     public function makeStopTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 68000);
         $initialFree = 98.0352;
         $longInitial = PB::long()->entry(59426.560)->size(0.084)->build();

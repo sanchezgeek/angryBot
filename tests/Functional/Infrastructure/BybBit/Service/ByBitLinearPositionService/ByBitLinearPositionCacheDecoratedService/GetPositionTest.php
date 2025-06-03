@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
@@ -22,7 +23,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
      * @dataProvider positionValueOptionProvider
      */
     public function testCallInnerServiceWhenNoCachedValueExists(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Position $position,
         array $innerServiceResult
@@ -41,7 +42,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
      * @dataProvider positionValueOptionProvider
      */
     public function testGetPositionFromCache(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Position $position,
         array $cachedFromInnerService
@@ -64,7 +65,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
      * @dataProvider positionValueOptionProvider
      */
     public function testCallInnerServiceWhenCachedValueInvalidated(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Position $position,
         array $innerServiceResult
@@ -90,7 +91,7 @@ final class GetPositionTest extends ByBitLinearPositionCacheDecoratedServiceTest
 
     private function positionValueOptionProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
 
         $position = PositionBuilder::bySide($side)->entry(62000)->size(1.3)->build();

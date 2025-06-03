@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Storage;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
@@ -15,7 +16,7 @@ use App\Settings\Domain\SettingValueCaster;
 final class AssignedSettingValueFactory
 {
     /**
-     * @return array{Symbol, Side}
+     * @return array{SymbolInterface, Side}
      */
     public static function parseSymbolAndSide(string $fullKey): array
     {
@@ -26,7 +27,7 @@ final class AssignedSettingValueFactory
             preg_match_all('/(?<=\[).*?(?=\])/', $fullKey, $matches);
             foreach ($matches[0] as $match) {
                 if (str_contains($match, 'symbol=')) {
-                    $symbol = Symbol::tryFrom(str_replace('symbol=', '', $match));
+                    $symbol = SymbolEnum::tryFrom(str_replace('symbol=', '', $match));
                 } elseif (str_contains($match, 'side=')) {
                     $side = Side::tryFrom(str_replace('side=', '', $match));
                 }
@@ -63,7 +64,7 @@ final class AssignedSettingValueFactory
         return $storedValue === null ? null : SettingValueCaster::castToDeclaredType($setting, $storedValue);
     }
 
-    public static function buildFullKey(AppSettingInterface $setting, ?Symbol $symbol, ?Side $positionSide): string
+    public static function buildFullKey(AppSettingInterface $setting, ?SymbolInterface $symbol, ?Side $positionSide): string
     {
         $baseKey = $setting->getSettingKey();
 

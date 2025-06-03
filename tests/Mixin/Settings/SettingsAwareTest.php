@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Settings;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
@@ -65,7 +66,7 @@ trait SettingsAwareTest
         self::getSettingsService()->set($settingAccessor, $value);
     }
 
-    protected function setMinimalSafePriceDistance(Symbol $symbol, Side $positionSide, float $pricePercent = 0.1): void
+    protected function setMinimalSafePriceDistance(SymbolInterface $symbol, Side $positionSide, float $pricePercent = 0.1): void
     {
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
         $this->overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $pricePercent);

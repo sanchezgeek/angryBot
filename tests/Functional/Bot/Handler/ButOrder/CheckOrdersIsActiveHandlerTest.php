@@ -7,7 +7,8 @@ namespace App\Tests\Functional\Bot\Handler\ButOrder;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActiveHandler;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
@@ -56,8 +57,8 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
     public function idleOrdersBecameActiveTestDataProvider(): iterable
     {
         $positions = [
-            30000 => PositionFactory::short(Symbol::BTCUSDT, 29000, 0.01),
-            2140 => PositionFactory::short(Symbol::ETHUSDT, 2000, 0.01),
+            30000 => PositionFactory::short(SymbolEnum::BTCUSDT, 29000, 0.01),
+            2140 => PositionFactory::short(SymbolEnum::ETHUSDT, 2000, 0.01),
         ];
 
         $buyOrders = [
@@ -67,11 +68,11 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
             BuyOrderBuilder::long(30, 30001, 0.01)->build(),
             BuyOrderBuilder::long(40, 29999, 0.011)->build(),
 
-            BuyOrderBuilder::short(50, 2141, 0.01, Symbol::ETHUSDT)->build(),
-            BuyOrderBuilder::short(60, 2139, 0.11, Symbol::ETHUSDT)->build(),
+            BuyOrderBuilder::short(50, 2141, 0.01, SymbolEnum::ETHUSDT)->build(),
+            BuyOrderBuilder::short(60, 2139, 0.11, SymbolEnum::ETHUSDT)->build(),
 
-            BuyOrderBuilder::long(70, 2141, 0.01, Symbol::ETHUSDT)->build(),
-            BuyOrderBuilder::long(80, 2139, 0.11, Symbol::ETHUSDT)->build(),
+            BuyOrderBuilder::long(70, 2141, 0.01, SymbolEnum::ETHUSDT)->build(),
+            BuyOrderBuilder::long(80, 2139, 0.11, SymbolEnum::ETHUSDT)->build(),
         ];
 
         yield [
@@ -84,11 +85,11 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
                 BuyOrderBuilder::long(30, 30001, 0.01)->build()->setActive(),
                 BuyOrderBuilder::long(40, 29999, 0.011)->build()->setIdle(),
 
-                BuyOrderBuilder::short(50, 2141, 0.01, Symbol::ETHUSDT)->build()->setIdle(),
-                BuyOrderBuilder::short(60, 2139, 0.11, Symbol::ETHUSDT)->build()->setActive(),
+                BuyOrderBuilder::short(50, 2141, 0.01, SymbolEnum::ETHUSDT)->build()->setIdle(),
+                BuyOrderBuilder::short(60, 2139, 0.11, SymbolEnum::ETHUSDT)->build()->setActive(),
 
-                BuyOrderBuilder::long(70, 2141, 0.01, Symbol::ETHUSDT)->build()->setActive(),
-                BuyOrderBuilder::long(80, 2139, 0.11, Symbol::ETHUSDT)->build()->setIdle(),
+                BuyOrderBuilder::long(70, 2141, 0.01, SymbolEnum::ETHUSDT)->build()->setActive(),
+                BuyOrderBuilder::long(80, 2139, 0.11, SymbolEnum::ETHUSDT)->build()->setIdle(),
             ],
         ];
     }

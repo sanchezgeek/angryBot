@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Cache;
 
 use App\Application\Cache\CacheKeyGeneratorInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -20,7 +21,7 @@ final readonly class CheckResultKeyBasedOnOrderAndPricePnlStep implements CacheK
     public function __construct(
         private float $orderPrice,
         private float $orderQty,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private Side $positionSide,
         float|Percent $pnlStep
     ) {

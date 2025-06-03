@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Worker;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 
 use function json_decode;
 use function md5;

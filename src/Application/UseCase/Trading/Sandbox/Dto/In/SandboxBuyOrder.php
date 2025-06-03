@@ -7,7 +7,8 @@ namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -19,7 +20,7 @@ use function sprintf;
 readonly class SandboxBuyOrder implements Stringable, VolumeSignAwareInterface, OrderTypeAwareInterface
 {
     public function __construct(
-        public Symbol $symbol,
+        public SymbolInterface $symbol,
         public Side $positionSide,
         public float $price,
         public float $volume,

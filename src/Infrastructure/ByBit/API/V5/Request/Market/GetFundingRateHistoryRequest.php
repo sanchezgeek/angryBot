@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use Symfony\Component\HttpFoundation\Request;
@@ -36,7 +37,7 @@ final readonly class GetFundingRateHistoryRequest extends AbstractByBitApiReques
         return ['category' => $this->category->value, 'symbol' => $this->symbol->value, 'limit' => $this->limit];
     }
 
-    public function __construct(private AssetCategory $category, private Symbol $symbol, private int $limit = 1)
+    public function __construct(private AssetCategory $category, private SymbolInterface $symbol, private int $limit = 1)
     {
     }
 }

@@ -6,7 +6,8 @@ namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
@@ -67,32 +68,32 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         $this->apiClient = $apiClient;
     }
 
-    public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
     {
         $request = new SetLeverageRequest(self::ASSET_CATEGORY, $symbol, $forBuy, $forSell);
         $this->sendRequest($request);
     }
 
-    public function switchPositionMode(Symbol $symbol, PositionMode $positionMode): void
+    public function switchPositionMode(SymbolInterface $symbol, PositionMode $positionMode): void
     {
         $request = new SwitchPositionModeRequest(self::ASSET_CATEGORY, $symbol, $positionMode);
         $this->sendRequest($request);
     }
 
     /**
-     * @return Symbol[]
+     * @return SymbolInterface[]
      */
     public function getOpenedPositionsSymbols(array $except = []): array
     {
         $symbols = [];
         foreach ($this->getOpenedPositionsRawSymbols() as $rawItem) {
-            if ($symbol = Symbol::tryFrom($rawItem)) {
+            if ($symbol = SymbolEnum::tryFrom($rawItem)) {
                 $symbols[] = $symbol;
             }
         }
 
         return array_values(
-            array_filter($symbols, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
+            array_filter($symbols, static fn(SymbolInterface $symbol): bool => !in_array($symbol, $except, true))
         );
     }
 
@@ -196,7 +197,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         foreach ($list as $item) {
             $side = Side::from(strtolower($item['side']));
             // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
-            $symbol = Symbol::from($item['symbol']);
+            $symbol = SymbolEnum::from($item['symbol']);
 
             $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
             if ((float)$item['avgPrice'] !== 0.0) {
@@ -212,7 +213,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         }
 
         foreach ($positions as $symbolRaw => $symbolPositions) {
-            $symbol = Symbol::from($symbolRaw);
+            $symbol = SymbolEnum::from($symbolRaw);
             $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
             $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
             $this->cache->save($item);
@@ -236,7 +237,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\GetPositionTest
      */
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         $positions = $this->getPositions($symbol);
 
@@ -254,7 +255,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
      */
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         if ($symbol->associatedCategory() !== self::ASSET_CATEGORY) {
             throw new InvalidArgumentException('Unsupported symbol associated category');
@@ -301,7 +302,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     {
         return new Position(
             Side::from(strtolower($apiData['side'])),
-            Symbol::from($apiData['symbol']),
+            SymbolEnum::from($apiData['symbol']),
             (float)$apiData['avgPrice'],
             (float)$apiData['size'],
             (float)$apiData['positionValue'],

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Position;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
@@ -19,7 +20,7 @@ final class SendGetPositionsV5ApiRequestTest extends ByBitV5ApiRequestTestAbstra
     public function testSendGetPositionsRequest(): void
     {
         // Arrange
-        $request = new GetPositionsRequest(AssetCategory::linear, Symbol::BTCUSDT);
+        $request = new GetPositionsRequest(AssetCategory::linear, SymbolEnum::BTCUSDT);
         $requestUrl = $this->getFullRequestUrl($request);
         $mockRequestKey = $this->httpClientStub->matchGet($requestUrl, $request->data(), PositionResponses::positions());
 

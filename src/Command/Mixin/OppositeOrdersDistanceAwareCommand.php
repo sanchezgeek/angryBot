@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use InvalidArgumentException;
@@ -35,7 +36,7 @@ trait OppositeOrdersDistanceAwareCommand
     /**
      * @throws Throwable
      */
-    protected function getOppositeOrdersDistanceOption(Symbol $symbol): ?float
+    protected function getOppositeOrdersDistanceOption(SymbolInterface $symbol): ?float
     {
         $name = $this->oppositeDistanceOption;
 

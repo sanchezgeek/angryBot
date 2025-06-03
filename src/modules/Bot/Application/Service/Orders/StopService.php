@@ -8,7 +8,8 @@ use App\Bot\Application\Command\CreateStop;
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\SymbolPrice;
@@ -29,7 +30,7 @@ final class StopService implements StopServiceInterface
         $this->commandBus = $commandBus;
     }
 
-    public function create(Symbol $symbol, Side $positionSide, SymbolPrice|float $price, float $volume, ?float $triggerDelta = null, array $context = []): int
+    public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice|float $price, float $volume, ?float $triggerDelta = null, array $context = []): int
     {
         // @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         // Но не переборщить

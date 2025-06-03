@@ -21,7 +21,8 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChainFactory;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -138,8 +139,8 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
         $positionServiceStub = new class implements PositionServiceInterface
         {
-            public function getPosition(Symbol $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
-            public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getPosition(SymbolInterface $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getPositions(SymbolInterface $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getOpenedPositionsSymbols(array $except = []): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}

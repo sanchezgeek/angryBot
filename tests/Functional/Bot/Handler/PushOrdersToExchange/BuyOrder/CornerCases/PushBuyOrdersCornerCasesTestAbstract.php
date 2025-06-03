@@ -15,7 +15,8 @@ use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
@@ -38,7 +39,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     use SettingsAwareTest;
     use RateLimiterAwareTest;
 
-    protected const SYMBOL = Symbol::BTCUSDT;
+    protected const SYMBOL = SymbolEnum::BTCUSDT;
 
     protected PushBuyOrdersHandler $handler;
 

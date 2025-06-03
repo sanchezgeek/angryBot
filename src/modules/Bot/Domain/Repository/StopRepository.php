@@ -6,7 +6,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use BackedEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -60,7 +61,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(Symbol $symbol, Side $side, ?callable $qbModifier = null): array
+    public function findAllByPositionSide(SymbolInterface $symbol, Side $side, ?callable $qbModifier = null): array
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
@@ -78,7 +79,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
      * @return Stop[]
      */
     public function findActive(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -88,7 +89,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     }
 
     public function findActiveQB(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -231,7 +232,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findPushedToExchange(Symbol $symbol, Side $side): array
+    public function findPushedToExchange(SymbolInterface $symbol, Side $side): array
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = true")

@@ -19,7 +19,8 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Coin\Coin;
@@ -91,7 +92,7 @@ final class SchedulerFactory
 
     private function symbol(): array
     {
-        $symbol = Symbol::from($_ENV['PROCESSED_SYMBOL']);
+        $symbol = SymbolEnum::from($_ENV['PROCESSED_SYMBOL']);
         $processedOrders = $_ENV['PROCESSED_ORDERS'];
 
         OutputHelper::print(sprintf('%s %s started', $symbol->value, $processedOrders));
@@ -156,7 +157,7 @@ final class SchedulerFactory
             // PeriodicalJob::create('2023-02-24T23:49:08Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Buy, 15, 3, false))),
 
             # market
-            PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(Symbol::BTCUSDT))),
+            PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(SymbolEnum::BTCUSDT))),
 
             # alarm
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new CheckAlarm())),
@@ -170,8 +171,8 @@ final class SchedulerFactory
 
             # !!! position !!!
             // --- stops
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Sell))),
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(Symbol::BTCUSDT, Side::Buy))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Sell))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Buy))),
 
             // -- main positions loss
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2M', AsyncMessage::for(new CheckPositionIsInLoss())),
@@ -203,7 +204,7 @@ final class SchedulerFactory
              * Cache for two seconds, because there are two cache workers (so any other worker no need to do request to get ticker)
              * @see ../../../docker/etc/supervisor.d/bot-consumers.ini [program:cache]
              */
-            PeriodicalJob::create($start, $interval, new UpdateTicker(self::interval($ttl), Symbol::BTCUSDT)),
+            PeriodicalJob::create($start, $interval, new UpdateTicker(self::interval($ttl), SymbolEnum::BTCUSDT)),
         ];
     }
 
@@ -213,7 +214,7 @@ final class SchedulerFactory
     }
 
     /**
-     * @return Symbol[]
+     * @return SymbolInterface[]
      */
     private function getOpenedPositionsSymbols(): array
     {

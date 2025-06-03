@@ -2,7 +2,8 @@
 
 namespace App\Settings\UI\Symfony\Command\Settings;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Position\ValueObject\Side;
@@ -72,7 +73,8 @@ class EditSettingCommand extends AbstractCommand
 
         if (!$reset) {
             if (!($this->symbolIsSpecified() && $symbol = $this->getSymbol())) {
-                $symbol = $io->ask("Symbol (default = `null`):"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
+                // @todo | symbol | provider / factory ...
+                $symbol = $io->ask("Symbol (default = `null`):"); $symbol = $symbol !== null ? SymbolEnum::fromShortName(strtoupper($symbol)) : null;
             }
             $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {

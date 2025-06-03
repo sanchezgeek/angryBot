@@ -17,7 +17,8 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
@@ -53,7 +54,7 @@ use function sprintf;
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
 {
-    /** @var Symbol[] */
+    /** @var SymbolInterface[] */
     private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
 //        Symbol::LAIUSDT,
     ];
@@ -300,7 +301,7 @@ final class CheckPositionIsUnderLiquidationHandler
     /**
      * @return ActiveStopOrder[]
      */
-    private function findActivePositionStopOrders(Symbol $symbol, Side $positionSide, PriceRange $priceRange): array
+    private function findActivePositionStopOrders(SymbolInterface $symbol, Side $positionSide, PriceRange $priceRange): array
     {
         return array_filter(
             $this->activeConditionalStopOrders,
@@ -321,7 +322,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return (new CoinAmount($position->symbol->associatedCoin(), min($amountCalcByDistance, self::MAX_TRANSFER_AMOUNT)));
     }
 
-    private function getPositionOld(Symbol $symbol): ?Position
+    private function getPositionOld(SymbolInterface $symbol): ?Position
     {
         if (!($positions = $this->positionService->getPositions($symbol))) {
             return null;
@@ -400,7 +401,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return new StopsCollection(...$result);
     }
 
-    public static function isSymbolIgnored(Symbol $symbol): bool
+    public static function isSymbolIgnored(SymbolInterface $symbol): bool
     {
         return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }

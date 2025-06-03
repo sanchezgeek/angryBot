@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Service;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
@@ -15,7 +16,7 @@ final readonly class SettingAccessor implements Stringable
 {
     public function __construct(
         public AppSettingInterface $setting,
-        public ?Symbol $symbol = null,
+        public ?SymbolInterface $symbol = null,
         public ?Side $side = null,
         public bool $exact = false
     ) {
@@ -24,12 +25,12 @@ final readonly class SettingAccessor implements Stringable
         }
     }
 
-    public static function withAlternativesAllowed(AppSettingInterface $setting, ?Symbol $symbol = null, ?Side $side = null): self
+    public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): self
     {
         return new self($setting, $symbol, $side, false);
     }
 
-    public static function exact(AppSettingInterface $setting, ?Symbol $symbol = null, ?Side $side = null): self
+    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): self
     {
         return new self($setting, $symbol, $side, true);
     }

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use Generator;
@@ -19,14 +20,14 @@ use function sprintf;
  */
 final readonly class PriceRange implements Stringable
 {
-    public function __construct(private SymbolPrice $from, private SymbolPrice $to, private Symbol $symbol)
+    public function __construct(private SymbolPrice $from, private SymbolPrice $to, private SymbolInterface $symbol)
     {
         if ($from->greaterOrEquals($to)) {
             throw new \LogicException('$from must be greater than $to.');
         }
     }
 
-    public static function create(SymbolPrice|float $from, SymbolPrice|float $to, Symbol $symbol): self
+    public static function create(SymbolPrice|float $from, SymbolPrice|float $to, SymbolInterface $symbol): self
     {
         $from = $symbol->makePrice(SymbolPrice::toFloat($from));
         $to = $symbol->makePrice(SymbolPrice::toFloat($to));
@@ -125,7 +126,7 @@ final readonly class PriceRange implements Stringable
         );
     }
 
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }

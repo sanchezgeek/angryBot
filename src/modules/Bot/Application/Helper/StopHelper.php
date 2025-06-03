@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Application\Helper;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrdersHandler;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
 
 class StopHelper
@@ -15,7 +16,7 @@ class StopHelper
         return 0.0005 * $currentPrice->value();
     }
 
-    public static function additionalTriggerDeltaIfCurrentPriceOverStop(Symbol $symbol): float
+    public static function additionalTriggerDeltaIfCurrentPriceOverStop(SymbolInterface $symbol): float
     {
         return $symbol->makePrice($symbol->stopDefaultTriggerDelta() / 3)->value();
     }

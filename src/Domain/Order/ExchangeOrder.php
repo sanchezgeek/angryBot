@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domain\Order;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
 
 final class ExchangeOrder // implements OrderInterface
 {
-    private Symbol $symbol;
+    private SymbolInterface $symbol;
     private float $volume;
     private float $providedVolume;
     private SymbolPrice $price;
 
-    public function __construct(Symbol $symbol, float $volume, SymbolPrice|float $price, ?float $providedVolume = null)
+    public function __construct(SymbolInterface $symbol, float $volume, SymbolPrice|float $price, ?float $providedVolume = null)
     {
         $this->symbol = $symbol;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price));
@@ -23,7 +24,7 @@ final class ExchangeOrder // implements OrderInterface
         $this->providedVolume = $providedVolume ?? $volume;
     }
 
-    public static function raw(Symbol $symbol, float $volume, SymbolPrice|float $price): self
+    public static function raw(SymbolInterface $symbol, float $volume, SymbolPrice|float $price): self
     {
         return new self($symbol, $volume, $price);
     }
@@ -31,7 +32,7 @@ final class ExchangeOrder // implements OrderInterface
     /**
      * @todo tests
      */
-    public static function roundedToMin(Symbol $symbol, float $volume, SymbolPrice|float $price): self
+    public static function roundedToMin(SymbolInterface $symbol, float $volume, SymbolPrice|float $price): self
     {
         $providedVolume = $volume;
         $price = SymbolPrice::toFloat($price);
@@ -51,7 +52,7 @@ final class ExchangeOrder // implements OrderInterface
         return new self($symbol, $volume, $price, $providedVolume);
     }
 
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }

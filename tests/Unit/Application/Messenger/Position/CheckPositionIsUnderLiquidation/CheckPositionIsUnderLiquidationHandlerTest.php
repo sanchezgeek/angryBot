@@ -17,7 +17,8 @@ use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -110,7 +111,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     public function doNothingWhenPositionIsNotUnderLiquidationTestCases(): iterable
     {
         $markPrice = 35000;
-        $ticker = TickerFactory::create(Symbol::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
+        $ticker = TickerFactory::create(SymbolEnum::BTCUSDT, $markPrice - 10, $markPrice, $markPrice - 10);
         $transferFromSpotOnDistance = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->indexPrice), 0.1);
 
         yield 'SHORT' => [

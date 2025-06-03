@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Mock\Response\ByBitV5Api\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -95,7 +96,7 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
     }
 
     public function withOrder(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $orderSide,
         string $orderId,
         float $triggerPrice,
@@ -121,7 +122,7 @@ final class CurrentOrdersResponseBuilder implements ResponseBuilderInterface
     }
 
     public function withActiveConditionalStop(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         string $orderId,
         float $triggerPrice,

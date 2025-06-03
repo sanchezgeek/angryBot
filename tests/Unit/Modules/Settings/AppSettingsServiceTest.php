@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Settings;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
@@ -48,7 +49,7 @@ final class AppSettingsServiceTest extends TestCase
     {
         $setting = TestSetting::Test;
 
-        $settingValueAccessor = SettingAccessor::exact($setting, Symbol::ARCUSDT, Side::Sell);
+        $settingValueAccessor = SettingAccessor::exact($setting, SymbolEnum::ARCUSDT, Side::Sell);
         $values = ['test.test[symbol=ARCUSDT][side=sell]' => 10];
         $this->mockExistedSettings($setting, $values); # with &
 

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use InvalidArgumentException;
@@ -39,7 +40,7 @@ final readonly class GetCurrentOrdersRequest extends AbstractByBitApiRequest
         return self::URL;
     }
 
-    public static function openOnly(AssetCategory $category, ?Symbol $symbol): self
+    public static function openOnly(AssetCategory $category, ?SymbolInterface $symbol): self
     {
         return new self($category, $symbol, self::OPEN_ONLY_PARAM_OPTION);
     }
@@ -54,7 +55,7 @@ final readonly class GetCurrentOrdersRequest extends AbstractByBitApiRequest
         if ($this->symbol) {
             $data['symbol'] = $this->symbol->value;
         } else {
-            $data['settleCoin'] = Symbol::BTCUSDT->associatedCoin()->value;
+            $data['settleCoin'] = SymbolEnum::BTCUSDT->associatedCoin()->value;
         }
 
         return $data;
@@ -62,7 +63,7 @@ final readonly class GetCurrentOrdersRequest extends AbstractByBitApiRequest
 
     private function __construct(
         private AssetCategory $category,
-        private ?Symbol $symbol,
+        private ?SymbolInterface $symbol,
         private string $openOnlyParam
     ) {
         assert(

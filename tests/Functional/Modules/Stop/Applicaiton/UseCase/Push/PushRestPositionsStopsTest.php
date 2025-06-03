@@ -8,7 +8,8 @@ use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -49,7 +50,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
-        $tickersMap = array_combine(array_map(static fn(Symbol $symbol) => $symbol->value, $symbols), $tickers);
+        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols), $tickers);
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
@@ -82,7 +83,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     {
         $setup = self::baseSetup();
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $btcTicker = TickerFactory::create($symbol, 29000, 29000, 29000);
         $setup->addTicker($btcTicker);
 
@@ -106,7 +107,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
                     ->setExchangeOrderId($exchangeOrderIds[0]),
         ]);
 
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $linkTicker = TickerFactory::create($symbol, 23.6, 23.6, 23.6);
         $setup->addTicker($linkTicker);
 
@@ -131,8 +132,8 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         ]);
 
         # other symbols without stops
-        $setup->addTicker(TickerFactory::create(Symbol::ETHUSDT, 2100,  2100,  2100));
-        $setup->addTicker(TickerFactory::create(Symbol::ADAUSDT, 0.6, 0.6, 0.6));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ETHUSDT, 2100,  2100,  2100));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ADAUSDT, 0.6, 0.6, 0.6));
 
         yield [
             'setup' => $setup,

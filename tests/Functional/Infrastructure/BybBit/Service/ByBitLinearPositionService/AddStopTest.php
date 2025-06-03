@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -38,7 +39,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
      * @dataProvider addStopSuccessTestCases
      */
     public function testCanAddStop(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         AssetCategory $category,
         Side $positionSide,
         TriggerBy $triggerBy,
@@ -66,7 +67,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
     private function addStopSuccessTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $category = AssetCategory::linear;
         $positionSide = Side::Sell;
 
@@ -83,7 +84,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
      * @dataProvider addStopFailTestCases
      */
     public function testFailAddStop(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         AssetCategory $category,
         Side $positionSide,
         MockResponse $apiResponse,
@@ -115,7 +116,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
 
     private function addStopFailTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $category = AssetCategory::linear;
         $positionSide = Side::Sell;
 

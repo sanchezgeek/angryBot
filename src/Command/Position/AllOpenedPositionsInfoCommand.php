@@ -12,7 +12,8 @@ use App\Bot\Domain\Helper\SymbolHelper;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Helper\ConsoleTableHelper as CTH;
@@ -101,7 +102,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private ?array $rawSymbolsSetToMoveUp = null;
     private ?array $rawSymbolsSetToMoveDown = null;
 
-    /** @var Symbol[] */
+    /** @var SymbolInterface[] */
     private array $symbols;
 
     /** @var array<Position[]> */
@@ -311,7 +312,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /**
      * @return array<DataRow|SeparatorRow>
      */
-    private function posInfo(Symbol $symbol, float &$unrealizedTotal, array $specifiedCache = [], array $prevCache = []): array
+    private function posInfo(SymbolInterface $symbol, float &$unrealizedTotal, array $specifiedCache = [], array $prevCache = []): array
     {
         $result = [];
 
@@ -526,7 +527,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     private static function formatPnlDiffCell(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         bool $isMainWithoutSupport,
         float $a,
         float $b,
@@ -664,7 +665,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     /**
-     * @param Symbol[] $symbols
+     * @param SymbolInterface[] $symbols
      */
     private function getTotalUnrealizedProfitFromCache(array $cache, array $symbols): float
     {
@@ -763,7 +764,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
-    private static function positionCacheKeyByRaw(Symbol $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->value, $side->value);}
+    private static function positionCacheKeyByRaw(SymbolInterface $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->value, $side->value);}
 
     private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
 
@@ -895,9 +896,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $markPrice->differenceWith($firstStopPrice)->absDelta(),
             $markPrice
         );
+        // @todo | symbol | some way to get values based on symbol -> move to settings?
         $bounds = [
-            Symbol::BTCUSDT->value => 100,
-            Symbol::ETHUSDT->value => 200,
+            SymbolEnum::BTCUSDT->value => 100,
+            SymbolEnum::ETHUSDT->value => 200,
         ];
         $bound = $bounds[$symbol->value] ?? 300;
         $firstStopDistanceColor = 'none';

@@ -7,7 +7,8 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderSer
 use App\Domain\Position\Helper\PositionClone;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
@@ -42,7 +43,7 @@ final class ClearCacheTest extends KernelTestCase
      */
     public function testClearPositionCacheOnCloseByMarket(Side $positionSide): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $initialPositionSize = 1.2;
         $orderQty = 0.01;
         $expectedSizeAfterMarketClose = 1.19;
@@ -69,7 +70,7 @@ final class ClearCacheTest extends KernelTestCase
      */
     public function testClearPositionCacheOnMarketBuy(Side $positionSide): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $initialPositionSize = 1.2;
         $orderQty = 0.01;
         $expectedSizeAfterMarketBuy = 1.21;

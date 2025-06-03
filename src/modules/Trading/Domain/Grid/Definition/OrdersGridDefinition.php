@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Domain\Grid\Definition;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
@@ -27,7 +28,7 @@ final readonly class OrdersGridDefinition
         string $definition,
         SymbolPrice $priceToRelate,
         Side $positionSide,
-        Symbol $symbol
+        SymbolInterface $symbol
     ): self {
         $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
         $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';

@@ -8,7 +8,8 @@ use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -51,7 +52,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
-        $tickersMap = array_combine(array_map(static fn(Symbol $symbol) => $symbol->value, $symbols), $tickers);
+        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols), $tickers);
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
@@ -87,7 +88,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     {
         $setup = self::baseSetup();
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $btcShort = $setup->getPosition($symbol, Side::Sell);
 
         $markPrice = $btcShort->liquidationPrice - PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $btcShort->liquidationPrice) - 100;
@@ -119,7 +120,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
             110 => StopTestHelper::clone($setup->getStopById(110))->setExchangeOrderId($exchangeOrderIds[2]),
         ]);
 
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $linkTicker = TickerFactory::create($symbol, 23.685, 23.687, 23.688);
         $setup->addTicker($linkTicker);
 
@@ -148,8 +149,8 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         ]);
 
         # other symbols without stops
-        $setup->addTicker(TickerFactory::create(Symbol::ETHUSDT, 2100,  2100,  2100));
-        $setup->addTicker(TickerFactory::create(Symbol::ADAUSDT, 0.6, 0.6, 0.6));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ETHUSDT, 2100,  2100,  2100));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ADAUSDT, 0.6, 0.6, 0.6));
 
         yield [
             'setup' => $setup,

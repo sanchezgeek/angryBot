@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 
@@ -19,7 +20,7 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeCacheDeco
     public function testCallInnerService(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $order = new ActiveStopOrder($symbol, Side::Buy, uuid_create(), 0.01, 25000, TriggerBy::IndexPrice->value);
 
         // Assert

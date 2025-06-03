@@ -7,7 +7,8 @@ namespace App\Infrastructure\ByBit\Service\Trade;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -61,7 +62,7 @@ final class ByBitOrderService implements OrderServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest\MarketBuyTest
      */
-    public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string
+    public function marketBuy(SymbolInterface $symbol, Side $positionSide, float $qty): string
     {
         $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),

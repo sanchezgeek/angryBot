@@ -4,7 +4,8 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -53,7 +54,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActive(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -87,7 +88,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActiveForPush(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?float $currentPrice = null,
         bool $exceptOppositeOrders = false,
@@ -136,14 +137,14 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      * @todo MB use current price to find orders?
      */
-    public function getIdleOrders(Symbol ...$symbols): array
+    public function getIdleOrders(SymbolInterface ...$symbols): array
     {
         $qb = $this->createQueryBuilder('b')
             ->andWhere('b.state = :idleState')->setParameter('idleState', BuyOrderState::Idle)
         ;
 
         if ($symbols) {
-            $symbols = array_map(static fn(Symbol $symbol) => $symbol->value, $symbols);
+            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
 

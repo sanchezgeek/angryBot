@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 
@@ -21,7 +22,7 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
     /**
      * @dataProvider positionsTestDataProvider
      */
-    public function testCallInnerServiceWhenNoCachedValueExists(Symbol $symbol, array $innerServiceResult): void
+    public function testCallInnerServiceWhenNoCachedValueExists(SymbolInterface $symbol, array $innerServiceResult): void
     {
         $this->innerService->expects(self::once())->method('getPositions')->with($symbol)->willReturn($innerServiceResult);
 
@@ -35,7 +36,7 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
     /**
      * @dataProvider positionsTestDataProvider
      */
-    public function testGetPositionsFromCache(Symbol $symbol, array $cachedPositions): void
+    public function testGetPositionsFromCache(SymbolInterface $symbol, array $cachedPositions): void
     {
         $item = $this->cache->getItem($this->getPositionsCacheKey($symbol));
         $item->set($cachedPositions);
@@ -53,7 +54,7 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
     /**
      * @dataProvider positionsTestDataProvider
      */
-    public function testCallInnerServiceWhenCachedValueInvalidated(Symbol $symbol, array $innerServiceResult): void
+    public function testCallInnerServiceWhenCachedValueInvalidated(SymbolInterface $symbol, array $innerServiceResult): void
     {
         $oldPositions = [
             PositionBuilder::short()->entry(15000)->size(1.1)->build(),
@@ -78,7 +79,7 @@ final class GetPositionsTest extends ByBitLinearPositionCacheDecoratedServiceTes
 
     private function positionsTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
 
         $position = PositionBuilder::bySide($side)->entry(60000)->size(1.1)->build();

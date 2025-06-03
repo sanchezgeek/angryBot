@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Factory;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 
 /**
@@ -13,12 +13,12 @@ use App\Domain\Position\ValueObject\Side;
  */
 final class PositionFactory
 {
-    private const DEFAULT_PRICE = 29000;
-    private const DEFAULT_SIZE = 0.05;
-    private const DEFAULT_LEVERAGE = 100;
+    private const int DEFAULT_PRICE = 29000;
+    private const float DEFAULT_SIZE = 0.05;
+    private const int DEFAULT_LEVERAGE = 100;
 
     public static function short(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $at = self::DEFAULT_PRICE,
         float $size = self::DEFAULT_SIZE,
         int $leverage = self::DEFAULT_LEVERAGE,
@@ -42,7 +42,7 @@ final class PositionFactory
     }
 
     public static function long(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $at = self::DEFAULT_PRICE,
         float $size = self::DEFAULT_SIZE,
         int $leverage = self::DEFAULT_LEVERAGE,

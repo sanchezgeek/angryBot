@@ -7,7 +7,8 @@ namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\Dyn
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
@@ -29,7 +30,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 {
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
-    private Symbol $symbol;
+    private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
     private ?float $warningDistance = null;
     private ?PriceRange $criticalRange = null;

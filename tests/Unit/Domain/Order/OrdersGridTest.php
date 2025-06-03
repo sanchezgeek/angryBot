@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Order;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\SymbolPrice;
@@ -34,7 +35,7 @@ final class OrdersGridTest extends TestCase
 
     private function createCases(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionFactory::short($symbol, 30000, 0.5, 100);
 
         return [
@@ -95,7 +96,7 @@ final class OrdersGridTest extends TestCase
 
     private function getOrdersByPriceStepDataProvider(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionFactory::short($symbol, 30000, 0.5, 100);
 
         return [
@@ -171,7 +172,7 @@ final class OrdersGridTest extends TestCase
 
     private function getOrdersByQntDataProvider(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [

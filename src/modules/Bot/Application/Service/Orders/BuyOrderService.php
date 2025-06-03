@@ -6,7 +6,8 @@ namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Command\CreateBuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -22,7 +23,7 @@ final class BuyOrderService
         $this->commandBus = $commandBus;
     }
 
-    public function create(Symbol $symbol, Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
+    public function create(SymbolInterface $symbol, Side $positionSide, float $price, float $volume, float $triggerDelta, array $context = []): int
     {
         $id = $this->repository->getNextId();
 

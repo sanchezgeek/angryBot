@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\UseCase\Push\MainPositionsStops;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 
 final class MainStopsPushLastSortStorage
 {
@@ -16,7 +17,7 @@ final class MainStopsPushLastSortStorage
     }
 
     /**
-     * @return Symbol[]|null
+     * @return SymbolInterface[]|null
      */
     public function getLastSort(): ?array
     {

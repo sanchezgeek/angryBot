@@ -7,7 +7,8 @@ namespace App\Tests\Utils\TradingSetup;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
 use Exception;
@@ -71,7 +72,7 @@ final class TradingSetup
         return $this;
     }
 
-    public function getPosition(Symbol $symbol, Side $side): Position
+    public function getPosition(SymbolInterface $symbol, Side $side): Position
     {
         if (!$position = $this->positions[$symbol->value][$side->value] ?? null) {
             throw new Exception(sprintf('"%s %s" position not found', $symbol->value, $side->title()));

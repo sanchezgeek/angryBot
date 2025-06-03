@@ -6,7 +6,8 @@ namespace App\Tests\Unit\Domain\Entity;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
@@ -30,7 +31,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testCanGetContextIfContextIsEmpty(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, []);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, []);
 
         self::assertSame([], $buyOrder->getContext());
     }
@@ -40,7 +41,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testCanGetContext(Side $side, array $context): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, $context);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, $context);
 
         self::assertSame($context, $buyOrder->getContext());
     }
@@ -50,7 +51,7 @@ final class BuyOrderTest extends TestCase
      */
     public function testCanGetContextByName(Side $side, array $context, string $name, mixed $expectedValue): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, $context);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, $context);
 
         self::assertSame($expectedValue, $buyOrder->getContext($name));
         self::assertSame($expectedValue, $buyOrder->getContext()[$name]);
@@ -79,19 +80,19 @@ final class BuyOrderTest extends TestCase
     public function testExchangeOrderIdContext(Side $side): void
     {
         # after create with empty context
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertFalse($buyOrder->hasExchangeOrderId());
         self::assertNull($buyOrder->getExchangeOrderId());
 
         # after create with context
         $exchangeOrderId = uuid_create();
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
         self::assertTrue($buyOrder->hasExchangeOrderId());
         self::assertSame($exchangeOrderId, $buyOrder->getExchangeOrderId());
 
         # after set by method
         $exchangeOrderId = uuid_create();
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         $buyOrder->setExchangeOrderId($exchangeOrderId);
         self::assertTrue($buyOrder->hasExchangeOrderId());
         self::assertSame($exchangeOrderId, $buyOrder->getExchangeOrderId());
@@ -103,7 +104,7 @@ final class BuyOrderTest extends TestCase
     public function testClearExchangeOrderIdContext(Side $side): void
     {
         $exchangeOrderId = uuid_create();
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [self::EXCHANGE_ORDER_ID_CONTEXT => $exchangeOrderId]);
 
         $buyOrder->clearExchangeOrderId();
 
@@ -117,19 +118,19 @@ final class BuyOrderTest extends TestCase
     public function testOnlyAfterExchangeOrderExecutedContext(Side $side): void
     {
         # after create with empty context
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, []);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, []);
         self::assertNull($buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertNull($buyOrder->getOnlyAfterExchangeOrderExecutedContext());
 
         # after create with context
         $exchangeOrderId = uuid_create();
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId]);
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
         self::assertSame($exchangeOrderId, $buyOrder->getOnlyAfterExchangeOrderExecutedContext());
 
         # after set by method
         $exchangeOrderId = uuid_create();
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         $buyOrder->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId);
         self::assertSame([self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $exchangeOrderId], $buyOrder->getContext());
         self::assertSame($exchangeOrderId, $buyOrder->getContext(self::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT));
@@ -141,16 +142,16 @@ final class BuyOrderTest extends TestCase
      */
     public function testIsWithShortStop(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertFalse($buyOrder->isWithShortStop());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isWithShortStop());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
         self::assertFalse($buyOrder->isWithShortStop());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
         self::assertTrue($buyOrder->isWithShortStop());
     }
 
@@ -159,19 +160,19 @@ final class BuyOrderTest extends TestCase
      */
     public function testIsForceBuyOrder(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertFalse($buyOrder->isForceBuyOrder());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isForceBuyOrder());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => false]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => false]);
         self::assertFalse($buyOrder->isForceBuyOrder());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => true]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::FORCE_BUY_CONTEXT => true]);
         self::assertTrue($buyOrder->isForceBuyOrder());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         $buyOrder->setIsForceBuyOrderContext();
         self::assertTrue($buyOrder->isForceBuyOrder());
     }
@@ -181,16 +182,16 @@ final class BuyOrderTest extends TestCase
      */
     public function testIsOnlyIfHasAvailableBalanceContext(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => false]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => false]);
         self::assertFalse($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true]);
         self::assertTrue($buyOrder->isOnlyIfHasAvailableBalanceContextSet());
     }
 
@@ -199,13 +200,13 @@ final class BuyOrderTest extends TestCase
      */
     public function testGetStopDistance(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertNull($buyOrder->getOppositeOrderDistance());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => 100500]);
         self::assertSame(100500.0, $buyOrder->getOppositeOrderDistance());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         $buyOrder->setOppositeOrdersDistance(123.1);
         self::assertSame(123.1, $buyOrder->getOppositeOrderDistance());
     }
@@ -215,16 +216,16 @@ final class BuyOrderTest extends TestCase
      */
     public function testisOppositeBuyOrderAfterStopLoss(Side $side): void
     {
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => 100500]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => 100500]);
         self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => false]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => false]);
         self::assertFalse($buyOrder->isOppositeBuyOrderAfterStopLoss());
 
-        $buyOrder = new BuyOrder(1, 100500, 123.456, Symbol::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true]);
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true]);
         self::assertTrue($buyOrder->isOppositeBuyOrderAfterStopLoss());
     }
 

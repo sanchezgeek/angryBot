@@ -2,7 +2,8 @@
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
@@ -13,7 +14,7 @@ trait SymbolAwareCommand
     use ConsoleInputAwareCommand;
 
     private const DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
-    private const DEFAULT_SYMBOL = Symbol::BTCUSDT;
+    private const DEFAULT_SYMBOL = SymbolEnum::BTCUSDT;
 
     private ?string $symbolOptionName = null;
 
@@ -22,10 +23,10 @@ trait SymbolAwareCommand
         return (bool)$this->paramFetcher->getStringOption($this->symbolOptionName, false);
     }
 
-    protected function getSymbol(): Symbol
+    protected function getSymbol(): SymbolInterface
     {
         if ($this->symbolOptionName) {
-            $symbol = Symbol::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
+            $symbol = SymbolEnum::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
         } else {
             $symbol = self::DEFAULT_SYMBOL;
         }
@@ -34,7 +35,7 @@ trait SymbolAwareCommand
     }
 
     /**
-     * @return Symbol[]
+     * @return SymbolInterface[]
      * @throws Throwable
      */
     private function getSymbols(array $exceptWhenGetAll = []): array
@@ -55,21 +56,21 @@ trait SymbolAwareCommand
     }
 
     /**
-     * @return Symbol[]
+     * @return SymbolInterface[]
      */
     protected static function parseProvidedSymbols(string $providedStringArray): array
     {
         $rawItems = explode(',', $providedStringArray);
         $symbols = [];
         foreach ($rawItems as $rawItem) {
-            $symbols[] = Symbol::fromShortName($rawItem);
+            $symbols[] = SymbolEnum::fromShortName($rawItem);
         }
         return $symbols;
     }
 
     protected function configureSymbolArgs(
         string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
-        ?Symbol $defaultValue = self::DEFAULT_SYMBOL,
+        ?SymbolInterface $defaultValue = self::DEFAULT_SYMBOL,
     ): static
     {
         $this->symbolOptionName = $symbolOptionName;

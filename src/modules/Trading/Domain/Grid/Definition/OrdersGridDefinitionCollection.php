@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Domain\Grid\Definition;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use IteratorAggregate;
@@ -25,7 +26,7 @@ final readonly class OrdersGridDefinitionCollection implements IteratorAggregate
         $this->items = $items;
     }
 
-    public static function create(string $collectionDefinition, SymbolPrice $refPrice, Side $positionSide, Symbol $symbol): self
+    public static function create(string $collectionDefinition, SymbolPrice $refPrice, Side $positionSide, SymbolInterface $symbol): self
     {
         $items = [];
         foreach (explode(self::SEPARATOR, $collectionDefinition) as $child) {

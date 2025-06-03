@@ -9,7 +9,8 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -61,7 +62,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
-    public function ticker(Symbol $symbol): Ticker
+    public function ticker(SymbolInterface $symbol): Ticker
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, $symbol);
 
@@ -96,7 +97,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?SymbolInterface $symbol = null, ?PriceRange $priceRange = null): array
     {
         if (!$symbol && $priceRange) {
             throw new InvalidArgumentException('Wrong usage: cannot apply priceRange when Symbol not specified');
@@ -113,7 +114,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             $closeOnTrigger = $item['closeOnTrigger'];
 
             try {
-                $itemSymbol = Symbol::from($item['symbol']);
+                $itemSymbol = SymbolEnum::from($item['symbol']);
                 if ($symbol && $itemSymbol !== $symbol) {
                     continue;
                 }
@@ -168,7 +169,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         }
     }
 
-    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
+    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
     {
         $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
         $data = $this->sendRequest($request)->data();
@@ -211,7 +212,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         return $result;
     }
 
-    public function getKlines(Symbol|string $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
+    public function getKlines(SymbolInterface|string $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
     {
         $request = new GetKlinesRequest(self::ASSET_CATEGORY, $symbol, $interval, $from, $to, $limit);
         $data = $this->sendRequest($request)->data();

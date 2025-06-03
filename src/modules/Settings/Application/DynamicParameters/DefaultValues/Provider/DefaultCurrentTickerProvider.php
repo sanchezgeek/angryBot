@@ -6,7 +6,8 @@ namespace App\Settings\Application\DynamicParameters\DefaultValues\Provider;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
 use InvalidArgumentException;
 
@@ -28,6 +29,6 @@ final readonly class DefaultCurrentTickerProvider implements ParameterDefaultVal
             throw new InvalidArgumentException('Symbol must be specified');
         }
 
-        return $this->exchangeService->ticker(Symbol::fromShortName(strtoupper($input['symbol'])));
+        return $this->exchangeService->ticker(SymbolEnum::fromShortName(strtoupper($input['symbol'])));
     }
 }

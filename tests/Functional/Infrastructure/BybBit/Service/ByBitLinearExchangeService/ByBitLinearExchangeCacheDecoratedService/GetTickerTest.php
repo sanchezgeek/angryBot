@@ -6,7 +6,8 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\Service\CacheDecorated\Dto\CachedTickerDto;
 use App\Tests\Factory\TickerFactory;
 
@@ -20,7 +21,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     public function testCallInnerServiceWhenNoCachedValueExists(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::create($symbol, 29990, 30000);
 
         $this->innerService->expects(self::once())->method('ticker')->with($symbol)->willReturn($ticker);
@@ -36,7 +37,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     public function testGetPositionFromCache(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::create($symbol, 29990, 30000);
         $item = $this->cache->getItem($this->getTickerCacheKey($symbol));
         $item->set(self::cachedTickerItemValue($ticker));
@@ -55,7 +56,7 @@ final class GetTickerTest extends ByBitLinearExchangeCacheDecoratedServiceTestAb
     public function testCallInnerServiceWhenCachedValueInvalidated(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $oldCachedTicker = TickerFactory::create($symbol,  29990, 30000);
         $ticker = TickerFactory::create($symbol,  30990, 31000);
 

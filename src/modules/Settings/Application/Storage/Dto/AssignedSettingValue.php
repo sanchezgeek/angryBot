@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Storage\Dto;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use BackedEnum;
@@ -14,7 +15,7 @@ final readonly class AssignedSettingValue implements Stringable
 {
     public function __construct(
         public AppSettingInterface $setting,
-        public ?Symbol $symbol,
+        public ?SymbolInterface $symbol,
         public ?Side $side,
         public string $fullKey,
         public mixed $value,

@@ -11,7 +11,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -119,7 +120,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $pushedStopsPercent = 7;
 
         ### BTCUSDT ###
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $message = new CheckPositionIsUnderLiquidation(
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
@@ -180,7 +181,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         ];
 
         ### LINKUSDT ###
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $message = new CheckPositionIsUnderLiquidation(
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
@@ -248,7 +249,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
 
         $delayedStopsPercent = 0.1;
         $pushedStopsPercent = 0.1;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop, warningPnlDistance: $warningPnlDistance, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $longEntry = 35000; $longLiquidation = 25000;
@@ -518,7 +519,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $pushedStopsPercent = 7;
 
         # BTCUSDT SHORT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $message = new CheckPositionIsUnderLiquidation(
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,
@@ -532,7 +533,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $activeBtcUsdtShortStops = [self::activeCondOrder($btcUsdtShort, $pushedStopsPercent, $existedBtcUsdtStopsPrice)];
 
         # LINKUSDT LONG
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $message = new CheckPositionIsUnderLiquidation(
             symbol: $symbol,
             percentOfLiquidationDistanceToAddStop: $percentOfLiquidationDistanceToAddStop,

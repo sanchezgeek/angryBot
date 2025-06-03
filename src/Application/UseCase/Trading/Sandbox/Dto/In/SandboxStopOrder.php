@@ -6,7 +6,8 @@ namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -21,7 +22,7 @@ readonly class SandboxStopOrder implements Stringable, VolumeSignAwareInterface,
      * MB private?
      */
     public function __construct(
-        public Symbol $symbol,
+        public SymbolInterface $symbol,
         public Side $positionSide,
         public float $price,
         public float $volume,

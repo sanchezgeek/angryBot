@@ -10,7 +10,8 @@ use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -58,7 +59,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetTickerTest
      */
-    public function ticker(Symbol $symbol): Ticker
+    public function ticker(SymbolInterface $symbol): Ticker
     {
         if ($this->externalCache) {
             $itemFromExternal = $this->getTickerCacheItemFromExternalCache($symbol);
@@ -67,7 +68,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
                 && ($cachedTickerDto = $itemFromExternal->get())
                 && $cachedTickerDto->updatedByAccName !== self::thisAccName()
             ) {
-                if ($symbol !== Symbol::BTCUSDT) {
+                if ($symbol !== SymbolEnum::BTCUSDT) {
                     /** @var CachedTickerDto $cachedTickerDto */
                     $this->events->dispatch(new TickerUpdateSkipped($cachedTickerDto));
                 }
@@ -92,7 +93,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    private function updateTicker(Symbol $symbol, \DateInterval $ttl): Ticker
+    private function updateTicker(SymbolInterface $symbol, \DateInterval $ttl): Ticker
     {
         $key = $this->tickerCacheKey($symbol);
 
@@ -128,7 +129,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function checkExternalTickerCacheOrUpdate(Symbol $symbol, \DateInterval $ttl): void
+    public function checkExternalTickerCacheOrUpdate(SymbolInterface $symbol, \DateInterval $ttl): void
     {
         /** @var CachedTickerDto $itemFromExternalCacheValue */
         if (
@@ -144,7 +145,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         $this->updateTicker($symbol, $ttl);
     }
 
-    private function getTickerCacheItemFromExternalCache(Symbol $symbol): ?CacheItem
+    private function getTickerCacheItemFromExternalCache(SymbolInterface $symbol): ?CacheItem
     {
         return $this->externalCache?->getItem($this->tickerCacheKey($symbol));
     }
@@ -163,7 +164,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?SymbolInterface $symbol = null, ?PriceRange $priceRange = null): array
     {
         return $this->exchangeService->activeConditionalOrders($symbol, $priceRange);
     }
@@ -180,12 +181,12 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         $this->exchangeService->closeActiveConditionalOrder($order);
     }
 
-    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
+    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
     {
         return $this->exchangeService->getInstrumentInfo($symbol);
     }
 
-    private function tickerCacheKey(Symbol $symbol): string
+    private function tickerCacheKey(SymbolInterface $symbol): string
     {
         return \sprintf('api_%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->value);
     }

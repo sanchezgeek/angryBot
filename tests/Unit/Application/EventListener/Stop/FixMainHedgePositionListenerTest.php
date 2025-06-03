@@ -10,7 +10,8 @@ use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -125,7 +126,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
     public function cases(): iterable
     {
         # BTCUSDT support closed
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->build($main);
@@ -140,7 +141,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         # ADAUSDT support
-        $symbol = Symbol::ADAUSDT;
+        $symbol = SymbolEnum::ADAUSDT;
         $main = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(4470)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(0.9052)->size(2700)->build($main);
         $stop = (new Stop(1, 0.9442, 10, null, $symbol, $support->side));
@@ -155,7 +156,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 
         # BTCUSDT main closed
         ### -- entry prices equal
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.5)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build($support);
         $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));

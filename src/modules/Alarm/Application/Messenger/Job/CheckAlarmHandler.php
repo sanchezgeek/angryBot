@@ -3,7 +3,8 @@
 namespace App\Alarm\Application\Messenger\Job;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -32,7 +33,7 @@ final readonly class CheckAlarmHandler
     public function __invoke(CheckAlarm $dto): void
     {
         foreach (self::ALARMS as $symbol => [$down, $up]) {
-            $ticker = $this->exchangeService->ticker(Symbol::from($symbol));
+            $ticker = $this->exchangeService->ticker(SymbolEnum::from($symbol));
             $markPrice = $ticker->markPrice;
 
             if ($up !== null && $markPrice->greaterThan($up)) {

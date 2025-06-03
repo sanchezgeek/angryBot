@@ -10,7 +10,8 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
@@ -86,7 +87,7 @@ class PlaceOrderCommand extends AbstractCommand
         $side = $this->getPositionSide();
 
         if ($type === self::MARKET_BUY) {
-            $except = [Symbol::BTCUSDT];
+            $except = [SymbolEnum::BTCUSDT];
 
             $symbols = $this->getSymbols($except);
 
@@ -198,7 +199,7 @@ class PlaceOrderCommand extends AbstractCommand
     }
 
     /**
-     * @param Symbol[] $symbols
+     * @param SymbolInterface[] $symbols
      */
     private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, ?string $mode = null): void
     {

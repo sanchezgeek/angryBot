@@ -6,7 +6,8 @@ namespace App\Tests\Stub\Bot;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use Exception;
@@ -30,7 +31,7 @@ final class PositionServiceStub implements PositionServiceInterface
     private array $addStopMethodCalls = [];
     private array $pushedStopsExchangeOrderIds = [];
 
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         foreach ($this->positions as $position) {
             if ($position->symbol === $symbol && $position->side === $side) {
@@ -41,7 +42,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         return $this->positions;
     }

@@ -12,7 +12,8 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -63,8 +64,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      * @see CreateOppositeBuyOrdersListener::MAIN_SYMBOLS
      */
     private const MAIN_SYMBOLS = [
-        Symbol::BTCUSDT,
-        Symbol::ETHUSDT,
+        SymbolEnum::BTCUSDT,
+        SymbolEnum::ETHUSDT,
     ];
 
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
@@ -114,7 +115,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     public function pushStopsTestCases(): iterable
     {
         # BTCUSDT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
@@ -282,7 +283,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         # LINKUSDT
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
@@ -357,7 +358,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private function oppositeBuyOrderCreateTestCases(): iterable
     {
         # BTCUSDT SHORT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionFactory::short($symbol, 29000); $ticker = TickerFactory::create($symbol, 29050);
 
         $exchangeOrderIds = [];
@@ -448,7 +449,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         # AAVEUSDT SHORT
-        $symbol = Symbol::AAVEUSDT;
+        $symbol = SymbolEnum::AAVEUSDT;
         $position = PositionFactory::short($symbol, 391.1, 45); $ticker = TickerFactory::create($symbol, 391.2);
 
         $exchangeOrderIds = [];
@@ -657,7 +658,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @todo | tests | move to helper
      */
-    public static function successConditionalStopApiCallExpectations(Symbol $symbol, array $stops, TriggerBy $triggerBy, ?array &$exchangeOrderIdsCollector = null): array
+    public static function successConditionalStopApiCallExpectations(SymbolInterface $symbol, array $stops, TriggerBy $triggerBy, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {
@@ -687,7 +688,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @return ByBitApiCallExpectation[]
      */
-    protected static function successByMarketApiCallExpectations(Symbol $symbol, array $stops, ?array &$exchangeOrderIdsCollector = null): array
+    protected static function successByMarketApiCallExpectations(SymbolInterface $symbol, array $stops, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {

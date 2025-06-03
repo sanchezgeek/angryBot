@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
@@ -26,7 +27,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
     #[AppDynamicParameter(group: 'trading')]
     public function safeLiquidationPriceDelta(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice

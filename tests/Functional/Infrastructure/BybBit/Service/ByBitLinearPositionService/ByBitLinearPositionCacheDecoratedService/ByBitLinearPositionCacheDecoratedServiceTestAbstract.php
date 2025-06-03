@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -33,7 +34,7 @@ abstract class ByBitLinearPositionCacheDecoratedServiceTestAbstract extends Kern
         );
     }
 
-    protected static function getPositionsCacheKey(Symbol $symbol): string
+    protected static function getPositionsCacheKey(SymbolInterface $symbol): string
     {
         return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
     }

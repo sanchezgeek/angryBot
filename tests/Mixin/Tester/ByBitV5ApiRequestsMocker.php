@@ -9,7 +9,8 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -49,7 +50,7 @@ trait ByBitV5ApiRequestsMocker
     /**
      * @doto pass coin instead
      */
-    protected function haveAvailableSpotBalance(Symbol $symbol, float $amount): void
+    protected function haveAvailableSpotBalance(SymbolInterface $symbol, float $amount): void
     {
         $amount = new CoinAmount($symbol->associatedCoin(), $amount);
 
@@ -77,7 +78,7 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls(new ByBitApiCallExpectation($expectedRequest, $resultResponse));
     }
 
-    protected function haveContractWalletBalance(Symbol $symbol, float $total, float $available): void
+    protected function haveContractWalletBalance(SymbolInterface $symbol, float $total, float $available): void
     {
         if ($available > $total) {
             throw new RuntimeException('$available cannot be greater than $total');
@@ -129,7 +130,7 @@ trait ByBitV5ApiRequestsMocker
      *
      * @return ByBitApiCallExpectation[]
      */
-    protected static function successMarketBuyApiCallExpectations(Symbol $symbol, array $buyOrders, ?array &$exchangeOrderIdsCollector = null): array
+    protected static function successMarketBuyApiCallExpectations(SymbolInterface $symbol, array $buyOrders, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($buyOrders as $buyOrder) {
@@ -149,7 +150,7 @@ trait ByBitV5ApiRequestsMocker
         return $result;
     }
 
-    protected static function cannotAffordBuyApiCallExpectations(Symbol $symbol, array $buyOrders): array
+    protected static function cannotAffordBuyApiCallExpectations(SymbolInterface $symbol, array $buyOrders): array
     {
         $error = ByBitV5ApiError::knownError(ApiV5Errors::CannotAffordOrderCost, 'Cannot afford');
 
@@ -164,7 +165,7 @@ trait ByBitV5ApiRequestsMocker
         return $result;
     }
 
-    protected static function successCloseByMarketApiCallExpectation(Symbol $symbol, Side $positionSide, float $qty): ByBitApiCallExpectation
+    protected static function successCloseByMarketApiCallExpectation(SymbolInterface $symbol, Side $positionSide, float $qty): ByBitApiCallExpectation
     {
         $exchangeOrderId = uuid_create();
 
@@ -174,7 +175,7 @@ trait ByBitV5ApiRequestsMocker
         return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
     }
 
-    protected static function successCloseActiveConditionalOrderApiCallExpectation(Symbol $symbol, ActiveStopOrder $activeStopOrder): ByBitApiCallExpectation
+    protected static function successCloseActiveConditionalOrderApiCallExpectation(SymbolInterface $symbol, ActiveStopOrder $activeStopOrder): ByBitApiCallExpectation
     {
         $expectedRequest = CancelOrderRequest::byOrderId($activeStopOrder->symbol->associatedCategory(), $activeStopOrder->symbol, $activeStopOrder->orderId);
         $resultResponse = CancelOrderResponseBuilder::ok($activeStopOrder->orderId)->build();
@@ -192,7 +193,7 @@ trait ByBitV5ApiRequestsMocker
         return new ByBitApiCallExpectation($expectedRequest, $resultResponse);
     }
 
-    protected static function positionsApiCallExpectation(Symbol $symbol, Position ...$positions): ByBitApiCallExpectation
+    protected static function positionsApiCallExpectation(SymbolInterface $symbol, Position ...$positions): ByBitApiCallExpectation
     {
         $expectedRequest = new GetPositionsRequest($symbol->associatedCategory(), $symbol);
 
@@ -215,7 +216,7 @@ trait ByBitV5ApiRequestsMocker
         $this->expectsToMakeApiCalls($byBitApiCallExpectation);
     }
 
-    protected function havePosition(Symbol $symbol, Position ...$pre): void
+    protected function havePosition(SymbolInterface $symbol, Position ...$pre): void
     {
         $positions = [];
         foreach ($pre as $position) {
@@ -257,7 +258,7 @@ trait ByBitV5ApiRequestsMocker
         );
     }
 
-    private function haveActiveConditionalStops(Symbol $symbol, ActiveStopOrder ...$activeStopOrders): void
+    private function haveActiveConditionalStops(SymbolInterface $symbol, ActiveStopOrder ...$activeStopOrders): void
     {
         $category = $symbol->associatedCategory();
 

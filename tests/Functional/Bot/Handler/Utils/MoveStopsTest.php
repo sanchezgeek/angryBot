@@ -10,7 +10,8 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -30,7 +31,7 @@ final class MoveStopsTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
 
-    private const SYMBOL = Symbol::BTCUSDT;
+    private const SYMBOL = SymbolEnum::BTCUSDT;
 
     protected PositionServiceInterface $positionServiceStub;
 

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Decorator;
 
 use App\Application\Cache\CacheServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Trading\SDK\Check\Cache\CheckResultKeyBasedOnOrderAndPricePnlStep;
@@ -72,7 +73,7 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
      * @note 100x-leveraged
      * @see PnlHelper::getPositionLeverage
      */
-    public static function pnlPercentStep(Symbol $symbol, float $currentPrice): int
+    public static function pnlPercentStep(SymbolInterface $symbol, float $currentPrice): int
     {
         if (isset(self::$pnlStepCache[$symbol->value])) {
             return self::$pnlStepCache[$symbol->value];

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\ByBitLinearExchangeCacheDecoratedService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -20,7 +21,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeCacheDecor
     public function testCallInnerService(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $activeOrders = [
             new ActiveStopOrder($symbol, Side::Buy, uuid_create(), 0.01, 25000, TriggerBy::IndexPrice->value),
             new ActiveStopOrder($symbol, Side::Sell, uuid_create(), 0.1, 30000, TriggerBy::LastPrice->value),
@@ -41,7 +42,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeCacheDecor
     public function testCallInnerServiceWithPriceRange(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $activeOrders = [
             new ActiveStopOrder($symbol, Side::Buy, uuid_create(), 0.01, 25000, TriggerBy::IndexPrice->value),
             new ActiveStopOrder($symbol, Side::Sell, uuid_create(), 0.1, 30000, TriggerBy::LastPrice->value),

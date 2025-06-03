@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
@@ -52,7 +53,7 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private ?Symbol $symbol = null,
+        private ?SymbolInterface $symbol = null,
         private ?Coin $settleCoin = null
     ) {
         if (!$this->symbol && !$this->settleCoin) {

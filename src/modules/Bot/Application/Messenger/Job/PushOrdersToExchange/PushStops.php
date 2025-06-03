@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use InvalidArgumentException;
 
@@ -15,7 +16,7 @@ use InvalidArgumentException;
 final readonly class PushStops
 {
     public function __construct(
-        public Symbol $symbol,
+        public SymbolInterface $symbol,
         public Side $side,
         public ?Position $positionState = null,
     ) {

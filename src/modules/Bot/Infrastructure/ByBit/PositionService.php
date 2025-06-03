@@ -10,7 +10,8 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
@@ -47,7 +48,7 @@ final class PositionService implements PositionServiceInterface
         $this->api = new BybitLinear($this->apiKey, $this->apiSecret, self::URL);
     }
 
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         $key = \sprintf('position_data_%s_%s', $symbol->value, $side->value);
 
@@ -80,7 +81,7 @@ final class PositionService implements PositionServiceInterface
         });
     }
 
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         throw new NotImplementedException(sprintf('%s: not implemented', __METHOD__));
     }

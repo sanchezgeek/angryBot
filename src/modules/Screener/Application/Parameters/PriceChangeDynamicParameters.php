@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -24,7 +25,7 @@ final readonly class PriceChangeDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice,
         float $passedPartOfOneDay,
-        ?Symbol $symbol = null,
+        ?SymbolInterface $symbol = null,
     ): float {
         return $this->significantPricePercent($refPrice, $passedPartOfOneDay, $symbol)->of($refPrice);
     }
@@ -34,7 +35,7 @@ final readonly class PriceChangeDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice,
         float $passedPartOfOneDay,
-        ?Symbol $symbol = null,
+        ?SymbolInterface $symbol = null,
     ): Percent {
         if ($passedPartOfOneDay <= 0) {
             throw new LogicException(sprintf('$passedPartOfOneDay cannot be less than 0 (%s provided)', $passedPartOfOneDay));
@@ -45,7 +46,7 @@ final readonly class PriceChangeDynamicParameters
         return Percent::notStrict($base * $passedPartOfOneDay);
     }
 
-    private function oneDaySignificantPricePercent(float $currentPrice, ?Symbol $symbol = null): float
+    private function oneDaySignificantPricePercent(float $currentPrice, ?SymbolInterface $symbol = null): float
     {
         if ($percentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantDelta_OneDay_PricePercent, $symbol))) {
             return $percentOverride;

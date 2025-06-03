@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest;
 
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -38,7 +39,7 @@ final class MarketBuyTest extends ByBitOrderServiceTestAbstract
     /**
      * @dataProvider marketBuySuccessTestCases
      *
-     * @param array{category: AssetCategory, symbol: Symbol, positionSide: Side} $data
+     * @param array{category: AssetCategory, symbol: SymbolInterface, positionSide: Side} $data
      */
     public function testCanDoMarketBuy(array $data): void
     {
@@ -66,7 +67,7 @@ final class MarketBuyTest extends ByBitOrderServiceTestAbstract
     /**
      * @dataProvider marketBuyFailTestCases
      *
-     * @param array{category: AssetCategory, symbol: Symbol, positionSide: Side, apiResponse: MockResponse, expectedException: Throwable} $data
+     * @param array{category: AssetCategory, symbol: SymbolInterface, positionSide: Side, apiResponse: MockResponse, expectedException: Throwable} $data
      */
     public function testFailAddBuyOrder(array $data): void
     {
@@ -89,7 +90,7 @@ final class MarketBuyTest extends ByBitOrderServiceTestAbstract
 
     private function marketBuyFailTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $category = AssetCategory::linear;
 
         # common errors

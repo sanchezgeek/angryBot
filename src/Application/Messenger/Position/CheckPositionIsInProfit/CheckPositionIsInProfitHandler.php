@@ -8,7 +8,8 @@ use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use Psr\Log\LoggerInterface;
@@ -19,9 +20,10 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 final class CheckPositionIsInProfitHandler
 {
     /** @todo | MainSymbols DRY? */
+    /** @todo | symbol | some way to get values based on symbol -> move to settings? */
     private const SYMBOLS_ALERT_PNL_PERCENT_DEFAULT = [
-        Symbol::BTCUSDT->value => 150,
-        Symbol::ETHUSDT->value => 300,
+        SymbolEnum::BTCUSDT->value => 150,
+        SymbolEnum::ETHUSDT->value => 300,
         'other' => 1000
     ];
 

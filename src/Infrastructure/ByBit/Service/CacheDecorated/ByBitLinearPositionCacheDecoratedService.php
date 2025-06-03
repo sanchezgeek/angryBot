@@ -6,7 +6,8 @@ namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -52,7 +53,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     /**
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         $positions = $this->getPositions($symbol);
 
@@ -65,7 +66,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         return null;
     }
 
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         $key = self::positionsCacheKey($symbol);
 
@@ -93,7 +94,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         return $this->positionService->addConditionalStop($position, $price, $qty, $triggerBy);
     }
 
-    public function clearPositionsCache(Symbol $symbol, ?Side $positionSide = null): void
+    public function clearPositionsCache(SymbolInterface $symbol, ?Side $positionSide = null): void
     {
         // @todo | cache | all symbols?
         $this->cache->delete(
@@ -101,7 +102,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         );
     }
 
-    public static function positionsCacheKey(Symbol $symbol): string
+    public static function positionsCacheKey(SymbolInterface $symbol): string
     {
         return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
     }

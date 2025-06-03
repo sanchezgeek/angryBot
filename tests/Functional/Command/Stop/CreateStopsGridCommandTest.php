@@ -7,7 +7,8 @@ namespace App\Tests\Functional\Command\Stop;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
@@ -48,7 +49,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
      */
     public function testCanCreateStopsGrid(
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         string $forVolume,
         string $from,
@@ -84,7 +85,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
     private function createStopsGridDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 1.5);
 
@@ -277,7 +278,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
      */
     public function testFailCreateStopsGrid(
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         ?Side $side,
         ?string $forVolume,
         ?string $from,
@@ -304,7 +305,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
     private function failCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 0.5);
 
@@ -360,7 +361,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
     }
 
-    private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, ?float $tD = null): Stop
+    private static function buildExpectedStop(SymbolInterface $symbol, Side $side, int $id, float $volume, float $price, ?float $tD = null): Stop
     {
         $tD = $tD ?: $symbol->stopDefaultTriggerDelta();
 

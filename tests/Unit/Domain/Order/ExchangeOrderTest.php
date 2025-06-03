@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\ExchangeOrder;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +14,7 @@ final class ExchangeOrderTest extends TestCase
     public function testRoundToMin(): void
     {
         self::markTestIncomplete();
-        $symbol = Symbol::ATAUSDT;
+        $symbol = SymbolEnum::ATAUSDT;
 
         $currentPrice = $symbol->makePrice(0.21201);
 
@@ -24,7 +25,7 @@ final class ExchangeOrderTest extends TestCase
     public function testRoundToFloatMin(): void
     {
         self::markTestIncomplete();
-        $symbol = Symbol::GNOUSDT;
+        $symbol = SymbolEnum::GNOUSDT;
 
         $currentPrice = $symbol->makePrice(284.92);
 

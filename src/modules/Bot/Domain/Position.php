@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Domain;
 
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Assertion\PositionSizeAssertion;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
@@ -38,7 +39,7 @@ final class Position implements Stringable
      */
     public function __construct(
         public readonly Side $side,
-        public readonly Symbol $symbol,
+        public readonly SymbolInterface $symbol,
         public readonly float $entryPrice,
         public readonly float $size,
         public readonly float $value,

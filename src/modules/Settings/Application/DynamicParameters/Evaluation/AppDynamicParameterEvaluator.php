@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\DynamicParameters\Evaluation;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -116,7 +117,7 @@ final readonly class AppDynamicParameterEvaluator
 
         $type = $ref->getType()->getName();
         $parser = match (true) {
-            $type === Symbol::class => static fn ($value) => $type::fromShortName(strtoupper($value)),
+            $type === SymbolEnum::class => static fn ($value) => $type::fromShortName(strtoupper($value)),
             is_subclass_of($type, BackedEnum::class) => static fn ($value) => $type::from($value),
             default => static fn($value) => $value,
         };

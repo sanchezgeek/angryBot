@@ -7,7 +7,8 @@ namespace App\Tests\Functional\Command\Stop\EditStopsInRangeCommand;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\Stop\EditStopsCommand;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -55,7 +56,7 @@ final class RemoveStopsInRangeTest extends KernelTestCase
         array $initialStops,
         array $activeConditionalStops,
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         string $from,
         string $to,
@@ -76,7 +77,7 @@ final class RemoveStopsInRangeTest extends KernelTestCase
 
     private function removeStopsFromRangeDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 1.5);
 

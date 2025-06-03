@@ -6,14 +6,15 @@ namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 
 interface StopServiceInterface
 {
     public function create(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         SymbolPrice|float $price,
         float $volume,
