@@ -8,6 +8,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,7 +19,7 @@ use function count;
 use function sprintf;
 
 #[AsCommand(name: 'sl:remove-stale')]
-class RemoveStaleStopsCommand extends AbstractCommand
+class RemoveStaleStopsCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 

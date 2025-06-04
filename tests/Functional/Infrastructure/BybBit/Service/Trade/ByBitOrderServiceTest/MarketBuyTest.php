@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderSer
 
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
@@ -16,6 +15,7 @@ use App\Tests\Functional\Infrastructure\BybBit\Service\ApiTestCaseData;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\DataProvider\TestCaseAwareTest;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 

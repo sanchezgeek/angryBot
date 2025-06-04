@@ -6,10 +6,9 @@ namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface StopServiceInterface
 {

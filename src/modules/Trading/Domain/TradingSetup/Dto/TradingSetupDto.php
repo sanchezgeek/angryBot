@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Domain\TradingSetup\Dto;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class TradingSetupDto
 {

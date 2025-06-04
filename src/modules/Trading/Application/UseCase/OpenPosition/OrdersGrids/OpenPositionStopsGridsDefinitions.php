@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\UseCase\OpenPosition\OrdersGrids;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -13,6 +11,7 @@ use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Settings\OpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\DefaultGridDefinitionNotFound;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final readonly class OpenPositionStopsGridsDefinitions
 {
@@ -33,7 +32,7 @@ final readonly class OpenPositionStopsGridsDefinitions
 
         if (!$symbolSideDef && !$symbolDef) {
             throw new DefaultGridDefinitionNotFound(
-                sprintf('Cannot find predefined Stops grids definition nor for "%s", neither for "%s %s"', $symbol->value, $symbol->value, $positionSide->title())
+                sprintf('Cannot find predefined Stops grids definition nor for "%s", neither for "%s %s"', $symbol->name(), $symbol->name(), $positionSide->title())
             );
         }
 

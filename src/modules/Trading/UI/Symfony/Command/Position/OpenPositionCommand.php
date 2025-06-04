@@ -4,10 +4,9 @@ namespace App\Trading\UI\Symfony\Command\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
@@ -19,6 +18,7 @@ use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -28,7 +28,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
 #[AsCommand(name: 'p:open')]
-class OpenPositionCommand extends AbstractCommand
+class OpenPositionCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 
@@ -113,7 +113,7 @@ class OpenPositionCommand extends AbstractCommand
             $this->openPositionHandler->handle($inputDto);
         } catch (AutoReopenPositionDenied $e) {
             $this->io->warning(
-                sprintf("%s\nClose position manually first:\n   `./bin/console order:place --symbol=%s` -kclose %s 100%%", $e->getMessage(), $symbol->value, $positionSide->value)
+                sprintf("%s\nClose position manually first:\n   `./bin/console order:place --symbol=%s` -kclose %s 100%%", $e->getMessage(), $symbol->name(), $positionSide->value)
             );
             return Command::FAILURE;
         } catch (Throwable $e) {

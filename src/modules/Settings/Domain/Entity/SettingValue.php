@@ -2,10 +2,10 @@
 
 namespace App\Settings\Domain\Entity;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Domain\Repository\SettingValueRepository;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\Mapping as ORM;
 use InvalidArgumentException;
 
@@ -21,7 +21,8 @@ class SettingValue
     #[ORM\Column(type: 'string', nullable: false)]
     public string $key;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: SymbolEnum::class)]
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name', nullable: true)]
     public ?SymbolInterface $symbol = null;
 
     #[ORM\Column(type: 'string', nullable: true, enumType: Side::class)]
@@ -77,22 +78,9 @@ class SettingValue
     {
         return [
             'key' => $this->key,
-            'symbol' => $this->symbol?->value,
+            'symbol' => $this->symbol?->name(),
             'positionSide' => $this->positionSide?->value,
             'value' => $this->value,
         ];
-    }
-
-    /**
-     * @todo | symbol | provider / factory ...
-     */
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            $data['key'],
-            $data['value'],
-            $data['symbol'] ? SymbolEnum::from($data['symbol']) : null,
-            $data['positionSide'] ? Side::from($data['positionSide']) : null,
-        );
     }
 }

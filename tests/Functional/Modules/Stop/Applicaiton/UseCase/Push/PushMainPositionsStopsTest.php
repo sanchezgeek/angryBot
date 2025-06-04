@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
 use App\Bot\Application\Helper\StopHelper;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -26,6 +24,7 @@ use App\Tests\Helper\StopTestHelper;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Utils\TradingSetup\TradingSetup;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
@@ -37,9 +36,6 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     protected function setUp(): void
     {
         parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
     }
 
     /**
@@ -52,7 +48,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
-        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols), $tickers);
+        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols), $tickers);
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
@@ -65,7 +61,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
             $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 
             $this->havePosition($position->symbol, $position); // fallback for PositionServiceInterface
-            $ticker = $tickersMap[$position->symbol->value];
+            $ticker = $tickersMap[$position->symbol->name()];
             $positionsApiResponse->withPosition($position, $ticker->markPrice->value());
         }
         $positionsApiCall = new ByBitApiCallExpectation(new GetPositionsRequest(self::CATEGORY, null), $positionsApiResponse->build());

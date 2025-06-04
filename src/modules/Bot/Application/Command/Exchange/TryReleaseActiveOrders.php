@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Command\Exchange;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 
 readonly final class TryReleaseActiveOrders

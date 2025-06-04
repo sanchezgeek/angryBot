@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Price\Helper;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 readonly class PriceFormatter
 {

@@ -6,18 +6,18 @@ namespace App\Infrastructure\ByBit\Service\CacheDecorated;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
+use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -26,10 +26,10 @@ use function sprintf;
 
 final readonly class ByBitLinearPositionCacheDecoratedService implements PositionServiceInterface, PositionsCache
 {
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
     /** @todo | inject into service? */
-    public const POSITION_TTL = '4 seconds';
+    public const string POSITION_TTL = '4 seconds';
 
     /**
      * @param ByBitLinearPositionService $positionService
@@ -40,9 +40,9 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     ) {
     }
 
-    public function getOpenedPositionsSymbols(array $except = []): array
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
-        return $this->positionService->getOpenedPositionsSymbols($except);
+        return $this->positionService->getOpenedPositionsSymbols(...$except);
     }
 
     public function getOpenedPositionsRawSymbols(): array
@@ -57,13 +57,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     {
         $positions = $this->getPositions($symbol);
 
-        foreach ($positions as $position) {
-            if ($position->side === $side) {
-                return $position;
-            }
-        }
-
-        return null;
+        return array_find($positions, static fn($position) => $position->side === $side);
     }
 
     public function getPositions(SymbolInterface $symbol): array
@@ -86,6 +80,7 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\AddStopTest
      */
@@ -104,6 +99,6 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     public static function positionsCacheKey(SymbolInterface $symbol): string
     {
-        return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->value);
+        return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->name());
     }
 }

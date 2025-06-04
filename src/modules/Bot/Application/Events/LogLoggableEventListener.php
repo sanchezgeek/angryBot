@@ -7,16 +7,11 @@ namespace App\Bot\Application\Events;
 use App\Bot\Application\Events\Exchange\PositionUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
-use App\Bot\Application\Events\Stop\ActiveCondStopMovedBack;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
-use App\Helper\OutputHelper;
 use App\Trait\LoggerTrait;
 use App\Worker\AppContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 use function sprintf;
@@ -47,7 +42,7 @@ final class LogLoggableEventListener implements EventSubscriberInterface
 
         if ($event instanceof TickerUpdated || $event instanceof TickerUpdateSkipped) {
             $symbol = $event instanceof TickerUpdated ? $event->ticker->symbol : $event->foundCachedTickerDto->ticker->symbol;
-            if (!$this->tickerUpdatedLogThrottlingLimiter->create($symbol->value)->consume()->isAccepted()) {
+            if (!$this->tickerUpdatedLogThrottlingLimiter->create($symbol->name())->consume()->isAccepted()) {
                 return;
             }
         }

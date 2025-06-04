@@ -17,7 +17,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -88,8 +87,6 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
             $this->clockMock,
             self::getContainer()->get(StopChecksChain::class),
         );
-
-        self::truncateStops();
     }
 
     /**

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Pnl\Helper;
 
-use App\Bot\Domain\Pnl;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 class PnlFormatter
 {

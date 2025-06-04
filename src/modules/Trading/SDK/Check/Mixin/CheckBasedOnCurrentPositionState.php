@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 
 trait CheckBasedOnCurrentPositionState

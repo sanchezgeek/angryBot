@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Tests\Utils\TestData\TestCaseDataBase;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 class ApiTestCaseData extends TestCaseDataBase
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Hedge;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Position\Helper\PositionClone;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -24,7 +25,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'hedge:diff-stop')]
-class DiffStopCommand extends AbstractCommand
+class DiffStopCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;

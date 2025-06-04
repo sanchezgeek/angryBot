@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Bot\Domain\Factory;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PositionFactory
 {

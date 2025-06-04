@@ -10,7 +10,6 @@ use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -28,8 +27,8 @@ final class CreateOppositeBuyOrdersListener
     public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
     private const MAIN_SYMBOLS = [
-        SymbolEnum::BTCUSDT,
-        SymbolEnum::ETHUSDT
+        SymbolEnum::BTCUSDT->value,
+        SymbolEnum::ETHUSDT->value
     ];
 
     /**
@@ -112,11 +111,11 @@ final class CreateOppositeBuyOrdersListener
     public function getOppositeOrderPnlDistance(Stop $stop): Percent
     {
         $symbol = $stop->getSymbol();
-        if (isset(self::DISTANCES[$symbol->value])) {
-            return new Percent(self::DISTANCES[$symbol->value]);
+        if (isset(self::DISTANCES[$symbol->name()])) {
+            return new Percent(self::DISTANCES[$symbol->name()]);
         }
 
-        if (!in_array($symbol, self::MAIN_SYMBOLS, true)) {
+        if (!in_array($symbol->name(), self::MAIN_SYMBOLS, true)) {
             return $stop->getPositionSide()->isLong()
                 ? $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin)
                 : $this->settings->required(TradingSettings::Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin)

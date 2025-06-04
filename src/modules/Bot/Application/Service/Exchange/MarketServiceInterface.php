@@ -2,8 +2,7 @@
 
 namespace App\Bot\Application\Service\Exchange;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface MarketServiceInterface
 {

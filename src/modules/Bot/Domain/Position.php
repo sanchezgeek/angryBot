@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Bot\Domain;
 
 use App\Bot\Application\Service\Hedge\Hedge;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Assertion\PositionSizeAssertion;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
@@ -15,6 +13,7 @@ use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Helper\FloatHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use LogicException;
 use RuntimeException;
@@ -143,7 +142,7 @@ final class Position implements Stringable
             $this->isMainPosition() => ' (main)',
             default => ''
         };
-        return sprintf('%s %s%s', $this->symbol->value, $this->side->title(), $info);
+        return sprintf('%s %s%s', $this->symbol->name(), $this->side->title(), $info);
     }
 
     /**
@@ -188,8 +187,8 @@ final class Position implements Stringable
 
     public function priceDistanceWithLiquidation(Ticker $ticker): float
     {
-        if ($this->symbol !== $ticker->symbol) {
-            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->value, $this->symbol->value));
+        if (!$this->symbol->eq($ticker->symbol)) {
+            throw new LogicException(sprintf('%s: invalid ticker "%s" provided ("%s" expected)', __METHOD__, $ticker->symbol->name(), $this->symbol->name()));
         }
 
         return $this->liquidationPrice()->deltaWith($ticker->markPrice);

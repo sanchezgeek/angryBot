@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Settings;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
@@ -21,6 +20,7 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Tests\Mixin\TestWithDoctrineRepository;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -99,7 +99,7 @@ trait SettingsAwareTest
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;
                 [$symbol, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
-                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol, $side, $key, $value);
+                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol ? SymbolEnum::tryFrom($symbol) : null, $side, $key, $value);
             }
 
             return $storedValues;

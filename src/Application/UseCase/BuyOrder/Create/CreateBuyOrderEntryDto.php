@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\UseCase\BuyOrder\Create;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class CreateBuyOrderEntryDto
 {

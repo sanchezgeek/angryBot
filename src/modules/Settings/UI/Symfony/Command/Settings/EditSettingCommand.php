@@ -3,9 +3,9 @@
 namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
@@ -22,9 +22,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:edit')]
-class EditSettingCommand extends AbstractCommand
+#[AutoconfigureTag(name: 'command.symbol_dependent')]
+class EditSettingCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 

@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox\Factory;
 
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @todo | sandbox | Move to ... where?

@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange\Account;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Value\CachedValue;
 
 abstract class AbstractExchangeAccountService implements ExchangeAccountServiceInterface

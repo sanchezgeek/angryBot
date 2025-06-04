@@ -11,7 +11,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -21,6 +20,7 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\Dto\CachedTickerDto;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\TickersCache;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Cache\CacheItem;
@@ -33,10 +33,6 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private ?CacheInterface $externalCache;
 
-    /**
-     * @param ByBitLinearExchangeService $exchangeService
-     * @param ?CacheInterface $externalCache
-     */
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
         private EventDispatcherInterface $events,
@@ -188,6 +184,6 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
 
     private function tickerCacheKey(SymbolInterface $symbol): string
     {
-        return \sprintf('api_%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->value);
+        return \sprintf('api_%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->name());
     }
 }

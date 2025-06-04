@@ -33,7 +33,7 @@ final readonly class UnexpectedSandboxExecutionExceptionHandler
             $order->sourceOrder ? sprintf(' (id = %d)', $order->sourceOrder->getId()) : ''
         );
 
-        $identifier = sprintf('%s_%s_%s', OutputHelper::shortClassName($order), $order->symbol->value, $order->positionSide->value);
+        $identifier = sprintf('%s_%s_%s', OutputHelper::shortClassName($order), $order->symbol->name(), $order->positionSide->value);
         if ($order->sourceOrder) {
             $identifier .= sprintf('_id_%d', $order->sourceOrder->getId());
         }

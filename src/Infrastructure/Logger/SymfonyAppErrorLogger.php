@@ -21,7 +21,7 @@ readonly class SymfonyAppErrorLogger implements AppErrorLoggerInterface
     public function exception(Throwable $e, ?string $additionalInfo = null): void
     {
         if ($additionalInfo) {
-            $message = sprintf('%s | %s', $additionalInfo, $e->getMessage());
+            $message = sprintf('%s: %s', $additionalInfo, $e->getMessage());
         } else {
             $message = $e->getMessage();
         }

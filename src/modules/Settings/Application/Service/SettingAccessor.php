@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Service;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 use Stringable;
 

@@ -13,8 +13,6 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -22,6 +20,9 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolContainerInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
@@ -33,7 +34,7 @@ use function sprintf;
  * @see \App\Tests\Unit\Domain\Entity\StopTest
  */
 #[ORM\Entity(repositoryClass: StopRepository::class)]
-class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
+class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
     public const string SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
     public const string IS_TP_CONTEXT = 'isTakeProfit';
@@ -68,7 +69,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(nullable: true)]
     private float $triggerDelta;
 
-    #[ORM\Column(type: 'symbol', enumType: SymbolEnum::class)]
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
     private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
@@ -89,6 +91,16 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+    }
+
+    /**
+     * @internal For tests
+     */
+    public function replaceSymbolEntity(Symbol $symbol): self
+    {
+        $this->symbol = $symbol;
+
+        return $this;
     }
 
     public function getId(): int
@@ -298,7 +310,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return [
             'id' => $this->id,
             'positionSide' => $this->positionSide->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'price' => $this->price,
             'volume' => $this->volume,
             'triggerDelta' => $this->triggerDelta,
@@ -306,26 +318,10 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         ];
     }
 
-    /**
-     * @todo | symbol | provider / factory ...
-     */
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            $data['id'],
-            $data['price'],
-            $data['volume'],
-            $data['triggerDelta'],
-            SymbolEnum::from($data['symbol']),
-            Side::from($data['positionSide']),
-            $data['context']
-        );
-    }
-
     public function info(): array
     {
         return [
-            'symbol' => $this->getSymbol(),
+            'symbol' => $this->getSymbol()->name(),
             'side' => $this->positionSide,
             'price' => $this->price,
             'volume' => $this->volume,

@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitExchangeAccoun
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\API\V5\Request\Account\GetWalletBalanceRequest;

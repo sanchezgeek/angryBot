@@ -17,6 +17,7 @@ trait StopsTester
     use TestWithDoctrineRepository;
     use PositionSideAwareTest;
     use TestWithDbFixtures;
+    use SymbolsDependentTester;
 
     /**
      * @return Stop[]
@@ -45,7 +46,7 @@ trait StopsTester
         usort($expectedStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
         usort($actualStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
 
-        self::assertEquals($expectedStops, $actualStops);
+        self::assertOrdersEqual($expectedStops, $actualStops);
     }
 
     protected static function getStopRepository(): StopRepository
@@ -53,6 +54,9 @@ trait StopsTester
         return self::getContainer()->get(StopRepository::class);
     }
 
+    /**
+     * @before
+     */
     protected static function truncateStops(): int
     {
         $qnt = self::truncate(Stop::class);

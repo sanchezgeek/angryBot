@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -13,6 +11,7 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEval
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 
 /**

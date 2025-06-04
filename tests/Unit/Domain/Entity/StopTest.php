@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Domain\Entity;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -217,41 +216,13 @@ final class StopTest extends TestCase
             [
                 'id' => $id,
                 'positionSide' => $positionSide->value,
-                'symbol' => $symbol->value,
+                'symbol' => $symbol->name(),
                 'price' => $price,
                 'volume' => $volume,
                 'triggerDelta' => $triggerDelta,
                 'context' => $context
             ],
             $stop->toArray()
-        );
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testFromArray(Side $positionSide): void
-    {
-        $data = [
-            'id' => $id = 100500,
-            'positionSide' => $positionSide->value,
-            'symbol' => SymbolEnum::BTCUSDT->value,
-            'price' => $price = 29000.1,
-            'volume' => $volume = 0.011,
-            'triggerDelta' => $triggerDelta = 13.1,
-            'context' => $context = [
-                'root.string.context' => 'some string context',
-                'root.bool.context' => false,
-                'some.array.context' => [
-                    'inner.string.context' => 'some string context',
-                    'inner.bool.context' => true,
-                ],
-            ]
-        ];
-
-        self::assertEquals(
-            new Stop($id, $price, $volume, $triggerDelta, SymbolEnum::BTCUSDT, $positionSide, $context),
-            Stop::fromArray($data)
         );
     }
 

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
-use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -14,13 +12,12 @@ use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
-use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Tests\Factory\Position\PositionBuilder;
-use App\Tests\Factory\TickerFactory;
 use App\Tests\Mock\Response\ByBitV5Api\ErrorResponseFactory;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -72,7 +69,7 @@ final class AddStopTest extends ByBitLinearPositionServiceTestAbstract
         $positionSide = Side::Sell;
 
         foreach ([TriggerBy::IndexPrice, TriggerBy::MarkPrice, TriggerBy::LastPrice] as $triggerBy) {
-            yield sprintf('[triggerBy=%s] place %s %s position stop (%s)', $triggerBy->value, $symbol->value, $positionSide->title(), $category->value) => [
+            yield sprintf('[triggerBy=%s] place %s %s position stop (%s)', $triggerBy->value, $symbol->name(), $positionSide->title(), $category->value) => [
                 $symbol, $category, $positionSide, $triggerBy,
                 '$apiResponse' => PlaceOrderResponseBuilder::ok($exchangeOrderId = uuid_create())->build(),
                 '$expectedExchangeOrderId' => $exchangeOrderId,

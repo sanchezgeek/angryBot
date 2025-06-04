@@ -2,9 +2,8 @@
 
 namespace App\Infrastructure\Cache;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface PositionsCache
 {

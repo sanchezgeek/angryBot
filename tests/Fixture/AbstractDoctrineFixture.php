@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Fixture;
 
 use Doctrine\ORM\EntityManagerInterface;
-
 use Psr\Container\ContainerInterface;
 
 use function get_class;
@@ -28,7 +27,9 @@ abstract class AbstractDoctrineFixture extends AbstractFixture
         $entityManager->flush();
 
         $this->appliedEntityClassName = get_class($entity);
-        $this->appliedId = $entity->getId();
+        if (method_exists($entity, 'getId')) {
+            $this->appliedId = $entity->getId();
+        }
     }
 
     public function clear(ContainerInterface $container): void

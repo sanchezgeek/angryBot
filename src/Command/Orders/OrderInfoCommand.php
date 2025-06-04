@@ -9,6 +9,7 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Helper\OutputHelper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'o:info')]
-class OrderInfoCommand extends AbstractCommand
+class OrderInfoCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 

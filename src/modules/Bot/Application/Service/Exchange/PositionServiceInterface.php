@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Bot\Application\Service\Exchange;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface PositionServiceInterface
 {
@@ -31,7 +29,7 @@ interface PositionServiceInterface
     /**
      * @return SymbolInterface[]
      */
-    public function getOpenedPositionsSymbols(array $except): array;
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array;
 
     /**
      * @return string[]

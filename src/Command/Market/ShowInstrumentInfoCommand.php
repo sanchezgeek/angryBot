@@ -3,12 +3,10 @@
 namespace App\Command\Market;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Helper\OutputHelper;
+use App\Command\SymbolDependentCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,7 +16,7 @@ use function json_encode;
 use function sprintf;
 
 #[AsCommand(name: 'i:info')]
-class ShowInstrumentInfoCommand extends AbstractCommand
+class ShowInstrumentInfoCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;
@@ -33,7 +31,7 @@ class ShowInstrumentInfoCommand extends AbstractCommand
         $symbols = $this->getSymbols();
 
         foreach ($symbols as $symbol) {
-            $this->io->info(sprintf('%s: %s', $symbol->value, json_encode($this->exchangeService->getInstrumentInfo($symbol))));
+            $this->io->info(sprintf('%s: %s', $symbol->name(), json_encode($this->exchangeService->getInstrumentInfo($symbol))));
         }
 
         return Command::SUCCESS;

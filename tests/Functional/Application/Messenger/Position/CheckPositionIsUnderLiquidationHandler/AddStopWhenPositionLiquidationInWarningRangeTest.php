@@ -12,7 +12,6 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -27,6 +26,7 @@ use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
+use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
@@ -52,21 +52,13 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     use StopsTester;
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
+    use MessageConsumerTrait;
 
-    private const FixOppositeIfMain = true;
-    private const FixOppositeIfSupport = true;
+    private const bool FixOppositeIfMain = true;
+    private const bool FixOppositeIfSupport = true;
 
 //    private const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA;
 //    private const ADDITIONAL_STOP_TRIGGER_SHORT_DELTA = CheckPositionIsUnderLiquidationHandler::ADDITIONAL_STOP_TRIGGER_SHORT_DELTA;
-
-    private CheckPositionIsUnderLiquidationHandler $handler;
-
-    protected function setUp(): void
-    {
-        self::truncateStops();
-
-        $this->handler = self::getContainer()->get(CheckPositionIsUnderLiquidationHandler::class);
-    }
 
     /**
      * @dataProvider addStopTestCases
@@ -95,7 +87,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::FixOppositeEvenIfSupport, $symbol, $position->side), self::FixOppositeIfSupport);
 
         // Act
-        ($this->handler)($message);
+        $this->runMessageConsume($message);
 
         // Arrange
         self::seeStopsInDb(...array_merge($delayedStops, $expectedAdditionalStops));
@@ -485,7 +477,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
     /**
      * @dataProvider addStopForMultiplePositionsTestCases
      */
-    public function testAddStopForMultiplePositions(
+    public function testAddSto1pForMultiplePositions(
         CheckPositionIsUnderLiquidation $message,
         array $allOpenedPositions,
         array $delayedStops,
@@ -503,7 +495,7 @@ class AddStopWhenPositionLiquidationInWarningRangeTest extends KernelTestCase
         $this->overrideSetting(LiquidationHandlerSettings::FixOppositeEvenIfSupport, self::FixOppositeIfSupport);
 
         // Act
-        ($this->handler)($message);
+        $this->runMessageConsume($message);
 
         // Arrange
         self::seeStopsInDb(...array_merge($delayedStops, $expectedAdditionalStops));

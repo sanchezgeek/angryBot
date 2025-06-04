@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Command\Stop\EditStopsInRangeCommand;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\Stop\EditStopsCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
@@ -16,8 +15,8 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\CommandsTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_map;
@@ -39,8 +38,6 @@ final class MoveStopsInRangeTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        self::truncateStops();
-
         $this->tester = $this->createCommandTester(self::COMMAND_NAME);
     }
 

@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Application\Helper;
 
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrdersHandler;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 class StopHelper
 {

@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Domain\Entity;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;

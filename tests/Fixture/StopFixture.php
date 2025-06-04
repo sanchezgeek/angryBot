@@ -6,6 +6,7 @@ namespace App\Tests\Fixture;
 
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
+use App\Trading\Domain\Symbol\Entity\Symbol;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 
@@ -22,10 +23,14 @@ final class StopFixture extends AbstractDoctrineFixture
 
     public function apply(ContainerInterface $container): void
     {
-        parent::apply($container);
-
         /** @var EntityManagerInterface $entityManager */
         $entityManager = $container->get(EntityManagerInterface::class);
+
+        $this->getEntity()->replaceSymbolEntity(
+            $entityManager->find(Symbol::class, $this->getEntity()->getSymbol()->name())
+        );
+
+        parent::apply($container);
 
         /**
          * @see StopService

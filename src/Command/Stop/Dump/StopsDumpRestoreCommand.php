@@ -3,12 +3,13 @@
 namespace App\Command\Stop\Dump;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Entity\Stop;
+use App\Bot\Application\Service\RestoreOrder\StopRestoreFactory;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Helper\Json;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -25,7 +26,7 @@ use function sprintf;
  * @see StopsDumpCommandTest
  */
 #[AsCommand(name: 'sl:dump:restore')]
-class StopsDumpRestoreCommand extends AbstractCommand
+class StopsDumpRestoreCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -42,7 +43,7 @@ class StopsDumpRestoreCommand extends AbstractCommand
         $filepath = $this->paramFetcher->getStringArgument(self::PATH_ARG);
         $dump = Json::decode(file_get_contents($filepath));
 
-        $stops = array_map(static fn(array $stopData) => Stop::fromArray($stopData), $dump);
+        $stops = array_map(fn(array $data) => $this->stopRestoreFactory->restore($data), $dump);
 
         $this->entityManager->wrapInTransaction(function() use ($stops) {
             foreach ($stops as $stop) {
@@ -58,8 +59,9 @@ class StopsDumpRestoreCommand extends AbstractCommand
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
+        private readonly ClockInterface $clock,
+        private readonly StopRestoreFactory $stopRestoreFactory,
         PositionServiceInterface $positionService,
-        private ClockInterface $clock,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);

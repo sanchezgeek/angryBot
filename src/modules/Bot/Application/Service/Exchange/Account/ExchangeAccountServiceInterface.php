@@ -4,9 +4,8 @@ namespace App\Bot\Application\Service\Exchange\Account;
 
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface ExchangeAccountServiceInterface
 {

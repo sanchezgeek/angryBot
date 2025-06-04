@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Order\Service;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\TestCase;
 
 /**

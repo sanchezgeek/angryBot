@@ -74,7 +74,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
 
         if (!$context->currentPositionState) {
             // e.g. position closed at this moment
-            throw new ReferencedPositionNotFound(sprintf('Trying to find position by %s %s, but cannot', $symbol->value, $side->value));
+            throw new ReferencedPositionNotFound(sprintf('Trying to find position by %s %s, but cannot', $symbol->name(), $side->value));
         }
 
         return $context->currentPositionState->isSupportPosition();

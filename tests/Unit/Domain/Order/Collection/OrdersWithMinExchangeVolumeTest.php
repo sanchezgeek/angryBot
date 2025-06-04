@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Order\Collection;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\TestCase;
 
 /**

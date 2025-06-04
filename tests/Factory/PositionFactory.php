@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Factory;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @see \App\Tests\Unit\Tests\Factory\PositionFactoryTest

@@ -6,9 +6,8 @@ namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Command\CreateBuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
 

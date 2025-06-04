@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Value\Percent\Percent;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;

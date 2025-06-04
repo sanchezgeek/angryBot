@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsCommand(name: 'active:force-release')]
-class ForceReleaseExchangeOrdersCommand extends AbstractCommand
+class ForceReleaseExchangeOrdersCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 

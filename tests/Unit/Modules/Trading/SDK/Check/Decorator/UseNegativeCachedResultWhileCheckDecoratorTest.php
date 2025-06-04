@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Modules\Trading\SDK\Check\Decorator;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Trading\SDK\Check\Decorator\UseNegativeCachedResultWhileCheckDecorator;
 use PHPUnit\Framework\TestCase;
 

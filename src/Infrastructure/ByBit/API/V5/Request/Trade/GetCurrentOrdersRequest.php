@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -53,9 +54,9 @@ final readonly class GetCurrentOrdersRequest extends AbstractByBitApiRequest
         ];
 
         if ($this->symbol) {
-            $data['symbol'] = $this->symbol->value;
+            $data['symbol'] = $this->symbol->name();
         } else {
-            $data['settleCoin'] = SymbolEnum::BTCUSDT->associatedCoin()->value;
+            $data['settleCoin'] = Coin::USDT->value;
         }
 
         return $data;

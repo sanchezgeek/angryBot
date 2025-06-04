@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\Service\CacheDecorated\Dto\CachedTickerDto;
 use App\Tests\Factory\TickerFactory;
 

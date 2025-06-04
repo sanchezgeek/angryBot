@@ -3,9 +3,8 @@
 namespace App\Bot\Application\Service\Exchange\Trade;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface OrderServiceInterface
 {

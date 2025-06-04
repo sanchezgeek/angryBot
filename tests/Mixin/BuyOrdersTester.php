@@ -15,6 +15,7 @@ trait BuyOrdersTester
     use TestWithDoctrineRepository;
     use TestWithDbFixtures;
     use PositionSideAwareTest;
+    use SymbolsDependentTester;
 
     /**
      * @return BuyOrder[]
@@ -38,6 +39,10 @@ trait BuyOrdersTester
         usort($expectedBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
         usort($actualBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
 
+        foreach ($expectedBuyOrders as $buyOrder) {
+            self::replaceEnumSymbol($buyOrder);
+        }
+
         self::assertEquals($expectedBuyOrders, $actualBuyOrders);
     }
 
@@ -46,6 +51,9 @@ trait BuyOrdersTester
         return self::getContainer()->get(BuyOrderRepository::class);
     }
 
+    /**
+     * @before
+     */
     protected static function truncateBuyOrders(): int
     {
         $qnt = self::truncate(BuyOrder::class);

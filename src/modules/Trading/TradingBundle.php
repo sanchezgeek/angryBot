@@ -7,6 +7,7 @@ namespace App\Trading;
 use App\Settings\Infrastructure\Symfony\Configuration\Trait\AppDynamicParametersAwareBundle;
 use App\Settings\Infrastructure\Symfony\Configuration\Trait\SettingsAwareBundle;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
+use App\Trading\Infrastructure\Symfony\CompillerPass\AddSymbolEntityProviderToCommandsCompilerPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
@@ -25,5 +26,9 @@ final class TradingBundle extends AbstractBundle
         $this->registerDynamicParameters($container, [
             TradingDynamicParameters::class,
         ]);
+
+        $container->addCompilerPass(
+            new AddSymbolEntityProviderToCommandsCompilerPass()
+        );
     }
 }

@@ -24,8 +24,6 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
@@ -38,6 +36,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Exception;
 use RuntimeException;
@@ -94,7 +93,7 @@ class TradingSandbox implements TradingSandboxInterface
 
     public function setState(SandboxStateInterface $state): void
     {
-        assert($this->symbol === $state->getSymbol());
+        assert($this->symbol->eq($state->getSymbol()));
 
         $this->currentState = clone $state;
     }
@@ -188,7 +187,7 @@ class TradingSandbox implements TradingSandboxInterface
         // @todo | undo?
         $currentState->setLastPrice($price);
 
-        $this->notice(sprintf('__ +++ try to make buy %s on %s %s (buyOrder.price = %s) +++ __', $volume, $this->symbol->value, $positionSide->title(), $price), true);
+        $this->notice(sprintf('__ +++ try to make buy %s on %s %s (buyOrder.price = %s) +++ __', $volume, $this->symbol->name(), $positionSide->title(), $price), true);
         $orderDto = new ExchangeOrder($this->symbol, $volume, $price);
         $cost = $this->orderCostCalculator->totalBuyCost($orderDto, $leverage = $this->getLeverage($positionSide), $positionSide);
         $margin = $this->orderCostCalculator->orderMargin($orderDto, $leverage);
@@ -272,7 +271,7 @@ class TradingSandbox implements TradingSandboxInterface
         // @todo | undo?
         $this->currentState->setLastPrice($price);
 
-        $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->value, $positionSide->title(), $price), true);
+        $this->notice(sprintf('__ --- try to make stop %s on %s %s (stop.price = %s) --- __', $volume, $this->symbol->name(), $positionSide->title(), $price), true);
 
         $position = $this->currentState->getPosition($positionSide);
         if (!$position) {

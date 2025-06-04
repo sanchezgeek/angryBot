@@ -9,8 +9,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -29,9 +27,11 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use ValueError;
 
 use function is_array;
 use function sprintf;
@@ -44,12 +44,14 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 {
     use ByBitApiCallHandler;
 
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
     private string $workerHash;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly SymbolProvider $symbolProvider,
+    ) {
         $this->apiClient = $apiClient;
     }
 
@@ -57,8 +59,10 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws TickerNotFoundException
      *
      * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws SymbolNotFoundException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
@@ -73,9 +77,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $ticker = null;
         foreach ($list as $item) {
-            if ($item['symbol'] === $symbol->value) {
+            if ($item['symbol'] === $symbol->name()) {
                 $ticker = new Ticker(
-                    $symbol,
+                    $this->symbolProvider->replaceEnumWithEntity($symbol),
                     (float)$item['markPrice'],
                     (float)$item['indexPrice'],
                     (float)$item['lastPrice'],
@@ -113,15 +117,11 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             $reduceOnly = $item['reduceOnly'];
             $closeOnTrigger = $item['closeOnTrigger'];
 
-            try {
-                $itemSymbol = SymbolEnum::from($item['symbol']);
-                if ($symbol && $itemSymbol !== $symbol) {
-                    continue;
-                }
-            } catch (ValueError) {
-                # in case of symbol not defined yet
+            if ($symbol && $symbol->name() !== $item['symbol']) {
                 continue;
             }
+
+            $itemSymbol = $this->symbolProvider->getOneByName($item['symbol']);
 
             // Only orders created by bot
             if (
@@ -156,6 +156,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
      */
@@ -180,6 +181,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             (float)$data['list'][0]['leverageFilter']['minLeverage'],
             (float)$data['list'][0]['leverageFilter']['maxLeverage'],
             (float)$data['list'][0]['priceFilter']['tickSize'],
+            (int)$data['list'][0]['priceScale'],
+            $data['list'][0]['quoteCoin'],
+            $data['list'][0]['contractType'],
         );
     }
 

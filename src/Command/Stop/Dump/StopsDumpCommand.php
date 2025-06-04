@@ -8,6 +8,7 @@ use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Helper\Json;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -27,7 +28,7 @@ use function sprintf;
  * @see StopsDumpCommandTest
  */
 #[AsCommand(name: 'sl:dump')]
-class StopsDumpCommand extends AbstractCommand
+class StopsDumpCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

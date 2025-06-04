@@ -6,11 +6,9 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
-
 use App\Tests\Factory\Position\PositionBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 use function usleep;
 

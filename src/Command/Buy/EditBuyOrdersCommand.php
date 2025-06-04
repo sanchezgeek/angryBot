@@ -5,15 +5,15 @@ namespace App\Command\Buy;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
@@ -22,7 +22,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_map;
 use function count;
@@ -32,7 +31,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'buy:edit')]
-class EditBuyOrdersCommand extends AbstractCommand
+class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -173,7 +172,7 @@ class EditBuyOrdersCommand extends AbstractCommand
             './bin/console %s%s --symbol=%s %s -a%s --fC="getContext(\'uniqid\')===\'%s\'"',
             self::NAME,
             $quiet ? ' --' . self::WITHOUT_CONFIRMATION_OPTION : '',
-            $symbol->value,
+            $symbol->name(),
             $positionSide->value,
             self::ACTION_REMOVE,
             $uniqueId

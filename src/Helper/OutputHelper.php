@@ -96,7 +96,7 @@ class OutputHelper
                 $order->getVolume(),
                 $order instanceof Stop ? 's.' : 'b.',
                 $order->getId(),
-                $order->getSymbol()->value,
+                $order->getSymbol()->name(),
             ),
             $orders
         );

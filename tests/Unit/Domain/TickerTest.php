@@ -6,9 +6,7 @@ namespace App\Tests\Unit\Domain;
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 

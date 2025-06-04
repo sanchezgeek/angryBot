@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Domain\Stop;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\Entity\StopBuilder;

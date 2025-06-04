@@ -9,14 +9,9 @@ use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use ValueError;
-
-use function ceil;
-use function explode;
-use function is_int;
-use function pow;
-use function round;
-use function strlen;
 
 enum SymbolEnum: string implements SymbolInterface
 {
@@ -331,14 +326,24 @@ enum SymbolEnum: string implements SymbolInterface
         self::BTCUSD->value => AssetCategory::inverse,
     ];
 
-    private const STOP_TRIGGER_DELTA = [
+    public const array STOP_TRIGGER_DELTA = [
         self::BTCUSDT->value => 25,
         self::BTCUSD->value => 25,
     ];
 
-    private const VERY_SHORT_NAMES = [
+    public const array VERY_SHORT_NAMES = [
 
     ];
+
+    public function eq(SymbolInterface $other): bool
+    {
+        return $this->value === $other->name();
+    }
+
+    public function name(): string
+    {
+        return $this->value;
+    }
 
     public function associatedCoin(): Coin
     {
@@ -357,20 +362,12 @@ enum SymbolEnum: string implements SymbolInterface
 
     public function stopDefaultTriggerDelta(): float
     {
-        if (isset(self::STOP_TRIGGER_DELTA[$this->value])) {
-            return self::STOP_TRIGGER_DELTA[$this->value];
-        }
-
-        $pricePrecision = $this->pricePrecision();
-
-        return round(pow(0.1, $pricePrecision - 1), $pricePrecision);
+        return self::STOP_TRIGGER_DELTA[$this->name] ?? SymbolHelper::stopDefaultTriggerDelta($this);
     }
 
     public function minimalPriceMove(): float
     {
-        $pricePrecision = $this->pricePrecision();
-
-        return round(pow(0.1, $pricePrecision), $pricePrecision);
+        return SymbolHelper::minimalPriceMove($this);
     }
 
     /**
@@ -393,51 +390,22 @@ enum SymbolEnum: string implements SymbolInterface
 
     public function contractSizePrecision(): ?int
     {
-        $minOrderQty = $this->minOrderQty();
-
-        if (is_int($minOrderQty)) {
-            return 0;
-        }
-
-        $parts = explode('.', (string)$minOrderQty);
-
-        return strlen($parts[1]);
+        return SymbolHelper::contractSizePrecision($this);
     }
 
     public function roundVolume(float $volume): float
     {
-        $value = round($volume, $this->contractSizePrecision());
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolume($this, $volume);
     }
 
     public function roundVolumeDown(float $volume): float
     {
-        $precision = $this->contractSizePrecision();
-
-        $value = floor($volume*pow(10,$precision))/pow(10,$precision);
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolumeDown($this, $volume);
     }
 
     public function roundVolumeUp(float $volume): float
     {
-        $precision = $this->contractSizePrecision();
-
-        $fig = 10 ** $precision;
-        $value = (ceil($volume * $fig) / $fig);
-
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolumeUp($this, $volume);
     }
 
     public static function fromShortName(string $name): self

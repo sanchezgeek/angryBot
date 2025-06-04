@@ -4,10 +4,9 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -63,7 +62,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         $qb = $this->createQueryBuilder('bo')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
             ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
 
         if ($exceptOppositeOrders) {
@@ -144,7 +143,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         ;
 
         if ($symbols) {
-            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols);
+            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
 

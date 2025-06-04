@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Storage\Dto;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use Stringable;
 

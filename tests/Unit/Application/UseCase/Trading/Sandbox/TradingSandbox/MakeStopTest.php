@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Position\PositionBuilder as PB;

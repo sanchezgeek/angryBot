@@ -9,14 +9,12 @@ use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Helper\Json;
 use App\Infrastructure\Cache\TickersCache;
 use App\Messenger\SchedulerTransport\SchedulerFactory;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use Lin\Bybit\BybitLinear;
 use Psr\Cache\CacheItemPoolInterface;
@@ -92,7 +90,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 
     private function getTicker(SymbolInterface $symbol): Ticker
     {
-        $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+        $data = $this->api->publics()->getTickers(['symbol' => $symbol->name()]);
 
         \assert(isset($data['result']), 'Ticker not found');
 
@@ -109,14 +107,14 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 
     private function tickerCacheKey(SymbolInterface $symbol): string
     {
-        return \sprintf('ticker_%s', $symbol->value);
+        return \sprintf('ticker_%s', $symbol->name());
     }
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void
     {
         $result = $this->api->privates()->postStopOrderCancel(
             [
-                'symbol' => $order->symbol->value,
+                'symbol' => $order->symbol->name(),
                 'stop_order_id' => $order->orderId
             ]
         );
@@ -131,7 +129,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
     public function activeConditionalOrders(?SymbolInterface $symbol = null, ?PriceRange $priceRange = null): array
     {
         $params = [
-            'symbol' => $symbol->value,
+            'symbol' => $symbol->name(),
             'stop_order_status' => 'Untriggered',
         ];
 
@@ -178,7 +176,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 ////
 
         $params = [
-            'symbol' => $symbol->value,
+            'symbol' => $symbol->name(),
             'orderFilter' => 'StopOrder',
             'openOnly' => 0
         ];
@@ -207,7 +205,7 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
         var_dump($data);die;
 
 //        $data = $this->api->privates()->getOrderList([
-//            'symbol' => $symbol->value,
+//            'symbol' => $symbol->name(),
 //            'order_type'=>'Market',
 //        ]);
 
@@ -221,9 +219,9 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 
 //    private function getTicker(Symbol $symbol, ?\DateTimeImmutable $requestedAt = null): Ticker
 //    {
-//        if (!isset($this->tickersHotCache[$symbol->value])) {
+//        if (!isset($this->tickersHotCache[$symbol->name()])) {
 //            $valueFactory = function () use ($symbol, $requestedAt) {
-//                $data = $this->api->publics()->getTickers(['symbol' => $symbol->value]);
+//                $data = $this->api->publics()->getTickers(['symbol' => $symbol->name()]);
 //
 //                \assert(isset($data['result']), 'Ticker not found');
 //
@@ -237,10 +235,10 @@ final class ExchangeService implements ExchangeServiceInterface, TickersCache
 //                return $ticker;
 //            };
 //
-//            $this->tickersHotCache[$symbol->value] = new CachedValue($valueFactory, 300); // no more than 3 times per second
+//            $this->tickersHotCache[$symbol->name()] = new CachedValue($valueFactory, 300); // no more than 3 times per second
 //        }
 //
-//        return $this->tickersHotCache[$symbol->value]->get();
+//        return $this->tickersHotCache[$symbol->name()]->get();
 //    }
     public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
     {

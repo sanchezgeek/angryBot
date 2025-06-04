@@ -7,7 +7,6 @@ namespace App\Infrastructure\ByBit\Service;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
@@ -29,6 +28,7 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use InvalidArgumentException;
 use LogicException;
@@ -83,7 +83,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     /**
      * @return SymbolInterface[]
      */
-    public function getOpenedPositionsSymbols(array $except = []): array
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         $symbols = [];
         foreach ($this->getOpenedPositionsRawSymbols() as $rawItem) {
@@ -92,8 +92,10 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             }
         }
 
+        $except = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $except);
+
         return array_values(
-            array_filter($symbols, static fn(SymbolInterface $symbol): bool => !in_array($symbol, $except, true))
+            array_filter($symbols, static fn(SymbolInterface $symbol): bool => !in_array($symbol->name(), $except, true))
         );
     }
 
@@ -199,17 +201,17 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
             $symbol = SymbolEnum::from($item['symbol']);
 
-            $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
+            $opposite = $positions[$symbol->name()][$side->getOpposite()->value] ?? null;
             if ((float)$item['avgPrice'] !== 0.0) {
                 $position = $this->parsePositionFromData($item);
                 if ($opposite) {
                     $position->setOppositePosition($opposite);
                     $opposite->setOppositePosition($position);
                 }
-                $positions[$symbol->value][$side->value] = $position;
+                $positions[$symbol->name()][$side->value] = $position;
             }
 
-            $this->lastMarkPrices[$symbol->value] = $symbol->makePrice((float)$item['markPrice']);
+            $this->lastMarkPrices[$symbol->name()] = $symbol->makePrice((float)$item['markPrice']);
         }
 
         foreach ($positions as $symbolRaw => $symbolPositions) {

@@ -26,7 +26,7 @@ final readonly class CheckPositionIsInLossHandler
             $mainPosition = ($first = $symbolPositions[array_key_first($symbolPositions)])->getHedge()?->mainPosition ?? $first;
             $symbol = $mainPosition->symbol;
 
-            if (!$this->positionInLossAlertThrottlingLimiter->create($symbol->value)->consume()->isAccepted()) {
+            if (!$this->positionInLossAlertThrottlingLimiter->create($symbol->name())->consume()->isAccepted()) {
                 continue;
             }
 
@@ -34,7 +34,7 @@ final readonly class CheckPositionIsInLossHandler
                 continue;
             }
 
-            if ($mainPosition->isPositionInLoss($lastMarkPrices[$symbol->value])) {
+            if ($mainPosition->isPositionInLoss($lastMarkPrices[$symbol->name()])) {
                 $this->appErrorLogger->error(sprintf('%s is in loss', $mainPosition->getCaption()));
             }
         }

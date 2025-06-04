@@ -16,11 +16,9 @@ use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Coin\Coin;
@@ -31,6 +29,7 @@ use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -56,8 +55,6 @@ final class SchedulerFactory
     private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::MEDIUM_SLOW;
     private const string PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
 
-    private const string DEDICATED_SYMBOL_SL_SPEED = self::VERY_SLOW;
-
     private const array TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
 //    private const TICKERS_CACHE = ['interval' => 'PT7S', 'delay' => 2300];
 //    private const TICKERS_CACHE = ['interval' => 'PT10S', 'delay' => 3300];
@@ -73,7 +70,6 @@ final class SchedulerFactory
             RunningWorker::BUY_ORDERS  => $this->buyOrders(),
             RunningWorker::SERVICE => $this->service(),
             RunningWorker::CRITICAL => $this->critical(),
-            RunningWorker::SYMBOL_DEDICATED => $this->symbol(),
             RunningWorker::MAIN_POSITIONS_STOPS => $this->mainStops(),
             RunningWorker::REST_POSITIONS_STOPS => $this->restStops(),
             default => [],
@@ -88,28 +84,6 @@ final class SchedulerFactory
         return [
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT3S', new CheckPositionIsUnderLiquidation()),
         ];
-    }
-
-    private function symbol(): array
-    {
-        $symbol = SymbolEnum::from($_ENV['PROCESSED_SYMBOL']);
-        $processedOrders = $_ENV['PROCESSED_ORDERS'];
-
-        OutputHelper::print(sprintf('%s %s started', $symbol->value, $processedOrders));
-
-        if ($processedOrders === 'Stop') {
-            return [
-                PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::DEDICATED_SYMBOL_SL_SPEED), new PushStops($symbol, Side::Sell)),
-                PeriodicalJob::create('2023-09-25T00:00:01.41Z', self::interval(self::DEDICATED_SYMBOL_SL_SPEED), new PushStops($symbol, Side::Buy)),
-            ];
-        } elseif ($processedOrders === 'BuyOrder') {
-            return [
-                PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Sell)),
-                PeriodicalJob::create('2023-09-20T00:00:02.11Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Buy)),
-            ];
-        }
-
-        return [];
     }
 
     private function mainStops(): array

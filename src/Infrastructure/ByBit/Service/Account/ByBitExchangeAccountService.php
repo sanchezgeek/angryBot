@@ -11,8 +11,6 @@ use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -34,10 +32,10 @@ use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinInterTransferRequ
 use App\Infrastructure\ByBit\API\V5\Request\Asset\Transfer\CoinUniversalTransferRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
-use Throwable;
 
 use function abs;
 use function is_array;

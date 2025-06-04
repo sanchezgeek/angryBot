@@ -6,9 +6,8 @@ namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 
 final readonly class StopCheckDto implements CheckOrderDto

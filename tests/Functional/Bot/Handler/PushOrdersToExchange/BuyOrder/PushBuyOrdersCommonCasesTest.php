@@ -5,19 +5,18 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Mixin\BuyOrdersTester;
+use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\OrderCasesTester;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
@@ -42,22 +41,11 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
     use OrderCasesTester;
     use StopsTester;
     use BuyOrdersTester;
+    use MessageConsumerTrait;
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
 
-    private const DEFAULT_STOP_TD = 37;
-
-    private PushBuyOrdersHandler $handler;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
-
-        $this->handler = self::getContainer()->get(PushBuyOrdersHandler::class);
-    }
+    private const int DEFAULT_STOP_TD = 37;
 
     /**
      * @dataProvider pushBuyOrdersTestDataProvider
@@ -85,7 +73,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $this->haveContractWalletBalanceAllUsedToOpenPosition($position);
         $this->applyDbFixtures(...$buyOrdersFixtures);
 
-        ($this->handler)(new PushBuyOrders($position->symbol, $position->side));
+        $this->runMessageConsume(new PushBuyOrders($position->symbol, $position->side));
 
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
         self::seeStopsInDb(...$stopsExpectedAfterHandle);

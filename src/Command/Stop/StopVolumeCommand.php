@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -17,7 +18,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'sl:volume', description: 'Creates incremental SL\'ses grid.')]
-class StopVolumeCommand extends AbstractCommand
+class StopVolumeCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 

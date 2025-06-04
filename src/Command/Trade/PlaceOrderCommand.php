@@ -11,10 +11,10 @@ use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -24,6 +24,7 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
@@ -47,7 +48,7 @@ use function str_contains;
 use function str_replace;
 
 #[AsCommand(name: 'order:place')]
-class PlaceOrderCommand extends AbstractCommand
+class PlaceOrderCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
@@ -89,7 +90,7 @@ class PlaceOrderCommand extends AbstractCommand
         if ($type === self::MARKET_BUY) {
             $except = [SymbolEnum::BTCUSDT];
 
-            $symbols = $this->getSymbols($except);
+            $symbols = $this->getSymbols(...$except);
 
             $additional = null;
             try {
@@ -236,11 +237,11 @@ class PlaceOrderCommand extends AbstractCommand
                     if (!$this->isWithoutConfirm() && !$this->io->confirm(
                         sprintf(
                             'Calculated volume for "%s" not equals initially provided one. Calculated: %s, initial: %s. Are you sure you want to buy %s on %s %s?',
-                            $order->getSymbol()->value,
+                            $order->getSymbol()->name(),
                             $order->getVolume(),
                             $order->getProvidedVolume(),
                             $order->getVolume(),
-                            $order->getSymbol()->value,
+                            $order->getSymbol()->name(),
                             $positionSide->title(),
                         ),
                     )) {
@@ -251,7 +252,7 @@ class PlaceOrderCommand extends AbstractCommand
 
             OutputHelper::print(sprintf('You attempt to buy:'), '');
             foreach ($orders as $order) {
-                OutputHelper::print(sprintf('%s %s: %s', $order->getSymbol()->value, $positionSide->title(), $order->getVolume()));
+                OutputHelper::print(sprintf('%s %s: %s', $order->getSymbol()->name(), $positionSide->title(), $order->getVolume()));
             }
             OutputHelper::print('');
 
@@ -263,17 +264,19 @@ class PlaceOrderCommand extends AbstractCommand
                 $try = true;
 
                 while ($try) {
+                    $symbol = $order->getSymbol();
+
                     try {
-                        $this->tradeService->marketBuy($order->getSymbol(), $positionSide, $order->getVolume());
+                        $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
                         $try = false;
                     } catch (CannotAffordOrderCostException $e) {
                         $currentContract = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
                         $cost = $this->orderCostCalculator->totalBuyCost($order, new Leverage(100), $this->getPositionSide());
 
                         $diff = $cost->sub($currentContract->available);
-                        $this->exchangeAccountService->interTransferFromSpotToContract($order->getSymbol()->associatedCoin(), $diff->value());
+                        $this->exchangeAccountService->interTransferFromSpotToContract($symbol->associatedCoin(), $diff->value());
                     } catch (Throwable $e) {
-                        OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $order->getSymbol()->value, $positionSide->title()));
+                        OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $symbol->name(), $positionSide->title()));
                     }
                 }
 

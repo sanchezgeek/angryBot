@@ -6,12 +6,9 @@ namespace App\Tests\Unit\Domain\Position;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -228,7 +225,7 @@ final class PositionTest extends TestCase
         $ticker = TickerFactory::create(SymbolEnum::BTCUSD, 30600,30450);
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->value, $position->symbol->value));
+        $this->expectExceptionMessage(sprintf('invalid ticker "%s" provided ("%s" expected)', $ticker->symbol->name(), $position->symbol->name()));
 
         $position->priceDistanceWithLiquidation($ticker);
     }

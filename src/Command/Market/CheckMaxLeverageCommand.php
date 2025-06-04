@@ -4,22 +4,20 @@ namespace App\Command\Market;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Helper\OutputHelper;
+use App\Command\SymbolDependentCommand;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use function json_encode;
 use function sprintf;
 
 #[AsCommand(name: 'leverage:check-max')]
-class CheckMaxLeverageCommand extends AbstractCommand
+class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;

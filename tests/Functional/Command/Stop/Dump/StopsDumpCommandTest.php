@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
@@ -15,6 +14,7 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -48,8 +48,6 @@ final class StopsDumpCommandTest extends KernelTestCase
         $clockMock = $this->createMock(ClockInterface::class);
         $clockMock->expects(self::once())->method('now')->willReturn($this->currentDatetime);
         self::getContainer()->set(ClockInterface::class, $clockMock);
-
-        self::truncateStops();
     }
 
     /**

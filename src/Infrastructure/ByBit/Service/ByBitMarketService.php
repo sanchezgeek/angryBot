@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetFundingRateHistoryRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 
 use function is_array;
@@ -40,13 +39,13 @@ final class ByBitMarketService implements MarketServiceInterface
 
         $fundingRate = null;
         foreach ($list as $item) {
-            if ($item['symbol'] === $symbol->value) {
+            if ($item['symbol'] === $symbol->name()) {
                 $fundingRate = (float)$item['fundingRate'];
             }
         }
 
         if (!$fundingRate) {
-            throw new RuntimeException(sprintf('Cannot find fundingRate for "%s (%s)"', $symbol->value, $symbol->associatedCategory()->name));
+            throw new RuntimeException(sprintf('Cannot find fundingRate for "%s (%s)"', $symbol->name(), $symbol->associatedCategory()->name));
         }
 
         return $fundingRate;

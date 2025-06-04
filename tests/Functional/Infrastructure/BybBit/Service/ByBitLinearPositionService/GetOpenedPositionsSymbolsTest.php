@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -34,12 +33,12 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
         $category = AssetCategory::linear;
 
         yield [
-            '$apiResponse' => (new PositionResponseBuilder($category))->build(),
+            '$apiResponse' => new PositionResponseBuilder($category)->build(),
             '$expectedSymbols' => [],
         ];
 
         yield [
-            '$apiResponse' => (new PositionResponseBuilder($category))
+            '$apiResponse' => new PositionResponseBuilder($category)
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())
@@ -59,7 +58,7 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
         array $expectedSymbols
     ): void {
         $this->matchGet(new GetPositionsRequest(AssetCategory::linear, null), $apiResponse);
-        $symbols = $this->service->getOpenedPositionsSymbols($except);
+        $symbols = $this->service->getOpenedPositionsSymbols(...$except);
 
         self::assertEquals($expectedSymbols, $symbols);
     }
@@ -70,13 +69,13 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
 
         yield [
             '$except' => [SymbolEnum::BTCUSDT],
-            '$apiResponse' => (new PositionResponseBuilder($category))->build(),
+            '$apiResponse' => new PositionResponseBuilder($category)->build(),
             '$expectedSymbols' => [],
         ];
 
         yield [
             '$except' => [SymbolEnum::BTCUSDT],
-            '$apiResponse' => (new PositionResponseBuilder($category))
+            '$apiResponse' => new PositionResponseBuilder($category)
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())
@@ -88,7 +87,7 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
 
         yield [
             '$except' => [SymbolEnum::TONUSDT],
-            '$apiResponse' => (new PositionResponseBuilder($category))
+            '$apiResponse' => new PositionResponseBuilder($category)
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::short()->symbol(SymbolEnum::BTCUSDT)->build())
                 ->withPosition(PositionBuilder::long()->symbol(SymbolEnum::XRPUSDT)->build())

@@ -5,19 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
 use App\Bot\Application\Helper\StopHelper;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
-use App\Domain\Position\ValueObject\Side;
-use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
-use App\Settings\Application\Service\SettingAccessor;
-use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -27,18 +21,11 @@ use App\Tests\Helper\StopTestHelper;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Utils\TradingSetup\TradingSetup;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
-    const CATEGORY = AssetCategory::linear;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
-    }
+    const AssetCategory CATEGORY = AssetCategory::linear;
 
     /**
      * @dataProvider cases
@@ -50,7 +37,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
-        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->value, $symbols), $tickers);
+        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols), $tickers);
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
@@ -60,7 +47,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $positionsApiResponse = (new PositionResponseBuilder(self::CATEGORY));
         foreach ($setup->getPositions() as $position) {
             $this->havePosition($position->symbol, $position); // fallback for PositionServiceInterface
-            $ticker = $tickersMap[$position->symbol->value];
+            $ticker = $tickersMap[$position->symbol->name()];
             $positionsApiResponse->withPosition($position, $ticker->markPrice->value());
         }
         $positionsApiCall = new ByBitApiCallExpectation(new GetPositionsRequest(self::CATEGORY, null), $positionsApiResponse->build());

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Order\Collection;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use IteratorAggregate;
 use Traversable;
 

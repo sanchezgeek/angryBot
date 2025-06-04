@@ -14,6 +14,7 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
+use App\Trading\Application\Symbol\SymbolProvider;
 use InvalidArgumentException;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
@@ -23,6 +24,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     public function __construct(
         private SettingValueRepository $repository,
         private SettingsCache $settingsCache,
+        private SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -73,7 +75,12 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
         $side = $settingAccessor->side;
 
         if (!$settingValue = $this->repository->findOneBy(['key' => $settingKey, 'symbol' => $symbol, 'positionSide' => $side])) {
-            $settingValue = SettingValue::withValue($settingKey, $value, $symbol, $side);
+            $settingValue = SettingValue::withValue(
+                $settingKey,
+                $value,
+                $symbol === null ? null : $this->symbolProvider->replaceEnumWithEntity($symbol),
+                $side
+            );
         } else {
             $settingValue->value = $value;
         }

@@ -7,7 +7,6 @@ namespace data\todo\code;
 use App\Application\UseCase\Trading\MarketBuy\Checks\MarketBuyChecksCollection;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\TickerFactory;
 use data\code\MarketBuyCheckInterface;

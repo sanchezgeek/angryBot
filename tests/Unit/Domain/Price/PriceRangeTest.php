@@ -6,8 +6,6 @@ namespace App\Tests\Unit\Domain\Price;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\PositionFactory;
 use LogicException;

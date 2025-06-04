@@ -11,8 +11,6 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
@@ -20,6 +18,9 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolContainerInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -27,7 +28,7 @@ use DomainException;
  * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest
  */
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
-class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
+class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
     use HasWithoutOppositeContext;
 
@@ -60,7 +61,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     #[ORM\Column]
     private float $volume;
 
-    #[ORM\Column(type: 'string', enumType: SymbolEnum::class)]
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
     private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
@@ -85,6 +87,16 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+    }
+
+    /**
+     * @internal For tests
+     */
+    public function replaceSymbolEntity(Symbol $symbol): self
+    {
+        $this->symbol = $symbol;
+
+        return $this;
     }
 
     public function getId(): int

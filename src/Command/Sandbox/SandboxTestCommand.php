@@ -13,17 +13,17 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Exception;
 use InvalidArgumentException;
@@ -41,7 +41,7 @@ use function sprintf;
 use function substr;
 
 #[AsCommand(name: 's:test')]
-class SandboxTestCommand extends AbstractCommand
+class SandboxTestCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
@@ -224,7 +224,7 @@ class SandboxTestCommand extends AbstractCommand
             $ordersPart[] = ($order instanceof BuyOrder ? '->buy' : '->close') . ' ' . $order->getVolume();
         }
 
-        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->value, $positionSide->title());
+        return sprintf("You're about to:        %s       on '%s'. Continue?", implode("    ", $ordersPart), $symbol->name(), $positionSide->title());
     }
 
     /**

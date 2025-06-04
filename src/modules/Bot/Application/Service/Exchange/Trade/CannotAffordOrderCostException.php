@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange\Trade;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 
 final class CannotAffordOrderCostException extends Exception
@@ -20,7 +19,7 @@ final class CannotAffordOrderCostException extends Exception
             \sprintf(
                 'CannotAffordOrderCost [buy %.3f, %s %s].',
                 $this->qty,
-                $this->symbol->value,
+                $this->symbol->name(),
                 $this->side->title()
             )
         );

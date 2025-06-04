@@ -13,7 +13,6 @@ use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -39,7 +38,7 @@ final readonly class PushAllMainPositionsStopsHandler
 
         /** @var Position[] $positions */
         $positions = array_combine(
-            array_map(static fn(Position $position) => $position->symbol->value, $positions),
+            array_map(static fn(Position $position) => $position->symbol->name(), $positions),
             $positions
         );
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
@@ -47,8 +46,8 @@ final readonly class PushAllMainPositionsStopsHandler
         $positionsCache = [];
         $queryInput = [];
         foreach ($positions as $position) {
-            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->value]);
-            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
+            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->name()]);
+            $positionsCache[$position->symbol->name()] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
         }
 
         $stopsToSymbolsMap = [];
@@ -59,9 +58,9 @@ final readonly class PushAllMainPositionsStopsHandler
         $sort = [];
         foreach ($positions as $position) {
             $positionSymbol = $position->symbol;
-            $symbolRaw = $positionSymbol->value;
+            $symbolRaw = $positionSymbol->name();
             $possibleTriggeredStops = $stopsToSymbolsMap[$symbolRaw] ?? [];
-            $currentPrice = $lastMarkPrices[$positionSymbol->value];
+            $currentPrice = $lastMarkPrices[$positionSymbol->name()];
             $ticker = new Ticker($positionSymbol, $currentPrice, $currentPrice, $currentPrice);
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
             $warningRange = $liquidationParameters->warningRange();
@@ -90,12 +89,12 @@ final readonly class PushAllMainPositionsStopsHandler
         foreach ($sort as $symbolRaw) {
             $lastSort[] = $symbol = SymbolEnum::from($symbolRaw);
             try {
-                $positionState = $positionsCache[$symbol->value]->get();
+                $positionState = $positionsCache[$symbol->name()]->get();
             } catch (RuntimeException) {
                 $positionState = null; // @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
             }
 
-            $this->innerHandler->__invoke(new PushStops($symbol, $positions[$symbol->value]->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->value, $side->title()));
+            $this->innerHandler->__invoke(new PushStops($symbol, $positions[$symbol->name()]->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
         }
         $this->lastSortStorage->setLastSort($lastSort);
 

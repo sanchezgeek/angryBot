@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Infrastructure\ByBit\V5Api\Request\Trade;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use PHPUnit\Framework\TestCase;
@@ -33,7 +32,7 @@ final class CancelOrderRequestTest extends TestCase
         self::assertTrue($request->isPrivateRequest());
         self::assertSame([
             'category' => $category->value,
-            'symbol' => $symbol->value,
+            'symbol' => $symbol->name(),
             'orderId' => $orderId,
             'orderLinkId' => null,
         ], $request->data());

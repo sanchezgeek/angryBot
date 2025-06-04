@@ -6,10 +6,9 @@ namespace App\Domain\Stop;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use IteratorAggregate;
 use LogicException;
@@ -151,7 +150,7 @@ final class StopsCollection implements IteratorAggregate
 
     public function grabBySymbolAndSide(SymbolInterface $symbol, ?Side $side = null): array
     {
-        return array_filter($this->items, static fn(Stop $stop) => $stop->getSymbol() === $symbol && (!$side || $stop->getPositionSide() === $side));
+        return array_filter($this->items, static fn(Stop $stop) => $stop->getSymbol()->eq($symbol) && (!$side || $stop->getPositionSide() === $side));
     }
 
     public function getOneById(int $id): Stop

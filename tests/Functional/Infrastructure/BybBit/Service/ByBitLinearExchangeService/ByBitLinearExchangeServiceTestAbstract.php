@@ -8,6 +8,7 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Result\ApiErrorInterface;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
+use App\Trading\Application\Symbol\SymbolProvider;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Throwable;
@@ -26,7 +27,8 @@ abstract class ByBitLinearExchangeServiceTestAbstract extends KernelTestCase
     protected function setUp(): void
     {
         $this->service = new ByBitLinearExchangeService(
-            $this->initializeApiClient()
+            $this->initializeApiClient(),
+            self::getContainer()->get(SymbolProvider::class)
         );
     }
 }

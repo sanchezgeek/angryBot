@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\BuyOrder;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Entity\BuyOrderBuilder;

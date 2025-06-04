@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Stop\Helper;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;

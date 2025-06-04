@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
@@ -13,6 +11,7 @@ use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProvide
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @see \App\Tests\Unit\Modules\Trading\Application\Parameters\TradingParametersProviderTest

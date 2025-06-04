@@ -6,8 +6,6 @@ namespace App\Tests\Unit\Application\UseCase\CalcPositionLiquidationPrice;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceResult;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Domain\Price\SymbolPrice;
 use PHPUnit\Framework\TestCase;
 
 final class CalcPositionLiquidationPriceResultTest extends TestCase

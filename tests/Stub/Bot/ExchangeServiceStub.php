@@ -8,10 +8,9 @@ use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\Cache\TickersCache;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 
 use function sprintf;

@@ -6,12 +6,11 @@ namespace App\Application\UseCase\Trading\Sandbox\Dto\In;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Stringable;
 
 use function sprintf;
@@ -39,7 +38,7 @@ readonly class SandboxStopOrder implements Stringable, VolumeSignAwareInterface,
 
     public function desc(): string
     {
-        return sprintf('%s %s SL (%s/%s)', $this->symbol->value, $this->positionSide->title(), $this->volume, $this->price);
+        return sprintf('%s %s SL (%s/%s)', $this->symbol->name(), $this->positionSide->title(), $this->volume, $this->price);
     }
 
     public function signedVolume(): float

@@ -76,7 +76,7 @@ final class TickersResponseBuilder implements ResponseBuilderInterface
         $body['result']['list'][] = array_replace(
             self::TICKERS_LIST_ITEM,
             [
-                'symbol' => $symbol->value,
+                'symbol' => $symbol->name(),
                 'lastPrice' => $ticker->lastPrice->value(),
                 'markPrice' => $ticker->markPrice->value(),
                 'indexPrice' => $ticker->indexPrice->value(),

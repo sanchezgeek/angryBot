@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -14,6 +12,7 @@ use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -133,7 +132,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
     {
         $data = [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'side' => ucfirst($this->side->value),
             'orderType' => $this->orderType->value,
             'timeInForce' => $this->timeInForce->value,

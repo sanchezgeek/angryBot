@@ -19,7 +19,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -50,8 +49,6 @@ class RemoveStaleStopsTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        self::truncateStops();
-
         $liquidationDynamicParametersFactory = $this->createMock(LiquidationDynamicParametersFactoryInterface::class);
 
         $this->liquidationDynamicParameters = $this->createMock(LiquidationDynamicParametersInterface::class);

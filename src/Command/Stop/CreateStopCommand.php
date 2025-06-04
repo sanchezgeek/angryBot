@@ -5,6 +5,7 @@ namespace App\Command\Stop;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -13,16 +14,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'sl:single', description: 'Creates single stop with specified price.')]
-class CreateStopCommand extends AbstractCommand
+class CreateStopCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
-
-    public function __construct(
-        private readonly StopService $stopService,
-        ?string $name = null,
-    ) {
-        parent::__construct($name);
-    }
 
     protected function configure(): void
     {
@@ -63,5 +57,12 @@ class CreateStopCommand extends AbstractCommand
 
             return Command::FAILURE;
         }
+    }
+
+    public function __construct(
+        private readonly StopService $stopService,
+        ?string $name = null,
+    ) {
+        parent::__construct($name);
     }
 }

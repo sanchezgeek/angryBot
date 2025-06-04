@@ -10,14 +10,13 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -50,13 +49,13 @@ final class PositionService implements PositionServiceInterface
 
     public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
-        $key = \sprintf('position_data_%s_%s', $symbol->value, $side->value);
+        $key = \sprintf('position_data_%s_%s', $symbol->name(), $side->value);
 
         return $this->cache->get($key, function (ItemInterface $item) use ($symbol, $side) {
             $item->expiresAfter(\DateInterval::createFromDateString(self::POSITION_TTL));
 
             $data = $this->api->privates()->getPositionList([
-                'symbol' => $symbol->value,
+                'symbol' => $symbol->name(),
             ]);
 
             $position = null;
@@ -99,7 +98,7 @@ final class PositionService implements PositionServiceInterface
         $result = $this->api->privates()->postStopOrderCreate([
             //'order_link_id'=>'xxxxxxxxxxxxxx',
             'side' => \ucfirst($position->side === Side::Sell ? Side::Buy->value : Side::Sell->value),
-            'symbol' => $position->symbol->value,
+            'symbol' => $position->symbol->name(),
             'trigger_by' => $triggerBy->value,
             'reduce_only' => 'true',
             'close_on_trigger' => 'false',
@@ -141,7 +140,7 @@ final class PositionService implements PositionServiceInterface
 
         $result = $this->api->privates()->postOrderCreate([
             'side' => \ucfirst($position->side === Side::Sell ? Side::Sell->value : Side::Buy->value),
-            'symbol' => $position->symbol->value,
+            'symbol' => $position->symbol->name(),
             'trigger_by' => 'IndexPrice',
             'reduce_only' => 'false',
             'close_on_trigger' => 'false',
@@ -167,7 +166,7 @@ final class PositionService implements PositionServiceInterface
         return $result['result']['order_id'];
     }
 
-    public function getOpenedPositionsSymbols(array $except = []): array
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         return [];
     }

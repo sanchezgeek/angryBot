@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock\Response\ByBitV5Api;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Tests\Mock\Response\MockResponseFactoryTrait;
 use App\Tests\Mock\Response\ResponseBuilderInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function array_replace;
@@ -83,7 +82,7 @@ final class MarketResponseBuilder implements ResponseBuilderInterface
         $markPrice = $markPrice ?? $indexPrice;
 
         $this->tickersListItems[] = array_replace(self::TICKERS_LIST_ITEM, [
-            'symbol' => $symbol->value,
+            'symbol' => $symbol->name(),
             'lastPrice' => (string)$lastPrice,
             'markPrice' => (string)$markPrice,
             'indexPrice' => (string)$indexPrice,

@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 

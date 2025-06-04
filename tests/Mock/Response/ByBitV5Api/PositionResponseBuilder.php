@@ -73,7 +73,7 @@ final class PositionResponseBuilder implements ResponseBuilderInterface
     {
         // @todo | move ucfirst to enum ?
         $item = array_replace(self::POSITIONS_LIST_ITEM, [
-            'symbol' => $position->symbol->value,
+            'symbol' => $position->symbol->name(),
             'side' => ucfirst($position->side->value),
             'avgPrice' => (string)$position->entryPrice,
             'positionValue' => (string)$position->value,

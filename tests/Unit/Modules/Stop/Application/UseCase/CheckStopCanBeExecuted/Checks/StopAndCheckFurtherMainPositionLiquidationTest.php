@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Modules\Stop\Application\UseCase\CheckStopCanBeExecuted
 
 use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
-use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
@@ -15,9 +14,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\Helper\PositionClone;
-use App\Helper\OutputHelper;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Checks\StopAndCheckFurtherMainPositionLiquidation;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
@@ -43,7 +40,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
     use SettingsAwareTest;
     use ChecksAwareTest;
 
-    const CHECK_ALIAS = StopAndCheckFurtherMainPositionLiquidation::ALIAS;
+    const string CHECK_ALIAS = StopAndCheckFurtherMainPositionLiquidation::ALIAS;
 
     private TradingSandboxFactoryInterface|MockObject $tradingSandboxFactory;
     private SandboxStateFactoryInterface|MockObject $sandboxStateFactory;

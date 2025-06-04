@@ -7,11 +7,10 @@ namespace App\Application\UseCase\Trading\Sandbox;
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface SandboxStateInterface
 {

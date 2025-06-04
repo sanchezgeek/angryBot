@@ -9,7 +9,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use Psr\Log\LoggerInterface;
@@ -43,7 +42,7 @@ final class CheckPositionIsInProfitHandler
                     continue;
                 }
 
-                $key = $symbol->value . '_' . $side->value;
+                $key = $symbol->name() . '_' . $side->value;
                 if (!$this->positionInProfitAlertThrottlingLimiter->create($key)->consume()->isAccepted()) {
                     continue;
                 }
@@ -54,7 +53,7 @@ final class CheckPositionIsInProfitHandler
                 if ($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side))) {
                     $alertPercentSpecifiedManually = true;
                 } else {
-                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->value] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
+                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->name()] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
                     $alertPercentSpecifiedManually = false;
                 }
 

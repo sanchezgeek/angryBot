@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Entity\StopBuilder;

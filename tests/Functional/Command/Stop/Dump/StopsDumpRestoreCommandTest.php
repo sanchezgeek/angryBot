@@ -6,7 +6,6 @@ namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Command\Stop\Dump\StopsDumpRestoreCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Mixin\StopsTester;
@@ -27,16 +26,10 @@ final class StopsDumpRestoreCommandTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
 
-    private const COMMAND_NAME = 'sl:dump:restore';
+    private const string COMMAND_NAME = 'sl:dump:restore';
 
     private PositionServiceStub $positionServiceStub;
-
     private DateTimeImmutable $currentDatetime;
-
-    protected function setUp(): void
-    {
-        self::truncateStops();
-    }
 
     /**
      * @dataProvider restoreStopsTestDataProvider

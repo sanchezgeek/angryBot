@@ -7,9 +7,8 @@ namespace App\Application\UseCase\Trading\Sandbox\Factory;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Trading\Sandbox\TradingSandbox;
 use App\Application\UseCase\Trading\Sandbox\TradingSandboxInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Service\OrderCostCalculator;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 readonly class TradingSandboxFactory implements TradingSandboxFactoryInterface
 {

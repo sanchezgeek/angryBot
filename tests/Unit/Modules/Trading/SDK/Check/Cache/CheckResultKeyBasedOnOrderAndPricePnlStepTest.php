@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Modules\Trading\SDK\Check\Cache;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Cache\CheckResultKeyBasedOnOrderAndPricePnlStep;
 use PHPUnit\Framework\TestCase;
 

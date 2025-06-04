@@ -12,6 +12,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceMovement;
@@ -40,7 +41,7 @@ use function sprintf;
 use function var_dump;
 
 #[AsCommand(name: 'sl:info')]
-class StopInfoCommand extends AbstractCommand
+class StopInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 

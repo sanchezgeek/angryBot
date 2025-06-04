@@ -5,6 +5,7 @@ namespace App\Command\Buy;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -14,7 +15,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'buy:move', description: 'Move position buy-orders')]
-class MoveBuyOrdersCommand extends AbstractCommand
+class MoveBuyOrdersCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 

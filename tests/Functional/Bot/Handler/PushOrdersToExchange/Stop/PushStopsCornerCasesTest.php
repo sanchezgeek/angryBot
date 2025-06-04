@@ -17,7 +17,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -101,8 +100,6 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->clockMock,
             self::getContainer()->get(StopChecksChain::class),
         );
-
-        self::truncateStops();
     }
 
     /**

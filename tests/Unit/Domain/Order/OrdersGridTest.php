@@ -6,10 +6,8 @@ namespace App\Tests\Unit\Domain\Order;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Order;
 use App\Domain\Order\OrdersGrid;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;

@@ -8,17 +8,12 @@ use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActiveHandler;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
-use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
-use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\OrderCasesTester;
-use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
-use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
@@ -32,8 +27,6 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        self::truncateBuyOrders();
 
         $this->handler = self::getContainer()->get(CheckOrdersNowIsActiveHandler::class);
     }

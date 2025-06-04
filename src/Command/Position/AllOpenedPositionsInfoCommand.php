@@ -8,18 +8,17 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\Helper\SymbolHelper;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Helper\ConsoleTableHelper as CTH;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -41,6 +40,8 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -57,7 +58,7 @@ use function sprintf;
  * @todo | UI | opened-positions | Capture specific position state to cache?
  */
 #[AsCommand(name: 'p:opened')]
-class AllOpenedPositionsInfoCommand extends AbstractCommand
+class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -151,14 +152,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if (
             ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false))
-            && ($providedItems = self::parseProvidedSymbols($moveUpOption))
+            && ($providedItems = $this->parseProvidedSymbols($moveUpOption))
         ) {
             $this->rawSymbolsSetToMoveUp = SymbolHelper::symbolsToRawValues(...$providedItems);
         }
 
         if (
             ($moveDownOption = $this->paramFetcher->getStringOption(self::MOVE_DOWN_OPTION, false))
-            && ($providedItems = self::parseProvidedSymbols($moveDownOption))
+            && ($providedItems = $this->parseProvidedSymbols($moveDownOption))
         ) {
             $this->rawSymbolsSetToMoveDown = SymbolHelper::symbolsToRawValues(...$providedItems);
         }
@@ -316,12 +317,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     {
         $result = [];
 
-        $positions = $this->positions[$symbol->value];
+        $positions = $this->positions[$symbol->name()];
         if (!$positions) {
             return [];
         }
 
-        $markPrice = $this->lastMarkPrices[$symbol->value];
+        $markPrice = $this->lastMarkPrices[$symbol->name()];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
         $isEquivalentHedge = $hedge?->isEquivalentHedge();
@@ -403,7 +404,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-            sprintf('%.1f', $this->ims[$main->symbol->value]),
+            sprintf('%.1f', $this->ims[$main->symbol->name()]),
         ]);
 
         # PNL%
@@ -604,13 +605,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if (!$this->currentStateGonnaBeSaved) {
             if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
-                $providedItems = self::parseProvidedSymbols($showSymbols);
+                $providedItems = $this->parseProvidedSymbols($showSymbols);
                 if ($providedItems) {
                     $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
                     $symbolsRaw = array_intersect($providedItems, $symbolsRaw);
                 }
             } elseif ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
-                $providedItems = self::parseProvidedSymbols($hideSymbols);
+                $providedItems = $this->parseProvidedSymbols($hideSymbols);
                 if ($providedItems) {
                     $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
                     $providedItems = array_intersect($providedItems, $symbolsRaw);
@@ -763,10 +764,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $color ? CTH::colorizeText($value, $color) : $value;
     }
 
-    private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
-    private static function positionCacheKeyByRaw(SymbolInterface $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->value, $side->value);}
+    private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->name(), $position->side->value);}
+    private static function positionCacheKeyByRaw(SymbolInterface $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->name(), $side->value);}
 
-    private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
+    private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->name());}
 
     private function getSavedDataCacheKeys(): array
     {
@@ -901,7 +902,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             SymbolEnum::BTCUSDT->value => 100,
             SymbolEnum::ETHUSDT->value => 200,
         ];
-        $bound = $bounds[$symbol->value] ?? 300;
+        $bound = $bounds[$symbol->name()] ?? 300;
         $firstStopDistanceColor = 'none';
         if (
             $firstStopDistancePnlPctWithTicker->value() < $bound

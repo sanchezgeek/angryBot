@@ -3,7 +3,9 @@
 namespace App\Command\Mixin;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
@@ -13,25 +15,35 @@ trait SymbolAwareCommand
 {
     use ConsoleInputAwareCommand;
 
-    private const DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
-    private const DEFAULT_SYMBOL = SymbolEnum::BTCUSDT;
+    private const string DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
+    private const string DEFAULT_SYMBOL_NAME = SymbolEnum::BTCUSDT->value;
 
     private ?string $symbolOptionName = null;
+
+    private SymbolProvider $symbolProvider;
+
+    public function withSymbolProvider(SymbolProvider $symbolProvider): void
+    {
+        $this->symbolProvider = $symbolProvider;
+    }
 
     protected function symbolIsSpecified(): bool
     {
         return (bool)$this->paramFetcher->getStringOption($this->symbolOptionName, false);
     }
 
+    /**
+     * @throws SymbolNotFoundException
+     */
     protected function getSymbol(): SymbolInterface
     {
         if ($this->symbolOptionName) {
-            $symbol = SymbolEnum::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
+            $symbolName = strtoupper($this->paramFetcher->getStringOption($this->symbolOptionName));
         } else {
-            $symbol = self::DEFAULT_SYMBOL;
+            $symbolName = self::DEFAULT_SYMBOL_NAME;
         }
 
-        return $symbol;
+        return $this->symbolProvider->getOneByName($symbolName);
     }
 
     /**
@@ -45,10 +57,11 @@ trait SymbolAwareCommand
         } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
             if ($providedSymbolValue === 'all') {
-                return $this->positionService->getOpenedPositionsSymbols($exceptWhenGetAll);
+                return $this->positionService->getOpenedPositionsSymbols(...$exceptWhenGetAll);
             } elseif (str_contains($providedSymbolValue, ',')) {
-                return self::parseProvidedSymbols($providedSymbolValue);
+                return $this->parseProvidedSymbols($providedSymbolValue);
             }
+
             throw $e;
         }
 
@@ -58,24 +71,23 @@ trait SymbolAwareCommand
     /**
      * @return SymbolInterface[]
      */
-    protected static function parseProvidedSymbols(string $providedStringArray): array
+    protected function parseProvidedSymbols(string $providedStringArray): array
     {
         $rawItems = explode(',', $providedStringArray);
         $symbols = [];
         foreach ($rawItems as $rawItem) {
-            $symbols[] = SymbolEnum::fromShortName($rawItem);
+            $symbols[] = $this->symbolProvider->getOneByName(strtoupper($rawItem));
         }
         return $symbols;
     }
 
     protected function configureSymbolArgs(
         string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
-        ?SymbolInterface $defaultValue = self::DEFAULT_SYMBOL,
-    ): static
-    {
+        ?string $defaultValue = self::DEFAULT_SYMBOL_NAME,
+    ): static {
         $this->symbolOptionName = $symbolOptionName;
 
-        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue?->value);
+        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue);
     }
 
     protected function isSymbolArgsConfigured(): bool

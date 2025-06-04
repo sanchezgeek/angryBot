@@ -6,8 +6,8 @@ namespace App\Tests\Factory\Entity;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class BuyOrderBuilder
 {

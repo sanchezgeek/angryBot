@@ -9,8 +9,6 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -26,14 +24,15 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
-use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Account\AllCoinsBalanceResponseBuilder;
+use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\CancelOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Coin\CoinInterTransferResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\TickersResponseBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\Trade\CurrentOrdersResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
@@ -199,8 +198,8 @@ trait ByBitV5ApiRequestsMocker
 
         $resultResponse = new PositionResponseBuilder($symbol->associatedCategory());
         foreach ($positions as $position) {
-            if ($position->symbol !== $symbol) {
-                throw new LogicException(sprintf('Position with invalid ::symbol provided (%s provided, but %s expected)', $position->symbol->value, $symbol->value));
+            if (!$position->symbol->eq($symbol)) {
+                throw new LogicException(sprintf('Position with invalid ::symbol provided (%s provided, but %s expected)', $position->symbol->name(), $symbol->name()));
             }
             $resultResponse->withPosition($position);
         }

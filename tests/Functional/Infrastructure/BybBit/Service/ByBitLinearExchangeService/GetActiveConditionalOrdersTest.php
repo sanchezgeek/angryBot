@@ -7,7 +7,6 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -16,10 +15,11 @@ use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
-use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
+use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\Trade\CurrentOrdersResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -33,6 +33,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
 {
     use PositionSideAwareTest;
     use ByBitV5ApiTester;
+    use SymbolsDependentTester;
 
     private const REQUEST_URL = GetCurrentOrdersRequest::URL;
     private const CALLED_METHOD = 'ByBitLinearExchangeService::activeConditionalOrders';
@@ -48,14 +49,13 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
         array $expectedActiveStopOrders
     ): void {
         // Arrange
-        $orderId = uuid_create();
         $this->matchGet(GetCurrentOrdersRequest::openOnly($category, $symbol), $apiResponse);
 
         // Act
         $activeConditionalOrders = $this->service->activeConditionalOrders($symbol, $priceRange);
 
         // Assert
-        self::assertEquals($expectedActiveStopOrders, $activeConditionalOrders);
+        self::assertOrdersEqual($expectedActiveStopOrders, $activeConditionalOrders);
     }
 
     private function getActiveConditionalOrdersTestSuccessCases(): iterable

@@ -8,7 +8,6 @@ use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;

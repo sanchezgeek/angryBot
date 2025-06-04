@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Bot\Domain\ValueObject;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\TestCase;
 
 class SymbolTest extends TestCase

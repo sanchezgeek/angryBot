@@ -64,9 +64,9 @@ final class TryReleaseActiveOrdersHandler
         foreach ($messages as $msg) {
             $symbol = $msg->symbol;
 
-            $this->activeConditionalStopOrders[$symbol->value] = array_filter(
+            $this->activeConditionalStopOrders[$symbol->name()] = array_filter(
                 $activeConditionalStopOrders,
-                static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->symbol === $symbol
+                static fn(ActiveStopOrder $activeStopOrder) => $activeStopOrder->symbol->eq($symbol)
             );
 
             $this->handleMessage($msg);
@@ -78,7 +78,7 @@ final class TryReleaseActiveOrdersHandler
         $symbol = $command->symbol;
         $claimedOrderVolume = $command->forVolume;
 
-        $activeOrders = $this->activeConditionalStopOrders[$symbol->value];
+        $activeOrders = $this->activeConditionalStopOrders[$symbol->name()];
         if (!count($activeOrders)) {
             return;
         }

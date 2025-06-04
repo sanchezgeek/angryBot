@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Domain\ValueObject;
+namespace App\Trading\Domain\Symbol;
 
 use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
@@ -11,6 +11,9 @@ use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 
 interface SymbolInterface
 {
+    public function eq(SymbolInterface $other): bool;
+    public function name(): string;
+
     public function associatedCoin(): Coin;
     public function associatedCoinAmount(float $amount): CoinAmount;
     public function associatedCategory(): AssetCategory;

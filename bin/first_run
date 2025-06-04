@@ -10,5 +10,6 @@ make start
 make composer "c=install"
 make sf c="d:m:m -n"
 make sf c="settings:dump:restore --auto"
+make sf c="symbol:initialize --coin=USDT"
 make refresh
 make restart

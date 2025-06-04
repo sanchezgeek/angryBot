@@ -13,7 +13,6 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -39,6 +38,7 @@ use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function array_map;
@@ -76,14 +76,6 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
     private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
-    }
-
     /**
      * @dataProvider pushStopsTestCases
      *
@@ -106,7 +98,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $stops));
 
-        $this->runMessageConsume(new PushStops($position->symbol, $position->side));
+        $applicationTester = $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
         self::seeBuyOrdersInDb(...self::cloneBuyOrders(...$buyOrdersExpectedAfterHandle));

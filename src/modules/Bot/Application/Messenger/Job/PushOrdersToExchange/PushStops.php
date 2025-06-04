@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
 /**
@@ -24,8 +23,8 @@ final readonly class PushStops
             throw new InvalidArgumentException(sprintf('Provided $position.side (%s) !== $side (%s)', $this->positionState->side->value, $this->side->value));
         }
 
-        if ($this->positionState && $this->positionState->symbol !== $this->symbol) {
-            throw new InvalidArgumentException(sprintf('Provided $position.symbol (%s) !== $symbol (%s)', $this->positionState->symbol->value, $this->symbol->value));
+        if ($this->positionState && !$this->positionState->symbol->eq($this->symbol)) {
+            throw new InvalidArgumentException(sprintf('Provided $position.symbol (%s) !== $symbol (%s)', $this->positionState->symbol->name(), $this->symbol->name()));
         }
     }
 }

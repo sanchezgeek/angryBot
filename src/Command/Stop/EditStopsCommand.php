@@ -13,10 +13,10 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Worker\AppContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
@@ -37,7 +37,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'sl:edit')]
-class EditStopsCommand extends AbstractCommand
+class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

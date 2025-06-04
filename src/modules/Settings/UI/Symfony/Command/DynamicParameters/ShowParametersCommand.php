@@ -4,6 +4,7 @@ namespace App\Settings\UI\Symfony\Command\DynamicParameters;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
 use App\Output\Table\Dto\Style\Enum\CellAlign;
@@ -17,9 +18,12 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'parameters:show')]
-class ShowParametersCommand extends AbstractCommand
+#[AutoconfigureTag(name: 'command.symbol_dependent')]
+class ShowParametersCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 
@@ -71,7 +75,7 @@ class ShowParametersCommand extends AbstractCommand
 
         $userInput = [];
         if ($this->symbolIsSpecified()) {
-            $userInput['symbol'] = $this->getSymbol()->value;
+            $userInput['symbol'] = $this->getSymbol()->name();
         }
 
         $arguments = $this->parameterEvaluator->getParameterArguments($selectedGroup, $selectedParameter);

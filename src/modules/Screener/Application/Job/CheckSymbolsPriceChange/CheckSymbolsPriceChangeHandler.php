@@ -6,7 +6,6 @@ namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
 use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;

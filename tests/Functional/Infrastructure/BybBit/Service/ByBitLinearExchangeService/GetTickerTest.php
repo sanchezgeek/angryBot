@@ -6,18 +6,17 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchange
 
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
-use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\MarketResponseBuilder;
-use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -49,7 +48,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         $ticker = $this->service->ticker($symbol);
 
         // Assert
-        self::assertEquals($expectedTicker, $ticker);
+        CustomAssertions::assertEqualsWithInnerSymbols($expectedTicker, $ticker);
     }
 
     private function getTickerTestSuccessCases(): iterable
@@ -57,7 +56,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         $category = self::ASSET_CATEGORY;
 
         $symbol = SymbolEnum::BTCUSDT;
-        yield sprintf('have %s ticker (%s)', $symbol->value, $category->value) => [
+        yield sprintf('have %s ticker (%s)', $symbol->name(), $category->value) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(
                 $symbol,
@@ -69,7 +68,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         ];
 
         $symbol = SymbolEnum::BTCUSD;
-        yield sprintf('have %s ticker (%s)', $symbol->value, $category->value) => [
+        yield sprintf('have %s ticker (%s)', $symbol->name(), $category->value) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(
                 $symbol,
@@ -112,7 +111,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         # Ticker not found
         $symbol = SymbolEnum::BTCUSDT;
         $notFoundExpected = TickerNotFoundException::forSymbolAndCategory($symbol, $category);
-        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSD->value, $category->value, $symbol->value, $notFoundExpected->getMessage()) => [
+        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSD->value, $category->value, $symbol->name(), $notFoundExpected->getMessage()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(SymbolEnum::BTCUSD, 30000, 29980, 29990)->build(),
             '$expectedException' => $notFoundExpected,
@@ -120,7 +119,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
 
         $symbol = SymbolEnum::BTCUSD;
         $notFoundExpected = TickerNotFoundException::forSymbolAndCategory($symbol, $category);
-        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSDT->value, $category->value, $symbol->value, $notFoundExpected->getMessage()) => [
+        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSDT->value, $category->value, $symbol->name(), $notFoundExpected->getMessage()) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(SymbolEnum::BTCUSDT, 30000, 29980, 29990)->build(),
             '$expectedException' => $notFoundExpected,

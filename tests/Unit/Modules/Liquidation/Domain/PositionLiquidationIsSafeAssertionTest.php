@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Modules\Liquidation\Domain;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
 use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum as Strategy;
 use App\Tests\Factory\Position\PositionBuilder;

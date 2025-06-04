@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Bot\Application\Service\Hedge;
 use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Bot\Domain\ValueObject\SymbolInterface;
 use App\Tests\Factory\PositionFactory;
 use PHPUnit\Framework\TestCase;
 

@@ -13,11 +13,13 @@ use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
+use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -36,7 +38,7 @@ use function sprintf;
 
 /** @see CreateStopsGridCommandTest */
 #[AsCommand(name: 'sl:grid')]
-class CreateStopsGridCommand extends AbstractCommand
+class CreateStopsGridCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
@@ -101,6 +103,9 @@ class CreateStopsGridCommand extends AbstractCommand
 //        return $positionSide;
 //    }
 
+    /**
+     * @throws SymbolNotFoundException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // @todo | tD ?
@@ -198,7 +203,7 @@ class CreateStopsGridCommand extends AbstractCommand
 
         $this->io->success(sprintf('Stops grid created. uniqueID: %s', $uniqueId));
         $this->io->writeln(
-            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:edit --symbol=%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"', $symbol->value, $positionSide->value, $uniqueId) . PHP_EOL . PHP_EOL
+            sprintf('For delete them just run:' . PHP_EOL . './bin/console sl:edit --symbol=%s %s -aremove --fC="getContext(\'uniqid\')===\'%s\'"', $symbol->name(), $positionSide->value, $uniqueId) . PHP_EOL . PHP_EOL
         );
 
         return Command::SUCCESS;
