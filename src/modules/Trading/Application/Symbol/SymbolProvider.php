@@ -8,11 +8,18 @@ use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use App\Trading\Infrastructure\Cache\SymbolsCache;
 
-readonly class SymbolProvider
+final class SymbolProvider
 {
-    public function __construct(private SymbolRepository $symbolRepository)
-    {
+    private const int CACHE_TTL = 86400;
+
+    private array $hotCache = [];
+
+    public function __construct(
+        private readonly SymbolRepository $symbolRepository,
+        private readonly SymbolsCache $cache
+    ) {
     }
 
     /**
@@ -20,11 +27,14 @@ readonly class SymbolProvider
      */
     public function getOneByName(string $name): Symbol
     {
-        if (!$symbol = $this->symbolRepository->findOneByName($name)) {
-            throw new SymbolNotFoundException(sprintf('Cannot find symbol by "%s" name', $name));
+        if (isset($this->hotCache[$name])) {
+            return $this->hotCache[$name];
         }
 
-        return $symbol;
+        return $this->hotCache[$name] = $this->cache->get(sprintf('symbols_%s', $name), function () use ($name) {
+            if ($symbol = $this->symbolRepository->findOneByName($name)) return $symbol;
+            throw new SymbolNotFoundException(sprintf('Cannot find symbol by "%s" name', $name));
+        }, self::CACHE_TTL);
     }
 
     /**

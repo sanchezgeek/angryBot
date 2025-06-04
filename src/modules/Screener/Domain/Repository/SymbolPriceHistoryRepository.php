@@ -3,6 +3,7 @@
 namespace App\Screener\Domain\Repository;
 
 use App\Screener\Domain\Entity\SymbolPriceHistory;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -33,10 +34,10 @@ class SymbolPriceHistoryRepository extends ServiceEntityRepository
             : $this->getEntityManager()->wrapInTransaction($save);
     }
 
-    public function fundOnMomentOfTime(string $symbolRaw, DateTimeImmutable $onDateTime): ?SymbolPriceHistory
+    public function fundOnMomentOfTime(SymbolInterface $symbol, DateTimeImmutable $onDateTime): ?SymbolPriceHistory
     {
         $qb = $this->createQueryBuilder('h');
-        $qb->where('h.symbol = :symbol')->setParameter(':symbol', $symbolRaw);
+        $qb->where('h.symbol = :symbol')->setParameter(':symbol', $symbol->name());
         $qb->andWhere('h.dateTime = :onDateTime')->setParameter(':onDateTime', $onDateTime);
 
         return $qb->getQuery()->getOneOrNullResult();

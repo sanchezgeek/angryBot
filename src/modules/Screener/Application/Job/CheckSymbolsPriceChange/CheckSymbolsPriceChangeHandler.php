@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
 use App\Application\Notification\AppNotificationLoggerInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
@@ -20,7 +19,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 #[AsMessageHandler]
 final class CheckSymbolsPriceChangeHandler
 {
-    private const ALERT_RETRY_COUNT = 1;
+    private const int ALERT_RETRY_COUNT = 1;
 
     public function __invoke(CheckSymbolsPriceChange $message): void
     {
@@ -37,20 +36,19 @@ final class CheckSymbolsPriceChangeHandler
 
         $partOfDayPassed = (date_create_immutable()->getTimestamp() - $date->getTimestamp()) / 86400;
 
-        $tickers = $this->exchangeService->getAllTickersRaw($message->settleCoin);
-        foreach ($tickers as $symbolRaw => $ticker) {
-            if ($this->isSymbolSkipped($symbolRaw)) {
-                continue;
+        foreach ($this->exchangeService->getAllTickers($message->settleCoin) as $ticker) {
+            $symbol = $ticker->symbol;
+            if ($this->settings->optional(SettingAccessor::withAlternativesAllowed(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled)) === false) {
+                return;
             }
 
-            $currentPrice = $ticker['last'];
-            $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbolRaw, $date);
-            // @todo | symbol | provider / factory ...
-            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, SymbolEnum::tryFrom($symbolRaw));
-            $delta = abs($prevPrice - $currentPrice);
+            $currentPrice = $ticker->lastPrice;
+            $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
+            $delta = abs($prevPrice - $currentPrice->value());
 
+            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, $symbol);
             if ($delta > $significantPriceDelta) {
-                if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbolRaw, $daysDelta))->consume()->isAccepted()) {
+                if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbol->name(), $daysDelta))->consume()->isAccepted()) {
                     continue;
                 }
 
@@ -61,7 +59,7 @@ final class CheckSymbolsPriceChangeHandler
                     $this->notifications->notify(
                         sprintf(
                             '%s [daysDelta=%.2f from %s].price=%s, curr.price = %s, Δ = %s (%s) (> %s [%s])',
-                            $symbolRaw,
+                            $symbol->name(),
                             $partOfDayPassed,
                             $date->format('m-d H:i:s'),
                             $prevPrice,
@@ -75,11 +73,6 @@ final class CheckSymbolsPriceChangeHandler
                 }
             }
         }
-    }
-
-    private function isSymbolSkipped(string $symbol): bool
-    {
-        return $symbol === 'BTCPERP' || str_contains($symbol, 'BTCUSDT-') || str_contains($symbol, 'BTC-');
     }
 
     public function __construct(

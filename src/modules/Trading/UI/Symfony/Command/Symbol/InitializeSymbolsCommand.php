@@ -46,8 +46,7 @@ class InitializeSymbolsCommand extends AbstractCommand
         if ($symbolName) {
             $this->initSymbol($symbolName);
         } else {
-            $tickers = $this->exchangeService->getAllTickersRaw($this->coin);
-            foreach ($tickers as $symbolRaw => $prices) {
+            foreach ($this->exchangeService->getAllAvailableSymbolsRaw($this->coin) as $symbolRaw) {
                 $this->initSymbol($symbolRaw);
             }
         }

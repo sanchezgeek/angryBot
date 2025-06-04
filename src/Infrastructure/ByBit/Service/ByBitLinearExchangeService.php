@@ -98,6 +98,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SymbolNotFoundException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
@@ -120,7 +123,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             if ($symbol && $symbol->name() !== $item['symbol']) {
                 continue;
             }
-
             $itemSymbol = $this->symbolProvider->getOneByName($item['symbol']);
 
             // Only orders created by bot
@@ -188,14 +190,36 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
     }
 
     /**
-     * @return array<string, array{last: float, index: float, mark: float}> SymbolRaw -> Ticker
+     * @return string[]
      *
      * @throws ApiRateLimitReached
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function getAllTickersRaw(Coin $settleCoin): array
+    public function getAllAvailableSymbolsRaw(Coin $settleCoin): array
+    {
+        $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        return array_map(static fn(array $item) => $item['symbol'], $list);
+    }
+
+    /**
+     * @return Ticker[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     *
+     * @throws SymbolNotFoundException
+     */
+    public function getAllTickers(Coin $settleCoin): array
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
 
@@ -206,17 +230,18 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $result = [];
         foreach ($list as $item) {
-            $result[$item['symbol']] = [
-                'mark' => (float)$item['markPrice'],
-                'last' => (float)$item['lastPrice'],
-                'index' => (float)$item['indexPrice'],
-            ];
+            $result[] = new Ticker(
+                $this->symbolProvider->getOneByName($item['symbol']),
+                (float)$item['markPrice'],
+                (float)$item['indexPrice'],
+                (float)$item['lastPrice'],
+            );
         }
 
         return $result;
     }
 
-    public function getKlines(SymbolInterface|string $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
+    public function getCandles(SymbolInterface $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
     {
         $request = new GetKlinesRequest(self::ASSET_CATEGORY, $symbol, $interval, $from, $to, $limit);
         $data = $this->sendRequest($request)->data();
