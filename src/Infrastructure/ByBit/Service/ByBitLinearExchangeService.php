@@ -27,7 +27,8 @@ use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -61,8 +62,8 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
-     * @throws SymbolEntityNotFoundException
-     * @throws InitializeSymbolException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
@@ -100,8 +101,8 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      *
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
@@ -200,9 +201,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
-     *
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
      */
     public function getAllTickers(Coin $settleCoin): array
     {
@@ -215,12 +213,13 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $result = [];
         foreach ($list as $item) {
-            $result[] = new Ticker(
-                $this->symbolProvider->getOrInitialize($item['symbol']),
-                (float)$item['markPrice'],
-                (float)$item['indexPrice'],
-                (float)$item['lastPrice'],
-            );
+            try {
+                $symbol = $this->symbolProvider->getOrInitialize($item['symbol'], $settleCoin);
+            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+                continue;
+            }
+
+            $result[] = new Ticker($symbol, (float)$item['markPrice'], (float)$item['indexPrice'], (float)$item['lastPrice']);
         }
 
         return $result;

@@ -6,7 +6,8 @@ use App\Command\AbstractCommand;
 use App\Domain\Coin\Coin;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolsEntry;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolsHandler;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
@@ -60,7 +61,7 @@ class InitializeSymbolsCommand extends AbstractCommand
             $this->initializeSymbolsHandler->handle(
                 new InitializeSymbolsEntry($name, $this->coin)
             );
-        } catch (InitializeSymbolException $e) {
+        } catch (UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException $e) {
             self::info(sprintf('Skip "%s": %s', $name, $e->getMessage()));
             return;
         }
