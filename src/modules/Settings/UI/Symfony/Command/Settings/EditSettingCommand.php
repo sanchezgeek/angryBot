@@ -14,6 +14,9 @@ use App\Settings\Application\Service\SettingsLocator;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Domain\SettingValueValidator;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -45,6 +48,10 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         ;
     }
 
+    /**
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -74,9 +81,12 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         }
 
         if (!$reset) {
-            if (!($this->symbolIsSpecified() && $symbol = $this->getSymbol())) {
+            if (!$this->symbolIsSpecified()) {
                 // @todo | symbol | provider / factory ...
-                $symbol = $io->ask("Symbol (default = `null`):"); $symbol = $symbol !== null ? SymbolEnum::fromShortName(strtoupper($symbol)) : null;
+                $symbolAnswer = $io->ask("Symbol (default = `null`):");
+                $symbol = $this->parseProvidedSymbolAsk($symbolAnswer);
+            } else {
+                $symbol = $this->getSymbol();
             }
             $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {
@@ -129,6 +139,20 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         }
 
         return Command::SUCCESS;
+    }
+
+    private function parseProvidedSymbolAsk($symbolAnswer): ?SymbolInterface
+    {
+        if ($symbolAnswer === null) {
+            return null;
+        }
+
+        $symbols = $this->parseProvidedSymbols($symbolAnswer);
+        if (count($symbols) > 1) {
+            throw new InvalidArgumentException('Only for one symbol');
+        }
+
+        return $symbols[0];
     }
 
     public function __construct(
