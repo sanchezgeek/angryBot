@@ -113,6 +113,8 @@ enum SymbolEnum: string implements SymbolInterface
     case FLOCKUSDT = 'FLOCKUSDT';
     case MASKUSDT = 'MASKUSDT';
     case BUSDT = 'BUSDT';
+    case TRBUSDT = 'TRBUSDT';
+    case XEMUSDT = 'XEMUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -212,6 +214,8 @@ enum SymbolEnum: string implements SymbolInterface
         self::FLOCKUSDT->value => 5,
         self::MASKUSDT->value => 3,
         self::BUSDT->value => 5,
+        self::TRBUSDT->value => 2,
+        self::XEMUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -312,6 +316,8 @@ enum SymbolEnum: string implements SymbolInterface
         self::FLOCKUSDT->value => 1,
         self::MASKUSDT->value => 0.1,
         self::BUSDT->value => 1,
+        self::TRBUSDT->value => 0.01,
+        self::XEMUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [

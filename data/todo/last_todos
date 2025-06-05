@@ -165,6 +165,11 @@ imports
 ### openedPositions ###
     save current passed distance
 
+### PriceChange ###
+    @todo | priceChange | some very short period handler
+    @todo | priceChange | save prev percent and notify again if new percent >= prev
+    @todo | priceChange | +/-
+
 ### Symbol###
 
     ->value
