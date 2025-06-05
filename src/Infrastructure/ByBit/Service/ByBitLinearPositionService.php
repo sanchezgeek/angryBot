@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
@@ -28,6 +29,9 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use InvalidArgumentException;
@@ -54,9 +58,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 {
     use ByBitApiCallHandler;
 
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
-    private const SLEEP_INC = 5;
+    private const int SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
     private array $lastMarkPrices = [];
@@ -64,6 +68,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     public function __construct(
         ByBitApiClientInterface $apiClient,
         private readonly CacheInterface $cache,
+        private readonly SymbolProvider $symbolProvider,
     ) {
         $this->apiClient = $apiClient;
     }
@@ -197,13 +202,12 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         /** @var array<Position[]> $positions */
         $positions = [];
         foreach ($list as $item) {
-            $side = Side::from(strtolower($item['side']));
-            // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
-            $symbol = SymbolEnum::from($item['symbol']);
-
-            $opposite = $positions[$symbol->name()][$side->getOpposite()->value] ?? null;
             if ((float)$item['avgPrice'] !== 0.0) {
                 $position = $this->parsePositionFromData($item);
+                $symbol = $position->symbol;
+                $side = $position->side;
+
+                $opposite = $positions[$symbol->name()][$side->getOpposite()->value] ?? null;
                 if ($opposite) {
                     $position->setOppositePosition($opposite);
                     $opposite->setOppositePosition($position);
@@ -214,8 +218,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $this->lastMarkPrices[$symbol->name()] = $symbol->makePrice((float)$item['markPrice']);
         }
 
-        foreach ($positions as $symbolRaw => $symbolPositions) {
-            $symbol = SymbolEnum::from($symbolRaw);
+        foreach ($positions as $symbolPositions) {
+            $symbol = reset($symbolPositions)->symbol;
             $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
             $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
             $this->cache->save($item);
@@ -300,11 +304,16 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         return $positions;
     }
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
+     */
     private function parsePositionFromData(array $apiData): Position
     {
         return new Position(
             Side::from(strtolower($apiData['side'])),
-            SymbolEnum::from($apiData['symbol']),
+            $this->symbolProvider->getOrInitialize($apiData['symbol']),
             (float)$apiData['avgPrice'],
             (float)$apiData['size'],
             (float)$apiData['positionValue'],

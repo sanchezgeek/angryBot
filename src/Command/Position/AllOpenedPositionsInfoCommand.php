@@ -40,6 +40,8 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -64,32 +66,32 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
-    private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '150';
+    private const string DEFAULT_UPDATE_INTERVAL = '15';
+    private const string DEFAULT_SAVE_CACHE_INTERVAL = '150';
 
-    private const SortCacheKey = 'opened_positions_sort';
-    private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
-    private const Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
+    private const string SortCacheKey = 'opened_positions_sort';
+    private const string SavedDataKeysCacheKey = 'saved_data_cache_keys';
+    private const string Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
 
-    private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
-    private const WITH_SAVED_SORT_OPTION = 'sorted';
-    private const USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
-    private const USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
-    private const SAVE_SORT_OPTION = 'save-sort';
-    private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
-    private const MOVE_UP_OPTION = 'move-up';
-    private const MOVE_DOWN_OPTION = 'move-down';
-    private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
-    private const CURRENT_STATE_OPTION = 'current-state';
-    private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
-    private const SHOW_CACHE_OPTION = 'show-cache';
-    private const UPDATE_OPTION = 'update';
-    private const UPDATE_INTERVAL_OPTION = 'update-interval';
-    private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
-    private const SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
+    private const string MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
+    private const string WITH_SAVED_SORT_OPTION = 'sorted';
+    private const string USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
+    private const string USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
+    private const string SAVE_SORT_OPTION = 'save-sort';
+    private const string FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
+    private const string MOVE_UP_OPTION = 'move-up';
+    private const string MOVE_DOWN_OPTION = 'move-down';
+    private const string DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
+    private const string CURRENT_STATE_OPTION = 'current-state';
+    private const string REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
+    private const string SHOW_CACHE_OPTION = 'show-cache';
+    private const string UPDATE_OPTION = 'update';
+    private const string UPDATE_INTERVAL_OPTION = 'update-interval';
+    private const string SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
+    private const string SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
 
-    private const SHOW_SYMBOLS_OPTION = 'show-symbols';
-    private const HIDE_SYMBOLS_OPTION = 'hide-symbols';
+    private const string SHOW_SYMBOLS_OPTION = 'show-symbols';
+    private const string HIDE_SYMBOLS_OPTION = 'hide-symbols';
 
     private bool $currentStateGonnaBeSaved = false;
     private array $cacheCollector = [];
@@ -633,7 +635,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $symbolsRaw = array_merge($equivalentHedgedSymbols, array_diff($symbolsRaw, $equivalentHedgedSymbols));
         }
 
-        return SymbolHelper::rawSymbolsToValueObjects(...$symbolsRaw);
+        return $this->rawSymbolsToValueObjects(...$symbolsRaw);
+    }
+
+    /**
+     * @return SymbolInterface[]
+     *
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
+     */
+    private function rawSymbolsToValueObjects(string ...$symbolsRaw): array
+    {
+        return array_map(fn (string $symbolRaw) => $this->symbolProvider->getOrInitialize($symbolRaw), $symbolsRaw);
     }
 
     public function getTotalUnrealizedProfit(): float

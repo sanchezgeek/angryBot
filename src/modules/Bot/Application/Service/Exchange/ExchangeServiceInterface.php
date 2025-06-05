@@ -20,6 +20,4 @@ interface ExchangeServiceInterface
     public function activeConditionalOrders(?SymbolInterface $symbol = null, ?PriceRange $priceRange = null): array;
 
     public function closeActiveConditionalOrder(ActiveStopOrder $order): void;
-
-    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto;
 }

@@ -12,7 +12,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -87,14 +86,16 @@ final readonly class PushAllMainPositionsStopsHandler
 
         $lastSort = [];
         foreach ($sort as $symbolRaw) {
-            $lastSort[] = $symbol = SymbolEnum::from($symbolRaw);
+            $position = $positions[$symbolRaw];
+            $lastSort[] = $symbol = $position->symbol;
+
             try {
-                $positionState = $positionsCache[$symbol->name()]->get();
+                $positionState = $positionsCache[$symbolRaw]->get();
             } catch (RuntimeException) {
                 $positionState = null; // @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
             }
 
-            $this->innerHandler->__invoke(new PushStops($symbol, $positions[$symbol->name()]->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
+            $this->innerHandler->__invoke(new PushStops($symbol, $position->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
         }
         $this->lastSortStorage->setLastSort($lastSort);
 

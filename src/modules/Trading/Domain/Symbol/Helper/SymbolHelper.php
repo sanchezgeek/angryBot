@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Domain\Symbol\Helper;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
@@ -18,14 +17,6 @@ final class SymbolHelper
     public static function symbolsToRawValues(SymbolInterface ...$symbols): array
     {
         return array_map(static fn (SymbolInterface $symbol) => $symbol->name(), $symbols);
-    }
-
-    /**
-     * @return SymbolInterface[]
-     */
-    public static function rawSymbolsToValueObjects(string ...$symbolsRaw): array
-    {
-        return array_map(static fn (string $symbolRaw) => SymbolEnum::from($symbolRaw), $symbolsRaw);
     }
 
     public static function stopDefaultTriggerDelta(SymbolInterface $symbol): float

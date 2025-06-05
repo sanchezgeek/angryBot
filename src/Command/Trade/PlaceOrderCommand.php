@@ -24,6 +24,9 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\API\V5\Enum\Position\PositionMode;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\Exception\Trade\PositionIdxNotMatch;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use InvalidArgumentException;
@@ -90,7 +93,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
         if ($type === self::MARKET_BUY) {
             $except = [SymbolEnum::BTCUSDT];
 
-            $symbols = $this->getSymbols(...$except);
+            $symbols = $this->getSymbols($except);
 
             $additional = null;
             try {
@@ -113,7 +116,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
             if (count($symbols) > 1) {
                 $msg = sprintf('You\'re about to buy %s%s on %d symbols". Continue?', $volume, $additional ?? '', count($symbols));
             } else {
-                $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbols[0]->value, $side->title());
+                $msg = sprintf('You\'re about to buy %s on "%s %s". Continue?', $volume, $symbols[0]->name(), $side->title());
             }
 
             if (!$this->isWithoutConfirm() && !$this->io->confirm($msg)) {
@@ -269,6 +272,14 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                     try {
                         $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
                         $try = false;
+                    } catch (PositionIdxNotMatch $e) {
+                        if ($this->io->confirm(
+                            sprintf('Got "%s" error while do marketBuy. Need to change positionIdx to "both" sides mode. Continue?', $e->getMessage())
+                        )) {
+                            $this->positionService->switchPositionMode($symbol, PositionMode::BOTH_SIDES_MODE);
+                            $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
+                            $try = false;
+                        }
                     } catch (CannotAffordOrderCostException $e) {
                         $currentContract = $this->exchangeAccountService->getContractWalletBalance($symbol->associatedCoin());
                         $cost = $this->orderCostCalculator->totalBuyCost($order, new Leverage(100), $this->getPositionSide());
@@ -323,7 +334,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
         private readonly OrderServiceInterface $tradeService,
         private readonly StopServiceInterface $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
-        PositionServiceInterface $positionService,
+        ByBitLinearPositionService $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly ExchangeAccountServiceInterface $exchangeAccountService,
         private readonly OrderCostCalculator $orderCostCalculator,

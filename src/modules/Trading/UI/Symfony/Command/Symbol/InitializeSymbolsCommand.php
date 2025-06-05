@@ -5,9 +5,10 @@ namespace App\Trading\UI\Symfony\Command\Symbol;
 use App\Command\AbstractCommand;
 use App\Domain\Coin\Coin;
 use App\Helper\OutputHelper;
-use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolsEntry;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolsHandler;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,9 +23,6 @@ class InitializeSymbolsCommand extends AbstractCommand
     private const string COIN_NAME = 'coin';
 
     private Coin $coin;
-    private array $availableContractTypes = [
-        'LinearPerpetual',
-    ];
 
     protected function configure(): void
     {
@@ -41,9 +39,7 @@ class InitializeSymbolsCommand extends AbstractCommand
 
         $this->io->info(sprintf('Start fetching "%s" symbols from exchange', $settleCoin));
 
-        $symbolName = $this->paramFetcher->getStringOption(self::SYMBOL_NAME, false);
-
-        if ($symbolName) {
+        if ($symbolName = $this->paramFetcher->getStringOption(self::SYMBOL_NAME, false)) {
             $this->initSymbol($symbolName);
         } else {
             foreach ($this->exchangeService->getAllAvailableSymbolsRaw($this->coin) as $symbolRaw) {
@@ -60,32 +56,14 @@ class InitializeSymbolsCommand extends AbstractCommand
             return;
         }
 
-        $info = $this->exchangeService->getInstrumentInfo($name);
-
-        if ($info->quoteCoin !== $this->coin->value) {
-            self::info(sprintf('Skip "%s": quoteCoin ("%s") !== specified coin ("%s")', $name, $info->quoteCoin, $this->coin->value));
+        try {
+            $this->initializeSymbolsHandler->handle(
+                new InitializeSymbolsEntry($name, $this->coin)
+            );
+        } catch (InitializeSymbolException $e) {
+            self::info(sprintf('Skip "%s": %s', $name, $e->getMessage()));
             return;
         }
-
-        if (!in_array($info->contractType, $this->availableContractTypes, true)) {
-            self::info(sprintf('Skip "%s" (unknown category "%s"). Available categories: "%s"', $name, $info->contractType, implode('", "', $this->availableContractTypes)));
-            return;
-        }
-
-        $category = match ($info->contractType) {
-            'LinearPerpetual' => AssetCategory::linear,
-        };
-
-        $symbol = new Symbol(
-            $name,
-            Coin::from($info->quoteCoin),
-            $category,
-            $info->minOrderQty,
-            $info->minOrderValue,
-            $info->priceScale
-        );
-
-        $this->symbolRepository->save($symbol);
     }
 
     private static function info(string $message): void
@@ -96,6 +74,7 @@ class InitializeSymbolsCommand extends AbstractCommand
     public function __construct(
         private readonly SymbolRepository $symbolRepository,
         private readonly ByBitLinearExchangeService $exchangeService,
+        private readonly InitializeSymbolsHandler $initializeSymbolsHandler,
         ?string $name = null,
     ) {
         parent::__construct($name);

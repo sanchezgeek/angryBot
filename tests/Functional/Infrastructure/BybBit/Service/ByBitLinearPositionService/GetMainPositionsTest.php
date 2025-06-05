@@ -13,6 +13,7 @@ use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\PHPUnit\TestLogger;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -22,7 +23,7 @@ final class GetMainPositionsTest extends KernelTestCase
 {
     use ByBitV5ApiTester;
 
-    const CATEGORY = AssetCategory::linear;
+    const AssetCategory CATEGORY = AssetCategory::linear;
 
     private LoggerInterface $logger;
     protected ByBitLinearPositionService $service;
@@ -33,7 +34,8 @@ final class GetMainPositionsTest extends KernelTestCase
 
         $this->service = new ByBitLinearPositionService(
             $this->initializeApiClient(),
-            new ArrayAdapter()
+            new ArrayAdapter(),
+            self::getContainer()->get(SymbolProvider::class),
         );
     }
 

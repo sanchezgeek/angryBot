@@ -6,7 +6,9 @@ namespace App\Application\UseCase\BuyOrder\Create;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 
 final readonly class CreateBuyOrderHandler
 {
@@ -16,6 +18,10 @@ final readonly class CreateBuyOrderHandler
     ) {
     }
 
+    /**
+     * @throws SymbolEntityNotFoundException
+     * @throws InitializeSymbolException
+     */
     public function handle(CreateBuyOrderEntryDto $dto): CreateBuyOrderResultDto
     {
         // @todo | buy | round here?
@@ -27,7 +33,7 @@ final readonly class CreateBuyOrderHandler
             $id,
             $dto->price,
             $dto->volume,
-            $this->symbolProvider->replaceEnumWithEntity($dto->symbol),
+            $this->symbolProvider->replaceWithActualEntity($dto->symbol),
             $dto->side,
             $dto->context
         );

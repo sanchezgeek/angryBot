@@ -14,7 +14,9 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use InvalidArgumentException;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
@@ -59,7 +61,10 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     }
 
     /**
+     * @throws SymbolEntityNotFoundException
+     * @throws InitializeSymbolException
      * @todo | settings | tests
+     *
      */
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue
     {
@@ -78,7 +83,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
             $settingValue = SettingValue::withValue(
                 $settingKey,
                 $value,
-                $symbol === null ? null : $this->symbolProvider->replaceEnumWithEntity($symbol),
+                $symbol === null ? null : $this->symbolProvider->replaceWithActualEntity($symbol),
                 $side
             );
         } else {

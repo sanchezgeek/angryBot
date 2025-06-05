@@ -2,9 +2,9 @@
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
@@ -16,7 +16,7 @@ trait SymbolAwareCommand
     use ConsoleInputAwareCommand;
 
     private const string DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
-    private const string DEFAULT_SYMBOL_NAME = SymbolEnum::BTCUSDT->value;
+    private const string DEFAULT_SYMBOL_NAME = 'BTCUSDT';
 
     private ?string $symbolOptionName = null;
 
@@ -33,7 +33,8 @@ trait SymbolAwareCommand
     }
 
     /**
-     * @throws SymbolNotFoundException
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
      */
     protected function getSymbol(): SymbolInterface
     {
@@ -43,7 +44,7 @@ trait SymbolAwareCommand
             $symbolName = self::DEFAULT_SYMBOL_NAME;
         }
 
-        return $this->symbolProvider->getOneByName($symbolName);
+        return $this->symbolProvider->getOrInitialize($symbolName);
     }
 
     /**
@@ -70,14 +71,19 @@ trait SymbolAwareCommand
 
     /**
      * @return SymbolInterface[]
+     *
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
      */
     protected function parseProvidedSymbols(string $providedStringArray): array
     {
         $rawItems = explode(',', $providedStringArray);
+
         $symbols = [];
         foreach ($rawItems as $rawItem) {
-            $symbols[] = $this->symbolProvider->getOneByName(strtoupper($rawItem));
+            $symbols[] = $this->symbolProvider->getOrInitialize(strtoupper($rawItem));
         }
+
         return $symbols;
     }
 

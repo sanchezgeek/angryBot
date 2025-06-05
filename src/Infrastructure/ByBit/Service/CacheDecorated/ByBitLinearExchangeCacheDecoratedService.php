@@ -177,11 +177,6 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
         $this->exchangeService->closeActiveConditionalOrder($order);
     }
 
-    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
-    {
-        return $this->exchangeService->getInstrumentInfo($symbol);
-    }
-
     private function tickerCacheKey(SymbolInterface $symbol): string
     {
         return \sprintf('api_%s_%s_ticker', self::ASSET_CATEGORY->value, $symbol->name());

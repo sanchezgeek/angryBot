@@ -19,6 +19,8 @@ use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
+use App\Infrastructure\ByBit\Service\Exception\Trade\PositionIdxNotMatch;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -68,6 +70,13 @@ final class ByBitOrderService implements OrderServiceInterface
             static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
                 $code = $error->code();
                 $msg = $error->msg();
+
+                if (
+                    in_array($code, [ApiV5Errors::BadRequestParams->value, ApiV5Errors::BadRequestParams2->value, ApiV5Errors::BadRequestParams3->value], true)
+                    && str_contains($msg, 'position idx not match position mode')
+                ) {
+                    throw new PositionIdxNotMatch($msg);
+                }
 
                 match ($code) {
                     ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(

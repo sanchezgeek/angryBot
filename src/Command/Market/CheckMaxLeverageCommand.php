@@ -9,6 +9,7 @@ use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,7 +32,7 @@ class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependent
     {
         foreach ($this->positionService->getAllPositions() as $symbolRaw => $symbolPositions) {
             $symbol = SymbolEnum::from($symbolRaw);
-            $maxLeverage = $this->exchangeService->getInstrumentInfo($symbol)->maxLeverage;
+            $maxLeverage = $this->marketService->getInstrumentInfo($symbol)->maxLeverage;
 
             foreach ($symbolPositions as $position) {
                 if ($position->leverage->value() < $maxLeverage) {
@@ -45,7 +46,7 @@ class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependent
     }
 
     public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly ByBitLinearMarketService $marketService,
         private readonly ByBitLinearPositionService $positionService,
         ?string $name = null,
     ) {

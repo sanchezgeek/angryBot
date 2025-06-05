@@ -9,6 +9,8 @@ use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Tests\Assertion\CustomAssertions;
+use App\Tests\Assertions\PositionAssertions;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -38,7 +40,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $position = $this->service->getPosition($symbol, $positionSide);
 
         // Assert
-        self::assertEquals($expectedPosition, $position);
+        PositionAssertions::assertPositionsEquals([$expectedPosition], [$position]);
     }
 
     private function getPositionTestCases(): iterable

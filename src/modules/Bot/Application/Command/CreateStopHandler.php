@@ -6,7 +6,9 @@ namespace App\Bot\Application\Command;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -18,6 +20,10 @@ final readonly class CreateStopHandler
     ) {
     }
 
+    /**
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
+     */
     public function __invoke(CreateStop $command): void
     {
         $stop = new Stop(
@@ -25,7 +31,7 @@ final readonly class CreateStopHandler
             $command->price,
             $command->volume,
             $command->triggerDelta,
-            $this->symbolProvider->replaceEnumWithEntity($command->symbol),
+            $this->symbolProvider->replaceWithActualEntity($command->symbol),
             $command->positionSide,
             $command->context
         );

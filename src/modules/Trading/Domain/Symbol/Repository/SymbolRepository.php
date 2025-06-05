@@ -4,6 +4,7 @@ namespace App\Trading\Domain\Symbol\Repository;
 
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -16,6 +17,9 @@ class SymbolRepository extends ServiceEntityRepository
         parent::__construct($registry, Symbol::class);
     }
 
+    /**
+     * @throws UniqueConstraintViolationException
+     */
     public function save(Symbol $symbol): void
     {
         $save = function () use ($symbol) {

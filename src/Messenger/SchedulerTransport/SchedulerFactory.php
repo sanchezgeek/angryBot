@@ -89,13 +89,19 @@ final class SchedulerFactory
     private function mainStops(): array
     {
         OutputHelper::print('main positions stops worker started');
-        return [PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_MAIN_POSITIONS_SL_SPEED), new PushAllMainPositionsStops())];
+
+        return [
+            PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_MAIN_POSITIONS_SL_SPEED), new PushAllMainPositionsStops())
+        ];
     }
 
     private function restStops(): array
     {
         OutputHelper::print('rest positions stops worker started');
-        return [PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_REST_POSITIONS_SL_SPEED), new PushAllRestPositionsStops())];
+
+        return [
+            PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_REST_POSITIONS_SL_SPEED), new PushAllRestPositionsStops())
+        ];
     }
 
     private function buyOrders(): array

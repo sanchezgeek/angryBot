@@ -19,7 +19,7 @@ use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
-use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -104,7 +104,7 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
 //    }
 
     /**
-     * @throws SymbolNotFoundException
+     * @throws SymbolEntityNotFoundException
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

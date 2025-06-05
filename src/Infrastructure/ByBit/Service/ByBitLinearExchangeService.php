@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service;
 
-use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
@@ -20,15 +19,15 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Request\Kline\GetKlinesRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Market\GetInstrumentInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-use App\Trading\Application\Symbol\Exception\SymbolNotFoundException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -62,7 +61,8 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
-     * @throws SymbolNotFoundException
+     * @throws SymbolEntityNotFoundException
+     * @throws InitializeSymbolException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
@@ -79,7 +79,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         foreach ($list as $item) {
             if ($item['symbol'] === $symbol->name()) {
                 $ticker = new Ticker(
-                    $this->symbolProvider->replaceEnumWithEntity($symbol),
+                    $this->symbolProvider->getOrInitialize($symbol->name()),
                     (float)$item['markPrice'],
                     (float)$item['indexPrice'],
                     (float)$item['lastPrice'],
@@ -100,7 +100,8 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
      *
-     * @throws SymbolNotFoundException
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
@@ -123,7 +124,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             if ($symbol && $symbol->name() !== $item['symbol']) {
                 continue;
             }
-            $itemSymbol = $this->symbolProvider->getOneByName($item['symbol']);
+            $itemSymbol = $this->symbolProvider->getOrInitialize($item['symbol']);
 
             // Only orders created by bot
             if (
@@ -172,23 +173,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         }
     }
 
-    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
-    {
-        $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
-        $data = $this->sendRequest($request)->data();
-
-        return new InstrumentInfoDto(
-            (float)$data['list'][0]['lotSizeFilter']['minOrderQty'],
-            (float)$data['list'][0]['lotSizeFilter']['minNotionalValue'],
-            (float)$data['list'][0]['leverageFilter']['minLeverage'],
-            (float)$data['list'][0]['leverageFilter']['maxLeverage'],
-            (float)$data['list'][0]['priceFilter']['tickSize'],
-            (int)$data['list'][0]['priceScale'],
-            $data['list'][0]['quoteCoin'],
-            $data['list'][0]['contractType'],
-        );
-    }
-
     /**
      * @return string[]
      *
@@ -217,7 +201,8 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      *
-     * @throws SymbolNotFoundException
+     * @throws InitializeSymbolException
+     * @throws SymbolEntityNotFoundException
      */
     public function getAllTickers(Coin $settleCoin): array
     {
@@ -231,7 +216,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         $result = [];
         foreach ($list as $item) {
             $result[] = new Ticker(
-                $this->symbolProvider->getOneByName($item['symbol']),
+                $this->symbolProvider->getOrInitialize($item['symbol']),
                 (float)$item['markPrice'],
                 (float)$item['indexPrice'],
                 (float)$item['lastPrice'],
