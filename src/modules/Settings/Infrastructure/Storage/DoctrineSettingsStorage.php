@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Settings\Infrastructure\Storage;
 
-use App\Domain\Shared\Helper\StringHelper;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsCache;
@@ -16,7 +15,8 @@ use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use InvalidArgumentException;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
@@ -61,10 +61,10 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     }
 
     /**
-     * @throws SymbolEntityNotFoundException
-     * @throws InitializeSymbolException
-     * @todo | settings | tests
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      *
+     * @todo | settings | tests
      */
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue
     {

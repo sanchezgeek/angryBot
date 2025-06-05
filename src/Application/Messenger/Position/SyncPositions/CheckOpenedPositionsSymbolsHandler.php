@@ -7,15 +7,16 @@ namespace App\Application\Messenger\Position\SyncPositions;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final readonly class CheckOpenedPositionsSymbolsHandler
 {
     /**
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     public function __invoke(CheckOpenedPositionsSymbolsMessage $message): void
     {

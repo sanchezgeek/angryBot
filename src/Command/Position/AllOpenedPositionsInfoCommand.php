@@ -41,7 +41,8 @@ use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -641,8 +642,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     /**
      * @return SymbolInterface[]
      *
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     private function rawSymbolsToValueObjects(string ...$symbolsRaw): array
     {

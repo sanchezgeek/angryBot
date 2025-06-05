@@ -31,7 +31,8 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderT
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use InvalidArgumentException;
@@ -306,8 +307,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
     /**
      * @throws SizeCannotBeLessOrEqualsZeroException
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     private function parsePositionFromData(array $apiData): Position
     {

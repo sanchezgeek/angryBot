@@ -8,7 +8,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Domain\Position\ValueObject\Side;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 
 final readonly class StopRestoreFactory
 {
@@ -18,8 +19,8 @@ final readonly class StopRestoreFactory
     }
 
     /**
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     public function restore(array $data): Stop
     {

@@ -88,4 +88,9 @@ final class AppContext
     {
         return (bool)($_ENV['EXTERNAL_TICKERS_CACHE_ENABLED'] ?? null) === true;
     }
+
+    public static function isProfilingEnabled(): bool
+    {
+        return (bool)($_ENV['PROFILING_ENABLED'] ?? null) === true;
+    }
 }

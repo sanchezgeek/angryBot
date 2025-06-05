@@ -4,7 +4,8 @@ namespace App\Command\Mixin;
 
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
@@ -33,8 +34,8 @@ trait SymbolAwareCommand
     }
 
     /**
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     protected function getSymbol(): SymbolInterface
     {
@@ -72,8 +73,8 @@ trait SymbolAwareCommand
     /**
      * @return SymbolInterface[]
      *
-     * @throws InitializeSymbolException
-     * @throws SymbolEntityNotFoundException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     protected function parseProvidedSymbols(string $providedStringArray): array
     {

@@ -20,6 +20,8 @@ use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -104,7 +106,8 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
 //    }
 
     /**
-     * @throws SymbolEntityNotFoundException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

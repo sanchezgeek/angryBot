@@ -8,7 +8,8 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 
 final readonly class CreateBuyOrderHandler
 {
@@ -19,8 +20,8 @@ final readonly class CreateBuyOrderHandler
     }
 
     /**
-     * @throws SymbolEntityNotFoundException
-     * @throws InitializeSymbolException
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     public function handle(CreateBuyOrderEntryDto $dto): CreateBuyOrderResultDto
     {
