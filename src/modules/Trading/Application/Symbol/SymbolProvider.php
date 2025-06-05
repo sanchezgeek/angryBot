@@ -14,12 +14,14 @@ use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SymbolProvider
 {
     public function __construct(
         private SymbolRepository $symbolRepository,
         private InitializeSymbolsHandler $initializeSymbolsHandler, /** @todo | symbol | messageBus */
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -64,6 +66,10 @@ final readonly class SymbolProvider
      */
     public function replaceWithActualEntity(SymbolInterface $symbol): SymbolInterface
     {
-        return $symbol instanceof Symbol ? $symbol : $this->getOrInitialize($symbol->name());
+        return
+            !$symbol instanceof Symbol || !$this->entityManager->getUnitOfWork()->isInIdentityMap($symbol)
+                ? $this->getOrInitialize($symbol->name())
+                : $symbol
+            ;
     }
 }
