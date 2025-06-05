@@ -18,6 +18,7 @@ use Stringable;
  * @todo | symbol | probably it must been also exchange name (so in mapped type you can select symbols based on this value)
  */
 #[ORM\Entity(repositoryClass: SymbolRepository::class)]
+#[ORM\Cache(region: 'append_only')]
 class Symbol implements SymbolInterface, Stringable
 {
     #[ORM\Id]

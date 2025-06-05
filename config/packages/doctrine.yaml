@@ -26,7 +26,11 @@ doctrine:
                 prefix: 'App\Bot\Domain\Entity'
         controller_resolver:
             auto_mapping: false
-
+        second_level_cache:
+            enabled: true
+            regions:
+                append_only:
+                    lifetime: 86400
 when@test:
     doctrine:
         dbal:

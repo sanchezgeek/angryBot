@@ -11,22 +11,15 @@ use App\Trading\Application\UseCase\Symbol\InitializeSymbols\InitializeSymbolsHa
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use App\Trading\Infrastructure\Cache\SymbolsCache;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
-final class SymbolProvider
+final readonly class SymbolProvider
 {
-    private const int CACHE_TTL = 86400;
-
-    private array $hotCache = [];
-
     public function __construct(
-        private readonly SymbolRepository $symbolRepository,
-        /** @todo messageBus */
-        private readonly InitializeSymbolsHandler $initializeSymbolsHandler,
-        private readonly EntityManagerInterface $entityManager,
-        private readonly SymbolsCache $cache
+        private SymbolRepository $symbolRepository,
+        private InitializeSymbolsHandler $initializeSymbolsHandler, /** @todo | symbol | messageBus */
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -35,14 +28,11 @@ final class SymbolProvider
      */
     public function getOneByName(string $name): Symbol
     {
-        if (isset($this->hotCache[$name])) {
-            return $this->hotCache[$name];
+        if ($symbol = $this->symbolRepository->findOneByName($name)) {
+            return $symbol;
         }
 
-        return $this->hotCache[$name] = $this->cache->get(sprintf('symbols_%s', $name), function () use ($name) {
-            if ($symbol = $this->symbolRepository->findOneByName($name)) return $symbol;
-            throw new SymbolEntityNotFoundException(sprintf('Cannot find symbol by "%s" name', $name));
-        }, self::CACHE_TTL);
+        throw new SymbolEntityNotFoundException(sprintf('Cannot find symbol by "%s" name', $name));
     }
 
     /**
