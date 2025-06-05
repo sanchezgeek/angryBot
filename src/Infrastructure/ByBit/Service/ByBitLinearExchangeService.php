@@ -62,8 +62,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
@@ -100,9 +98,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
-     *
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
@@ -214,8 +209,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         $result = [];
         foreach ($list as $item) {
             try {
-                $symbol = $this->symbolProvider->getOrInitialize($item['symbol'], $settleCoin);
-            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($item['symbol'], $settleCoin);
+            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
+                // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
                 continue;
             }
 

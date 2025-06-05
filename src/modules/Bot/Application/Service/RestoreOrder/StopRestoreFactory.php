@@ -18,10 +18,6 @@ final readonly class StopRestoreFactory
     ) {
     }
 
-    /**
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     */
     public function restore(array $data): Stop
     {
         return new Stop(

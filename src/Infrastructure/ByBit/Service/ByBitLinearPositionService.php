@@ -92,9 +92,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
-     *
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     * @throws UnsupportedAssetCategoryException
     */
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
@@ -119,9 +116,17 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             $items[$symbolRaw/*unique*/] = $symbolRaw;
         }
 
-        return array_values(
-            array_map(fn($rawSymbol) => $this->symbolProvider->getOrInitialize($rawSymbol), $items)
-        );
+        $result = [];
+        foreach ($items as $symbolRaw) {
+            try {
+                $result[] = $this->symbolProvider->getOrInitialize($symbolRaw);
+            } catch (UnsupportedAssetCategoryException) {
+                // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
+                continue;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -133,9 +138,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws PermissionDeniedException
      *
      * @throws SizeCannotBeLessOrEqualsZeroException
-     *
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     * @throws UnsupportedAssetCategoryException
      */
     public function getPositionsWithLiquidation(): array
     {
@@ -162,9 +164,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws PermissionDeniedException
      *
      * @throws SizeCannotBeLessOrEqualsZeroException
-     *
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     * @throws UnsupportedAssetCategoryException
      */
     public function getPositionsWithoutLiquidation(): array
     {
@@ -192,9 +191,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @throws SizeCannotBeLessOrEqualsZeroException
      *
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     * @throws UnsupportedAssetCategoryException
-     *
      * @todo some collection
      */
     public function getAllPositions(): array
@@ -210,7 +206,13 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         $positions = [];
         foreach ($list as $item) {
             if ((float)$item['avgPrice'] !== 0.0) {
-                $position = $this->parsePositionFromData($item);
+                try {
+                    $position = $this->parsePositionFromData($item);
+                } catch (UnsupportedAssetCategoryException) {
+                    // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
+                    continue;
+                }
+
                 $symbol = $position->symbol;
                 $side = $position->side;
 
@@ -220,15 +222,17 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                     $opposite->setOppositePosition($position);
                 }
                 $positions[$symbol->name()][$side->value] = $position;
-            }
 
-            $this->lastMarkPrices[$symbol->name()] = $symbol->makePrice((float)$item['markPrice']);
+                $this->lastMarkPrices[$symbol->name()] = $symbol->makePrice((float)$item['markPrice']);
+            }
         }
 
         foreach ($positions as $symbolPositions) {
             $symbol = reset($symbolPositions)->symbol;
             $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
-            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
+            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(
+                DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL)
+            );
             $this->cache->save($item);
         }
 
@@ -271,9 +275,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @throws UnknownByBitApiErrorException
      *
      * @throws SizeCannotBeLessOrEqualsZeroException
-     *
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     * @throws UnsupportedAssetCategoryException
      */
     public function getPositions(SymbolInterface $symbol): array
     {
@@ -321,7 +322,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     /**
      * @throws SizeCannotBeLessOrEqualsZeroException
      * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     private function parsePositionFromData(array $apiData): Position
     {

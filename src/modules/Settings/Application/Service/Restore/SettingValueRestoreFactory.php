@@ -6,10 +6,7 @@ namespace App\Settings\Application\Service\Restore;
 
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Domain\Entity\SettingValue;
-use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 
 final readonly class SettingValueRestoreFactory
 {
@@ -18,10 +15,6 @@ final readonly class SettingValueRestoreFactory
     ) {
     }
 
-    /**
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     */
     public function restore(array $data): SettingValue
     {
         return SettingValue::withValue(

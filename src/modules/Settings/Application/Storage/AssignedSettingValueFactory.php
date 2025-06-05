@@ -37,13 +37,6 @@ final class AssignedSettingValueFactory
         return [$symbol, $side];
     }
 
-    public static function byFullKeyAndValue(AppSettingInterface $setting, string $fullKey, mixed $value, ?string $info = null): AssignedSettingValue
-    {
-        [$symbol, $side] = self::parseSymbolAndSide($fullKey);
-
-        return new AssignedSettingValue($setting, $symbol ? SymbolEnum::tryFrom($symbol) : null, $side, $fullKey, self::castStoredValue($setting, $value), $info);
-    }
-
     public static function fromEntity(AppSettingInterface $setting, SettingValue $settingValue, ?string $info = null): AssignedSettingValue
     {
         $fullKey = self::buildFullKey($setting, $settingValue->symbol, $settingValue->positionSide);
@@ -59,7 +52,7 @@ final class AssignedSettingValueFactory
         return new AssignedSettingValue($setting, $settingAccessor->symbol, $settingAccessor->side, $fullKey, self::castStoredValue($setting, $value), $info);
     }
 
-    private static function castStoredValue(AppSettingInterface $setting, mixed $storedValue): mixed
+    public static function castStoredValue(AppSettingInterface $setting, mixed $storedValue): mixed
     {
         return $storedValue === null ? null : SettingValueCaster::castToDeclaredType($setting, $storedValue);
     }

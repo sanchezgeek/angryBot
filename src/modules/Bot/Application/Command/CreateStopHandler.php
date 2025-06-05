@@ -21,10 +21,6 @@ final readonly class CreateStopHandler
     ) {
     }
 
-    /**
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     */
     public function __invoke(CreateStop $command): void
     {
         $stop = new Stop(

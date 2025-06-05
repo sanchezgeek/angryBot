@@ -99,7 +99,7 @@ trait SettingsAwareTest
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;
                 [$symbol, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
-                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol ? SymbolEnum::tryFrom($symbol) : null, $side, $key, $value);
+                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol ? SymbolEnum::from($symbol) : null, $side, $key, $value);
             }
 
             return $storedValues;

@@ -642,9 +642,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     /**
      * @return SymbolInterface[]
-     *
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     private function rawSymbolsToValueObjects(string ...$symbolsRaw): array
     {

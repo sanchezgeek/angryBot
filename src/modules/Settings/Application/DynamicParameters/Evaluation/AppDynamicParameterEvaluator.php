@@ -15,7 +15,6 @@ use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCur
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler\DefaultLiquidationHandlerHandledMessageProvider;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use InvalidArgumentException;

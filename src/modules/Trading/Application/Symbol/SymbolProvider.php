@@ -41,9 +41,30 @@ final readonly class SymbolProvider
      * Can be safely used when there is no stored entity yet
      *
      * @throws UnsupportedAssetCategoryException
+     *
+     * @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
+     */
+    public function getOrInitialize(string $name): Symbol
+    {
+        return $this->doGetOrInitialize($name);
+    }
+
+    /**
+     * Can be safely used when there is no stored entity yet
+     *
+     * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
-    public function getOrInitialize(string $name, ?Coin $coin = null): Symbol
+    public function getOrInitializeWithCoinSpecified(string $name, ?Coin $coin = null): Symbol
+    {
+        return $this->doGetOrInitialize($name, $coin);
+    }
+
+    /**
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     */
+    public function doGetOrInitialize(string $name, ?Coin $coin = null): Symbol
     {
         try {
             return $this->getOneByName($name);
@@ -60,9 +81,6 @@ final readonly class SymbolProvider
 
     /**
      * Use when need populate entities associations with Symbol
-     *
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
     public function replaceWithActualEntity(SymbolInterface $symbol): SymbolInterface
     {

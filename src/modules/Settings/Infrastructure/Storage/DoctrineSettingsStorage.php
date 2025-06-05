@@ -61,9 +61,6 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     }
 
     /**
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     *
      * @todo | settings | tests
      */
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue

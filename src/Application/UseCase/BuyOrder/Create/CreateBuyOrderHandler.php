@@ -19,10 +19,6 @@ final readonly class CreateBuyOrderHandler
     ) {
     }
 
-    /**
-     * @throws UnsupportedAssetCategoryException
-     * @throws QuoteCoinNotEqualsSpecifiedOneException
-     */
     public function handle(CreateBuyOrderEntryDto $dto): CreateBuyOrderResultDto
     {
         // @todo | buy | round here?

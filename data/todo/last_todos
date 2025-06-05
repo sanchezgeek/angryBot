@@ -191,7 +191,6 @@ analise average price change through some period
 
 
 ### Symbol###
-    maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler
     SymbolEnum - only in tests?? (search in src and replace with entity)
 
     @todo | symbols | profiling
@@ -203,7 +202,6 @@ analise average price change through some period
     !!! надо будет вручную просмотреть всё изменённые файлы (а точнее все файлы, где используется SymbolInterface) на предмет работы с инстансами !!!
 
     ctrl-f:
-        SymbolEnum::tryFrom
         SymbolEnum::try
         SymbolEnum::fromShortName
             replace with full name
@@ -215,3 +213,9 @@ analise average price change through some period
 
     adapt \App\Tests\Assertion\CustomAssertions::assertEqualsWithInnerSymbols for \App\Tests\Assertions\PositionAssertions::assertPositionsEquals (recursion level)
         check //        var_dump($sort);
+
+### !!! MAIN !!! ###
+    [symbol] @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
+            (maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler)
+
+    @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
