@@ -15,6 +15,7 @@ use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
@@ -55,7 +56,7 @@ final class GetActiveConditionalOrdersTest extends ByBitLinearExchangeServiceTes
         $activeConditionalOrders = $this->service->activeConditionalOrders($symbol, $priceRange);
 
         // Assert
-        self::assertOrdersEqual($expectedActiveStopOrders, $activeConditionalOrders);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedActiveStopOrders, $activeConditionalOrders);
     }
 
     private function getActiveConditionalOrdersTestSuccessCases(): iterable

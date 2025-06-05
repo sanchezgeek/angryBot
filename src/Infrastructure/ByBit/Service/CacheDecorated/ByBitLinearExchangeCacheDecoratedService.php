@@ -64,10 +64,9 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
                 && ($cachedTickerDto = $itemFromExternal->get())
                 && $cachedTickerDto->updatedByAccName !== self::thisAccName()
             ) {
-                if ($symbol !== SymbolEnum::BTCUSDT) {
-                    /** @var CachedTickerDto $cachedTickerDto */
-                    $this->events->dispatch(new TickerUpdateSkipped($cachedTickerDto));
-                }
+                /** @var CachedTickerDto $cachedTickerDto */
+                $this->events->dispatch(new TickerUpdateSkipped($cachedTickerDto));
+
                 return $cachedTickerDto->ticker;
             }
         }

@@ -63,9 +63,9 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      * @todo | DRY
      * @see CreateOppositeBuyOrdersListener::MAIN_SYMBOLS
      */
-    private const MAIN_SYMBOLS = [
-        SymbolEnum::BTCUSDT,
-        SymbolEnum::ETHUSDT,
+    private const array MAIN_SYMBOLS = [
+        SymbolEnum::BTCUSDT->value,
+        SymbolEnum::ETHUSDT->value,
     ];
 
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
@@ -636,7 +636,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             ];
         }
 
-        if (!in_array($stop->getSymbol(), self::MAIN_SYMBOLS, true)) {
+        if (!in_array($stop->getSymbol()->name(), self::MAIN_SYMBOLS, true)) {
             return self::$oppositeBuyOrderPnlDistancesForAltCoins[$stop->getPositionSide()->value];
         }
 

@@ -34,22 +34,6 @@ trait SymbolsDependentTester
     static bool $symbolsInitialized = false;
     private static array $symbolsCache = [];
 
-    private static function makeSymbolEntityFromKnownEnumByName(string $symbolName): Symbol
-    {
-        if (!$symbolEnum = SymbolEnum::from($symbolName)) {
-            throw new RuntimeException(sprintf('Cannot find SymbolEnum by "%s" when to try create symbol entity', $symbolName));
-        }
-
-        return new Symbol(
-            $symbolName,
-            $symbolEnum->associatedCoin(),
-            $symbolEnum->associatedCategory(),
-            $symbolEnum->minOrderQty(),
-            $symbolEnum->minNotionalOrderValue(),
-            $symbolEnum->pricePrecision(),
-        );
-    }
-
     /**
      * @before
      */
@@ -67,6 +51,22 @@ trait SymbolsDependentTester
 
             self::$symbolsInitialized = true;
         }
+    }
+
+    private static function makeSymbolEntityFromKnownEnumByName(string $symbolName): Symbol
+    {
+        if (!$symbolEnum = SymbolEnum::from($symbolName)) {
+            throw new RuntimeException(sprintf('Cannot find SymbolEnum by "%s" when to try create symbol entity', $symbolName));
+        }
+
+        return new Symbol(
+            $symbolName,
+            $symbolEnum->associatedCoin(),
+            $symbolEnum->associatedCategory(),
+            $symbolEnum->minOrderQty(),
+            $symbolEnum->minNotionalOrderValue(),
+            $symbolEnum->pricePrecision(),
+        );
     }
 
     private static function getSymbolEntity(string $name): ?Symbol
@@ -87,14 +87,5 @@ trait SymbolsDependentTester
     private static function replaceEnumSymbol(SymbolContainerInterface $order): void
     {
         $order->replaceSymbolEntity(self::getSymbolEntity($order->getSymbol()->name()));
-    }
-
-    public static function assertOrdersEqual(array $expected, array $actual): void
-    {
-        foreach ($expected as $order) {
-            self::replaceEnumSymbol($order);
-        }
-
-        self::assertEquals($expected, $actual);
     }
 }

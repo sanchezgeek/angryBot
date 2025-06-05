@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Infrastructure\Repository;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -84,19 +85,19 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             new BuyOrderFixture((new BuyOrder(4, 3050, 323, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))),
         );
 
-        self::assertOrdersEqual([
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new BuyOrder(4, 3050, 323, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
         ], self::getBuyOrderRepository()->findActive(SymbolEnum::TONUSDT, $side));
 
-        self::assertOrdersEqual([
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new BuyOrder(3, 2050, 223.1, SymbolEnum::SOLUSDT, $side),
         ], self::getBuyOrderRepository()->findActive(SymbolEnum::SOLUSDT, $side));
 
-        self::assertOrdersEqual([
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new BuyOrder(2, 1050, 123.123, SymbolEnum::ADAUSDT, $side),
         ], self::getBuyOrderRepository()->findActive(SymbolEnum::ADAUSDT, $side));
 
-        self::assertOrdersEqual([
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
         ], self::getBuyOrderRepository()->findActive(SymbolEnum::ETHUSDT, $side));
     }
 
@@ -112,7 +113,7 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             new BuyOrderFixture((new BuyOrder(2000, 1999, 323.1, SymbolEnum::ADAUSDT, $side))->setIdle()),
         );
 
-        self::assertOrdersEqual(
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
             [(new BuyOrder(1000, 1999, 323, SymbolEnum::ADAUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]))->setActive()],
             self::getBuyOrderRepository()->findActiveForPush(SymbolEnum::ADAUSDT, $side, 2000)
         );
@@ -131,7 +132,7 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             new BuyOrderFixture((new BuyOrder(2000, 1999, 323.1, SymbolEnum::ADAUSDT, $side))->setActive()),
         );
 
-        self::assertOrdersEqual(
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
             [(new BuyOrder(102, 2050, 223.1, SymbolEnum::ADAUSDT, $side))->setActive()],
             self::getBuyOrderRepository()->findActiveForPush(SymbolEnum::ADAUSDT, $side, 2049)
         );
@@ -150,7 +151,7 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             new BuyOrderFixture(new BuyOrder(1000, 3050, 323, SymbolEnum::ETHUSDT, $side)),
         );
 
-        self::assertOrdersEqual(
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
             [(new BuyOrder(100, 2050, 223.1, SymbolEnum::XRPUSDT, $side))->setOnlyAfterExchangeOrderExecutedContext($exchangeOrderId)],
             self::getBuyOrderRepository()->findOppositeToStopByExchangeOrderId($side, $exchangeOrderId)
         );

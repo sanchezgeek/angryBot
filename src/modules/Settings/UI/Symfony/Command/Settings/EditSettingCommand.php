@@ -81,13 +81,7 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         }
 
         if (!$reset) {
-            if (!$this->symbolIsSpecified()) {
-                // @todo | symbol | provider / factory ...
-                $symbolAnswer = $io->ask("Symbol (default = `null`):");
-                $symbol = $this->parseProvidedSymbolAsk($symbolAnswer);
-            } else {
-                $symbol = $this->getSymbol();
-            }
+            $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : $this->parseProvidedSymbolAsk($io->ask("Symbol (default = `null`):"));
             $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {
             $symbol = null;
@@ -96,7 +90,6 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
 
         if ($reset) {
             $this->settingsService->resetSetting($selectedSetting);
-
             return Command::SUCCESS;
         }
 

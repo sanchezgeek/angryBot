@@ -66,7 +66,6 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
         $exact = $settingAccessor->exact;
 
         $callback = $exact
-            // @todo | symbol | use ->eq()
             ? static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol->eq($settingAccessor->symbol)) && (!$settingAccessor->side || $value->side === $settingAccessor->side)
             : static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol->eq($settingAccessor->symbol)) && (!$settingAccessor->side || $value->side === $settingAccessor->side) || $value->isFallbackValue();
 

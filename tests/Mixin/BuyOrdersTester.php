@@ -6,6 +6,7 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
 use function usort;
@@ -39,11 +40,7 @@ trait BuyOrdersTester
         usort($expectedBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
         usort($actualBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
 
-        foreach ($expectedBuyOrders as $buyOrder) {
-            self::replaceEnumSymbol($buyOrder);
-        }
-
-        self::assertEquals($expectedBuyOrders, $actualBuyOrders);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedBuyOrders, $actualBuyOrders);
     }
 
     protected static function getBuyOrderRepository(): BuyOrderRepository

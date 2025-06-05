@@ -8,6 +8,7 @@ use App\Bot\Application\Service\RestoreOrder\StopRestoreFactory;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\StopsTester;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -48,7 +49,7 @@ final class StopRestoreFactoryTest extends KernelTestCase
             ]
         ];
 
-        self::assertOrdersEqual(
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
             [new Stop($id, $price, $volume, $triggerDelta, SymbolEnum::BTCUSDT, $positionSide, $context)],
             [$this->stopRestoreFactory->restore($data)]
         );

@@ -606,6 +606,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $this->currentSortSaved = true;
         }
 
+        // @todo | symbol | performance
         if (!$this->currentStateGonnaBeSaved) {
             if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
                 $providedItems = $this->parseProvidedSymbols($showSymbols);

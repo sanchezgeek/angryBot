@@ -48,7 +48,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         $ticker = $this->service->ticker($symbol);
 
         // Assert
-        CustomAssertions::assertEqualsWithInnerSymbols($expectedTicker, $ticker);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedTicker, $ticker);
     }
 
     private function getTickerTestSuccessCases(): iterable
