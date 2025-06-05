@@ -30,9 +30,4 @@ interface PositionServiceInterface
      * @return SymbolInterface[]
      */
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array;
-
-    /**
-     * @return string[]
-     */
-    public function getOpenedPositionsRawSymbols(): array;
 }

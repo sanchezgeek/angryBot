@@ -86,63 +86,61 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         $this->sendRequest($request);
     }
 
+
     /**
-     * @return SymbolInterface[]
-     */
+     * @throws PermissionDeniedException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+     *
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
+    */
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
-        $symbols = [];
-        foreach ($this->getOpenedPositionsRawSymbols() as $rawItem) {
-            if ($symbol = SymbolEnum::tryFrom($rawItem)) {
-                $symbols[] = $symbol;
-            }
-        }
-
-        $except = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $except);
-
-        return array_values(
-            array_filter($symbols, static fn(SymbolInterface $symbol): bool => !in_array($symbol->name(), $except, true))
-        );
-    }
-
-    /**
-     * @return string[]
-     */
-    public function getOpenedPositionsRawSymbols(): array
-    {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
-
         $data = $this->sendRequest($request)->data();
 
         if (!is_array($list = $data['list'] ?? null)) {
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
+        $except = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $except);
 
         $items = [];
         foreach ($list as $item) {
-            if ((float)$item['avgPrice'] === 0.0) {
+            $symbolRaw = $item['symbol'];
+            if (
+                (float)$item['avgPrice'] === 0.0
+                || in_array($symbolRaw, $except, true)
+            ) {
                 continue;
             }
-            $items[] = $item['symbol'];
+
+            $items[$symbolRaw/*unique*/] = $symbolRaw;
         }
 
-        return array_unique($items);
+        return array_values(
+            array_map(fn($rawSymbol) => $this->symbolProvider->getOrInitialize($rawSymbol), $items)
+        );
     }
 
     /**
      * @return Position[]
      *
      * @throws ApiRateLimitReached
-     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     *
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
      */
     public function getPositionsWithLiquidation(): array
     {
-        $allPositions = $this->getAllPositions();
-
         $result = [];
-        foreach ($allPositions as $symbolPositions) {
+        foreach ($this->getAllPositions() as $symbolPositions) {
             foreach ($symbolPositions as $position) {
 //                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
                 // @todo | liquidation | null
@@ -159,16 +157,19 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @return Position[]
      *
      * @throws ApiRateLimitReached
-     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     *
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
      */
     public function getPositionsWithoutLiquidation(): array
     {
-        $allPositions = $this->getAllPositions();
-
         $result = [];
-        foreach ($allPositions as $symbolPositions) {
+        foreach ($this->getAllPositions() as $symbolPositions) {
             foreach ($symbolPositions as $position) {
 //                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
                 // @todo | liquidation | null
@@ -184,10 +185,15 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     /**
      * @return array<Position[]>
      *
-     * @throws UnknownByBitApiErrorException
-     * @throws UnexpectedApiErrorException
      * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     *
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
      *
      * @todo some collection
      */
@@ -258,9 +264,16 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
+     * @return Position[]
+     *
      * @throws ApiRateLimitReached
-     * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     *
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws UnsupportedAssetCategoryException
      */
     public function getPositions(SymbolInterface $symbol): array
     {

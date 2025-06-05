@@ -46,6 +46,10 @@ class CustomAssertions extends Assert
 
     private static function prepareObjectWithInnerSymbol(object $object): object
     {
+        if ($object instanceof SymbolInterface) {
+            return SymbolEnum::from($object->name());
+        }
+
         $ref = new ReflectionClass($object);
 
         $new = $ref->newInstanceWithoutConstructor();

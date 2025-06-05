@@ -45,11 +45,6 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
         return $this->positionService->getOpenedPositionsSymbols(...$except);
     }
 
-    public function getOpenedPositionsRawSymbols(): array
-    {
-        return $this->positionService->getOpenedPositionsRawSymbols();
-    }
-
     /**
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService\GetPositionTest
      */

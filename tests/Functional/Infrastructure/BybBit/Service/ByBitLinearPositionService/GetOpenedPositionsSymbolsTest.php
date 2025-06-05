@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPosition
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -25,7 +26,7 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
     ): void {
         $this->matchGet(new GetPositionsRequest(AssetCategory::linear, null), $apiResponse);
         $symbols = $this->service->getOpenedPositionsSymbols();
-        self::assertEquals($expectedSymbols, $symbols);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedSymbols, $symbols);
     }
 
     private function getOpenedPositionsSymbolsTestCases(): iterable
@@ -60,7 +61,7 @@ final class GetOpenedPositionsSymbolsTest extends ByBitLinearPositionServiceTest
         $this->matchGet(new GetPositionsRequest(AssetCategory::linear, null), $apiResponse);
         $symbols = $this->service->getOpenedPositionsSymbols(...$except);
 
-        self::assertEquals($expectedSymbols, $symbols);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedSymbols, $symbols);
     }
 
     private function getOpenedPositionsSymbolsWithExceptTestCases(): iterable

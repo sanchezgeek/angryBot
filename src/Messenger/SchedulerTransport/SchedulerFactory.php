@@ -11,7 +11,6 @@ use App\Application\Messenger\Market\TransferFundingFees;
 use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Application\Messenger\Position\SyncPositions\CheckOpenedPositionsSymbolsMessage;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
@@ -108,7 +107,7 @@ final class SchedulerFactory
     {
         $items = [];
 
-        foreach ($this->getOpenedPositionsSymbols() as $symbol) {
+        foreach ($this->positionService->getOpenedPositionsSymbols() as $symbol) {
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Sell));
             $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Buy));
         }
@@ -145,9 +144,6 @@ final class SchedulerFactory
 
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckConnection())),
-
-            # symbols
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckOpenedPositionsSymbolsMessage())),
 
             # !!! position !!!
             // --- stops
@@ -191,13 +187,5 @@ final class SchedulerFactory
     private static function interval(string $datetime): DateInterval
     {
         return DateInterval::createFromDateString($datetime);
-    }
-
-    /**
-     * @return SymbolInterface[]
-     */
-    private function getOpenedPositionsSymbols(): array
-    {
-        return $this->positionService->getOpenedPositionsSymbols();
     }
 }

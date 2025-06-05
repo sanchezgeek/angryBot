@@ -104,9 +104,4 @@ final class PositionServiceStub implements PositionServiceInterface
     {
         throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
     }
-
-    public function getOpenedPositionsRawSymbols(): array
-    {
-        throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
-    }
 }

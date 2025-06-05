@@ -170,29 +170,33 @@ imports
     @todo | priceChange | save prev percent and notify again if new percent >= prev
     @todo | priceChange | +/-
 
+### Trading ###
+    TradingSetupDto ...
+    decisions by market volume at candle?
+
+
 ### Symbol###
+    maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler
+    SymbolEnum - only in tests?? (search in src and replace with entity)
 
-    ->value
-    ->name -> ->value
-
+    @todo | symbols | profiling
+    @todo | symbol | performance
+        check queries (EAGER)
+        symbolProvider profiling
     @todo | symbol | some way to get values based on symbol -> move to settings?
-
-
-    @todo | symbol | provider / factory ...
-    @todo | symbol | use ->eq()
-        ctr-f:
-            $symbol !==
-            === $symbol
-            getSymbol() ===
-            === .*->getSymbol()
-
-            StopsCollection
-            getOpenedPositionsSymbols
-
-
-
+    @todo | symbol | some wrappers after ref and check run ability
+    !!! надо будет вручную просмотреть всё изменённые файлы (а точнее все файлы, где используется SymbolInterface) на предмет работы с инстансами !!!
 
     ctrl-f:
         SymbolEnum::tryFrom
         SymbolEnum::try
         SymbolEnum::fromShortName
+            replace with full name
+
+
+    finally: @todo | symbol
+
+    rid of $this->symbol instanceof SymbolInterface ? $this->symbol->name() : $this->symbol
+
+    adapt \App\Tests\Assertion\CustomAssertions::assertEqualsWithInnerSymbols for \App\Tests\Assertions\PositionAssertions::assertPositionsEquals (recursion level)
+        check //        var_dump($sort);
