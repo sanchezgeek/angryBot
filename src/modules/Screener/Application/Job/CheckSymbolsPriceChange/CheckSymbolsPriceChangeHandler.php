@@ -17,10 +17,13 @@ use DateInterval;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
+/**
+ * @todo some very short period handler
+ */
 #[AsMessageHandler]
 final class CheckSymbolsPriceChangeHandler
 {
-    private const ALERT_RETRY_COUNT = 1;
+    private const int ALERT_RETRY_COUNT = 1;
 
     public function __invoke(CheckSymbolsPriceChange $message): void
     {
@@ -54,21 +57,24 @@ final class CheckSymbolsPriceChangeHandler
                 }
 
                 for ($i = 0; $i < self::ALERT_RETRY_COUNT; $i++) {
-                    $changePercent = Percent::fromPart($delta / $prevPrice)->setOutputFloatPrecision(2);
-                    $significantPriceDeltaPercent = Percent::fromPart($significantPriceDelta / $prevPrice)->setOutputFloatPrecision(2);
+                    $changePercent = Percent::fromPart($delta / $prevPrice,false)->setOutputFloatPrecision(2);
+                    $significantPriceDeltaPercent = Percent::fromPart($significantPriceDelta / $prevPrice, false)->setOutputFloatPrecision(2);
+
+                    // @todo save prev percent and notify again if new percent >= prev
 
                     $this->notifications->notify(
                         sprintf(
-                            '%s [daysDelta=%.2f from %s].price=%s, curr.price = %s, Δ = %s (%s) (> %s [%s])',
+                            '%s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (! %s !) (> %s [%s]) %s',
                             $symbolRaw,
                             $partOfDayPassed,
-                            $date->format('m-d H:i:s'),
+                            $date->format('m-d'),
                             $prevPrice,
                             $currentPrice,
                             $delta,
                             $changePercent,
                             $significantPriceDelta,
-                            $significantPriceDeltaPercent
+                            $significantPriceDeltaPercent, // @todo +/-
+                            $symbolRaw,
                         )
                     );
                 }
