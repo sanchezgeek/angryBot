@@ -6,9 +6,6 @@ namespace App\Trading\Domain\Symbol\Helper;
 
 use App\Trading\Domain\Symbol\SymbolInterface;
 
-/**
- * @todo | symbol | some wrappers after ref and check run ability
- */
 final class SymbolHelper
 {
     /**

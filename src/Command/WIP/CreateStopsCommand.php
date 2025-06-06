@@ -22,9 +22,9 @@ class CreateStopsCommand extends AbstractCommand
     use PositionAwareCommand;
 
     // @todo | symbol
-    private const DEFAULT_INITIAL_VOLUME = 0.001;
-    private const DEFAULT_TRIGGER_DELTA = 1;
-    private const DEFAULT_STEP = 13;
+    private const float DEFAULT_INITIAL_VOLUME = 0.001;
+    private const int DEFAULT_TRIGGER_DELTA = 1;
+    private const int DEFAULT_STEP = 13;
 
     protected function configure(): void
     {

@@ -211,7 +211,6 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             try {
                 $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($item['symbol'], $settleCoin);
             } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
-                // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
                 continue;
             }
 

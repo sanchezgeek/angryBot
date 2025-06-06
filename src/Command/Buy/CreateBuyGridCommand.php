@@ -162,15 +162,16 @@ class CreateBuyGridCommand extends AbstractCommand implements PositionDependentC
                 $ticker = $this->exchangeService->ticker($symbol);
                 $indexPrice = $ticker->indexPrice;
 
+                $leverage = 100;
                 return new Position(
                     $this->getPositionSide(),
                     $symbol,
                     $indexPrice->value(),
-                    $size = 0.001, // @todo | symbol
-                    $size * $indexPrice->value(),
+                    $size = $symbol->minOrderQty(),
+                    ($value = $size * $indexPrice->value()),
                     0,
-                    10, // @todo | symbol
-                    100,
+                    $value / $leverage,
+                    $leverage,
                 );
             }
 

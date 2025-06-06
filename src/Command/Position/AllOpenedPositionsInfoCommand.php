@@ -139,6 +139,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         ;
     }
 
+    private array $showSymbolsRawValues = [];
+    private array $hideSymbolsRawValues = [];
+
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
         parent::initialize($input, $output);
@@ -162,6 +165,18 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             && ($providedItems = $this->parseProvidedSymbols($moveDownOption))
         ) {
             $this->rawSymbolsSetToMoveDown = SymbolHelper::symbolsToRawValues(...$providedItems);
+        }
+
+        if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
+            if ($providedItems = $this->parseProvidedSymbols($showSymbols)) {
+                $this->showSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
+            }
+        }
+
+        if ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
+            if ($providedItems = $this->parseProvidedSymbols($hideSymbols)) {
+                $this->hideSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
+            }
         }
     }
 
@@ -603,23 +618,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $this->currentSortSaved = true;
         }
 
-        // @todo | symbol | performance
         if (!$this->currentStateGonnaBeSaved) {
-            if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
-                $providedItems = $this->parseProvidedSymbols($showSymbols);
-                if ($providedItems) {
-                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
-                    $symbolsRaw = array_intersect($providedItems, $symbolsRaw);
-                }
-            } elseif ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
-                $providedItems = $this->parseProvidedSymbols($hideSymbols);
-                if ($providedItems) {
-                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
-                    $providedItems = array_intersect($providedItems, $symbolsRaw);
-                    if ($providedItems) {
-                        $symbolsRaw = array_diff($symbolsRaw, $providedItems);
-                    }
-                }
+            if ($this->showSymbolsRawValues) {
+                $symbolsRaw = array_intersect($this->showSymbolsRawValues, $symbolsRaw);
+            } elseif (
+                $this->hideSymbolsRawValues
+                && $hideSymbolsRawValues = array_intersect($this->hideSymbolsRawValues, $symbolsRaw)
+            ) {
+                $symbolsRaw = array_diff($symbolsRaw, $hideSymbolsRawValues);
             }
         }
 

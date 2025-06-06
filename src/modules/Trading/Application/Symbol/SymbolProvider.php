@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Symbol;
 
+use App\Application\Logger\AppErrorLoggerInterface;
 use App\Domain\Coin\Coin;
+use App\Helper\OutputHelper;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
@@ -15,6 +17,7 @@ use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 final readonly class SymbolProvider
 {
@@ -22,6 +25,8 @@ final readonly class SymbolProvider
         private SymbolRepository $symbolRepository,
         private InitializeSymbolsHandler $initializeSymbolsHandler, /** @todo | symbol | messageBus */
         private EntityManagerInterface $entityManager,
+        private AppErrorLoggerInterface $appErrorLogger,
+        private RateLimiterFactory $symbolInitializeExceptionThrottlingLimiter
     ) {
     }
 
@@ -46,7 +51,12 @@ final readonly class SymbolProvider
      */
     public function getOrInitialize(string $name): Symbol
     {
-        return $this->doGetOrInitialize($name);
+        try {
+            return $this->doGetOrInitialize($name);
+        } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+            $this->logInitializeSymbolException($e, $name);
+            throw $e;
+        }
     }
 
     /**
@@ -57,14 +67,19 @@ final readonly class SymbolProvider
      */
     public function getOrInitializeWithCoinSpecified(string $name, ?Coin $coin = null): Symbol
     {
-        return $this->doGetOrInitialize($name, $coin);
+        try {
+            return $this->doGetOrInitialize($name, $coin);
+        } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+            $this->logInitializeSymbolException($e, $name);
+            throw $e;
+        }
     }
 
     /**
      * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
-    public function doGetOrInitialize(string $name, ?Coin $coin = null): Symbol
+    private function doGetOrInitialize(string $name, ?Coin $coin = null): Symbol
     {
         try {
             return $this->getOneByName($name);
@@ -89,5 +104,17 @@ final readonly class SymbolProvider
                 ? $this->getOrInitialize($symbol->name())
                 : $symbol
             ;
+    }
+
+    private function logInitializeSymbolException(
+        QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $exception,
+        string $symbolName,
+    ): void {
+        if ($this->symbolInitializeExceptionThrottlingLimiter->create($symbolName)->consume()->isAccepted()) {
+            $this->appErrorLogger->exception(
+                $exception,
+                sprintf('[%s] Get error while try to process "%s"', OutputHelper::shortClassName(__CLASS__), $symbolName)
+            );
+        }
     }
 }

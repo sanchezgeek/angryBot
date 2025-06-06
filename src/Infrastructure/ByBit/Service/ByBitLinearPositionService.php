@@ -123,7 +123,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
             try {
                 $result[] = $this->symbolProvider->getOrInitialize($symbolRaw);
             } catch (UnsupportedAssetCategoryException) {
-                // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
                 continue;
             }
         }
@@ -211,7 +210,6 @@ final class ByBitLinearPositionService implements PositionServiceInterface
                 try {
                     $position = $this->parsePositionFromData($item);
                 } catch (UnsupportedAssetCategoryException) {
-                    // @todo | symbol | log UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException with rate_limiter
                     continue;
                 }
 
