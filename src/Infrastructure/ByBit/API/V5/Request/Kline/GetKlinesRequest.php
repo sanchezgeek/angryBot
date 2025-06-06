@@ -38,7 +38,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
     {
         $data = [
             'category' => $this->category->value,
-            'symbol' => $this->symbol instanceof SymbolInterface ? $this->symbol->name() : $this->symbol,
+            'symbol' => $this->symbol->name(),
             'interval' => $this->interval,
         ];
 
@@ -56,7 +56,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private SymbolInterface|string $symbol,
+        private SymbolInterface $symbol,
         private int $interval,
         private DateTimeImmutable $from,
         private DateTimeImmutable $to,

@@ -8,6 +8,7 @@ use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoin
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
@@ -81,6 +82,20 @@ trait SymbolAwareCommand
         }
 
         return $symbols;
+    }
+
+    protected function parseProvidedSingleSymbolAnswer(?string $symbolRaw): ?SymbolInterface
+    {
+        if ($symbolRaw === null) {
+            return null;
+        }
+
+        $symbols = $this->parseProvidedSymbols($symbolRaw);
+        if (count($symbols) > 1) {
+            throw new InvalidArgumentException('Only for one symbol');
+        }
+
+        return $symbols[0];
     }
 
     /**

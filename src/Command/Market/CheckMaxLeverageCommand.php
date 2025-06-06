@@ -2,8 +2,6 @@
 
 namespace App\Command\Market;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
@@ -31,8 +29,7 @@ class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependent
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         foreach ($this->positionService->getAllPositions() as $symbolRaw => $symbolPositions) {
-            $symbol = SymbolEnum::from($symbolRaw);
-            $maxLeverage = $this->marketService->getInstrumentInfo($symbol)->maxLeverage;
+            $maxLeverage = $this->marketService->getInstrumentInfo(reset($symbolPositions)->symbol)->maxLeverage;
 
             foreach ($symbolPositions as $position) {
                 if ($position->leverage->value() < $maxLeverage) {

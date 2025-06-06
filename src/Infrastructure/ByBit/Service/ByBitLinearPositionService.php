@@ -88,6 +88,8 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 
 
     /**
+     * @return SymbolInterface[]
+     *
      * @throws PermissionDeniedException
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException

@@ -81,7 +81,7 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         }
 
         if (!$reset) {
-            $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : $this->parseProvidedSymbolAsk($io->ask("Symbol (default = `null`):"));
+            $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : $this->parseProvidedSingleSymbolAnswer($io->ask("Symbol (default = `null`):"));
             $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {
             $symbol = null;
@@ -132,20 +132,6 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
         }
 
         return Command::SUCCESS;
-    }
-
-    private function parseProvidedSymbolAsk($symbolAnswer): ?SymbolInterface
-    {
-        if ($symbolAnswer === null) {
-            return null;
-        }
-
-        $symbols = $this->parseProvidedSymbols($symbolAnswer);
-        if (count($symbols) > 1) {
-            throw new InvalidArgumentException('Only for one symbol');
-        }
-
-        return $symbols[0];
     }
 
     public function __construct(

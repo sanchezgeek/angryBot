@@ -23,7 +23,7 @@ final class ByBitLinearMarketService
         $this->apiClient = $apiClient;
     }
 
-    public function getInstrumentInfo(SymbolInterface|string $symbol): InstrumentInfoDto
+    public function getInstrumentInfo(SymbolInterface $symbol): InstrumentInfoDto
     {
         $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
         $data = $this->sendRequest($request)->data();

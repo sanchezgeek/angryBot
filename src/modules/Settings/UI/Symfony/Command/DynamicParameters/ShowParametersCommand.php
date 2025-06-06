@@ -82,12 +82,12 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
 
         $constructorInput = [];
         foreach ($arguments['constructorArguments'] as $argumentName) {
-            $constructorInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($io->ask(sprintf('%s (from constructor): ', $argumentName)));
+            $constructorInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s (from constructor): ', $argumentName)));
         }
 
         $methodInput = [];
         foreach ($arguments['referencedMethodArguments'] as $argumentName) {
-            $methodInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($io->ask(sprintf('%s: ', $argumentName)));
+            $methodInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s: ', $argumentName)));
         }
 
         $value = $this->parameterEvaluator->evaluate(
@@ -100,8 +100,12 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
         return Command::SUCCESS;
     }
 
-    private function parseInputValue(mixed $input): mixed
+    private function parseInputValue(string $argumentName, mixed $input): mixed
     {
+        if ($argumentName === 'symbol') {
+            return $this->parseProvidedSingleSymbolAnswer($input)->name();
+        }
+
         return match ($input) {
             'false' => false,
             'true' => true,

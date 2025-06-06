@@ -91,9 +91,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
         $side = $this->getPositionSide();
 
         if ($type === self::MARKET_BUY) {
-            $except = [SymbolEnum::BTCUSDT];
-
-            $symbols = $this->getSymbols($except);
+            $symbols = $this->getSymbols([SymbolEnum::BTCUSDT]);
 
             $additional = null;
             try {
