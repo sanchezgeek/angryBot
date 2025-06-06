@@ -49,12 +49,12 @@ final readonly class SymbolProvider
      *
      * @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
      */
-    public function getOrInitialize(string $name): Symbol
+    public function getOrInitialize(string $name, bool $logException = true): Symbol
     {
         try {
             return $this->doGetOrInitialize($name);
         } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
-            $this->logInitializeSymbolException($e, $name);
+            $logException && $this->logInitializeSymbolException($e, $name);
             throw $e;
         }
     }
@@ -65,12 +65,12 @@ final readonly class SymbolProvider
      * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
      */
-    public function getOrInitializeWithCoinSpecified(string $name, ?Coin $coin = null): Symbol
+    public function getOrInitializeWithCoinSpecified(string $name, ?Coin $coin = null, bool $logException = false): Symbol
     {
         try {
             return $this->doGetOrInitialize($name, $coin);
         } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
-            $this->logInitializeSymbolException($e, $name);
+            $logException && $this->logInitializeSymbolException($e, $name);
             throw $e;
         }
     }
