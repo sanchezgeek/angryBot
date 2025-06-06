@@ -13,6 +13,7 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
@@ -31,7 +32,6 @@ use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDen
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
-use LogicException;
 use RuntimeException;
 
 final class OpenPositionHandler
@@ -209,27 +209,26 @@ final class OpenPositionHandler
         $resultTotalVolume = 0;
         foreach ($ordersGridDefinitionsCollection as $ordersGridDefinition) {
             $forVolume = $ordersGridDefinition->definedPercent->of($totalSize);
-            $stopsContext = $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Stop);;
+            $stopsContext = $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Stop);
+            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */
 
-            // @todo | open-position | `withOpposite` | use OrdersWithMinExchangeVolume only if $ordersGridDefinition->withOpposite enabled
-            $orders = new OrdersLimitedWithMaxVolume(
-                new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(
-                    ...new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount)
-                )),
-                $forVolume
-            );
+            $orders = new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount);
+            $orders = new OrdersCollection(...$orders);
 
-            foreach ($orders as $order) {
+            $roundVolumeToMin = $stopsHasOppositeBuyOrders;
+            if ($roundVolumeToMin) {
+                $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
+            }
+
+            foreach (new OrdersLimitedWithMaxVolume($orders, $forVolume) as $order) {
+                if ($resultTotalVolume >= $totalSize) {
+                    break;
+                }
+
                 // @todo | open-position | add triggerDelta?
                 $this->stopService->create($symbol, $positionSide, $order->price()->value(), $order->volume(), null, $stopsContext);
                 $resultTotalVolume += $order->volume();
             }
-        }
-
-        if ($resultTotalVolume > $totalSize) {
-            throw new LogicException(
-                sprintf('Total stops volume (%s) cannot be greater than $totalVolume (%s). Maybe problem in $stopsGridsDefinition provided', $resultTotalVolume, $totalSize)
-            );
         }
     }
 
