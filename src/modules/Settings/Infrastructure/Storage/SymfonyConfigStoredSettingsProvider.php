@@ -39,7 +39,7 @@ final readonly class SymfonyConfigStoredSettingsProvider implements StoredSettin
 
         return new AssignedSettingValue(
             $setting,
-            $symbolRaw ? $this->symbolProvider->getOrInitialize($symbolRaw) : null,
+            $symbolRaw,
             $side,
             $fullKey,
             AssignedSettingValueFactory::castStoredValue($setting, $value),

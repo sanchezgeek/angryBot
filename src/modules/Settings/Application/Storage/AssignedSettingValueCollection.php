@@ -23,13 +23,7 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
 
     public function getFallbackValueIfPresented(): ?AssignedSettingValue
     {
-        foreach ($this->values as $value) {
-            if (!$value->symbol && !$value->side) {
-                return $value;
-            }
-        }
-
-        return null;
+        return array_find($this->values, static fn(AssignedSettingValue $value) => !$value->symbol && !$value->side);
     }
 
     /**
@@ -66,8 +60,8 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
         $exact = $settingAccessor->exact;
 
         $callback = $exact
-            ? static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol->eq($settingAccessor->symbol)) && (!$settingAccessor->side || $value->side === $settingAccessor->side)
-            : static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol->eq($settingAccessor->symbol)) && (!$settingAccessor->side || $value->side === $settingAccessor->side) || $value->isFallbackValue();
+            ? static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol === $settingAccessor->symbol) && (!$settingAccessor->side || $value->side === $settingAccessor->side)
+            : static fn(AssignedSettingValue $value) => (!$settingAccessor->symbol || $value->symbol === $settingAccessor->symbol) && (!$settingAccessor->side || $value->side === $settingAccessor->side) || $value->isFallbackValue();
 
         return new self(...array_filter($this->values, $callback));
     }

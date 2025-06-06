@@ -14,7 +14,7 @@ final readonly class AssignedSettingValue implements Stringable
 {
     public function __construct(
         public AppSettingInterface $setting,
-        public ?SymbolInterface $symbol,
+        public ?string $symbol,
         public ?Side $side,
         public string $fullKey,
         public mixed $value,

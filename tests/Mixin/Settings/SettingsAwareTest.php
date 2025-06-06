@@ -98,8 +98,8 @@ trait SettingsAwareTest
             $storedValues = [];
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;
-                [$symbol, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
-                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol ? SymbolEnum::from($symbol) : null, $side, $key, $value);
+                [$symbolRaw, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
+                $storedValues[] = new AssignedSettingValue($providedSetting, $symbolRaw, $side, $key, $value);
             }
 
             return $storedValues;

@@ -29,6 +29,7 @@ trait SymbolsDependentTester
         'ADAUSDT',
         'TONUSDT',
         'VIRTUALUSDT',
+        'BNBUSDT',
     ];
 
     static bool $symbolsInitialized = false;

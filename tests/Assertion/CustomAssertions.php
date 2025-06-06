@@ -27,18 +27,17 @@ class CustomAssertions extends Assert
     public static function assertObjectsWithInnerSymbolsEquals($expected, $actual, $message = ''): void
     {
         if (is_array($expected)) {
-            foreach ($expected as $key => $expectedItem) {
-                $actualItem = $actual[$key] ?? null;
-                if ($expectedItem !== null && !$actualItem) {
-                    throw new ExpectationFailedException('Failed to find corresponded item in $actual array');
-                }
+            self::assertIsArray($actual);
 
-                if (!isset($expectedItem) && !isset($actualItem)) {
-                    continue;
-                }
-
-                self::assertObjectsWithInnerSymbolsEquality($expectedItem, $actualItem, $message);
+            foreach ($expected as $key => $item) {
+                $expected[$key] = self::prepareObjectWithInnerSymbol($item);
             }
+
+            foreach ($actual as $key => $item) {
+                $actual[$key] = self::prepareObjectWithInnerSymbol($item);
+            }
+
+            self::assertEquals($expected, $actual);
         } else {
             self::assertObjectsWithInnerSymbolsEquality($expected, $actual, $message);
         }

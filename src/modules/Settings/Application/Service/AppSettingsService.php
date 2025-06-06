@@ -76,7 +76,7 @@ final class AppSettingsService implements AppSettingsProviderInterface
     {
         $settingValueAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
         $setting = $settingValueAccessor->setting;
-        $cacheKey = sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor->symbol?->name() ?? 'null', $settingValueAccessor->side?->value ?? 'null');
+        $cacheKey = sprintf('settingResultValue_%s_%s_%s', $setting->getSettingKey(), $settingValueAccessor->symbol ?: 'null', $settingValueAccessor->side?->value ?? 'null');
 
         return $this->settingsCache->get(
             md5($cacheKey),
@@ -112,14 +112,14 @@ final class AppSettingsService implements AppSettingsProviderInterface
 
         $break = false;
         if ($side) {
-            $keys[] = sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol->name(), $side->value);
+            $keys[] = sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol, $side->value);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
         }
 
         if ($symbol && !$break) {
-            $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol->name());
+            $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }

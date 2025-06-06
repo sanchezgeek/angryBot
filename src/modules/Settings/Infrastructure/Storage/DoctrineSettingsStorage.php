@@ -61,6 +61,8 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     }
 
     /**
+     * @throws UnsupportedAssetCategoryException
+     *
      * @todo | settings | tests
      */
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue
@@ -80,7 +82,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
             $settingValue = SettingValue::withValue(
                 $settingKey,
                 $value,
-                $symbol === null ? null : $this->symbolProvider->replaceWithActualEntity($symbol),
+                !$symbol ? null : $this->symbolProvider->getOrInitialize($symbol),
                 $side
             );
         } else {
@@ -94,10 +96,9 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function remove(SettingAccessor $settingAccessor): void
     {
-        $symbol = $settingAccessor->symbol;
-        $side = $settingAccessor->side;
-
-        if (!$settingValue = $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $symbol, 'positionSide' => $side])) {
+        if (!$settingValue = $this->repository->findOneBy(
+            ['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]
+        )) {
             return;
         }
 

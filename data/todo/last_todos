@@ -161,6 +161,7 @@ imports
 ### Statistics ###
     save ticker every minute
         check if symbol hedge other on some distance
+    position open/close datetime
 
 ### openedPositions ###
     save current passed distance
@@ -185,10 +186,20 @@ analise average price change through some period
     @todo | priceChange | save prev percent and notify again if new percent >= prev
     @todo | priceChange | +/-
 
-### Trading ###
-    TradingSetupDto ...
-    decisions by market volume at candle?
+    [ui] Screener -> dash (top volatility)
 
+### Trading ###
+    1. TradingSetupDto ...
+    2. decisions by market volume at candle?
+    3. some level finder
+        google
+
+        wait with trend
+            https://www.youtube.com/watch?v=HOwqznGsX88
+        close on opposite
+
+        3.1 try free spot exchanges api
+            + https://youtu.be/_1JaRsXuSb8?t=866
 
 ### Symbol###
     SymbolEnum - only in tests?? (search in src and replace with entity)

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\Storage;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\SettingAccessor;
@@ -16,7 +15,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 final class AssignedSettingValueFactory
 {
     /**
-     * @return array{SymbolInterface, Side}
+     * @return array{?string, Side}
      */
     public static function parseSymbolAndSide(string $fullKey): array
     {
@@ -41,7 +40,7 @@ final class AssignedSettingValueFactory
     {
         $fullKey = self::buildFullKey($setting, $settingValue->symbol, $settingValue->positionSide);
 
-        return new AssignedSettingValue($setting, $settingValue->symbol, $settingValue->positionSide, $fullKey, self::castStoredValue($setting, $settingValue->value), $info);
+        return new AssignedSettingValue($setting, $settingValue->symbol?->name(), $settingValue->positionSide, $fullKey, self::castStoredValue($setting, $settingValue->value), $info);
     }
 
     public static function byAccessorAndValue(SettingAccessor $settingAccessor, mixed $value, ?string $info = null): AssignedSettingValue
@@ -57,13 +56,15 @@ final class AssignedSettingValueFactory
         return $storedValue === null ? null : SettingValueCaster::castToDeclaredType($setting, $storedValue);
     }
 
-    public static function buildFullKey(AppSettingInterface $setting, ?SymbolInterface $symbol, ?Side $positionSide): string
+    public static function buildFullKey(AppSettingInterface $setting, SymbolInterface|string|null $symbol, ?Side $positionSide): string
     {
+        $symbol = $symbol instanceof SymbolInterface ? $symbol->name() : $symbol;
+
         $baseKey = $setting->getSettingKey();
 
         return match (true) {
-            $positionSide !== null => sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol->name(), $positionSide->value),
-            $symbol !== null => sprintf('%s[symbol=%s]', $baseKey, $symbol->name()),
+            $positionSide !== null && $symbol !== null => sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol, $positionSide->value),
+            $symbol !== null => sprintf('%s[symbol=%s]', $baseKey, $symbol),
             default => $baseKey,
         };
     }
