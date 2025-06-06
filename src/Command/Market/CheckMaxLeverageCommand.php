@@ -29,7 +29,7 @@ class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependent
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         foreach ($this->positionService->getAllPositions() as $symbolRaw => $symbolPositions) {
-            $maxLeverage = $this->marketService->getInstrumentInfo(reset($symbolPositions)->symbol)->maxLeverage;
+            $maxLeverage = $this->marketService->getInstrumentInfo($symbolRaw)->maxLeverage;
 
             foreach ($symbolPositions as $position) {
                 if ($position->leverage->value() < $maxLeverage) {
