@@ -164,3 +164,19 @@ imports
 
 ### openedPositions ###
     save current passed distance
+
+### schedule ###
+    move stops for all symbols
+
+### Orders execution ###
+    properly create opposite Stops for other symbols
+
+front + liq chart
+analise average price change through some period
+    => safePriceDistance
+    => significantPrice change (accurately for same period). E.g. x5 from common change
+    => ...
+    => auto swipe hedge criteria
+    => profit criteria
+    => move stops parameters
+
