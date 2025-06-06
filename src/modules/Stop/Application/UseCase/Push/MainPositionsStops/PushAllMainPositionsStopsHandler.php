@@ -70,19 +70,19 @@ final readonly class PushAllMainPositionsStopsHandler
                 $passedDistancePart = 1 - $priceDeltaWithLiquidation / $initialDistanceWithLiquidation;
             }
 
-            $sort[$symbolRaw] = sprintf(
-                'passedDistancePart_%.2f_im_%s_activatedStops_%d_%s',
-                $passedDistancePart,
-                $position->initialMargin->value(),
-                count($possibleTriggeredStops),
-                $symbolRaw
-            );
+            $k = $position->leverage->value() / 100;
+            $im = $position->initialMargin->value() * $k;
+
+            $sort[$symbolRaw] = [
+                'passedDistancePart' => $passedDistancePart,
+                'im' => $im,
+                'activatedStops' => count($possibleTriggeredStops),
+                'symbol' => $symbolRaw,
+            ];
         }
 
-        $sort = array_flip($sort);
-//        var_dump($sort);
-        krsort($sort);
-//        var_dump($sort);
+        $sort = self::arrayOrder($sort, 'passedDistancePart', SORT_DESC, 'im', SORT_DESC, 'activatedStops', SORT_DESC);
+        $sort = array_keys($sort);
 
         $lastSort = [];
         foreach ($sort as $symbolRaw) {
@@ -126,6 +126,21 @@ final readonly class PushAllMainPositionsStopsHandler
                 $this->messageBus->dispatch(new UpdateTicker($ttl, ...$reverse));
             }
         }
+    }
+
+    private static function arrayOrder()
+    {
+        $args = func_get_args();
+        $data = array_shift($args);
+        foreach ($args as $n => $field) {
+            if (is_string($field)) {
+                $tmp = array_map(static fn ($row) => $row[$field], $data);
+                $args[$n] = $tmp;
+            }
+        }
+        $args[] = &$data;
+        call_user_func_array('array_multisort', $args);
+        return array_pop($args);
     }
 
     private static function timeDiffInfo(string $desc, float $startPoint, bool $print = true): string
