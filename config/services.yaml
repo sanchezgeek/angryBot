@@ -144,7 +144,3 @@ services:
     App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfitHandler:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
-
-    App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActiveHandler:
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

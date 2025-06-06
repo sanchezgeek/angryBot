@@ -114,19 +114,14 @@ imports
             @todo | buy | round here?
             specify initial pnlDistance on SLs creation + periodical check new liquidation for move orders according to initial relative distance
 
-### Buy ###
-    ttl for active
-
 ### Forgotten Errors ###
     @todo | liquidation | log into app_errors?
     @todo | exceptions
     !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
 
-
 ### SymbolPrice ###
     @todo | price | handle exception
     @todo | ctrl-f: round(..., 2)
-
 
 ### Sandbox ###
     tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
@@ -137,17 +132,12 @@ imports
     @todo | sandbox | add unrealizedPNL (isUTA)
     @todo | sandbox | what to use? position entry or stop price
 
-
 ### Upgrade ###
     postgres 16
-
 
 ### DRY ###
     @todo | DRY | with OpenPositionHandler
     @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
-
-    `AkaLimitOrder` entity + some threshold for not lost the trade
-
 
 ### Uncategorized ###
     @todo | open-position | add triggerDelta?
@@ -190,17 +180,21 @@ analise average price change through some period
     [ui] Screener -> dash (top volatility)
 
 ### Trading ###
-    1. TradingSetupDto ...
-    2. decisions by market volume at candle?
-    3. some level finder
-        google
+    remove stale stops (after position close)
+    `AkaLimitOrder` entity + some threshold for not lost the trade
 
-        wait with trend
-            https://www.youtube.com/watch?v=HOwqznGsX88
-        close on opposite
+    Auto
+        1. TradingSetupDto ...
+        2. decisions by market volume at candle?
+        3. some level finder
+            google
 
-        3.1 try free spot exchanges api
-            + https://youtu.be/_1JaRsXuSb8?t=866
+            wait with trend
+                https://www.youtube.com/watch?v=HOwqznGsX88
+            close on opposite
+
+            3.1 try free spot exchanges api
+                + https://youtu.be/_1JaRsXuSb8?t=866
 
 ### Symbol###
     @todo | symbols | profiling

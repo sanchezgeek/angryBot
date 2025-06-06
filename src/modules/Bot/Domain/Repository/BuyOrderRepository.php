@@ -136,10 +136,27 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      * @todo MB use current price to find orders?
      */
-    public function getIdleOrders(SymbolInterface ...$symbols): array
+    public function getAllIdleOrders(SymbolInterface ...$symbols): array
     {
         $qb = $this->createQueryBuilder('b')
             ->andWhere('b.state = :idleState')->setParameter('idleState', BuyOrderState::Idle)
+        ;
+
+        if ($symbols) {
+            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
+            $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getAllActiveOrders(SymbolInterface ...$symbols): array
+    {
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere('b.state = :activeState')->setParameter('activeState', BuyOrderState::Active)
         ;
 
         if ($symbols) {

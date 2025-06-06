@@ -21,6 +21,7 @@ use App\EventBus\RecordEvents;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolContainerInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -45,10 +46,11 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public const string IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
     public const string OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
 
+    public const string ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT = 'activeStateSetAtTimestamp';
+
     use HasVolume;
     use HasExchangeOrderContext;
     use WithOppositeOrderDistanceContext;
-
     use RecordEvents;
 
     #[ORM\Id]
@@ -292,20 +294,43 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return $this->isOppositeStopExecuted;
     }
 
-    public function setActive(): self
+    public function setActive(DateTimeImmutable $datetime): self
     {
         $this->state = BuyOrderState::Active;
+        $this->setActiveStateChangeTimestamp($datetime);
+
         return $this;
     }
 
     public function setIdle(): self
     {
         $this->state = BuyOrderState::Idle;
+        $this->resetActiveStateChangeTimestamp();
+
         return $this;
     }
 
     public function isOrderActive(): bool
     {
         return $this->state === BuyOrderState::Active;
+    }
+
+    public function getActiveStateChangeTimestamp(): ?int
+    {
+        return $this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT] ?? null;
+    }
+
+    public function setActiveStateChangeTimestamp(DateTimeImmutable $time): self
+    {
+        $this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT] = $time->getTimestamp();
+
+        return $this;
+    }
+
+    public function resetActiveStateChangeTimestamp(): self
+    {
+        unset($this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT]);
+
+        return $this;
     }
 }
