@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Service;
 
+use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Domain\Entity\SymbolPriceHistory;
 use App\Screener\Domain\Repository\SymbolPriceHistoryRepository;
@@ -24,6 +25,7 @@ final readonly class PreviousSymbolPriceProvider
         if (!$historyValue = $this->historyRepository->fundOnMomentOfTime($symbol, $onDateTime)) {
             $candles = $this->exchangeService->getCandles(
                 symbol: $symbol,
+                interval: CandleIntervalEnum::m15,
                 from: $onDateTime,
                 to: $onDateTime->add(new DateInterval('PT1M')),
                 limit: 1

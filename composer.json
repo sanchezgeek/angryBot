@@ -62,6 +62,7 @@
             "App\\Buy\\": "src/modules/Buy",
             "App\\Profiling\\": "src/modules/Profiling",
             "App\\Screener\\": "src/modules/Screener",
+            "App\\Chart\\": "src/modules/Chart",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

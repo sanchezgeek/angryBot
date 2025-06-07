@@ -7,18 +7,15 @@ namespace App\Infrastructure\DomainEvents;
 use App\EventBus\EventBus;
 use App\EventBus\HasEvents;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-use Doctrine\ORM\Proxy\Proxy;
+use Doctrine\Persistence\Proxy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 
 final class TriggerDomainEventsListener implements EventSubscriberInterface
 {
-    private EventBus $eventBus;
-
-    public function __construct(EventBus $eventBus)
+    public function __construct(private EventBus $eventBus)
     {
-        $this->eventBus = $eventBus;
     }
 
     public function postFlush(PostFlushEventArgs $eventArgs): void
