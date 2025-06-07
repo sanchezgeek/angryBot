@@ -43,7 +43,7 @@ final readonly class OrdersGridDefinition
 
         $parts = explode('|', $definition);
         if ($isEquivRange) {
-            $rangePnl = Percent::string($parts[0]);
+            $rangePnl = Percent::string($parts[0], false);
 
             $fromPnl = -$rangePnl->value();
             $toPnl = $rangePnl->value();
