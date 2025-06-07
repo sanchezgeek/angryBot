@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -13,6 +12,7 @@ use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\ConditionalOrderTriggerDirection;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\PositionIdx;
 use App\Infrastructure\ByBit\API\V5\Enum\Order\TimeInForce;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -41,7 +41,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
     public static function marketBuy(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         float $qty,
     ): self {
@@ -57,7 +57,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
     public static function marketClose(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         float $qty,
     ): self {
@@ -73,7 +73,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
     public static function limitTP(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         float $qty,
         float $price,
@@ -95,7 +95,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
 
     public static function stopConditionalOrder(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         float $qty,
         float $price,
@@ -132,7 +132,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
     {
         $data = [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'side' => ucfirst($this->side->value),
             'orderType' => $this->orderType->value,
             'timeInForce' => $this->timeInForce->value,
@@ -169,7 +169,7 @@ final readonly class PlaceOrderRequest extends AbstractByBitApiRequest
      */
     private function __construct(
         private AssetCategory $category,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private Side $side,
         private ExecutionOrderType $orderType,
         private TriggerBy $triggerBy,

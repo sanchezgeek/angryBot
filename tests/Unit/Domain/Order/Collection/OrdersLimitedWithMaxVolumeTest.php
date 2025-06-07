@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order\Collection;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Order;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,7 +20,7 @@ final class OrdersLimitedWithMaxVolumeTest extends TestCase
      * @dataProvider testDataProvider
      */
     public function testIterateOrders(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         float $maxVolume,
         array $sourceOrders,
         array $expectedOrders,
@@ -33,7 +34,7 @@ final class OrdersLimitedWithMaxVolumeTest extends TestCase
 
     private function testDataProvider(): array
     {
-        $symbol = Symbol::ARCUSDT;
+        $symbol = SymbolEnum::ARCUSDT;
 
         return [
             [

@@ -4,6 +4,7 @@ namespace App\Settings\UI\Symfony\Command\Settings;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Helper\OutputHelper;
 use App\Output\Table\Dto\Cell;
 use App\Output\Table\Dto\DataRow;
@@ -22,9 +23,11 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:show')]
-class ShowSettingsCommand extends AbstractCommand
+#[AutoconfigureTag(name: 'command.symbol_dependent')]
+class ShowSettingsCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 

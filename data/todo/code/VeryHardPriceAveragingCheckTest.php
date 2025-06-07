@@ -7,7 +7,7 @@ namespace data\todo\code;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
@@ -35,7 +35,7 @@ final class VeryHardPriceAveragingCheckTest extends TestCase
     {
         yield 'BTCUSDT LONG' => [
             PositionBuilder::long()->size(0.1)->entry(50000)->build(),
-            TickerFactory::withEqualPrices(Symbol::BTCUSDT, 51251)
+            TickerFactory::withEqualPrices(SymbolEnum::BTCUSDT, 51251)
         ];
     }
 
@@ -57,7 +57,7 @@ final class VeryHardPriceAveragingCheckTest extends TestCase
     {
         yield 'BTCUSDT LONG' => [
             PositionBuilder::long()->size(0.1)->entry(50000)->build(),
-            TickerFactory::withEqualPrices(Symbol::BTCUSDT, 51250)
+            TickerFactory::withEqualPrices(SymbolEnum::BTCUSDT, 51250)
         ];
     }
 }

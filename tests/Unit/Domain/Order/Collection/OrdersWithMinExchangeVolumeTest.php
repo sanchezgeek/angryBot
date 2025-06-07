@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order\Collection;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,7 +20,7 @@ final class OrdersWithMinExchangeVolumeTest extends TestCase
      * @dataProvider testDataProvider
      */
     public function testOrders(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         array $sourceOrders,
         array $expectedOrders,
     ): void {
@@ -32,7 +33,7 @@ final class OrdersWithMinExchangeVolumeTest extends TestCase
 
     private function testDataProvider(): array
     {
-        $symbol = Symbol::ARCUSDT;
+        $symbol = SymbolEnum::ARCUSDT;
 
         return [
             [

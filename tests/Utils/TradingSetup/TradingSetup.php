@@ -7,9 +7,9 @@ namespace App\Tests\Utils\TradingSetup;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use RuntimeException;
 
@@ -46,7 +46,7 @@ final class TradingSetup
 
     public function addTicker(Ticker $ticker): self
     {
-        $symbol = $ticker->symbol->value;
+        $symbol = $ticker->symbol->name();
 
         if ($this->tickers[$symbol] ?? null) {
             throw new RuntimeException(sprintf('"%s" ticker already defined', $symbol));
@@ -59,7 +59,7 @@ final class TradingSetup
 
     public function addPosition(Position $position): self
     {
-        $symbol = $position->symbol->value;
+        $symbol = $position->symbol->name();
         $side = $position->side->value;
 
         if ($existed = $this->positions[$symbol][$side] ?? null) {
@@ -71,10 +71,10 @@ final class TradingSetup
         return $this;
     }
 
-    public function getPosition(Symbol $symbol, Side $side): Position
+    public function getPosition(SymbolInterface $symbol, Side $side): Position
     {
-        if (!$position = $this->positions[$symbol->value][$side->value] ?? null) {
-            throw new Exception(sprintf('"%s %s" position not found', $symbol->value, $side->title()));
+        if (!$position = $this->positions[$symbol->name()][$side->value] ?? null) {
+            throw new Exception(sprintf('"%s %s" position not found', $symbol->name(), $side->title()));
         }
 
         return $position;

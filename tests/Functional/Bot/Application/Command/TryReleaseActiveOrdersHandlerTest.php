@@ -12,7 +12,7 @@ use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -41,12 +41,6 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
     private PositionServiceStub $positionServiceStub;
 
     private TryReleaseActiveOrdersHandler $handler;
-
-    public static function setUpBeforeClass(): void
-    {
-        self::truncateStops();
-        self::truncateBuyOrders();
-    }
 
     protected function setUp(): void
     {
@@ -103,7 +97,7 @@ final class TryReleaseActiveOrdersHandlerTest extends KernelTestCase
 
     private function releaseActiveOrdersTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $exchangeOrderId = uuid_create();
         yield 'no need to release' => [
             '$ticker' => TickerFactory::create($symbol, 28510, 28510, 28510),

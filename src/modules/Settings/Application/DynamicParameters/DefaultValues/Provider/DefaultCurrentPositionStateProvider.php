@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\DynamicParameters\DefaultValues\Provider;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
+use App\Trading\Application\Symbol\SymbolProvider;
 use InvalidArgumentException;
 
 final readonly class DefaultCurrentPositionStateProvider implements ParameterDefaultValueProviderInterface
 {
     public function __construct(
-        private PositionServiceInterface $positionService
+        private PositionServiceInterface $positionService,
+        private SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -34,6 +34,6 @@ final readonly class DefaultCurrentPositionStateProvider implements ParameterDef
             throw new InvalidArgumentException('Symbol must be specified');
         }
 
-        return $this->positionService->getPosition(Symbol::fromShortName(strtoupper($input['symbol'])), Side::from($input['side']));
+        return $this->positionService->getPosition($this->symbolProvider->getOrInitialize($input['symbol']), Side::from($input['side']));
     }
 }

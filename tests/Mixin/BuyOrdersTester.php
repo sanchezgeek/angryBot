@@ -6,6 +6,7 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
 use function usort;
@@ -15,6 +16,7 @@ trait BuyOrdersTester
     use TestWithDoctrineRepository;
     use TestWithDbFixtures;
     use PositionSideAwareTest;
+    use SymbolsDependentTester;
 
     /**
      * @return BuyOrder[]
@@ -38,7 +40,7 @@ trait BuyOrdersTester
         usort($expectedBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
         usort($actualBuyOrders, static fn (BuyOrder $a, BuyOrder $b) => $a->getId() <=> $b->getId());
 
-        self::assertEquals($expectedBuyOrders, $actualBuyOrders);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedBuyOrders, $actualBuyOrders);
     }
 
     protected static function getBuyOrderRepository(): BuyOrderRepository
@@ -46,6 +48,9 @@ trait BuyOrdersTester
         return self::getContainer()->get(BuyOrderRepository::class);
     }
 
+    /**
+     * @before
+     */
     protected static function truncateBuyOrders(): int
     {
         $qnt = self::truncate(BuyOrder::class);

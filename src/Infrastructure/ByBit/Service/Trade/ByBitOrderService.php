@@ -7,7 +7,6 @@ namespace App\Infrastructure\ByBit\Service\Trade;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -20,8 +19,11 @@ use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrderValue;
+use App\Infrastructure\ByBit\Service\Exception\Trade\PositionIdxNotMatch;
+use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Closure;
 use Psr\Log\LoggerInterface;
 
@@ -31,7 +33,7 @@ final class ByBitOrderService implements OrderServiceInterface
 {
     use ByBitApiCallHandler;
 
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
     public function __construct(
         ByBitApiClientInterface $apiClient,
@@ -61,13 +63,20 @@ final class ByBitOrderService implements OrderServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest\MarketBuyTest
      */
-    public function marketBuy(Symbol $symbol, Side $positionSide, float $qty): string
+    public function marketBuy(SymbolInterface $symbol, Side $positionSide, float $qty): string
     {
         $exchangeOrderId = $this->sendPlaceOrderRequest(
             PlaceOrderRequest::marketBuy(self::ASSET_CATEGORY, $symbol, $positionSide, $qty),
             static function (ApiErrorInterface $error) use ($symbol, $positionSide, $qty) {
                 $code = $error->code();
                 $msg = $error->msg();
+
+                if (
+                    in_array($code, [ApiV5Errors::BadRequestParams->value, ApiV5Errors::BadRequestParams2->value, ApiV5Errors::BadRequestParams3->value], true)
+                    && str_contains($msg, 'position idx not match position mode')
+                ) {
+                    throw new PositionIdxNotMatch($msg);
+                }
 
                 match ($code) {
                     ApiV5Errors::CannotAffordOrderCost->value => throw CannotAffordOrderCostException::forBuy(
@@ -106,7 +115,7 @@ final class ByBitOrderService implements OrderServiceInterface
 //                PlaceOrderRequest::marketClose(self::ASSET_CATEGORY, $symbol, $position->side, $qty)
 //            );
 //        } catch (\Throwable $e) {
-//            OutputHelper::print(sprintf('%s while try to close %s on %s %s', $e->getMessage(), $qty, $symbol->value, $position->side->value));
+//            OutputHelper::print(sprintf('%s while try to close %s on %s %s', $e->getMessage(), $qty, $symbol->name(), $position->side->value));
 //            throw $e;
 //        }
 

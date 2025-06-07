@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface TradingParametersProviderInterface
 {
-    public function safeLiquidationPriceDelta(Symbol $symbol, Side $side, float $refPrice): float;
+    public function safeLiquidationPriceDelta(SymbolInterface $symbol, Side $side, float $refPrice): float;
 }

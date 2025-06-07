@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Mixin;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 
 trait CheckBasedOnCurrentPositionState
@@ -18,7 +18,7 @@ trait CheckBasedOnCurrentPositionState
         $this->positionService = $positionService;
     }
 
-    public function enrichContextWithCurrentPositionState(Symbol $symbol, Side $positionSide, TradingCheckContext $context): void
+    public function enrichContextWithCurrentPositionState(SymbolInterface $symbol, Side $positionSide, TradingCheckContext $context): void
     {
         if (!$context->currentPositionState) {
             $context->currentPositionState = $this->positionService->getPosition($symbol, $positionSide);

@@ -1,4 +1,4 @@
 #!/bin/bash
 
-#make ${1} | while read line ; do afplay -t 0.3 $(pwd)/data/alarm.wav 2>&1 1>/dev/null ; echo $line ; done
-make ${1} | while read line ; do echo $line ; aplay $(pwd)/data/alarm.wav -s25000 2>/dev/null ; done
+make ${1} | while read line ; do afplay -t 0.3 $(pwd)/data/alarm.wav 2>&1 1>/dev/null ; echo $line ; done
+#make ${1} | while read line ; do echo $line ; aplay $(pwd)/data/alarm.wav -s25000 2>/dev/null ; done

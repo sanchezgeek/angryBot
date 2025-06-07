@@ -2,7 +2,13 @@
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\Coin;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
+use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
@@ -10,31 +16,28 @@ use function str_contains;
 
 trait SymbolAwareCommand
 {
+    use CoinAwareCommand;
     use ConsoleInputAwareCommand;
 
-    private const DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
-    private const DEFAULT_SYMBOL = Symbol::BTCUSDT;
+    private const string DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
+    private const string DEFAULT_SYMBOL_NAME = 'BTCUSDT';
 
     private ?string $symbolOptionName = null;
+
+    private SymbolProvider $symbolProvider;
+
+    public function withSymbolProvider(SymbolProvider $symbolProvider): void
+    {
+        $this->symbolProvider = $symbolProvider;
+    }
 
     protected function symbolIsSpecified(): bool
     {
         return (bool)$this->paramFetcher->getStringOption($this->symbolOptionName, false);
     }
 
-    protected function getSymbol(): Symbol
-    {
-        if ($this->symbolOptionName) {
-            $symbol = Symbol::fromShortName($this->paramFetcher->getStringOption($this->symbolOptionName));
-        } else {
-            $symbol = self::DEFAULT_SYMBOL;
-        }
-
-        return $symbol;
-    }
-
     /**
-     * @return Symbol[]
+     * @return SymbolInterface[]
      * @throws Throwable
      */
     private function getSymbols(array $exceptWhenGetAll = []): array
@@ -44,10 +47,11 @@ trait SymbolAwareCommand
         } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
             if ($providedSymbolValue === 'all') {
-                return $this->positionService->getOpenedPositionsSymbols($exceptWhenGetAll);
+                return $this->positionService->getOpenedPositionsSymbols(...$exceptWhenGetAll);
             } elseif (str_contains($providedSymbolValue, ',')) {
-                return self::parseProvidedSymbols($providedSymbolValue);
+                return $this->parseProvidedSymbols($providedSymbolValue);
             }
+
             throw $e;
         }
 
@@ -55,26 +59,81 @@ trait SymbolAwareCommand
     }
 
     /**
-     * @return Symbol[]
+     * @throws UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException
      */
-    protected static function parseProvidedSymbols(string $providedStringArray): array
+    protected function getSymbol(): SymbolInterface
+    {
+        return $this->tryGetSymbolByProvidedName(
+            $this->symbolOptionName ? $this->paramFetcher->getStringOption($this->symbolOptionName) : self::DEFAULT_SYMBOL_NAME
+        );
+    }
+
+    /**
+     * @return SymbolInterface[]
+     * @throws UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException
+     */
+    protected function parseProvidedSymbols(string $providedStringArray): array
     {
         $rawItems = explode(',', $providedStringArray);
+
         $symbols = [];
         foreach ($rawItems as $rawItem) {
-            $symbols[] = Symbol::fromShortName($rawItem);
+            $symbols[] = $this->tryGetSymbolByProvidedName($rawItem);
         }
+
         return $symbols;
+    }
+
+    protected function parseProvidedSingleSymbolAnswer(?string $symbolRaw): ?SymbolInterface
+    {
+        if ($symbolRaw === null) {
+            return null;
+        }
+
+        $symbols = $this->parseProvidedSymbols($symbolRaw);
+        if (count($symbols) > 1) {
+            throw new InvalidArgumentException('Only for one symbol');
+        }
+
+        return $symbols[0];
+    }
+
+    /**
+     * @throws UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException
+     */
+    private function tryGetSymbolByProvidedName(string $fullOrShortName): Symbol
+    {
+        $fullOrShortName = strtoupper($fullOrShortName);
+
+        if ($fullOrShortName !== Coin::BTC->value) {
+            $isCoinSpecified = false;
+            foreach (Coin::cases() as $case) {
+                if (str_contains($fullOrShortName, $case->value)) {
+                    $isCoinSpecified = true;
+                }
+            }
+
+            if (!$isCoinSpecified) {
+                $fullOrShortName .= $this->getCoin()->value;
+            }
+        } else {
+            $fullOrShortName .= $this->getCoin()->value;
+        }
+
+        return $this->symbolProvider->getOrInitialize($fullOrShortName);
     }
 
     protected function configureSymbolArgs(
         string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
-        ?Symbol $defaultValue = self::DEFAULT_SYMBOL,
-    ): static
-    {
+        ?string $defaultValue = self::DEFAULT_SYMBOL_NAME,
+    ): static {
+        if (!$this->isCoinArgsConfigured()) {
+            $this->configureCoinArgs();
+        }
+
         $this->symbolOptionName = $symbolOptionName;
 
-        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue?->value);
+        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue);
     }
 
     protected function isSymbolArgsConfigured(): bool

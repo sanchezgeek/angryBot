@@ -9,10 +9,10 @@ use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPosi
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
@@ -32,9 +32,9 @@ class CheckLiquidationParametersBag
      * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]
      */
     private const CRITICAL_DISTANCE_PNLS = [
-        Symbol::BTCUSDT->value => 60,
-        Symbol::ETHUSDT->value => 80,
-        Symbol::ARCUSDT->value => 200,
+        SymbolEnum::BTCUSDT->value => 60,
+        SymbolEnum::ETHUSDT->value => 80,
+        SymbolEnum::ARCUSDT->value => 200,
         'other' => 200
     ];
 
@@ -172,7 +172,7 @@ class CheckLiquidationParametersBag
 
     public function criticalDistancePnl(): float
     {
-        return self::CRITICAL_DISTANCE_PNLS[$this->position->symbol->value] ?? self::CRITICAL_DISTANCE_PNLS['other'];
+        return self::CRITICAL_DISTANCE_PNLS[$this->position->symbol->name()] ?? self::CRITICAL_DISTANCE_PNLS['other'];
     }
 
     public function criticalDistance(): float

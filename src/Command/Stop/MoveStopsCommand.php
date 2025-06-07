@@ -7,6 +7,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -18,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function count;
 
 #[AsCommand(name: 'sl:move', description: 'Move position stops')]
-class MoveStopsCommand extends AbstractCommand
+class MoveStopsCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 
@@ -150,6 +151,7 @@ class MoveStopsCommand extends AbstractCommand
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);
+
         parent::__construct($name);
     }
 }

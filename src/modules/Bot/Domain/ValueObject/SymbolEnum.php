@@ -8,18 +8,12 @@ use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Price\PriceFactory;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use ValueError;
 
-use function ceil;
-use function explode;
-use function is_int;
-use function pow;
-use function round;
-use function strlen;
-
-enum Symbol: string
+enum SymbolEnum: string implements SymbolInterface
 {
     case BTCUSDT = 'BTCUSDT';
     case BTCUSD = 'BTCUSD';
@@ -116,6 +110,11 @@ enum Symbol: string
     case LPTUSDT = 'LPTUSDT';
     case NEIROETHUSDT = 'NEIROETHUSDT';
     case SOLVUSDT = 'SOLVUSDT';
+    case FLOCKUSDT = 'FLOCKUSDT';
+    case MASKUSDT = 'MASKUSDT';
+    case BUSDT = 'BUSDT';
+    case TRBUSDT = 'TRBUSDT';
+    case XEMUSDT = 'XEMUSDT';
 
     private const TRADING_PRICE_PRECISION = [
         self::BTCUSDT->value => 2,
@@ -212,6 +211,11 @@ enum Symbol: string
         self::LPTUSDT->value => 3,
         self::NEIROETHUSDT->value => 5,
         self::SOLVUSDT->value => 5,
+        self::FLOCKUSDT->value => 5,
+        self::MASKUSDT->value => 3,
+        self::BUSDT->value => 5,
+        self::TRBUSDT->value => 2,
+        self::XEMUSDT->value => 5,
     ];
 
     private const MIN_ORDER_QTY = [
@@ -309,6 +313,11 @@ enum Symbol: string
         self::LPTUSDT->value => 0.1,
         self::NEIROETHUSDT->value => 1,
         self::SOLVUSDT->value => 1,
+        self::FLOCKUSDT->value => 1,
+        self::MASKUSDT->value => 0.1,
+        self::BUSDT->value => 1,
+        self::TRBUSDT->value => 0.01,
+        self::XEMUSDT->value => 1,
     ];
 
     private const MIN_NOTIONAL_ORDER_VALUE = [
@@ -323,14 +332,24 @@ enum Symbol: string
         self::BTCUSD->value => AssetCategory::inverse,
     ];
 
-    private const STOP_TRIGGER_DELTA = [
+    public const array STOP_TRIGGER_DELTA = [
         self::BTCUSDT->value => 25,
         self::BTCUSD->value => 25,
     ];
 
-    private const VERY_SHORT_NAMES = [
+    public const array VERY_SHORT_NAMES = [
 
     ];
+
+    public function eq(SymbolInterface $other): bool
+    {
+        return $this->value === $other->name();
+    }
+
+    public function name(): string
+    {
+        return $this->value;
+    }
 
     public function associatedCoin(): Coin
     {
@@ -349,20 +368,12 @@ enum Symbol: string
 
     public function stopDefaultTriggerDelta(): float
     {
-        if (isset(self::STOP_TRIGGER_DELTA[$this->value])) {
-            return self::STOP_TRIGGER_DELTA[$this->value];
-        }
-
-        $pricePrecision = $this->pricePrecision();
-
-        return round(pow(0.1, $pricePrecision - 1), $pricePrecision);
+        return self::STOP_TRIGGER_DELTA[$this->name] ?? SymbolHelper::stopDefaultTriggerDelta($this);
     }
 
     public function minimalPriceMove(): float
     {
-        $pricePrecision = $this->pricePrecision();
-
-        return round(pow(0.1, $pricePrecision), $pricePrecision);
+        return SymbolHelper::minimalPriceMove($this);
     }
 
     /**
@@ -385,51 +396,22 @@ enum Symbol: string
 
     public function contractSizePrecision(): ?int
     {
-        $minOrderQty = $this->minOrderQty();
-
-        if (is_int($minOrderQty)) {
-            return 0;
-        }
-
-        $parts = explode('.', (string)$minOrderQty);
-
-        return strlen($parts[1]);
+        return SymbolHelper::contractSizePrecision($this);
     }
 
     public function roundVolume(float $volume): float
     {
-        $value = round($volume, $this->contractSizePrecision());
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolume($this, $volume);
     }
 
     public function roundVolumeDown(float $volume): float
     {
-        $precision = $this->contractSizePrecision();
-
-        $value = floor($volume*pow(10,$precision))/pow(10,$precision);
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolumeDown($this, $volume);
     }
 
     public function roundVolumeUp(float $volume): float
     {
-        $precision = $this->contractSizePrecision();
-
-        $fig = 10 ** $precision;
-        $value = (ceil($volume * $fig) / $fig);
-
-        if ($value < $this->minOrderQty()) {
-            $value = $this->minOrderQty();
-        }
-
-        return $value;
+        return SymbolHelper::roundVolumeUp($this, $volume);
     }
 
     public static function fromShortName(string $name): self

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Price\Helper;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\SymbolPrice;
 use PHPUnit\Framework\TestCase;
@@ -35,7 +35,7 @@ final class PriceHelperTest extends TestCase
      */
     public function testMax(float $a, float $b, float $expectedResult): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         // @todo | rid
         $a = SymbolPrice::create($a, $symbol);
@@ -64,7 +64,7 @@ final class PriceHelperTest extends TestCase
      */
     public function testMin(float $a, float $b, float $expectedResult): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $a = SymbolPrice::create($a, $symbol);
         $b = SymbolPrice::create($b, $symbol);

@@ -13,7 +13,6 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -21,6 +20,9 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolContainerInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
@@ -32,7 +34,7 @@ use function sprintf;
  * @see \App\Tests\Unit\Domain\Entity\StopTest
  */
 #[ORM\Entity(repositoryClass: StopRepository::class)]
-class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
+class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
     public const string SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
     public const string IS_TP_CONTEXT = 'isTakeProfit';
@@ -67,8 +69,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(nullable: true)]
     private float $triggerDelta;
 
-    #[ORM\Column(type: 'string', enumType: Symbol::class)]
-    private Symbol $symbol;
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
+    private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
@@ -79,7 +82,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
     private array $context = [];
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, Symbol $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice($price)->value();
@@ -90,15 +93,22 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->symbol = $symbol;
     }
 
+    /**
+     * @internal For tests
+     */
+    public function replaceSymbolEntity(Symbol $symbol): self
+    {
+        $this->symbol = $symbol;
+
+        return $this;
+    }
+
     public function getId(): int
     {
         return $this->id;
     }
 
-    /**
-     * @todo | new column
-     */
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }
@@ -300,7 +310,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return [
             'id' => $this->id,
             'positionSide' => $this->positionSide->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'price' => $this->price,
             'volume' => $this->volume,
             'triggerDelta' => $this->triggerDelta,
@@ -308,23 +318,10 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         ];
     }
 
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            $data['id'],
-            $data['price'],
-            $data['volume'],
-            $data['triggerDelta'],
-            Symbol::from($data['symbol']),
-            Side::from($data['positionSide']),
-            $data['context']
-        );
-    }
-
     public function info(): array
     {
         return [
-            'symbol' => $this->getSymbol(),
+            'symbol' => $this->getSymbol()->name(),
             'side' => $this->positionSide,
             'price' => $this->price,
             'volume' => $this->volume,

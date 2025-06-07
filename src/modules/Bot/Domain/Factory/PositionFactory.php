@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Bot\Domain\Factory;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PositionFactory
 {
-    public static function fakeWithNoLiquidation(Symbol $symbol, Side $positionSide, SymbolPrice|float $entryPrice, int $leverage = 100): Position
+    public static function fakeWithNoLiquidation(SymbolInterface $symbol, Side $positionSide, SymbolPrice|float $entryPrice, int $leverage = 100): Position
     {
         $entryPrice = SymbolPrice::toFloat($entryPrice);
 

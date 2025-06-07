@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Position;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Infrastructure\ByBit\API\V5\Enum\Position\PositionMode;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 final readonly class SwitchPositionModeRequest extends AbstractByBitApiRequest
@@ -36,14 +36,14 @@ final readonly class SwitchPositionModeRequest extends AbstractByBitApiRequest
 
         return [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'mode' => $mode,
         ];
     }
 
     public function __construct(
         private AssetCategory $category,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private PositionMode $mode
     ) {
     }

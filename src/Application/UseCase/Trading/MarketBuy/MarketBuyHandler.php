@@ -62,7 +62,7 @@ readonly class MarketBuyHandler
             $orderId = $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());
         } catch (OrderDoesNotMeetMinimumOrderValue $e) {
             // Make `/v5/order/create` request: got unknown errCode 110094 (Order does not meet minimum order value 5USDT) while try to buy 160 (126 initial) on BROCCOLIUSDT sell
-            OutputHelper::print(sprintf('%s %s: got "%s" while try to buy %s (%s initial)', $symbol->value, $dto->positionSide->value, $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume));
+            OutputHelper::print(sprintf('%s %s: got "%s" while try to buy %s (%s initial)', $symbol->name(), $dto->positionSide->value, $e->getMessage(), $exchangeOrder->getVolume(), $dto->volume));
             $orderId = $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume() + $symbol->minOrderQty() * 3);
         }
 

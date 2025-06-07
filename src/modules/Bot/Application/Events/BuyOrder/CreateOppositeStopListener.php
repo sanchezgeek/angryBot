@@ -6,15 +6,14 @@ namespace App\Bot\Application\Events\BuyOrder;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
-final class CreateOppositeStopListener
+final readonly class CreateOppositeStopListener
 {
     public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $positionService,
+        private ExchangeServiceInterface $exchangeService,
+        private PositionServiceInterface $positionService,
     ) {
     }
 
@@ -25,7 +24,7 @@ final class CreateOppositeStopListener
             return;
         }
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = $event->order->getSymbol();
         $order = $event->order;
 
         $position = $this->positionService->getPosition($symbol, $order->getPositionSide());

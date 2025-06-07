@@ -12,7 +12,6 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -38,7 +37,7 @@ final readonly class PushAllMainPositionsStopsHandler
 
         /** @var Position[] $positions */
         $positions = array_combine(
-            array_map(static fn(Position $position) => $position->symbol->value, $positions),
+            array_map(static fn(Position $position) => $position->symbol->name(), $positions),
             $positions
         );
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
@@ -46,8 +45,8 @@ final readonly class PushAllMainPositionsStopsHandler
         $positionsCache = [];
         $queryInput = [];
         foreach ($positions as $position) {
-            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->value]);
-            $positionsCache[$position->symbol->value] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
+            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->name()]);
+            $positionsCache[$position->symbol->name()] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
         }
 
         $stopsToSymbolsMap = [];
@@ -58,9 +57,9 @@ final readonly class PushAllMainPositionsStopsHandler
         $sort = [];
         foreach ($positions as $position) {
             $positionSymbol = $position->symbol;
-            $symbolRaw = $positionSymbol->value;
+            $symbolRaw = $positionSymbol->name();
             $possibleTriggeredStops = $stopsToSymbolsMap[$symbolRaw] ?? [];
-            $currentPrice = $lastMarkPrices[$positionSymbol->value];
+            $currentPrice = $lastMarkPrices[$positionSymbol->name()];
             $ticker = new Ticker($positionSymbol, $currentPrice, $currentPrice, $currentPrice);
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
             $warningRange = $liquidationParameters->warningRange();
@@ -71,30 +70,32 @@ final readonly class PushAllMainPositionsStopsHandler
                 $passedDistancePart = 1 - $priceDeltaWithLiquidation / $initialDistanceWithLiquidation;
             }
 
-            $sort[$symbolRaw] = sprintf(
-                'passedDistancePart_%.2f_im_%s_activatedStops_%d_%s',
-                $passedDistancePart,
-                $position->initialMargin->value(),
-                count($possibleTriggeredStops),
-                $symbolRaw
-            );
+            $k = $position->leverage->value() / 100;
+            $im = $position->initialMargin->value() * $k;
+
+            $sort[$symbolRaw] = [
+                'passedDistancePart' => $passedDistancePart,
+                'im' => $im,
+                'activatedStops' => count($possibleTriggeredStops),
+                'symbol' => $symbolRaw,
+            ];
         }
 
-        $sort = array_flip($sort);
-//        var_dump($sort);
-        krsort($sort);
-//        var_dump($sort);
+        $sort = self::arrayOrder($sort, 'passedDistancePart', SORT_DESC, 'im', SORT_DESC, 'activatedStops', SORT_DESC);
+        $sort = array_keys($sort);
 
         $lastSort = [];
         foreach ($sort as $symbolRaw) {
-            $lastSort[] = $symbol = Symbol::from($symbolRaw);
+            $position = $positions[$symbolRaw];
+            $lastSort[] = $symbol = $position->symbol;
+
             try {
-                $positionState = $positionsCache[$symbol->value]->get();
+                $positionState = $positionsCache[$symbolRaw]->get();
             } catch (RuntimeException) {
                 $positionState = null; // @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
             }
 
-            $this->innerHandler->__invoke(new PushStops($symbol, $positions[$symbol->value]->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->value, $side->title()));
+            $this->innerHandler->__invoke(new PushStops($symbol, $position->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
@@ -125,6 +126,21 @@ final readonly class PushAllMainPositionsStopsHandler
                 $this->messageBus->dispatch(new UpdateTicker($ttl, ...$reverse));
             }
         }
+    }
+
+    private static function arrayOrder()
+    {
+        $args = func_get_args();
+        $data = array_shift($args);
+        foreach ($args as $n => $field) {
+            if (is_string($field)) {
+                $tmp = array_map(static fn ($row) => $row[$field], $data);
+                $args[$n] = $tmp;
+            }
+        }
+        $args[] = &$data;
+        call_user_func_array('array_multisort', $args);
+        return array_pop($args);
     }
 
     private static function timeDiffInfo(string $desc, float $startPoint, bool $print = true): string

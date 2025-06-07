@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Command;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
-final class CreateStop
+final readonly class CreateStop
 {
     public function __construct(
-        public readonly int $id,
-        public readonly Symbol $symbol,
-        public readonly Side $positionSide,
-        public readonly float $volume,
-        public readonly float $price,
-        public readonly ?float $triggerDelta = null,
-        public readonly array $context = [],
+        public int $id,
+        public SymbolInterface $symbol,
+        public Side $positionSide,
+        public float $volume,
+        public float $price,
+        public ?float $triggerDelta = null,
+        public array $context = [],
     ) {
     }
 }

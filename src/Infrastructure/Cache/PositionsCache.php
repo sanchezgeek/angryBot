@@ -2,8 +2,8 @@
 
 namespace App\Infrastructure\Cache;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface PositionsCache
 {
@@ -11,5 +11,5 @@ interface PositionsCache
      * @todo всё таки надо подписаться на wss
      *       актуально для ситуации, когда выполнится conditionStop и MBH пытается проверить `buyIsSafe`, а кэш не сбросился
      */
-    public function clearPositionsCache(Symbol $symbol, Side $positionSide): void;
+    public function clearPositionsCache(SymbolInterface $symbol, Side $positionSide): void;
 }

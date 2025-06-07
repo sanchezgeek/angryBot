@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -12,6 +11,7 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEval
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 
 /**
@@ -24,7 +24,7 @@ final readonly class PriceChangeDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice,
         float $passedPartOfOneDay,
-        ?Symbol $symbol = null,
+        ?SymbolInterface $symbol = null,
     ): float {
         return $this->significantPricePercent($refPrice, $passedPartOfOneDay, $symbol)->of($refPrice);
     }
@@ -34,7 +34,7 @@ final readonly class PriceChangeDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPrice)]
         float $refPrice,
         float $passedPartOfOneDay,
-        ?Symbol $symbol = null,
+        ?SymbolInterface $symbol = null,
     ): Percent {
         if ($passedPartOfOneDay <= 0) {
             throw new LogicException(sprintf('$passedPartOfOneDay cannot be less than 0 (%s provided)', $passedPartOfOneDay));
@@ -45,13 +45,13 @@ final readonly class PriceChangeDynamicParameters
         return Percent::notStrict($base * $passedPartOfOneDay);
     }
 
-    private function oneDaySignificantPricePercent(float $currentPrice, ?Symbol $symbol = null): float
+    private function oneDaySignificantPricePercent(float $currentPrice, ?SymbolInterface $symbol = null): float
     {
         if ($percentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantDelta_OneDay_PricePercent, $symbol))) {
             return $percentOverride;
         }
 
-        return match (true) {
+        $base = match (true) {
             $currentPrice >= 15000 => 1,
             $currentPrice >= 5000 => 2,
             $currentPrice >= 3000 => 3,
@@ -69,6 +69,10 @@ final readonly class PriceChangeDynamicParameters
             $currentPrice >= 0.7 => 18,
             default => 20,
         };
+
+        $multiplier = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantDelta_OneDay_BaseMultiplier, $symbol));
+
+        return $base * $multiplier;
     }
 
     public function __construct(private AppSettingsProviderInterface $settingsProvider)

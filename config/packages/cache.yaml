@@ -22,3 +22,5 @@ framework:
 
             settings.cache:
 #                tags: 'settings'
+
+            symbols.cache:

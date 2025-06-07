@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Exchange\Account;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Value\CachedValue;
 
 abstract class AbstractExchangeAccountService implements ExchangeAccountServiceInterface
@@ -12,7 +12,7 @@ abstract class AbstractExchangeAccountService implements ExchangeAccountServiceI
     /** @var CachedValue[] */
     private array $balanceHotCache = [];
 
-    public function getCachedTotalBalance(Symbol $symbol): float
+    public function getCachedTotalBalance(SymbolInterface $symbol): float
     {
         $coin = $symbol->associatedCoin();
         $balance = $this->balanceHotCache[$coin->value] ?? (

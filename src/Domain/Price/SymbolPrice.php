@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Price;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 use Stringable;
 
@@ -27,7 +27,7 @@ final readonly class SymbolPrice implements Stringable
     /**
      * @throws PriceCannotBeLessThanZero
      */
-    private function __construct(private float $value, public Symbol $symbol)
+    private function __construct(private float $value, public SymbolInterface $symbol)
     {
         if ($this->value < 0) {
             throw new PriceCannotBeLessThanZero($value, $this->symbol);
@@ -37,7 +37,7 @@ final readonly class SymbolPrice implements Stringable
     /**
      * @throws PriceCannotBeLessThanZero
      */
-    public static function create(float $value, Symbol $source): self
+    public static function create(float $value, SymbolInterface $source): self
     {
         return new self($value, $source);
     }

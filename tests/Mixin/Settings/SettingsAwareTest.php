@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Settings;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
@@ -20,6 +20,7 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Tests\Mixin\TestWithDoctrineRepository;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -65,7 +66,7 @@ trait SettingsAwareTest
         self::getSettingsService()->set($settingAccessor, $value);
     }
 
-    protected function setMinimalSafePriceDistance(Symbol $symbol, Side $positionSide, float $pricePercent = 0.1): void
+    protected function setMinimalSafePriceDistance(SymbolInterface $symbol, Side $positionSide, float $pricePercent = 0.1): void
     {
         # @todo | buyIsSafe | for now to prevent MarketBuyHandler "buyIsSafe" checks
         $this->overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $pricePercent);
@@ -97,8 +98,8 @@ trait SettingsAwareTest
             $storedValues = [];
             foreach ($existentSettings as $key => $value) {
                 if (!str_contains($key, $providedSetting->getSettingKey())) continue;
-                [$symbol, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
-                $storedValues[] = new AssignedSettingValue($providedSetting, $symbol, $side, $key, $value);
+                [$symbolRaw, $side] = AssignedSettingValueFactory::parseSymbolAndSide($key);
+                $storedValues[] = new AssignedSettingValue($providedSetting, $symbolRaw, $side, $key, $value);
             }
 
             return $storedValues;

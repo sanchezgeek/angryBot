@@ -6,6 +6,7 @@ use App\Alarm\Application\Settings\AlarmSettings;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\DynamicParameters\Evaluation\AppDynamicParameterEvaluator;
 use App\Settings\Application\Service\AppSettingsService;
@@ -18,7 +19,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'alarm:edit')]
-class EditAlarmCommand extends AbstractCommand
+class EditAlarmCommand extends AbstractCommand implements PositionDependentCommand
 {
     use SymbolAwareCommand;
     use PositionAwareCommand;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\Stop\Dump\StopsDumpRestoreCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Mixin\StopsTester;
@@ -26,16 +26,10 @@ final class StopsDumpRestoreCommandTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
 
-    private const COMMAND_NAME = 'sl:dump:restore';
+    private const string COMMAND_NAME = 'sl:dump:restore';
 
     private PositionServiceStub $positionServiceStub;
-
     private DateTimeImmutable $currentDatetime;
-
-    protected function setUp(): void
-    {
-        self::truncateStops();
-    }
 
     /**
      * @dataProvider restoreStopsTestDataProvider
@@ -63,11 +57,11 @@ final class StopsDumpRestoreCommandTest extends KernelTestCase
         yield 'without delete' => [
             __DIR__ . '/../../../../Mock/dump/sell.2023-09-07_23:32:32.json',
             [
-                (new Stop(2, 28922.2, 0.003, 10, Symbol::ADAUSDT, Side::Sell))->setExchangeOrderId('885e602a-93fa-4a06-90c7-ae9f0d3b3e36'),
-                (new Stop(3, 28933.3, 0.002, 10, Symbol::ADAUSDT, Side::Sell))->setIsWithoutOppositeOrder(),
-                (new Stop(4, 28931.1, 0.002, 10, Symbol::ADAUSDT, Side::Sell)),
-                (new Stop(8, 28951.2, 0.001, 10, Symbol::ADAUSDT, Side::Sell)),
-                (new Stop(13, 28972.3, 0.01, 10, Symbol::ADAUSDT, Side::Sell)),
+                (new Stop(2, 28922.2, 0.003, 10, SymbolEnum::ADAUSDT, Side::Sell))->setExchangeOrderId('885e602a-93fa-4a06-90c7-ae9f0d3b3e36'),
+                (new Stop(3, 28933.3, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell))->setIsWithoutOppositeOrder(),
+                (new Stop(4, 28931.1, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell)),
+                (new Stop(8, 28951.2, 0.001, 10, SymbolEnum::ADAUSDT, Side::Sell)),
+                (new Stop(13, 28972.3, 0.01, 10, SymbolEnum::ADAUSDT, Side::Sell)),
             ]
         ];
     }

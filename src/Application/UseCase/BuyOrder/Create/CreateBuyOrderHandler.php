@@ -6,11 +6,17 @@ namespace App\Application\UseCase\BuyOrder\Create;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 
 final readonly class CreateBuyOrderHandler
 {
-    public function __construct(private BuyOrderRepository $repository)
-    {
+    public function __construct(
+        private BuyOrderRepository $repository,
+        private SymbolProvider $symbolProvider,
+    ) {
     }
 
     public function handle(CreateBuyOrderEntryDto $dto): CreateBuyOrderResultDto
@@ -20,7 +26,15 @@ final readonly class CreateBuyOrderHandler
 
         $id = $this->repository->getNextId();
 
-        $buyOrder = new BuyOrder($id, $dto->price, $dto->volume, $dto->symbol, $dto->side, $dto->context);
+        $buyOrder = new BuyOrder(
+            $id,
+            $dto->price,
+            $dto->volume,
+            $this->symbolProvider->replaceWithActualEntity($dto->symbol),
+            $dto->side,
+            $dto->context
+        );
+
         $this->repository->save($buyOrder);
 
         return new CreateBuyOrderResultDto($buyOrder);

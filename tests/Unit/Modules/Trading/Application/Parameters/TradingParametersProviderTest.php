@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -12,8 +12,8 @@ use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -35,7 +35,7 @@ final class TradingParametersProviderTest extends KernelTestCase
     /**
      * @dataProvider defaultValueCases
      */
-    public function testSafeDistanceOnRefPriceDefault(Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): void
+    public function testSafeDistanceOnRefPriceDefault(SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): void
     {
         if ($k) {
             self::overrideSetting(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $k);
@@ -50,7 +50,7 @@ final class TradingParametersProviderTest extends KernelTestCase
 
     public function defaultValueCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
 
         $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 94835.93);
@@ -139,7 +139,7 @@ final class TradingParametersProviderTest extends KernelTestCase
     /**
      * @dataProvider casesWithOverride
      */
-    public function testSafeDistanceOnRefPriceWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): void
+    public function testSafeDistanceOnRefPriceWithOverride(float $overridePercent, SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): void
     {
         self::overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $overridePercent);
 
@@ -152,7 +152,7 @@ final class TradingParametersProviderTest extends KernelTestCase
 
     public function casesWithOverride(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $overridePercent = 5;
         $refPrice = 100000;
@@ -160,7 +160,7 @@ final class TradingParametersProviderTest extends KernelTestCase
         yield self::caseDescriptionWithOverride($overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance) => [$overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance];
     }
 
-    private static function getExpectedSafeDistance(Symbol $symbol, Side $side, float $refPrice, float $k = 1): float
+    private static function getExpectedSafeDistance(SymbolInterface $symbol, Side $side, float $refPrice, float $k = 1): float
     {
         $base = match (true) {
             $refPrice >= 10000 => $refPrice / 12,
@@ -179,17 +179,17 @@ final class TradingParametersProviderTest extends KernelTestCase
         return $base * $k;
     }
 
-    private function caseDescription(Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): string
+    private function caseDescription(SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): string
     {
         $pct = Percent::fromPart($expectedSafeDistance / $refPrice, false);
 
-        return sprintf('%s, %s, %s%s => %s (%s)', $symbol->value, $positionSide->value, $refPrice, $k !== null ? sprintf(', k=%s', $k) : null, $expectedSafeDistance, $pct);
+        return sprintf('%s, %s, %s%s => %s (%s)', $symbol->name(), $positionSide->value, $refPrice, $k !== null ? sprintf(', k=%s', $k) : null, $expectedSafeDistance, $pct);
     }
 
-    private function caseDescriptionWithOverride(float $overridePercent, Symbol $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): string
+    private function caseDescriptionWithOverride(float $overridePercent, SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance): string
     {
         $pct = new Percent($overridePercent, false);
 
-        return sprintf('[override percent with %s] %s, %s, %s => %s (%s)', $overridePercent, $symbol->value, $positionSide->value, $refPrice, $expectedSafeDistance, $pct);
+        return sprintf('[override percent with %s] %s, %s, %s => %s (%s)', $overridePercent, $symbol->name(), $positionSide->value, $refPrice, $expectedSafeDistance, $pct);
     }
 }

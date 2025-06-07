@@ -12,6 +12,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Price\PriceMovement;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
@@ -26,7 +27,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'p:info')]
-class PositionsInfoCommand extends AbstractCommand
+class PositionsInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

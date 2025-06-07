@@ -1,0 +1,36 @@
+{
+  "file": "/srv/app/vendor/doctrine/orm/src/Exception/EntityManagerClosed.php",
+  "line": 13,
+  "trace": "#0 /srv/app/vendor/doctrine/orm/src/EntityManager.php(528): Doctrine\ORM\Exception\EntityManagerClosed::create()
+#N /srv/app/vendor/doctrine/orm/src/EntityManager.php(437): Doctrine\ORM\EntityManager->errorIfClosed()
+#N /srv/app/src/modules/Bot/Domain/Repository/BuyOrderRepository.php(37): Doctrine\ORM\EntityManager->persist(Object(App\Bot\Domain\Entity\BuyOrder))
+#N /srv/app/vendor/doctrine/orm/src/EntityManager.php(183): App\Bot\Domain\Repository\BuyOrderRepository->{closure:App\Bot\Domain\Repository\BuyOrderRepository::save():36}(Object(ContainerTxPiwdW\EntityManagerGhost614a58f))
+#N /srv/app/src/modules/Bot/Domain/Repository/BuyOrderRepository.php(42): Doctrine\ORM\EntityManager->wrapInTransaction(Object(Closure))
+#N /srv/app/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php(392): App\Bot\Domain\Repository\BuyOrderRepository->save(Object(App\Bot\Domain\Entity\BuyOrder))
+#N /srv/app/src/modules/Bot/Application/Messenger/Job/PushOrdersToExchange/PushBuyOrdersHandler.php(251): App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler->buy(Object(App\Bot\Domain\Position), Object(App\Bot\Domain\Ticker), Object(App\Bot\Domain\Entity\BuyOrder))
+#N /srv/app/vendor/symfony/messenger/Middleware/HandleMessageMiddleware.php(152): App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrdersHandler->__invoke(Object(App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders))
+#N /srv/app/vendor/symfony/messenger/Middleware/HandleMessageMiddleware.php(91): Symfony\Component\Messenger\Middleware\HandleMessageMiddleware->callHandler(Object(Closure), Object(App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders), NULL, NULL)
+#N /srv/app/vendor/symfony/messenger/Middleware/SendMessageMiddleware.php(71): Symfony\Component\Messenger\Middleware\HandleMessageMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N0 /srv/app/src/Infrastructure/Symfony/Messenger/Middleware/OutputWorkerMemoryUsageMiddleware.php(30): Symfony\Component\Messenger\Middleware\SendMessageMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N1 /srv/app/vendor/symfony/messenger/Middleware/FailedMessageProcessingMiddleware.php(34): App\Infrastructure\Symfony\Messenger\Middleware\OutputWorkerMemoryUsageMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N2 /srv/app/vendor/symfony/messenger/Middleware/DispatchAfterCurrentBusMiddleware.php(68): Symfony\Component\Messenger\Middleware\FailedMessageProcessingMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N3 /srv/app/vendor/symfony/messenger/Middleware/RejectRedeliveredMessageMiddleware.php(41): Symfony\Component\Messenger\Middleware\DispatchAfterCurrentBusMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N4 /srv/app/vendor/symfony/messenger/Middleware/AddBusNameStampMiddleware.php(35): Symfony\Component\Messenger\Middleware\RejectRedeliveredMessageMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N5 /srv/app/vendor/symfony/messenger/Middleware/TraceableMiddleware.php(36): Symfony\Component\Messenger\Middleware\AddBusNameStampMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N6 /srv/app/vendor/symfony/messenger/MessageBus.php(69): Symfony\Component\Messenger\Middleware\TraceableMiddleware->handle(Object(Symfony\Component\Messenger\Envelope), Object(Symfony\Component\Messenger\Middleware\TraceableStack))
+#N7 /srv/app/vendor/symfony/messenger/RoutableMessageBus.php(48): Symfony\Component\Messenger\MessageBus->dispatch(Object(Symfony\Component\Messenger\Envelope), Array)
+#N8 /srv/app/vendor/symfony/messenger/Worker.php(170): Symfony\Component\Messenger\RoutableMessageBus->dispatch(Object(Symfony\Component\Messenger\Envelope))
+#N9 /srv/app/vendor/symfony/messenger/Worker.php(119): Symfony\Component\Messenger\Worker->handleMessage(Object(Symfony\Component\Messenger\Envelope), 'cron')
+#N0 /srv/app/vendor/symfony/messenger/Command/ConsumeMessagesCommand.php(260): Symfony\Component\Messenger\Worker->run(Array)
+#N1 /srv/app/vendor/symfony/console/Command/Command.php(279): Symfony\Component\Messenger\Command\ConsumeMessagesCommand->execute(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N2 /srv/app/vendor/symfony/console/Application.php(1094): Symfony\Component\Console\Command\Command->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N3 /srv/app/vendor/symfony/framework-bundle/Console/Application.php(123): Symfony\Component\Console\Application->doRunCommand(Object(Symfony\Component\Messenger\Command\ConsumeMessagesCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N4 /srv/app/vendor/symfony/console/Application.php(342): Symfony\Bundle\FrameworkBundle\Console\Application->doRunCommand(Object(Symfony\Component\Messenger\Command\ConsumeMessagesCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N5 /srv/app/vendor/symfony/framework-bundle/Console/Application.php(77): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N6 /srv/app/vendor/symfony/console/Application.php(193): Symfony\Bundle\FrameworkBundle\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N7 /srv/app/vendor/symfony/runtime/Runner/Symfony/ConsoleApplicationRunner.php(49): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#N8 /srv/app/vendor/autoload_runtime.php(29): Symfony\Component\Runtime\Runner\Symfony\ConsoleApplicationRunner->run()
+#N9 /srv/app/bin/console(15): require_once('/srv/app/vendor...')
+#N0 {main}",
+  "previous": "[object] (Doctrine\ORM\ORMInvalidArgumentException(code: 0): A new entity was found through the relationship 'App\Bot\Domain\Entity\Stop#symbol' that was not configured to cascade persist operations for entity: BTCUSDT. To solve this issue: Either explicitly call EntityManager#persist() on this unknown entity or configure cascade persist this association in the mapping for example #[ORM\ManyToOne(..., cascade: ['persist'])]. at /srv/app/vendor/doctrine/orm/src/ORMInvalidArgumentException.php:68)"
+}

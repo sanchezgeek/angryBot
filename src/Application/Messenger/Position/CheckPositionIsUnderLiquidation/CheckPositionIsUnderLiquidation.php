@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @codeCoverageIgnore
@@ -12,7 +12,7 @@ use App\Bot\Domain\ValueObject\Symbol;
 final readonly class CheckPositionIsUnderLiquidation
 {
     public function __construct(
-        public ?Symbol $symbol = null,
+        public ?SymbolInterface $symbol = null,
         public ?int $checkStopsOnPnlPercent = null,
         public ?int $percentOfLiquidationDistanceToAddStop = null,
         public ?float $acceptableStoppedPart = null,

@@ -4,8 +4,8 @@ namespace App\Bot\Application\Service\Exchange\Account;
 
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface ExchangeAccountServiceInterface
 {
@@ -17,5 +17,5 @@ interface ExchangeAccountServiceInterface
 
     public function interTransferFromContractToSpot(Coin $coin, float $amount): void;
 
-    public function getCachedTotalBalance(Symbol $symbol): float;
+    public function getCachedTotalBalance(SymbolInterface $symbol): float;
 }

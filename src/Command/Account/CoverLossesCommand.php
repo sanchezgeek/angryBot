@@ -13,6 +13,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Value\Percent\Percent;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,7 +23,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'balance:cover-losses')]
-class CoverLossesCommand extends AbstractCommand
+class CoverLossesCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Clock\ClockInterface;
 use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
@@ -14,6 +14,7 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -47,8 +48,6 @@ final class StopsDumpCommandTest extends KernelTestCase
         $clockMock = $this->createMock(ClockInterface::class);
         $clockMock->expects(self::once())->method('now')->willReturn($this->currentDatetime);
         self::getContainer()->set(ClockInterface::class, $clockMock);
-
-        self::truncateStops();
     }
 
     /**
@@ -57,7 +56,7 @@ final class StopsDumpCommandTest extends KernelTestCase
      * @todo add symbol in command args
      */
     public function testCanDumpStops(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         array $initialStops,
         string $expectedContent,
@@ -92,7 +91,7 @@ final class StopsDumpCommandTest extends KernelTestCase
 
     private function dumpStopsTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT; $side = Side::Sell;
+        $symbol = SymbolEnum::BTCUSDT; $side = Side::Sell;
 
         $initialStops = [
             new Stop(1, 28891.1, 0.003, 10, $symbol, $side->getOpposite()),

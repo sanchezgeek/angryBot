@@ -17,7 +17,6 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
@@ -31,6 +30,7 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
@@ -62,10 +62,10 @@ final class PushStopsHandler extends AbstractOrdersPusher
 //        if ($message->dispatchedAt && $tickerDto->cacheSavedAt) {
 //            $diff = $message->dispatchedAt - $tickerDto->cacheSavedAt;
 //            $updatedByWorker = $tickerDto->updatedByWorker;
-//            if ($updatedByWorker !== AppContext::runningWorker()) OutputHelper::print(sprintf('%s ticker cache lifetime = %s', $symbol->value, $tickerDto->lifetime($message->dispatchedAt)));
+//            if ($updatedByWorker !== AppContext::runningWorker()) OutputHelper::print(sprintf('%s ticker cache lifetime = %s', $symbol->name(), $tickerDto->lifetime($message->dispatchedAt)));
 //            // @todo compare with markPrice from all positions
 //            if ($diff < 0 && $updatedByWorker !== AppContext::runningWorker()) OutputHelper::warning(sprintf('negative diff: %s (by %s)', $diff, $updatedByWorker->value));
-//            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->value, $diff, $updatedByWorker->value));
+//            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->name(), $diff, $updatedByWorker->value));
 //        }
 
         $liquidationParameters = $this->liquidationDynamicParameters($position, $ticker);
@@ -178,7 +178,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
     /**
      * @return Stop[]
      */
-    private function findStops(Side $side, Symbol $symbol): array
+    private function findStops(Side $side, SymbolInterface $symbol): array
     {
         return $this->repository->findActive(
             symbol: $symbol,

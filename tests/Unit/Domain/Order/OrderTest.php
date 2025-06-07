@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Order;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Order;
-use App\Domain\Price\SymbolPrice;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -16,7 +15,7 @@ final class OrderTest extends TestCase
 {
     public function testCanCreate(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $order = new Order($symbol->makePrice(30000), 0.1);
 

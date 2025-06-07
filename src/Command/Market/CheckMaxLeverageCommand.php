@@ -2,23 +2,21 @@
 
 namespace App\Command\Market;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Helper\OutputHelper;
+use App\Command\SymbolDependentCommand;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use function json_encode;
 use function sprintf;
 
 #[AsCommand(name: 'leverage:check-max')]
-class CheckMaxLeverageCommand extends AbstractCommand
+class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;
@@ -31,8 +29,7 @@ class CheckMaxLeverageCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         foreach ($this->positionService->getAllPositions() as $symbolRaw => $symbolPositions) {
-            $symbol = Symbol::from($symbolRaw);
-            $maxLeverage = $this->exchangeService->getInstrumentInfo($symbol)->maxLeverage;
+            $maxLeverage = $this->marketService->getInstrumentInfo($symbolRaw)->maxLeverage;
 
             foreach ($symbolPositions as $position) {
                 if ($position->leverage->value() < $maxLeverage) {
@@ -46,7 +43,7 @@ class CheckMaxLeverageCommand extends AbstractCommand
     }
 
     public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly ByBitLinearMarketService $marketService,
         private readonly ByBitLinearPositionService $positionService,
         ?string $name = null,
     ) {

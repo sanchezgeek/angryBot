@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\EventListener;
 
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
@@ -30,15 +28,13 @@ use function sprintf;
  * ] => cover losses by adding SL on MainPosition.
  */
 #[AsEventListener]
-final class FixOppositePositionListener
+final readonly class FixOppositePositionListener
 {
     public function __construct(
-        private readonly AppSettingsProviderInterface $settings,
-        private readonly OrderCostCalculator $orderCostCalculator,
-        private readonly ExchangeAccountServiceInterface $exchangeAccountService,
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly PositionServiceInterface $positionService, /** @todo | MB without cache? */
-        private readonly StopServiceInterface $stopService,
+        private AppSettingsProviderInterface $settings,
+        private ExchangeServiceInterface $exchangeService,
+        private PositionServiceInterface $positionService, /** @todo | MB without cache? */
+        private StopServiceInterface $stopService,
     ) {
     }
 

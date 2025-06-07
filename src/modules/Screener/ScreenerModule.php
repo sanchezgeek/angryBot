@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Screener;
 
+use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
 use App\Settings\Infrastructure\Symfony\Configuration\Trait\AppDynamicParametersAwareBundle;
 use App\Settings\Infrastructure\Symfony\Configuration\Trait\SettingsAwareBundle;
-use App\Trading\Application\Parameters\TradingDynamicParameters;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
@@ -22,7 +22,7 @@ final class ScreenerModule extends AbstractBundle
         $this->registerSettings($container, __NAMESPACE__, __DIR__ . '/Application/Settings');
         $this->registerSettingsValues($container,__DIR__ . '/Infrastructure/Symfony/config/screener_settings.yaml');
         $this->registerDynamicParameters($container, [
-            TradingDynamicParameters::class,
+            PriceChangeDynamicParameters::class,
         ]);
     }
 }

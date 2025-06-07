@@ -6,15 +6,15 @@ namespace App\Tests\Factory\Position;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
-
 use RuntimeException;
 
 use function sprintf;
@@ -22,12 +22,12 @@ use function sprintf;
 class PositionBuilder
 {
     private const DEFAULT_ENTRY = 29000;
-    private const DEFAULT_SYMBOL = Symbol::BTCUSDT;
+    private const DEFAULT_SYMBOL = SymbolEnum::BTCUSDT;
     private const DEFAULT_SIZE = 0.5;
     private const DEFAULT_LEVERAGE = 100;
 
     private Side $side;
-    private Symbol $symbol = self::DEFAULT_SYMBOL;
+    private SymbolInterface $symbol = self::DEFAULT_SYMBOL;
     private float $entry = self::DEFAULT_ENTRY;
     private ?float $liquidation = null;
     private float $size = self::DEFAULT_SIZE;
@@ -63,7 +63,7 @@ class PositionBuilder
         return new self($position->side->getOpposite());
     }
 
-    public function symbol(Symbol $symbol): self
+    public function symbol(SymbolInterface $symbol): self
     {
         $builder = clone $this;
         $builder->symbol = $symbol;

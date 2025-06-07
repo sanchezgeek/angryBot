@@ -4,9 +4,9 @@ namespace App\Bot\Domain\Repository;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -53,7 +53,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActive(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -62,7 +62,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         $qb = $this->createQueryBuilder('bo')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
             ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
 
         if ($exceptOppositeOrders) {
@@ -87,7 +87,7 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActiveForPush(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?float $currentPrice = null,
         bool $exceptOppositeOrders = false,
@@ -136,14 +136,31 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      * @todo MB use current price to find orders?
      */
-    public function getIdleOrders(Symbol ...$symbols): array
+    public function getAllIdleOrders(SymbolInterface ...$symbols): array
     {
         $qb = $this->createQueryBuilder('b')
             ->andWhere('b.state = :idleState')->setParameter('idleState', BuyOrderState::Idle)
         ;
 
         if ($symbols) {
-            $symbols = array_map(static fn(Symbol $symbol) => $symbol->value, $symbols);
+            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
+            $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getAllActiveOrders(SymbolInterface ...$symbols): array
+    {
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere('b.state = :activeState')->setParameter('activeState', BuyOrderState::Active)
+        ;
+
+        if ($symbols) {
+            $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
 

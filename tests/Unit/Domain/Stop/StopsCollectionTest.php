@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Stop;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -50,7 +50,7 @@ final class StopsCollectionTest extends TestCase
 
     public function testGrabFromRange(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $collection = new StopsCollection();
 

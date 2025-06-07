@@ -8,6 +8,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
@@ -17,16 +18,19 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'buy:reset-active')]
-class ResetActiveFlagCommand extends AbstractCommand
+#[AutoconfigureTag(name: 'command.symbol_dependent')]
+class ResetActiveFlagCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
     use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
 
-    private const ALLOWED_PNL_DELTA_OPTION = 'allowed-pnl-delta';
-    private const ALLOWED_PNL_DELTA_DEFAULT = '25%';
+    private const string ALL_OPTION = 'all';
+    private const string ALLOWED_PNL_DELTA_OPTION = 'allowed-pnl-delta';
+    private const string ALLOWED_PNL_DELTA_DEFAULT = '25%';
 
     protected function configure(): void
     {
@@ -34,11 +38,24 @@ class ResetActiveFlagCommand extends AbstractCommand
             ->configureSymbolArgs(defaultValue: null)
             ->configurePositionArgs(InputArgument::OPTIONAL)
             ->addOption(self::ALLOWED_PNL_DELTA_OPTION, null, InputOption::VALUE_OPTIONAL, 'PNL percent threshold to keep orders active even if order price laying before ticker', self::ALLOWED_PNL_DELTA_DEFAULT)
+            ->addOption(self::ALL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reset for all orders')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if ($this->paramFetcher->getBoolOption(self::ALL_OPTION)) {
+            $count = 0;
+            foreach ($this->repository->getAllActiveOrders() as $buyOrder) {
+                $buyOrder->setIdle();
+                $this->repository->save($buyOrder);
+                $count ++;
+            }
+
+            $this->io->info(sprintf('Handler %d orders', $count));
+            return Command::SUCCESS;
+        }
+
         $symbols = $this->symbolIsSpecified() ? $this->getSymbols() : [];
         $side = $this->getPositionSide(false);
         $allowedPnl = $this->paramFetcher->percentOption(self::ALLOWED_PNL_DELTA_OPTION);

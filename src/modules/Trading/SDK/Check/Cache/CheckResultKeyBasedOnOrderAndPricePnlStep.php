@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Cache;
 
 use App\Application\Cache\CacheKeyGeneratorInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @see \App\Tests\Unit\Modules\Trading\SDK\Check\Cache\CheckResultKeyBasedOnOrderAndPricePnlStepTest
@@ -20,7 +20,7 @@ final readonly class CheckResultKeyBasedOnOrderAndPricePnlStep implements CacheK
     public function __construct(
         private float $orderPrice,
         private float $orderQty,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private Side $positionSide,
         float|Percent $pnlStep
     ) {
@@ -61,7 +61,7 @@ final readonly class CheckResultKeyBasedOnOrderAndPricePnlStep implements CacheK
 
         return sprintf(
             'CRKBOPPS_%s_%s_pct_%s_step_%.' . $this->symbol->pricePrecision() . 'f_priceLevel_%d_orderQty_%s',
-            $this->symbol->value,
+            $this->symbol->name(),
             $this->positionSide->value,
             $this->pnlStep,
             $stepBasedOnRoundedPrice,

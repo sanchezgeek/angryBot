@@ -6,8 +6,8 @@ namespace App\Stop\Application\UseCase\CheckStopCanBeExecuted;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 
 final readonly class StopCheckDto implements CheckOrderDto
@@ -21,7 +21,7 @@ final readonly class StopCheckDto implements CheckOrderDto
         $this->executionPrice = $this->inner->isCloseByMarketContextSet() ? $ticker->markPrice->value() : $this->inner->getPrice();
     }
 
-    public function symbol(): Symbol
+    public function symbol(): SymbolInterface
     {
         return $this->inner->getSymbol();
     }

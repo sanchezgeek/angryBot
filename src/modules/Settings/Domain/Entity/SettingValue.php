@@ -2,9 +2,10 @@
 
 namespace App\Settings\Domain\Entity;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Domain\Repository\SettingValueRepository;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\Mapping as ORM;
 use InvalidArgumentException;
 
@@ -20,8 +21,9 @@ class SettingValue
     #[ORM\Column(type: 'string', nullable: false)]
     public string $key;
 
-    #[ORM\Column(type: 'string', nullable: true, enumType: Symbol::class)]
-    public ?Symbol $symbol = null;
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name', nullable: true)]
+    public ?SymbolInterface $symbol = null;
 
     #[ORM\Column(type: 'string', nullable: true, enumType: Side::class)]
     public ?Side $positionSide = null;
@@ -37,7 +39,7 @@ class SettingValue
     private function __construct(
         string $key,
         mixed $value = null,
-        ?Symbol $symbol = null,
+        ?SymbolInterface $symbol = null,
         ?Side $positionSide = null,
     ) {
         if ($this->positionSide && !$this->symbol) {
@@ -50,12 +52,12 @@ class SettingValue
         $this->value = $value;
     }
 
-    public static function withValue(string $key, mixed $value, ?Symbol $symbol = null, ?Side $positionSide = null): self
+    public static function withValue(string $key, mixed $value, ?SymbolInterface $symbol = null, ?Side $positionSide = null): self
     {
         return new self($key, $value, $symbol, $positionSide);
     }
 
-    public static function disabled(string $key, ?Symbol $symbol = null, ?Side $positionSide = null): self
+    public static function disabled(string $key, ?SymbolInterface $symbol = null, ?Side $positionSide = null): self
     {
         return new self($key, null, $symbol, $positionSide);
     }
@@ -76,19 +78,9 @@ class SettingValue
     {
         return [
             'key' => $this->key,
-            'symbol' => $this->symbol?->value,
+            'symbol' => $this->symbol?->name(),
             'positionSide' => $this->positionSide?->value,
             'value' => $this->value,
         ];
-    }
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            $data['key'],
-            $data['value'],
-            $data['symbol'] ? Symbol::from($data['symbol']) : null,
-            $data['positionSide'] ? Side::from($data['positionSide']) : null,
-        );
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Entity;
 
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
@@ -27,7 +27,7 @@ final class StopTest extends TestCase
 
     public function testShortPnl(): void
     {
-        $position = PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 1, 100);
 
         $stop = StopBuilder::short(1, 29700, 0.5)->build();
         self::assertEquals(100, $stop->getPnlInPercents($position));
@@ -44,7 +44,7 @@ final class StopTest extends TestCase
 
     public function testLongPnl(): void
     {
-        $position = PositionFactory::long(Symbol::BTCUSDT, 30000, 1, 100);
+        $position = PositionFactory::long(SymbolEnum::BTCUSDT, 30000, 1, 100);
 
         $stop = StopBuilder::long(1, 31000, 0.5)->build();
         self::assertEquals(333.33, $stop->getPnlInPercents($position));
@@ -72,7 +72,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContextIfContextIsEmpty(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, []);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, []);
 
         self::assertSame([], $stop->getContext());
     }
@@ -82,7 +82,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContext(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, $context);
 
         self::assertSame($context, $stop->getContext());
     }
@@ -92,7 +92,7 @@ final class StopTest extends TestCase
      */
     public function testCanGetContextByName(Side $side, array $context, string $name, mixed $expectedValue): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, $context);
 
         self::assertSame($expectedValue, $stop->getContext($name));
         self::assertSame($expectedValue, $stop->getContext()[$name]);
@@ -120,13 +120,13 @@ final class StopTest extends TestCase
      */
     public function testGetIsWithOppositeOrder(Side $side): void
     {
-        $stopWithOpposite1 = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side);
+        $stopWithOpposite1 = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side);
         self::assertTrue($stopWithOpposite1->isWithOppositeOrder());
 
-        $stopWithOpposite2 = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => false]);
+        $stopWithOpposite2 = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => false]);
         self::assertTrue($stopWithOpposite2->isWithOppositeOrder());
 
-        $stopWithoutOpposite = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
+        $stopWithoutOpposite = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
         self::assertFalse($stopWithoutOpposite->isWithOppositeOrder());
     }
 
@@ -135,7 +135,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsWithOppositeOrderContext(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, [self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true]);
         $stop->setIsWithOppositeOrder();
         self::assertTrue($stop->isWithOppositeOrder());
     }
@@ -145,7 +145,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsWithoutOppositeOrderContext(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ETHUSDT, $side);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ETHUSDT, $side);
         $stop->setIsWithoutOppositeOrder();
         self::assertFalse($stop->isWithOppositeOrder());
     }
@@ -155,7 +155,7 @@ final class StopTest extends TestCase
      */
     public function testIsTakeProfitOrder(Side $side): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, [self::IS_TP_CONTEXT => true]);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, [self::IS_TP_CONTEXT => true]);
 
         self::assertTrue($stop->isTakeProfitOrder());
     }
@@ -165,7 +165,7 @@ final class StopTest extends TestCase
      */
     public function testIsNotTakeProfitOrder(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, $context);
 
         self::assertFalse($stop->isTakeProfitOrder());
     }
@@ -175,7 +175,7 @@ final class StopTest extends TestCase
      */
     public function testSetIsTakeProfitOrder(Side $side, array $context): void
     {
-        $stop = new Stop(1, 100500, 123.456, 10, Symbol::ADAUSDT, $side, $context);
+        $stop = new Stop(1, 100500, 123.456, 10, SymbolEnum::ADAUSDT, $side, $context);
         $stop->setIsTakeProfitOrder();
         self::assertTrue($stop->isTakeProfitOrder());
     }
@@ -200,7 +200,7 @@ final class StopTest extends TestCase
             $price = 29000.1,
             $volume = 0.011,
             $triggerDelta = 13.1,
-            $symbol = Symbol::BTCUSD,
+            $symbol = SymbolEnum::BTCUSD,
             $positionSide,
             $context = [
                 'root.string.context' => 'some string context',
@@ -216,41 +216,13 @@ final class StopTest extends TestCase
             [
                 'id' => $id,
                 'positionSide' => $positionSide->value,
-                'symbol' => $symbol->value,
+                'symbol' => $symbol->name(),
                 'price' => $price,
                 'volume' => $volume,
                 'triggerDelta' => $triggerDelta,
                 'context' => $context
             ],
             $stop->toArray()
-        );
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
-    public function testFromArray(Side $positionSide): void
-    {
-        $data = [
-            'id' => $id = 100500,
-            'positionSide' => $positionSide->value,
-            'symbol' => Symbol::BTCUSDT->value,
-            'price' => $price = 29000.1,
-            'volume' => $volume = 0.011,
-            'triggerDelta' => $triggerDelta = 13.1,
-            'context' => $context = [
-                'root.string.context' => 'some string context',
-                'root.bool.context' => false,
-                'some.array.context' => [
-                    'inner.string.context' => 'some string context',
-                    'inner.bool.context' => true,
-                ],
-            ]
-        ];
-
-        self::assertEquals(
-            new Stop($id, $price, $volume, $triggerDelta, Symbol::BTCUSDT, $positionSide, $context),
-            Stop::fromArray($data)
         );
     }
 

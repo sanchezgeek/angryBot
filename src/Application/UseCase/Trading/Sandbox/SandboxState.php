@@ -5,20 +5,15 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
-use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
-use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxHedgeIsEquivalentException;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
-use App\Domain\Order\ExchangeOrder;
-use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
-use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
 use function array_values;
@@ -31,7 +26,7 @@ class SandboxState implements SandboxStateInterface
 {
     /** @var Position[] */
     private array $positions = [];
-    public readonly Symbol $symbol;
+    public readonly SymbolInterface $symbol;
     private SymbolPrice $lastPrice;
 
     public ContractBalance $contractBalance;
@@ -56,7 +51,7 @@ class SandboxState implements SandboxStateInterface
         }
     }
 
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }
@@ -102,8 +97,8 @@ class SandboxState implements SandboxStateInterface
      */
     public function setPositionAndActualizeOpposite(Position|ClosedPosition $input): void
     {
-        assert($this->symbol === $input->symbol, new InvalidArgumentException(
-            sprintf('%s: incorrect usage (positions with "%s" symbol expected, but %s provided)', __METHOD__, $this->symbol->value, $input->symbol->value)
+        assert($this->symbol->eq($input->symbol), new InvalidArgumentException(
+            sprintf('%s: incorrect usage (positions with "%s" symbol expected, but %s provided)', __METHOD__, $this->symbol->name(), $input->symbol->name())
         ));
         $positionSide = $input->side;
         $oppositeSide = $positionSide->getOpposite();

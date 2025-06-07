@@ -1,3 +1,6 @@
+imports:
+    - { resource: doctrine.yaml }
+
 services:
     _defaults:
         autowire: true
@@ -26,3 +29,7 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '20 minutes'
+        symbol_initialize_exception_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '5 minute'

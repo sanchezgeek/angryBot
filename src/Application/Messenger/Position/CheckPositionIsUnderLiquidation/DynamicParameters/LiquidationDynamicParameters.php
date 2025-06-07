@@ -7,20 +7,19 @@ namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\Dyn
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Price\Enum\PriceMovementDirection;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Helper\OutputHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use LogicException;
 use RuntimeException;
@@ -29,7 +28,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 {
     public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
-    private Symbol $symbol;
+    private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
     private ?float $warningDistance = null;
     private ?PriceRange $criticalRange = null;
@@ -52,7 +51,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
         private readonly ?CheckPositionIsUnderLiquidation $handledMessage = null,
     ) {
-        if ($this->ticker->symbol !== $this->position->symbol) {
+        if (!$this->ticker->symbol->eq($this->position->symbol)) {
             throw new LogicException('Something wrong');
         }
 
@@ -350,7 +349,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 $modifier = min($modifierInitial, $modifierMax);
 
                 $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier), $this->symbol);
-                var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->value, $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));
+                var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->name(), $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));
 
                 return $this->actualStopsPriceRange;
             }

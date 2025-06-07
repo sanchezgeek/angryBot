@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\DynamicParameters\Evaluation;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -14,6 +14,8 @@ use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCur
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentTickerProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler\DefaultLiquidationHandlerHandledMessageProvider;
 use App\Settings\Application\Service\AppSettingsService;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use InvalidArgumentException;
 use ReflectionParameter;
@@ -25,7 +27,8 @@ final readonly class AppDynamicParameterEvaluator
 {
     public function __construct(
         private Container $container,
-        private AppDynamicParametersLocator $parametersLocator
+        private AppDynamicParametersLocator $parametersLocator,
+        private SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -96,7 +99,8 @@ final readonly class AppDynamicParameterEvaluator
 
     private function parseArgument(ReflectionParameter $ref, AppDynamicParameterEvaluationEntry $entry, array $data): mixed
     {
-        $providedValue = !isset($data[$ref->getName()]) ? null : $data[$ref->getName()];
+        $argumentName = $ref->getName();
+        $providedValue = !isset($data[$argumentName]) ? null : $data[$argumentName];
 
         // @todo if ! and without ?
         if ($providedValue === null) {
@@ -116,7 +120,8 @@ final readonly class AppDynamicParameterEvaluator
 
         $type = $ref->getType()->getName();
         $parser = match (true) {
-            $type === Symbol::class => static fn ($value) => $type::fromShortName(strtoupper($value)),
+            $argumentName === 'symbol' && !$providedValue instanceof SymbolInterface => fn ($value) => $this->symbolProvider->getOrInitialize(strtoupper($providedValue)),
+            $type === SymbolEnum::class => static fn ($value) => $type::fromShortName(strtoupper($value)),
             is_subclass_of($type, BackedEnum::class) => static fn ($value) => $type::from($value),
             default => static fn($value) => $value,
         };

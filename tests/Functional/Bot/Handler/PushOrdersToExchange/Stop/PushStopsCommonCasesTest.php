@@ -12,7 +12,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -38,6 +38,7 @@ use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function array_map;
@@ -62,9 +63,9 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      * @todo | DRY
      * @see CreateOppositeBuyOrdersListener::MAIN_SYMBOLS
      */
-    private const MAIN_SYMBOLS = [
-        Symbol::BTCUSDT,
-        Symbol::ETHUSDT,
+    private const array MAIN_SYMBOLS = [
+        SymbolEnum::BTCUSDT->value,
+        SymbolEnum::ETHUSDT->value,
     ];
 
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
@@ -74,14 +75,6 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private const ADD_TRIGGER_DELTA_IF_INDEX_ALREADY_OVER_STOP = 7;
     private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
     private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
-    }
 
     /**
      * @dataProvider pushStopsTestCases
@@ -105,7 +98,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $stops));
 
-        $this->runMessageConsume(new PushStops($position->symbol, $position->side));
+        $applicationTester = $this->runMessageConsume(new PushStops($position->symbol, $position->side));
 
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
         self::seeBuyOrdersInDb(...self::cloneBuyOrders(...$buyOrdersExpectedAfterHandle));
@@ -114,7 +107,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     public function pushStopsTestCases(): iterable
     {
         # BTCUSDT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
@@ -282,7 +275,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         # LINKUSDT
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $addTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
 
         $exchangeOrderIds = [];
@@ -357,7 +350,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private function oppositeBuyOrderCreateTestCases(): iterable
     {
         # BTCUSDT SHORT
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionFactory::short($symbol, 29000); $ticker = TickerFactory::create($symbol, 29050);
 
         $exchangeOrderIds = [];
@@ -448,7 +441,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         ];
 
         # AAVEUSDT SHORT
-        $symbol = Symbol::AAVEUSDT;
+        $symbol = SymbolEnum::AAVEUSDT;
         $position = PositionFactory::short($symbol, 391.1, 45); $ticker = TickerFactory::create($symbol, 391.2);
 
         $exchangeOrderIds = [];
@@ -643,7 +636,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
             ];
         }
 
-        if (!in_array($stop->getSymbol(), self::MAIN_SYMBOLS, true)) {
+        if (!in_array($stop->getSymbol()->name(), self::MAIN_SYMBOLS, true)) {
             return self::$oppositeBuyOrderPnlDistancesForAltCoins[$stop->getPositionSide()->value];
         }
 
@@ -657,7 +650,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @todo | tests | move to helper
      */
-    public static function successConditionalStopApiCallExpectations(Symbol $symbol, array $stops, TriggerBy $triggerBy, ?array &$exchangeOrderIdsCollector = null): array
+    public static function successConditionalStopApiCallExpectations(SymbolInterface $symbol, array $stops, TriggerBy $triggerBy, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {
@@ -687,7 +680,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
      *
      * @return ByBitApiCallExpectation[]
      */
-    protected static function successByMarketApiCallExpectations(Symbol $symbol, array $stops, ?array &$exchangeOrderIdsCollector = null): array
+    protected static function successByMarketApiCallExpectations(SymbolInterface $symbol, array $stops, ?array &$exchangeOrderIdsCollector = null): array
     {
         $result = [];
         foreach ($stops as $stop) {

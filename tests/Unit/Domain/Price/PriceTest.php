@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Price;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\PositionFactory;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
@@ -25,7 +26,7 @@ final class PriceTest extends TestCase
      */
     public function testCanCreateAndGetValue(float $value, float $expectedValue): void
     {
-        $price = SymbolPrice::create($value, Symbol::BTCUSDT);
+        $price = SymbolPrice::create($value, SymbolEnum::BTCUSDT);
 
         self::assertEquals($expectedValue, $price->value());
     }
@@ -48,7 +49,7 @@ final class PriceTest extends TestCase
     /**
      * @dataProvider failCreateCases
      */
-    public function testFailCreate(Symbol $symbol, float $value, Exception $expectedException): void
+    public function testFailCreate(SymbolInterface $symbol, float $value, Exception $expectedException): void
     {
         $this->expectExceptionObject($expectedException);
 
@@ -57,7 +58,7 @@ final class PriceTest extends TestCase
 
     private function failCreateCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [$symbol, -1, new PriceCannotBeLessThanZero(-1, $symbol)],
@@ -86,7 +87,7 @@ final class PriceTest extends TestCase
 
     private function addTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(123.45), 1, $symbol->makePrice(124.45)];
         yield [$symbol->makePrice(123.45), 1.002, $symbol->makePrice(124.452)];
@@ -117,7 +118,7 @@ final class PriceTest extends TestCase
 
     private function subTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(123.45), 1, $symbol->makePrice(122.45)];
         yield [$symbol->makePrice(123.452), 1.001, $symbol->makePrice(122.451)];
@@ -136,7 +137,7 @@ final class PriceTest extends TestCase
 
     private function greaterThanTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(123), $symbol->makePrice(456), false];
         yield [$symbol->makePrice(455.999), $symbol->makePrice(456), false];
@@ -154,7 +155,7 @@ final class PriceTest extends TestCase
 
     private function greaterOrEqualsTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(123), $symbol->makePrice(456), false];
         yield [$symbol->makePrice(455.999), $symbol->makePrice(456), false];
@@ -172,7 +173,7 @@ final class PriceTest extends TestCase
 
     private function lessThanTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(456), $symbol->makePrice(123), false];
         yield [$symbol->makePrice(456), $symbol->makePrice(455.999), false];
@@ -190,7 +191,7 @@ final class PriceTest extends TestCase
 
     private function lessOrEqualsTestDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield [$symbol->makePrice(456), $symbol->makePrice(123), false];
         yield [$symbol->makePrice(456), $symbol->makePrice(455.999), false];
@@ -210,7 +211,7 @@ final class PriceTest extends TestCase
 
     private function priceIsOverTakeProfitTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield 'over SHORT TP (+)' => [
             'price' => $symbol->makePrice(200500),
@@ -253,7 +254,7 @@ final class PriceTest extends TestCase
 
     private function priceInLossOfOther(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         yield 'over SHORT SL (+)' => [
             'price' => $symbol->makePrice(200501.01),
@@ -286,7 +287,7 @@ final class PriceTest extends TestCase
 
     public function testDifferenceWith(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $currentPrice = $symbol->makePrice(100500);
         $fromPrice = $symbol->makePrice(200500);
@@ -306,7 +307,7 @@ final class PriceTest extends TestCase
 
     public function isPriceInRangeTestCases(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [$symbol->makePrice(100500), PriceRange::create(100500, 200500, $symbol), true],
@@ -319,7 +320,7 @@ final class PriceTest extends TestCase
 
     public function testGetPnlInPercents(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         ## SHORT
         $position = PositionFactory::short($symbol, 30000, 1, 100);
@@ -342,7 +343,7 @@ final class PriceTest extends TestCase
 
     public function testGetTargetPriceByPnlPercent(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         ## SHORT
         $position = PositionFactory::short($symbol, 100500, 1, 100);
@@ -370,7 +371,7 @@ final class PriceTest extends TestCase
 
     public function testModifyByDirection(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         self::assertEquals($symbol->makePrice(50000.2), $symbol->makePrice(50000)->modifyByDirection(Side::Sell, PriceMovementDirection::TO_LOSS, 0.2));
         self::assertEquals($symbol->makePrice(50000.2), $symbol->makePrice(50000)->modifyByDirection(Side::Buy, PriceMovementDirection::TO_PROFIT, 0.2));

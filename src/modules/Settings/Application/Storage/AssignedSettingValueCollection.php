@@ -23,13 +23,7 @@ final readonly class AssignedSettingValueCollection implements IteratorAggregate
 
     public function getFallbackValueIfPresented(): ?AssignedSettingValue
     {
-        foreach ($this->values as $value) {
-            if (!$value->symbol && !$value->side) {
-                return $value;
-            }
-        }
-
-        return null;
+        return array_find($this->values, static fn(AssignedSettingValue $value) => !$value->symbol && !$value->side);
     }
 
     /**

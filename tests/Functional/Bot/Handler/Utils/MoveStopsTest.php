@@ -6,14 +6,11 @@ namespace App\Tests\Functional\Bot\Handler\Utils;
 
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Application\Messenger\Job\Utils\MoveStopsHandler;
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
-use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
@@ -30,16 +27,11 @@ final class MoveStopsTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
 
-    private const SYMBOL = Symbol::BTCUSDT;
+    private const SYMBOL = SymbolEnum::BTCUSDT;
 
     protected PositionServiceInterface $positionServiceStub;
 
     private MoveStopsHandler $handler;
-
-    public static function setUpBeforeClass(): void
-    {
-        self::truncateStops();
-    }
 
     protected function setUp(): void
     {

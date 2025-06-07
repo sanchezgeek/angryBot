@@ -4,7 +4,8 @@ namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Command\AbstractCommand;
-use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\Mixin\CoinAwareCommand;
+use App\Domain\Coin\Coin;
 use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,15 +21,15 @@ use function str_contains;
 #[AsCommand(name: 'balance:info')]
 class BalanceInfoCommand extends AbstractCommand
 {
-    use SymbolAwareCommand;
+    use CoinAwareCommand;
 
-    private const TRANSFER_DIRECTION_OPTION = 'transferDirection';
-    private const TRANSFER_AMOUNT_OPTION = 'transferAmount';
+    private const string TRANSFER_DIRECTION_OPTION = 'transferDirection';
+    private const string TRANSFER_AMOUNT_OPTION = 'transferAmount';
 
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs()
+            ->configureCoinArgs()
             ->addOption(self::TRANSFER_AMOUNT_OPTION, 'a', InputOption::VALUE_REQUIRED, 'Transfer amount')
             ->addOption(self::TRANSFER_DIRECTION_OPTION, 't', InputOption::VALUE_REQUIRED,
                 'Transfer direction (`sc` === SPOT → CONTRACT, `cs` === CONTRACT → SPOT, `fs` === FUNDING → SPOT, `sf` === SPOT → FUNDING, )'
@@ -38,7 +39,7 @@ class BalanceInfoCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $coin = $this->getSymbol()->associatedCoin();
+        $coin = $this->getCoin();
 
         if ($transferAmount = $this->paramFetcher->floatOption(self::TRANSFER_AMOUNT_OPTION)) {
             $to = $this->paramFetcher->getStringOption(self::TRANSFER_DIRECTION_OPTION);

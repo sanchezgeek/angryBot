@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
-use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\MarketResponseBuilder;
-use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
 
@@ -36,7 +36,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
      * @dataProvider getTickerTestSuccessCases
      */
     public function testCanGetTicker(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         AssetCategory $category,
         MockResponse $apiResponse,
         Ticker $expectedTicker
@@ -48,15 +48,15 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         $ticker = $this->service->ticker($symbol);
 
         // Assert
-        self::assertEquals($expectedTicker, $ticker);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedTicker, $ticker);
     }
 
     private function getTickerTestSuccessCases(): iterable
     {
         $category = self::ASSET_CATEGORY;
 
-        $symbol = Symbol::BTCUSDT;
-        yield sprintf('have %s ticker (%s)', $symbol->value, $category->value) => [
+        $symbol = SymbolEnum::BTCUSDT;
+        yield sprintf('have %s ticker (%s)', $symbol->name(), $category->value) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(
                 $symbol,
@@ -67,8 +67,8 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
             '$expectedTicker' => TickerFactory::create($symbol, $indexPrice, $markPrice, $lastPrice),
         ];
 
-        $symbol = Symbol::BTCUSD;
-        yield sprintf('have %s ticker (%s)', $symbol->value, $category->value) => [
+        $symbol = SymbolEnum::BTCUSD;
+        yield sprintf('have %s ticker (%s)', $symbol->name(), $category->value) => [
             $symbol, $category,
             '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(
                 $symbol,
@@ -84,7 +84,7 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
      * @dataProvider getTickerFailTestCases
      */
     public function testFailGetTickerWhenTickerNotFoundThroughApi(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         AssetCategory $category,
         MockResponse $apiResponse,
         Throwable $expectedException,
@@ -109,24 +109,24 @@ final class GetTickerTest extends ByBitLinearExchangeServiceTestAbstract
         $category = self::ASSET_CATEGORY;
 
         # Ticker not found
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $notFoundExpected = TickerNotFoundException::forSymbolAndCategory($symbol, $category);
-        yield sprintf('have %s ticker (%s), but request %s ticker => %s', Symbol::BTCUSD->value, $category->value, $symbol->value, $notFoundExpected->getMessage()) => [
+        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSD->value, $category->value, $symbol->name(), $notFoundExpected->getMessage()) => [
             $symbol, $category,
-            '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(Symbol::BTCUSD, 30000, 29980, 29990)->build(),
+            '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(SymbolEnum::BTCUSD, 30000, 29980, 29990)->build(),
             '$expectedException' => $notFoundExpected,
         ];
 
-        $symbol = Symbol::BTCUSD;
+        $symbol = SymbolEnum::BTCUSD;
         $notFoundExpected = TickerNotFoundException::forSymbolAndCategory($symbol, $category);
-        yield sprintf('have %s ticker (%s), but request %s ticker => %s', Symbol::BTCUSDT->value, $category->value, $symbol->value, $notFoundExpected->getMessage()) => [
+        yield sprintf('have %s ticker (%s), but request %s ticker => %s', SymbolEnum::BTCUSDT->value, $category->value, $symbol->name(), $notFoundExpected->getMessage()) => [
             $symbol, $category,
-            '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(Symbol::BTCUSDT, 30000, 29980, 29990)->build(),
+            '$apiResponse' => MarketResponseBuilder::ok($category)->withTicker(SymbolEnum::BTCUSDT, 30000, 29980, 29990)->build(),
             '$expectedException' => $notFoundExpected,
         ];
 
         # Api errors
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $error = ByBitV5ApiError::knownError(ApiV5Errors::ApiRateLimitReached, $msg = 'Api rate limit reached');
         yield sprintf('API returned %d code (%s)', $error->code(), ApiV5Errors::ApiRateLimitReached->desc()) => [
             $symbol, $category,

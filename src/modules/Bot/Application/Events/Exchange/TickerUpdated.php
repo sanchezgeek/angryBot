@@ -23,6 +23,6 @@ final class TickerUpdated extends LoggableEvent
             return null;
         }
 
-        return \sprintf('%9s: %s', $this->ticker->symbol->value, $this->ticker->indexPrice->value());
+        return \sprintf('%9s: %s', $this->ticker->symbol->name(), $this->ticker->indexPrice->value());
     }
 }

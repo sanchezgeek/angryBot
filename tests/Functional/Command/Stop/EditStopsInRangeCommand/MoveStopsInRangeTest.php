@@ -6,7 +6,7 @@ namespace App\Tests\Functional\Command\Stop\EditStopsInRangeCommand;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\Stop\EditStopsCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\StopsCollection;
@@ -15,8 +15,8 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\CommandsTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_map;
@@ -38,8 +38,6 @@ final class MoveStopsInRangeTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        self::truncateStops();
-
         $this->tester = $this->createCommandTester(self::COMMAND_NAME);
     }
 
@@ -51,7 +49,7 @@ final class MoveStopsInRangeTest extends KernelTestCase
     public function testCanEditStopsInRange(
         array $initialStops,
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         string $from,
         string $to,
@@ -82,27 +80,27 @@ final class MoveStopsInRangeTest extends KernelTestCase
 
     private function editStopsInRangeDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 1.5);
 
         yield 'move to specified price' => [
             [
-                new Stop(1000, 28929, 0.1, 100, Symbol::BTCUSDT, $side),
-                new Stop(2000, 28991, 0.2, 200, Symbol::BTCUSDT, $side),
-                new Stop(1, 28890, 0.003, 21, Symbol::BTCUSDT, $side),
-                new Stop(2, 28920, 0.003, 22, Symbol::BTCUSDT, $side),
-                new Stop(3, 28930, 0.002, 23, Symbol::BTCUSDT, $side),
-                new Stop(4, 28931, 0.002, 24, Symbol::BTCUSDT, $side),
-                new Stop(5, 28940, 0.003, 25, Symbol::BTCUSDT, $side),
-                new Stop(6, 28941, 0.004, 26, Symbol::BTCUSDT, $side),
-                new Stop(7, 28950, 0.002, 27, Symbol::BTCUSDT, $side),
-                new Stop(8, 28951, 0.001, 28, Symbol::BTCUSDT, $side),
-                new Stop(9, 28960, 0.002, 29, Symbol::BTCUSDT, $side),
-                new Stop(10, 28961, 0.002, 30, Symbol::BTCUSDT, $side),
-                new Stop(11, 28970, 0.004, 31, Symbol::BTCUSDT, $side),
-                new Stop(12, 28971, 0.005, 32, Symbol::BTCUSDT, $side),
-                new Stop(13, 28972, 0.01, 33, Symbol::BTCUSDT, $side),
+                new Stop(1000, 28929, 0.1, 100, SymbolEnum::BTCUSDT, $side),
+                new Stop(2000, 28991, 0.2, 200, SymbolEnum::BTCUSDT, $side),
+                new Stop(1, 28890, 0.003, 21, SymbolEnum::BTCUSDT, $side),
+                new Stop(2, 28920, 0.003, 22, SymbolEnum::BTCUSDT, $side),
+                new Stop(3, 28930, 0.002, 23, SymbolEnum::BTCUSDT, $side),
+                new Stop(4, 28931, 0.002, 24, SymbolEnum::BTCUSDT, $side),
+                new Stop(5, 28940, 0.003, 25, SymbolEnum::BTCUSDT, $side),
+                new Stop(6, 28941, 0.004, 26, SymbolEnum::BTCUSDT, $side),
+                new Stop(7, 28950, 0.002, 27, SymbolEnum::BTCUSDT, $side),
+                new Stop(8, 28951, 0.001, 28, SymbolEnum::BTCUSDT, $side),
+                new Stop(9, 28960, 0.002, 29, SymbolEnum::BTCUSDT, $side),
+                new Stop(10, 28961, 0.002, 30, SymbolEnum::BTCUSDT, $side),
+                new Stop(11, 28970, 0.004, 31, SymbolEnum::BTCUSDT, $side),
+                new Stop(12, 28971, 0.005, 32, SymbolEnum::BTCUSDT, $side),
+                new Stop(13, 28972, 0.01, 33, SymbolEnum::BTCUSDT, $side),
             ],
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
             '$from' => '28930',
@@ -112,16 +110,16 @@ final class MoveStopsInRangeTest extends KernelTestCase
                 EditStopsCommand::MOVE_PART_OPTION => '35%',
             ],
             'expectedStopsInDb' => [
-                new Stop(1000, 28929, 0.1, 100, Symbol::BTCUSDT, $side),
-                new Stop(2000, 28991, 0.2, 200, Symbol::BTCUSDT, $side),
-                new Stop(1, 28890, 0.003, 21, Symbol::BTCUSDT, $side),
-                new Stop(2, 28920, 0.003, 22, Symbol::BTCUSDT, $side),
-                new Stop(5, 28940, 0.001, 25, Symbol::BTCUSDT, $side),
-                new Stop(6, 28941, 0.004, 26, Symbol::BTCUSDT, $side),
-                new Stop(11, 28970, 0.004, 31, Symbol::BTCUSDT, $side),
-                new Stop(12, 28971, 0.005, 32, Symbol::BTCUSDT, $side),
-                new Stop(13, 28972, 0.01, 33, Symbol::BTCUSDT, $side),
-                new Stop(2001, 29000, 0.013, 30, Symbol::BTCUSDT, $side),
+                new Stop(1000, 28929, 0.1, 100, SymbolEnum::BTCUSDT, $side),
+                new Stop(2000, 28991, 0.2, 200, SymbolEnum::BTCUSDT, $side),
+                new Stop(1, 28890, 0.003, 21, SymbolEnum::BTCUSDT, $side),
+                new Stop(2, 28920, 0.003, 22, SymbolEnum::BTCUSDT, $side),
+                new Stop(5, 28940, 0.001, 25, SymbolEnum::BTCUSDT, $side),
+                new Stop(6, 28941, 0.004, 26, SymbolEnum::BTCUSDT, $side),
+                new Stop(11, 28970, 0.004, 31, SymbolEnum::BTCUSDT, $side),
+                new Stop(12, 28971, 0.005, 32, SymbolEnum::BTCUSDT, $side),
+                new Stop(13, 28972, 0.01, 33, SymbolEnum::BTCUSDT, $side),
+                new Stop(2001, 29000, 0.013, 30, SymbolEnum::BTCUSDT, $side),
             ]
         ];
 

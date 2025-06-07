@@ -6,9 +6,9 @@ namespace App\Tests\Stub\Bot;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use LogicException;
 
@@ -30,10 +30,10 @@ final class PositionServiceStub implements PositionServiceInterface
     private array $addStopMethodCalls = [];
     private array $pushedStopsExchangeOrderIds = [];
 
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         foreach ($this->positions as $position) {
-            if ($position->symbol === $symbol && $position->side === $side) {
+            if ($position->symbol->eq($symbol) && $position->side === $side) {
                 return $position;
             }
         }
@@ -41,7 +41,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return null;
     }
 
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         return $this->positions;
     }
@@ -85,10 +85,10 @@ final class PositionServiceStub implements PositionServiceInterface
     public function havePosition(Position $position, bool $replace = false): self
     {
         foreach ($this->positions as $key => $item) {
-            if ($item->symbol === $position->symbol && $item->side === $position->side) {
+            if ($item->symbol->eq($position->symbol) && $item->side === $position->side) {
                 if (!$replace) {
                     throw new LogicException(
-                        sprintf('Position %s:%s already in array', $item->symbol->value, $item->side->title())
+                        sprintf('Position %s:%s already in array', $item->symbol->name(), $item->side->title())
                     );
                 }
                 unset($this->positions[$key]);
@@ -100,12 +100,7 @@ final class PositionServiceStub implements PositionServiceInterface
         return $this;
     }
 
-    public function getOpenedPositionsSymbols(array $except = []): array
-    {
-        throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
-    }
-
-    public function getOpenedPositionsRawSymbols(): array
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
     }

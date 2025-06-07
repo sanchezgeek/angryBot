@@ -6,8 +6,9 @@ namespace App\Tests\Functional\Infrastructure\Repository;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\StopsTester;
@@ -31,8 +32,6 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
     {
         $this->stopRepository = self::getStopRepository();
 
-        self::truncateStops();
-
         // findFirstStopUnderPosition
         // findFirstPositionStop
         // findPushedToExchange
@@ -44,7 +43,8 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
     public function testSave(Side $side): void
     {
         // Arrange
-        $stop = new Stop(100500, 100500.1, 0.01, 10, Symbol::ADAUSDT, $side, ['someStringContext' => 'some value', 'someArrayContext' => ['value']]);
+        $stop = new Stop(100500, 100500.1, 0.01, 10, SymbolEnum::ADAUSDT, $side, ['someStringContext' => 'some value', 'someArrayContext' => ['value']]);
+        self::replaceEnumSymbol($stop);
 
         $stop->setExchangeOrderId('123456');
         $stop->setIsCloseByMarketContext();
@@ -54,7 +54,7 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
 
         // Assert
         self::seeStopsInDb(
-            (new Stop(100500, 100500.1, 0.01, 10, Symbol::ADAUSDT, $side, ['someStringContext' => 'some value', 'someArrayContext' => ['value']]))
+            new Stop(100500, 100500.1, 0.01, 10, SymbolEnum::ADAUSDT, $side, ['someStringContext' => 'some value', 'someArrayContext' => ['value']])
                 ->setIsCloseByMarketContext()
                 ->setExchangeOrderId('123456')
         );
@@ -67,8 +67,8 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
     {
         // Arrange
         $this->applyDbFixtures(
-            new StopFixture(new Stop(1, 1050, 123.123, 0.1, Symbol::XRPUSDT, $side)),
-            new StopFixture(new Stop(2, 1050, 123.124, 0.2, Symbol::ETHUSDT, $side)),
+            new StopFixture(new Stop(1, 1050, 123.123, 0.1, SymbolEnum::XRPUSDT, $side)),
+            new StopFixture(new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ETHUSDT, $side)),
         );
 
         $stop = $this->stopRepository->find(2);
@@ -78,7 +78,7 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
 
         // Assert
         self::seeStopsInDb(
-            new Stop(1, 1050, 123.123, 0.1, Symbol::XRPUSDT, $side)
+            new Stop(1, 1050, 123.123, 0.1, SymbolEnum::XRPUSDT, $side)
         );
     }
 
@@ -88,26 +88,26 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
     public function testCanFindActive(Side $side): void
     {
         $this->applyDbFixtures(
-            new StopFixture((new Stop(1, 1050, 123.123, 0.1, Symbol::ETHUSDT, $side))->setExchangeOrderId('123456')),
-            new StopFixture(new Stop(2, 1050, 123.124, 0.2, Symbol::ADAUSDT, $side)),
-            new StopFixture(new Stop(3, 1050, 123.125, 0.3, Symbol::SOLUSDT, $side)),
-            new StopFixture(new Stop(4, 1050, 123.125, 0.3, Symbol::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']])),
+            new StopFixture((new Stop(1, 1050, 123.123, 0.1, SymbolEnum::ETHUSDT, $side))->setExchangeOrderId('123456')),
+            new StopFixture(new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ADAUSDT, $side)),
+            new StopFixture(new Stop(3, 1050, 123.125, 0.3, SymbolEnum::SOLUSDT, $side)),
+            new StopFixture(new Stop(4, 1050, 123.125, 0.3, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']])),
         );
 
-        self::assertEquals([
-            new Stop(4, 1050, 123.125, 0.3, Symbol::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
-        ], $this->stopRepository->findActive(Symbol::TONUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(4, 1050, 123.125, 0.3, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
+        ], $this->stopRepository->findActive(SymbolEnum::TONUSDT, $side));
 
-        self::assertEquals([
-            new Stop(3, 1050, 123.125, 0.3, Symbol::SOLUSDT, $side),
-        ], $this->stopRepository->findActive(Symbol::SOLUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(3, 1050, 123.125, 0.3, SymbolEnum::SOLUSDT, $side),
+        ], $this->stopRepository->findActive(SymbolEnum::SOLUSDT, $side));
 
-        self::assertEquals([
-            new Stop(2, 1050, 123.124, 0.2, Symbol::ADAUSDT, $side),
-        ], $this->stopRepository->findActive(Symbol::ADAUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ADAUSDT, $side),
+        ], $this->stopRepository->findActive(SymbolEnum::ADAUSDT, $side));
 
-        self::assertEquals([
-        ], $this->stopRepository->findActive(Symbol::ETHUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+        ], $this->stopRepository->findActive(SymbolEnum::ETHUSDT, $side));
     }
 
     /**
@@ -116,27 +116,27 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
     public function testCanFindAllByPositionSide(Side $side): void
     {
         $this->applyDbFixtures(
-            new StopFixture((new Stop(1, 1050, 123.123, 0.1, Symbol::ETHUSDT, $side))->setExchangeOrderId('123456')),
-            new StopFixture(new Stop(2, 1050, 123.124, 0.2, Symbol::ADAUSDT, $side)),
-            new StopFixture(new Stop(3, 1050, 123.125, 0.3, Symbol::SOLUSDT, $side)),
-            new StopFixture(new Stop(4, 1050, 123.125, 0.3, Symbol::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']])),
+            new StopFixture((new Stop(1, 1050, 123.123, 0.1, SymbolEnum::ETHUSDT, $side))->setExchangeOrderId('123456')),
+            new StopFixture(new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ADAUSDT, $side)),
+            new StopFixture(new Stop(3, 1050, 123.125, 0.3, SymbolEnum::SOLUSDT, $side)),
+            new StopFixture(new Stop(4, 1050, 123.125, 0.3, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']])),
         );
 
-        self::assertEquals([
-            new Stop(4, 1050, 123.125, 0.3, Symbol::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
-        ], $this->stopRepository->findAllByPositionSide(Symbol::TONUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(4, 1050, 123.125, 0.3, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
+        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::TONUSDT, $side));
 
-        self::assertEquals([
-            new Stop(3, 1050, 123.125, 0.3, Symbol::SOLUSDT, $side),
-        ], $this->stopRepository->findAllByPositionSide(Symbol::SOLUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(3, 1050, 123.125, 0.3, SymbolEnum::SOLUSDT, $side),
+        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::SOLUSDT, $side));
 
-        self::assertEquals([
-            new Stop(2, 1050, 123.124, 0.2, Symbol::ADAUSDT, $side),
-        ], $this->stopRepository->findAllByPositionSide(Symbol::ADAUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ADAUSDT, $side),
+        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::ADAUSDT, $side));
 
-        self::assertEquals([
-            (new Stop(1, 1050, 123.123, 0.1, Symbol::ETHUSDT, $side))->setExchangeOrderId('123456')
-        ], $this->stopRepository->findAllByPositionSide(Symbol::ETHUSDT, $side));
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals([
+            new Stop(1, 1050, 123.123, 0.1, SymbolEnum::ETHUSDT, $side)->setExchangeOrderId('123456')
+        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::ETHUSDT, $side));
     }
 
     /**
@@ -147,14 +147,14 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
         $exchangeOrderId = uuid_create();
 
         $this->applyDbFixtures(
-            new StopFixture(new Stop(1, 100500, 123.123, 10, Symbol::ADAUSDT, $side)),
-            new StopFixture((new Stop(100, 2050, 223.1, 20, Symbol::XRPUSDT, $side))->setExchangeOrderId($exchangeOrderId)),
-            new StopFixture(new Stop(1000, 3050, 323, 30, Symbol::ETHUSDT, $side)),
+            new StopFixture(new Stop(1, 100500, 123.123, 10, SymbolEnum::ADAUSDT, $side)),
+            new StopFixture((new Stop(100, 2050, 223.1, 20, SymbolEnum::XRPUSDT, $side))->setExchangeOrderId($exchangeOrderId)),
+            new StopFixture(new Stop(1000, 3050, 323, 30, SymbolEnum::ETHUSDT, $side)),
         );
 
-        self::assertEquals(
-            (new Stop(100, 2050, 223.1, 20, Symbol::XRPUSDT, $side))->setExchangeOrderId($exchangeOrderId),
-            $this->stopRepository->findByExchangeOrderId($side, $exchangeOrderId)
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
+            [new Stop(100, 2050, 223.1, 20, SymbolEnum::XRPUSDT, $side)->setExchangeOrderId($exchangeOrderId)],
+            [$this->stopRepository->findByExchangeOrderId($side, $exchangeOrderId)]
         );
     }
 }

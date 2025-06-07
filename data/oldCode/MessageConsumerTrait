@@ -1,0 +1,103 @@
+<?php
+
+declare(strict_types=1);
+
+
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Tests\Mixin\Console\RunCommandTrait;
+use App\Trading\Domain\Symbol\Repository\SymbolRepository;
+use ReflectionClass;
+use Symfony\Component\Console\Tester\ApplicationTester;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Transport\TransportInterface;
+
+trait MessageConsumerTrait
+{
+    use RunCommandTrait;
+
+    /**
+     * @before
+     */
+    protected function cleanTransport(string $name = 'test'): TransportInterface
+    {
+        $transport = $this->getTransport($name);
+
+        do {
+            $hasEnvelopes = false;
+            $envelopes = $transport->get();
+
+            foreach ($envelopes as $envelope) {
+                $transport->ack($envelope);
+                $hasEnvelopes = true;
+            }
+        } while ($hasEnvelopes);
+
+        return $transport;
+    }
+
+    private static function replaceMessagePropertyValue(object $object, string $propertyName, mixed $value): object
+    {
+        $objReflection = new ReflectionClass($object);
+
+        if ($objReflection->getProperty($propertyName)->isReadOnly()) {
+            $mutable = $objReflection->newInstanceWithoutConstructor();
+
+            do {
+                foreach ($objReflection->getProperties() as $property) {
+                    if ($property->isInitialized($object) && $property->name != $propertyName) {
+                        $objReflection->getProperty($property->name)->setValue($mutable, $property->getValue($object));
+                    }
+                }
+            } while ($objReflection = $objReflection->getParentClass());
+
+            $object = $mutable;
+        }
+
+        $objReflection = new ReflectionClass($object);
+
+        $objReflection->getProperty($propertyName)->setValue($object, $value);
+
+        return $object;
+    }
+
+    public static function prepareSymbolMessage(object &$message): void
+    {
+        $reflection = new ReflectionClass($message);
+
+        foreach ($reflection->getProperties() as $property) {
+            if (
+                $property->name === 'symbol'
+                && ($symbol = $property->getValue($message)) instanceof SymbolEnum
+            ) {
+                /** @var SymbolRepository $symbolRepository */
+                $symbolRepository = self::getContainer()->get(SymbolRepository::class);
+                $symbolEntity = $symbolRepository->findOneBy(['name' => $symbol->name]);
+
+                $message = self::replaceMessagePropertyValue($message, 'symbol', $symbolEntity);
+            }
+        }
+    }
+
+    protected function runMessageConsume(
+        object $message,
+        string $queue = 'test',
+        ?KernelInterface $kernel = null,
+    ): ApplicationTester {
+        $transport = $this->getTransport($queue);
+        $transport->send(new Envelope($message));
+
+        return $this->runCommand([
+            'command' => 'messenger:consume',
+            'receivers' => [$queue],
+            '--limit' => '1',
+            '--time-limit' => '1',
+            '--sleep' => '0.01',
+        ], [], $kernel);
+    }
+
+    private function getTransport(string $name): TransportInterface
+    {
+        return static::getContainer()->get('messenger.transport.' . $name);
+    }
+}

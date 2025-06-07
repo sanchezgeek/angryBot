@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Worker;
 
-use App\Bot\Domain\ValueObject\Symbol;
-
-use function json_decode;
 use function md5;
 use function substr;
 use function uniqid;
@@ -90,5 +87,10 @@ final class AppContext
     public static function isExternalTickersCacheEnabled(): bool
     {
         return (bool)($_ENV['EXTERNAL_TICKERS_CACHE_ENABLED'] ?? null) === true;
+    }
+
+    public static function isProfilingEnabled(): bool
+    {
+        return (bool)($_ENV['PROFILING_ENABLED'] ?? null) === true;
     }
 }

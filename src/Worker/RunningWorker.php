@@ -6,9 +6,6 @@ namespace App\Worker;
 
 enum RunningWorker: string
 {
-    /** @deprecated @see symbol-consumer-template */
-    case SYMBOL_DEDICATED = 'symbol-dedicated';
-
     case SERVICE = 'service';
 
     case BUY_ORDERS = 'buy-orders';

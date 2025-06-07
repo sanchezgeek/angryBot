@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox\Factory;
 
 use App\Application\UseCase\Trading\Sandbox\SandboxStateInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface SandboxStateFactoryInterface
 {
-    public function byCurrentTradingAccountState(Symbol $symbol): SandboxStateInterface;
+    public function byCurrentTradingAccountState(SymbolInterface $symbol): SandboxStateInterface;
 }

@@ -6,8 +6,9 @@ namespace App\Infrastructure\ByBit\Service;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
@@ -28,6 +29,11 @@ use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use InvalidArgumentException;
 use LogicException;
@@ -53,9 +59,9 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 {
     use ByBitApiCallHandler;
 
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
-    private const SLEEP_INC = 5;
+    private const int SLEEP_INC = 5;
     protected int $lastSleep = 0;
 
     private array $lastMarkPrices = [];
@@ -63,77 +69,81 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     public function __construct(
         ByBitApiClientInterface $apiClient,
         private readonly CacheInterface $cache,
+        private readonly SymbolProvider $symbolProvider,
     ) {
         $this->apiClient = $apiClient;
     }
 
-    public function setLeverage(Symbol $symbol, float $forBuy, float $forSell): void
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
     {
         $request = new SetLeverageRequest(self::ASSET_CATEGORY, $symbol, $forBuy, $forSell);
         $this->sendRequest($request);
     }
 
-    public function switchPositionMode(Symbol $symbol, PositionMode $positionMode): void
+    public function switchPositionMode(SymbolInterface $symbol, PositionMode $positionMode): void
     {
         $request = new SwitchPositionModeRequest(self::ASSET_CATEGORY, $symbol, $positionMode);
         $this->sendRequest($request);
     }
 
-    /**
-     * @return Symbol[]
-     */
-    public function getOpenedPositionsSymbols(array $except = []): array
-    {
-        $symbols = [];
-        foreach ($this->getOpenedPositionsRawSymbols() as $rawItem) {
-            if ($symbol = Symbol::tryFrom($rawItem)) {
-                $symbols[] = $symbol;
-            }
-        }
-
-        return array_values(
-            array_filter($symbols, static fn(Symbol $symbol): bool => !in_array($symbol, $except, true))
-        );
-    }
 
     /**
-     * @return string[]
-     */
-    public function getOpenedPositionsRawSymbols(): array
+     * @return SymbolInterface[]
+     *
+     * @throws PermissionDeniedException
+     * @throws ApiRateLimitReached
+     * @throws UnknownByBitApiErrorException
+     * @throws UnexpectedApiErrorException
+    */
+    public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         $request = new GetPositionsRequest(self::ASSET_CATEGORY, null);
-
         $data = $this->sendRequest($request)->data();
 
         if (!is_array($list = $data['list'] ?? null)) {
             throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
         }
+        $except = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $except);
 
         $items = [];
         foreach ($list as $item) {
-            if ((float)$item['avgPrice'] === 0.0) {
+            $symbolRaw = $item['symbol'];
+            if (
+                (float)$item['avgPrice'] === 0.0
+                || in_array($symbolRaw, $except, true)
+            ) {
                 continue;
             }
-            $items[] = $item['symbol'];
+
+            $items[$symbolRaw/*unique*/] = $symbolRaw;
         }
 
-        return array_unique($items);
+        $result = [];
+        foreach ($items as $symbolRaw) {
+            try {
+                $result[] = $this->symbolProvider->getOrInitialize($symbolRaw);
+            } catch (UnsupportedAssetCategoryException) {
+                continue;
+            }
+        }
+
+        return $result;
     }
 
     /**
      * @return Position[]
      *
      * @throws ApiRateLimitReached
-     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
      */
     public function getPositionsWithLiquidation(): array
     {
-        $allPositions = $this->getAllPositions();
-
         $result = [];
-        foreach ($allPositions as $symbolPositions) {
+        foreach ($this->getAllPositions() as $symbolPositions) {
             foreach ($symbolPositions as $position) {
 //                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
                 // @todo | liquidation | null
@@ -150,16 +160,16 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      * @return Position[]
      *
      * @throws ApiRateLimitReached
-     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
      */
     public function getPositionsWithoutLiquidation(): array
     {
-        $allPositions = $this->getAllPositions();
-
         $result = [];
-        foreach ($allPositions as $symbolPositions) {
+        foreach ($this->getAllPositions() as $symbolPositions) {
             foreach ($symbolPositions as $position) {
 //                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
                 // @todo | liquidation | null
@@ -175,10 +185,12 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     /**
      * @return array<Position[]>
      *
-     * @throws UnknownByBitApiErrorException
-     * @throws UnexpectedApiErrorException
      * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
      * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
      *
      * @todo some collection
      */
@@ -194,27 +206,33 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         /** @var array<Position[]> $positions */
         $positions = [];
         foreach ($list as $item) {
-            $side = Side::from(strtolower($item['side']));
-            // @todo | crash | it will crash in case of opened position on symbol not presented in Symbol.php
-            $symbol = Symbol::from($item['symbol']);
-
-            $opposite = $positions[$symbol->value][$side->getOpposite()->value] ?? null;
             if ((float)$item['avgPrice'] !== 0.0) {
-                $position = $this->parsePositionFromData($item);
+                try {
+                    $position = $this->parsePositionFromData($item);
+                } catch (UnsupportedAssetCategoryException) {
+                    continue;
+                }
+
+                $symbol = $position->symbol;
+                $side = $position->side;
+
+                $opposite = $positions[$symbol->name()][$side->getOpposite()->value] ?? null;
                 if ($opposite) {
                     $position->setOppositePosition($opposite);
                     $opposite->setOppositePosition($position);
                 }
-                $positions[$symbol->value][$side->value] = $position;
-            }
+                $positions[$symbol->name()][$side->value] = $position;
 
-            $this->lastMarkPrices[$symbol->value] = $symbol->makePrice((float)$item['markPrice']);
+                $this->lastMarkPrices[$symbol->name()] = $symbol->makePrice((float)$item['markPrice']);
+            }
         }
 
-        foreach ($positions as $symbolRaw => $symbolPositions) {
-            $symbol = Symbol::from($symbolRaw);
+        foreach ($positions as $symbolPositions) {
+            $symbol = reset($symbolPositions)->symbol;
             $key = ByBitLinearPositionCacheDecoratedService::positionsCacheKey($symbol);
-            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL));
+            $item = $this->cache->getItem($key)->set(array_values($symbolPositions))->expiresAfter(
+                DateInterval::createFromDateString(ByBitLinearPositionCacheDecoratedService::POSITION_TTL)
+            );
             $this->cache->save($item);
         }
 
@@ -236,7 +254,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\GetPositionTest
      */
-    public function getPosition(Symbol $symbol, Side $side): ?Position
+    public function getPosition(SymbolInterface $symbol, Side $side): ?Position
     {
         $positions = $this->getPositions($symbol);
 
@@ -250,11 +268,15 @@ final class ByBitLinearPositionService implements PositionServiceInterface
     }
 
     /**
+     * @return Position[]
+     *
      * @throws ApiRateLimitReached
-     * @throws UnknownByBitApiErrorException
      * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
      */
-    public function getPositions(Symbol $symbol): array
+    public function getPositions(SymbolInterface $symbol): array
     {
         if ($symbol->associatedCategory() !== self::ASSET_CATEGORY) {
             throw new InvalidArgumentException('Unsupported symbol associated category');
@@ -297,11 +319,15 @@ final class ByBitLinearPositionService implements PositionServiceInterface
         return $positions;
     }
 
+    /**
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     * @throws UnsupportedAssetCategoryException
+     */
     private function parsePositionFromData(array $apiData): Position
     {
         return new Position(
             Side::from(strtolower($apiData['side'])),
-            Symbol::from($apiData['symbol']),
+            $this->symbolProvider->getOrInitialize($apiData['symbol']),
             (float)$apiData['avgPrice'],
             (float)$apiData['size'],
             (float)$apiData['positionValue'],

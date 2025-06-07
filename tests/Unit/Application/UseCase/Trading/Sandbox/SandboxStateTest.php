@@ -6,13 +6,10 @@ namespace App\Tests\Unit\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Tests\Factory\Position\PositionBuilder as PB;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\ContractBalanceTestHelper;
@@ -30,7 +27,7 @@ class SandboxStateTest extends TestCase
 
     public function testCreate(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $coin = $symbol->associatedCoin();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
@@ -67,7 +64,7 @@ class SandboxStateTest extends TestCase
 
     public function allFreeIsAvailableTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);
         $free = 98.1001;
 
@@ -108,7 +105,7 @@ class SandboxStateTest extends TestCase
 
     public function testSetClosedPosition(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $coin = $symbol->associatedCoin();
 
         $ticker = TickerFactory::withEqualPrices($symbol, 68150);

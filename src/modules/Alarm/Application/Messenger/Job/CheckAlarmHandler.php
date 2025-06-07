@@ -3,7 +3,7 @@
 namespace App\Alarm\Application\Messenger\Job;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -12,7 +12,7 @@ use function sprintf;
 #[AsMessageHandler]
 final readonly class CheckAlarmHandler
 {
-    private const ALARMS = [
+    private const array ALARMS = [
 //        Symbol::BTCUSDT->value => [98200, 100200],
 //        Symbol::ADAUSDT->value => [0.97, 1.2],
 //        Symbol::TONUSDT->value => [5.87, 6.55],
@@ -32,7 +32,9 @@ final readonly class CheckAlarmHandler
     public function __invoke(CheckAlarm $dto): void
     {
         foreach (self::ALARMS as $symbol => [$down, $up]) {
-            $ticker = $this->exchangeService->ticker(Symbol::from($symbol));
+            $ticker = $this->exchangeService->ticker(
+                $this->symbolProvider->getOrInitialize($symbol)
+            );
             $markPrice = $ticker->markPrice;
 
             if ($up !== null && $markPrice->greaterThan($up)) {
@@ -47,6 +49,7 @@ final readonly class CheckAlarmHandler
 
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
+        private SymbolProvider $symbolProvider,
         private LoggerInterface $appErrorLogger
     ) {
     }

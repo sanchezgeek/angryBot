@@ -18,6 +18,7 @@ use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -39,7 +40,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'p:hedge:open')]
-class HedgePositionCommand extends AbstractCommand
+class HedgePositionCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;
@@ -72,7 +73,7 @@ class HedgePositionCommand extends AbstractCommand
 
         $percentToHedge = $this->paramFetcher->requiredPercentOption(name: self::MAIN_POSITION_SIZE_PART_OPTION, asPercent: true);
         if (!($positions = $this->positionService->getPositions($symbol))) {
-            throw new Exception(sprintf('No opened positions on %s', $symbol->value));
+            throw new Exception(sprintf('No opened positions on %s', $symbol->name()));
         }
 
         $hedge = $positions[0]->getHedge();

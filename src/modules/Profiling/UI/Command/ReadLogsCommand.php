@@ -3,8 +3,7 @@
 namespace App\Profiling\UI\Command;
 
 use App\Command\AbstractCommand;
-use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Profiling\Application\Storage\ProfilingPointStorage;
 use App\Profiling\SDK\ProfilingContext;
 use App\Profiling\SDK\ProfilingPointDto;
@@ -16,17 +15,13 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'profiling:read')]
-class ReadLogsCommand extends AbstractCommand
+class ReadLogsCommand extends AbstractCommand implements PositionDependentCommand
 {
-    use SymbolAwareCommand;
-    use PositionAwareCommand;
-
-    private const UNIQID_ARG = 'unique-id';
+    private const string UNIQID_ARG = 'unique-id';
 
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs()
             ->addArgument(self::UNIQID_ARG, InputArgument::REQUIRED)
         ;
     }

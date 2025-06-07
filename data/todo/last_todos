@@ -32,6 +32,7 @@ imports
 
 ### Liquidation ###
     @todo | liquidation
+    @todo | liquidation | corner cases
     @todo | liquidation | too big additional stop
     liq strategy based on safePriceDistance (or add some to liquidation distance)
     lP history points (and average through period)
@@ -114,19 +115,14 @@ imports
             @todo | buy | round here?
             specify initial pnlDistance on SLs creation + periodical check new liquidation for move orders according to initial relative distance
 
-### Buy ###
-    ttl for active
-
 ### Forgotten Errors ###
     @todo | liquidation | log into app_errors?
     @todo | exceptions
     !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
 
-
 ### SymbolPrice ###
     @todo | price | handle exception
     @todo | ctrl-f: round(..., 2)
-
 
 ### Sandbox ###
     tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
@@ -137,17 +133,12 @@ imports
     @todo | sandbox | add unrealizedPNL (isUTA)
     @todo | sandbox | what to use? position entry or stop price
 
-
 ### Upgrade ###
     postgres 16
-
 
 ### DRY ###
     @todo | DRY | with OpenPositionHandler
     @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
-
-    `AkaLimitOrder` entity + some threshold for not lost the trade
-
 
 ### Uncategorized ###
     @todo | open-position | add triggerDelta?
@@ -156,17 +147,73 @@ imports
     @todo | open-position | research
 
 ### Domain ###
+    @todo | symbol | for all symbols
     @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
 
 ### Statistics ###
     save ticker every minute
         check if symbol hedge other on some distance
+    position open/close datetime
 
 ### openedPositions ###
     save current passed distance
 
+### schedule ###
+    move stops for all symbols
+
+### Orders execution ###
+    properly create opposite Stops for other symbols
+
+front + liq chart
+analise average price change through some period
+    => safePriceDistance
+    => significantPrice change (accurately for same period). E.g. x5 from common change
+    => ...
+    => auto swipe hedge criteria
+    => profit criteria
+    => move stops parameters
+
+### PriceChange ###
+    @todo | priceChange | some very short period handler
+    @todo | priceChange | save prev percent and notify again if new percent >= prev
+    @todo | priceChange | +/-
+
+    [ui] Screener -> dash (top volatility)
+
+### Trading ###
+    remove stale stops (after position close)
+    `AkaLimitOrder` entity + some threshold for not lost the trade
+
+    Auto
+        1. TradingSetupDto ...
+        2. decisions by market volume at candle?
+        3. some level finder
+            google
+
+            wait with trend
+                https://www.youtube.com/watch?v=HOwqznGsX88
+            close on opposite
+
+            3.1 try free spot exchanges api
+                + https://youtu.be/_1JaRsXuSb8?t=866
+
+### Symbol###
+    @todo | symbols | profiling
+    @todo | symbol | performance
+        check queries (EAGER)
+        symbolProvider profiling
+    @todo | symbol | some way to get values based on symbol -> move to settings?
+    @todo | symbol | for all symbols
+    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+
+### !!! MAIN !!! ###
+    [symbol] @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
+            (maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler)
 
 
+
+### HOT ###
+    PriceChange on short period
 
 ### Admin ###
     @todo cp env.example
@@ -175,4 +222,3 @@ imports
 
 ### Domain Ref ###
     PNL
-

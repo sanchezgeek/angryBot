@@ -34,7 +34,7 @@ final readonly class GenerateSupervisorConfigsHandler
         $templatePath = realpath($this->templatePath);
         $templateContent = file_get_contents($templatePath);
         foreach ($this->positionService->getOpenedPositionsSymbols() as $symbol) {
-            $symbol = $symbol->value;
+            $symbol = $symbol->name();
 
             $content = str_replace('%symbol%', $symbol, $templateContent);
             $filename = sprintf('%s%s.ini', self::CONFIG_FILE_NAME_PREFIX, $symbol);

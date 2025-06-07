@@ -6,16 +6,16 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\Query\Parameter;
-use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use RuntimeException;
 
 /**
  * @extends ServiceEntityRepository<Stop>
@@ -60,11 +60,11 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(Symbol $symbol, Side $side, ?callable $qbModifier = null): array
+    public function findAllByPositionSide(SymbolInterface $symbol, Side $side, ?callable $qbModifier = null): array
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
 
         if ($qbModifier) {
@@ -78,7 +78,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
      * @return Stop[]
      */
     public function findActive(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -88,7 +88,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     }
 
     public function findActiveQB(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
@@ -97,7 +97,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
 
         // а это тут вообще зачем? Для случая ConditionalBO?
@@ -148,15 +148,11 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
             }
         }
 
-        $query = implode(' UNION ALL ', $queries);
-
-        $query = str_replace('id_0', 'id', $query); # doctrine bug?
-        $query = str_replace('price_1', 'price', $query);
-        $query = str_replace('volume_2', 'volume', $query);
-        $query = str_replace('trigger_delta_3', 'trigger_delta', $query);
-        $query = str_replace('symbol_4', 'symbol', $query);
-        $query = str_replace('position_side_5', 'position_side', $query);
-        $query = str_replace('context_6', 'context', $query);
+        $query = preg_replace(
+            ['/id_\d+/', '/price_\d+/', '/volume_\d+/', '/trigger_delta_\d+/', '/symbol_\d+/', '/position_side_\d+/', '/context_\d+/'],
+            ['id',       'price',       'volume',       'trigger_delta',       'symbol',       'position_side',       'context'],
+            implode(' UNION ALL ', $queries)
+        );
 
         $params = [];
         foreach ($parameters as $parameter) {
@@ -231,12 +227,12 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findPushedToExchange(Symbol $symbol, Side $side): array
+    public function findPushedToExchange(SymbolInterface $symbol, Side $side): array
     {
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = true")
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
 
         return $qb->getQuery()->getResult();

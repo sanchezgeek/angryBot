@@ -13,6 +13,10 @@ use App\Settings\Application\Storage\StoredSettingsProviderInterface;
 use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Settings\Domain\SettingValueValidator;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use InvalidArgumentException;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
@@ -22,6 +26,7 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     public function __construct(
         private SettingValueRepository $repository,
         private SettingsCache $settingsCache,
+        private SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -33,7 +38,13 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
         $settingAccessor = $setting instanceof SettingAccessor ? $setting : SettingAccessor::withAlternativesAllowed($setting);
 
-        return $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]);
+        return $this->repository->findOneBy(
+            [
+                'key' => $settingAccessor->setting->getSettingKey(),
+                'symbol' => $settingAccessor->symbol,
+                'positionSide' => $settingAccessor->side,
+            ]
+        );
     }
 
     public function getSettingStoredValues(AppSettingInterface $setting): array
@@ -50,6 +61,8 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
     }
 
     /**
+     * @throws UnsupportedAssetCategoryException
+     *
      * @todo | settings | tests
      */
     public function store(SettingAccessor $settingAccessor, mixed $value): SettingValue
@@ -66,7 +79,12 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
         $side = $settingAccessor->side;
 
         if (!$settingValue = $this->repository->findOneBy(['key' => $settingKey, 'symbol' => $symbol, 'positionSide' => $side])) {
-            $settingValue = SettingValue::withValue($settingKey, $value, $symbol, $side);
+            $settingValue = SettingValue::withValue(
+                $settingKey,
+                $value,
+                !$symbol ? null : $this->symbolProvider->getOrInitialize($symbol),
+                $side
+            );
         } else {
             $settingValue->value = $value;
         }
@@ -78,10 +96,9 @@ final readonly class DoctrineSettingsStorage implements StoredSettingsProviderIn
 
     public function remove(SettingAccessor $settingAccessor): void
     {
-        $symbol = $settingAccessor->symbol;
-        $side = $settingAccessor->side;
-
-        if (!$settingValue = $this->repository->findOneBy(['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $symbol, 'positionSide' => $side])) {
+        if (!$settingValue = $this->repository->findOneBy(
+            ['key' => $settingAccessor->setting->getSettingKey(), 'symbol' => $settingAccessor->symbol, 'positionSide' => $settingAccessor->side]
+        )) {
             return;
         }
 

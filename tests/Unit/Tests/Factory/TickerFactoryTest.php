@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Tests\Factory;
 
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\SymbolPrice;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +16,7 @@ class TickerFactoryTest extends TestCase
 {
     public function testFactory(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $ticker = TickerFactory::create($symbol, 100500, 100600, 100700);
 

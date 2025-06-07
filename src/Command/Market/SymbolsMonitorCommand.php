@@ -4,10 +4,11 @@ namespace App\Command\Market;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -16,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'symbols:monitor')]
-class SymbolsMonitorCommand extends AbstractCommand
+class SymbolsMonitorCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 
@@ -52,7 +53,7 @@ class SymbolsMonitorCommand extends AbstractCommand
             $items[] = [$symbol, $ticker->indexPrice];
         }
 
-        /** @var array<array<Symbol, SymbolPrice>> $itemsRows */
+        /** @var array<array<SymbolInterface, SymbolPrice>> $itemsRows */
         $itemsRows = array_chunk($items, $columnsCount);
 
         $namesLengths = [];

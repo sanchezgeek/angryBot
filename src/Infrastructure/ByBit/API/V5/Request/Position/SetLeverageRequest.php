@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Position;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 final readonly class SetLeverageRequest extends AbstractByBitApiRequest
@@ -27,7 +27,7 @@ final readonly class SetLeverageRequest extends AbstractByBitApiRequest
     {
         return [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'buyLeverage' => (string)$this->buyLeverage,
             'sellLeverage' => (string)$this->sellLeverage,
         ];
@@ -35,7 +35,7 @@ final readonly class SetLeverageRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private float $buyLeverage,
         private float $sellLeverage,
     ) {

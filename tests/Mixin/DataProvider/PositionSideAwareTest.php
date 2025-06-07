@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\DataProvider;
 
-use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Position\ValueObject\Side;
 
 trait PositionSideAwareTest

@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Price;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\SymbolPrice;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Price\PriceRange;
 use App\Tests\Factory\PositionFactory;
 use LogicException;
@@ -19,7 +18,7 @@ final class PriceRangeTest extends TestCase
 {
     public function testCanCreate(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $range = new PriceRange($symbol->makePrice(100.1), $symbol->makePrice(200.2), $symbol);
 
@@ -29,7 +28,7 @@ final class PriceRangeTest extends TestCase
 
     public function testCanWithFromToFactory(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $range = PriceRange::create(100.1, 200.2, $symbol);
 
@@ -42,7 +41,7 @@ final class PriceRangeTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('$from must be greater than $to.');
 
-        PriceRange::create(200, 200, Symbol::BTCUSDT);
+        PriceRange::create(200, 200, SymbolEnum::BTCUSDT);
     }
 
     /**
@@ -61,7 +60,7 @@ final class PriceRangeTest extends TestCase
 
     private function byPositionPnlRangeProvider(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $position = PositionFactory::short($symbol, 30000, 0.5, 100);
 
@@ -103,7 +102,7 @@ final class PriceRangeTest extends TestCase
 
     private function itemsByStepDataProvider(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [
@@ -194,7 +193,7 @@ final class PriceRangeTest extends TestCase
 
     private function itemsByQntDataProvider(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [
@@ -256,7 +255,7 @@ final class PriceRangeTest extends TestCase
 
     public function testMiddlePrice(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $range = PriceRange::create(37950, 38050, $symbol);
 
@@ -274,7 +273,7 @@ final class PriceRangeTest extends TestCase
 
     public function isPriceInRangeTestCases(): array
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         return [
             [PriceRange::create(100500, 200500, $symbol), 100500, true],

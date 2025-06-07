@@ -17,13 +17,12 @@ use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
@@ -33,9 +32,10 @@ use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDeco
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
-use Psr\Log\LoggerInterface;
+use Exception;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Cache\CacheInterface;
 use Throwable;
@@ -53,19 +53,19 @@ use function sprintf;
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
 {
-    /** @var Symbol[] */
-    private const SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
-//        Symbol::LAIUSDT,
+    /** @var SymbolInterface[] */
+    private const array SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
+//        Symbol::LAIUSDT->value,
     ];
 
     # Transfer from spot
-    public const TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
-    public const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
-    public const MAX_TRANSFER_AMOUNT = 60;
-    private const TRANSFER_AMOUNT_MODIFIER = 0.2;
-    private const SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
+    public const int TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
+    public const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
+    public const int MAX_TRANSFER_AMOUNT = 60;
+    private const float TRANSFER_AMOUNT_MODIFIER = 0.2;
+    private const float SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
 
-    public const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
+    public const int CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = 40;
 
     /** @var Position[] */
     private array $positions;
@@ -120,7 +120,7 @@ final class CheckPositionIsUnderLiquidationHandler
                     acceptableStoppedPart: $message->acceptableStoppedPart,
                     warningPnlDistance: $message->warningPnlDistance,
                 );
-                $this->positions[$symbol->value] = $main;
+                $this->positions[$symbol->name()] = $main;
             }
         } else {
             if (!($position = $this->getPositionOld($message->symbol))) {
@@ -129,15 +129,15 @@ final class CheckPositionIsUnderLiquidationHandler
             $symbol = $position->symbol;
 
             $messages = [$message];
-            $this->positions[$symbol->value] = $position;
-            $this->lastMarkPrices[$symbol->value] = $this->exchangeService->ticker($symbol)->markPrice;
+            $this->positions[$symbol->name()] = $position;
+            $this->lastMarkPrices[$symbol->name()] = $this->exchangeService->ticker($symbol)->markPrice;
         }
 
         foreach ($messages as $message) {
             try {
                 $this->handleMessage($message);
             } catch (Throwable $e) {
-                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s', $message->symbol->value));
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s', $message->symbol->name()));
             }
         }
     }
@@ -145,9 +145,9 @@ final class CheckPositionIsUnderLiquidationHandler
     public function handleMessage(CheckPositionIsUnderLiquidation $message): void
     {
         $symbol = $message->symbol;
-        $position = $this->positions[$symbol->value];
+        $position = $this->positions[$symbol->name()];
 
-        $markPrice = $this->lastMarkPrices[$symbol->value];
+        $markPrice = $this->lastMarkPrices[$symbol->name()];
         $ticker = new Ticker($symbol, $markPrice, $markPrice, $markPrice); // @todo Get rid of ticker?
         $coin = $symbol->associatedCoin();
 
@@ -201,7 +201,7 @@ final class CheckPositionIsUnderLiquidationHandler
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
                 OutputHelper::print($msg);
-                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to transfer from spot to contract while process %s', $message->symbol->value));
+                $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to transfer from spot to contract while process %s', $message->symbol->name()));
             }
         }
 
@@ -220,7 +220,7 @@ final class CheckPositionIsUnderLiquidationHandler
             $stoppedPositionPart = ($stopsBeforeLiquidationVolume / $notCoveredSize) * 100; // @todo | maybe need update position before calc
             $volumePartDelta = $acceptableStoppedPartBeforeLiquidation - $stoppedPositionPart;
             if ($volumePartDelta > 0) {
-                $stopQty = $symbol->roundVolumeUp((new Percent($volumePartDelta))->of($notCoveredSize));
+                $stopQty = $symbol->roundVolumeUp(new Percent($volumePartDelta)->of($notCoveredSize));
 
                 $closeByMarketIfDistanceLessThan = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice());
                 if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan) {
@@ -300,13 +300,13 @@ final class CheckPositionIsUnderLiquidationHandler
     /**
      * @return ActiveStopOrder[]
      */
-    private function findActivePositionStopOrders(Symbol $symbol, Side $positionSide, PriceRange $priceRange): array
+    private function findActivePositionStopOrders(SymbolInterface $symbol, Side $positionSide, PriceRange $priceRange): array
     {
         return array_filter(
             $this->activeConditionalStopOrders,
             static function(ActiveStopOrder $activeStopOrder) use ($symbol, $positionSide, $priceRange) {
                 return
-                    $activeStopOrder->symbol === $symbol &&
+                    $activeStopOrder->symbol->eq($symbol) &&
                     $activeStopOrder->positionSide === $positionSide &&
                     $priceRange->isPriceInRange($activeStopOrder->triggerPrice);
             }
@@ -321,7 +321,7 @@ final class CheckPositionIsUnderLiquidationHandler
         return (new CoinAmount($position->symbol->associatedCoin(), min($amountCalcByDistance, self::MAX_TRANSFER_AMOUNT)));
     }
 
-    private function getPositionOld(Symbol $symbol): ?Position
+    private function getPositionOld(SymbolInterface $symbol): ?Position
     {
         if (!($positions = $this->positionService->getPositions($symbol))) {
             return null;
@@ -400,9 +400,9 @@ final class CheckPositionIsUnderLiquidationHandler
         return new StopsCollection(...$result);
     }
 
-    public static function isSymbolIgnored(Symbol $symbol): bool
+    public static function isSymbolIgnored(SymbolInterface $symbol): bool
     {
-        return in_array($symbol, self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
+        return in_array($symbol->name(), self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
     private function getLastRunMarkPrice(Position $position): ?SymbolPrice
@@ -438,7 +438,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private static function lastRunMarkPriceCacheKey(Position $position): string
     {
-        return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->value, $position->side->value);
+        return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->name(), $position->side->value);
     }
 
     /**

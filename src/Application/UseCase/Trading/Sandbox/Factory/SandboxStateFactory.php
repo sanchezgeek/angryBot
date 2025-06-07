@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Application\UseCase\Trading\Sandbox\Factory;
 
 use App\Application\UseCase\Trading\Sandbox\SandboxState;
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 /**
  * @todo | sandbox | Move to ... where?
@@ -23,7 +22,7 @@ final readonly class SandboxStateFactory implements SandboxStateFactoryInterface
     ) {
     }
 
-    public function byCurrentTradingAccountState(Symbol $symbol): SandboxState
+    public function byCurrentTradingAccountState(SymbolInterface $symbol): SandboxState
     {
         $ticker = $this->exchangeService->ticker($symbol);
         $positions = $this->positionService->getPositions($symbol);

@@ -15,3 +15,6 @@ services:
 
     App\Screener\:
         resource: '../../../'
+
+    App\Screener\Application\Parameters\PriceChangeDynamicParameters:
+        public: true

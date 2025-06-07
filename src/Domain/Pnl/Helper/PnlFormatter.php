@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Pnl\Helper;
 
-use App\Bot\Domain\Pnl;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 class PnlFormatter
 {
@@ -13,13 +12,13 @@ class PnlFormatter
     private string $currency;
     private bool $showCurrency = true;
 
-    public function __construct(Symbol $symbol)
+    public function __construct(SymbolInterface $symbol)
     {
         $this->precision = $symbol->associatedCoin()->coinCostPrecision();
         $this->currency = $symbol->associatedCoin()->name;
     }
 
-    public static function bySymbol(Symbol $symbol): self
+    public static function bySymbol(SymbolInterface $symbol): self
     {
         return new self($symbol);
     }

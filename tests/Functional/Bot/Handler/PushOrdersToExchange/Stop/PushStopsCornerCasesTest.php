@@ -16,7 +16,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -53,7 +53,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     use RateLimiterAwareTest;
     use SettingsAwareTest;
 
-    private const SYMBOL = Symbol::BTCUSDT;
+    private const SYMBOL = SymbolEnum::BTCUSDT;
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
     private const OPPOSITE_BUY_DISTANCE = 38;
     private const ADD_PRICE_DELTA_IF_INDEX_ALREADY_OVER_STOP = 15;
@@ -100,8 +100,6 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             $this->clockMock,
             self::getContainer()->get(StopChecksChain::class),
         );
-
-        self::truncateStops();
     }
 
     /**

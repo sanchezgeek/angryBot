@@ -5,18 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push;
 
 use App\Bot\Application\Helper\StopHelper;
-use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
-use App\Domain\Position\ValueObject\Side;
-use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
-use App\Settings\Application\Service\SettingAccessor;
-use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -26,18 +21,11 @@ use App\Tests\Helper\StopTestHelper;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Utils\TradingSetup\TradingSetup;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
-    const CATEGORY = AssetCategory::linear;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::truncateStops();
-        self::truncateBuyOrders();
-    }
+    const AssetCategory CATEGORY = AssetCategory::linear;
 
     /**
      * @dataProvider cases
@@ -49,7 +37,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
-        $tickersMap = array_combine(array_map(static fn(Symbol $symbol) => $symbol->value, $symbols), $tickers);
+        $tickersMap = array_combine(array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols), $tickers);
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
@@ -59,7 +47,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $positionsApiResponse = (new PositionResponseBuilder(self::CATEGORY));
         foreach ($setup->getPositions() as $position) {
             $this->havePosition($position->symbol, $position); // fallback for PositionServiceInterface
-            $ticker = $tickersMap[$position->symbol->value];
+            $ticker = $tickersMap[$position->symbol->name()];
             $positionsApiResponse->withPosition($position, $ticker->markPrice->value());
         }
         $positionsApiCall = new ByBitApiCallExpectation(new GetPositionsRequest(self::CATEGORY, null), $positionsApiResponse->build());
@@ -82,7 +70,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     {
         $setup = self::baseSetup();
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $btcTicker = TickerFactory::create($symbol, 29000, 29000, 29000);
         $setup->addTicker($btcTicker);
 
@@ -106,7 +94,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
                     ->setExchangeOrderId($exchangeOrderIds[0]),
         ]);
 
-        $symbol = Symbol::LINKUSDT;
+        $symbol = SymbolEnum::LINKUSDT;
         $linkTicker = TickerFactory::create($symbol, 23.6, 23.6, 23.6);
         $setup->addTicker($linkTicker);
 
@@ -131,8 +119,8 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         ]);
 
         # other symbols without stops
-        $setup->addTicker(TickerFactory::create(Symbol::ETHUSDT, 2100,  2100,  2100));
-        $setup->addTicker(TickerFactory::create(Symbol::ADAUSDT, 0.6, 0.6, 0.6));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ETHUSDT, 2100,  2100,  2100));
+        $setup->addTicker(TickerFactory::create(SymbolEnum::ADAUSDT, 0.6, 0.6, 0.6));
 
         yield [
             'setup' => $setup,

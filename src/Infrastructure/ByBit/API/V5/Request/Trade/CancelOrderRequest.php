@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Trade;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -35,7 +35,7 @@ final readonly class CancelOrderRequest extends AbstractByBitApiRequest
 
     public static function byOrderId(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         string $orderId
     ): self {
         return new self($category, $symbol, $orderId);
@@ -45,7 +45,7 @@ final readonly class CancelOrderRequest extends AbstractByBitApiRequest
     {
         return [
             'category' => $this->category->value,
-            'symbol' => $this->symbol->value,
+            'symbol' => $this->symbol->name(),
             'orderId' => $this->oderId,
             'orderLinkId' => $this->oderLinkId,
         ];
@@ -53,7 +53,7 @@ final readonly class CancelOrderRequest extends AbstractByBitApiRequest
 
     private function __construct(
         private AssetCategory $category,
-        private Symbol $symbol,
+        private SymbolInterface $symbol,
         private string $oderId,
         private ?string $oderLinkId = null,
     ) {

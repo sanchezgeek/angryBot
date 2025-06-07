@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
+use App\Tests\Assertion\CustomAssertions;
+use App\Tests\Assertions\PositionAssertions;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function sprintf;
@@ -24,7 +27,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
      * @dataProvider getPositionTestCases
      */
     public function testGetPosition(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         AssetCategory $category,
         Side $positionSide,
         MockResponse $apiResponse,
@@ -37,12 +40,12 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $position = $this->service->getPosition($symbol, $positionSide);
 
         // Assert
-        self::assertEquals($expectedPosition, $position);
+        PositionAssertions::assertPositionsEquals([$expectedPosition], [$position]);
     }
 
     private function getPositionTestCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $category = AssetCategory::linear;
 
         ### SHORT ###
@@ -50,7 +53,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 
         # single
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 31000, 330, 100, -20);
-        yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have only %s %s position (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
             '$expectedPosition' => $position,
@@ -61,7 +64,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
         $position->setOppositePosition($oppositePosition);
         $oppositePosition->setOppositePosition($position);
-        yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have %s %s position with opposite (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->withPosition($oppositePosition)->build(),
             '$expectedPosition' => $position,
@@ -69,7 +72,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 
         # have no position on SHORT side
         $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 29000, 1.2, 31000, 0.0, 200, 90, 100);
-        yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have no %s position on %s side (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),
             '$expectedPosition' => null,
@@ -80,7 +83,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 
         # single
         $position = new Position($positionSide, $symbol, 30000, 1.1, 33000, 29000, 330, 100, 20);
-        yield sprintf('have only %s %s position (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have only %s %s position (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->build(),
             '$expectedPosition' => $position,
@@ -91,7 +94,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
         $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
         $position->setOppositePosition($oppositePosition);
         $oppositePosition->setOppositePosition($position);
-        yield sprintf('have %s %s position with opposite (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have %s %s position with opposite (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($position)->withPosition($oppositePosition)->build(),
             '$expectedPosition' => $position,
@@ -99,7 +102,7 @@ final class GetPositionTest extends ByBitLinearPositionServiceTestAbstract
 
         # have no position on LONG side
         $oppositePosition = new Position($positionSide->getOpposite(), $symbol, 30000, 0.8, 28000, 0.0, 100, 90, -20);
-        yield sprintf('have no %s position on %s side (%s)', $symbol->value, $positionSide->title(), $category->value) => [
+        yield sprintf('have no %s position on %s side (%s)', $symbol->name(), $positionSide->title(), $category->value) => [
             $symbol, $category, $positionSide,
             '$apiResponse' => (new PositionResponseBuilder($category))->withPosition($oppositePosition)->build(),
             '$expectedPosition' => null,

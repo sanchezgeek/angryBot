@@ -5,8 +5,8 @@ namespace App\Settings\UI\Symfony\Command\Settings\Dump;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Helper\Json;
+use App\Settings\Application\Service\Restore\SettingValueRestoreFactory;
 use App\Settings\Application\Service\SettingsCache;
-use App\Settings\Domain\Entity\SettingValue;
 use App\Settings\Domain\Repository\SettingValueRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
@@ -65,22 +65,22 @@ class SettingsDumpRestoreCommand extends AbstractCommand
 
         $dump = Json::decode(file_get_contents($filepath));
 
-        $values = array_map(static fn(array $data) => SettingValue::fromArray($data), $dump);
-
-        if ($this->paramFetcher->getBoolOption(self::PURGE_OPTION)) {
-            $existedValues = $this->settingValueRepository->findAll();
-            foreach ($existedValues as $existedValue) {
-                $this->settingValueRepository->remove($existedValue);
-            }
-        }
+        $values = array_map(fn(array $data) => $this->settingValueRestoreService->restore($data), $dump);
 
         $this->entityManager->wrapInTransaction(function() use ($values) {
+            if ($this->paramFetcher->getBoolOption(self::PURGE_OPTION)) {
+                $existedValues = $this->settingValueRepository->findAll();
+                foreach ($existedValues as $existedValue) {
+                    $this->settingValueRepository->remove($existedValue);
+                }
+            }
+
             foreach ($values as $value) {
-                $this->entityManager->persist($value);
+                $this->settingValueRepository->save($value);
             }
         });
 
-        $this->io->note(sprintf('Settings restored. Qnt: %d', count($values)));
+        $this->io->note(sprintf('Settings restored. Qnt: %d', count($dump)));
         $this->settingsCache->clear();
 
         if ($auto) {
@@ -93,6 +93,7 @@ class SettingsDumpRestoreCommand extends AbstractCommand
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly SettingValueRepository $settingValueRepository,
+        private readonly SettingValueRestoreFactory $settingValueRestoreService,
         private readonly SettingsCache $settingsCache,
         private readonly string $defaultSettingsPath,
         ?string $name = null,

@@ -1,0 +1,8 @@
+doctrine:
+    orm:
+        mappings:
+            Symbol:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/modules/Trading/Domain/Symbol/Entity'
+                prefix: 'App\Trading\Domain\Symbol\Entity'

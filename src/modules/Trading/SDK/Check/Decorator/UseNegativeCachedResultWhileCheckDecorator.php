@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Trading\SDK\Check\Decorator;
 
 use App\Application\Cache\CacheServiceInterface;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Cache\CheckResultKeyBasedOnOrderAndPricePnlStep;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
@@ -55,7 +55,7 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
 
         /** @var AbstractTradingCheckResult $cachedResult */
         if ($cachedResult = $this->cache->get($cacheKey)) {
-//            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->value, $context->ticker->markPrice->value(), $orderDto->orderQty()));
+//            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->name(), $context->ticker->markPrice->value(), $orderDto->orderQty()));
             return $cachedResult->quietClone();
         }
 
@@ -72,10 +72,10 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
      * @note 100x-leveraged
      * @see PnlHelper::getPositionLeverage
      */
-    public static function pnlPercentStep(Symbol $symbol, float $currentPrice): int
+    public static function pnlPercentStep(SymbolInterface $symbol, float $currentPrice): int
     {
-        if (isset(self::$pnlStepCache[$symbol->value])) {
-            return self::$pnlStepCache[$symbol->value];
+        if (isset(self::$pnlStepCache[$symbol->name()])) {
+            return self::$pnlStepCache[$symbol->name()];
         }
 
         $result = match (true) {
@@ -87,6 +87,6 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
             default => 20,
         };
 
-        return self::$pnlStepCache[$symbol->value] = $result;
+        return self::$pnlStepCache[$symbol->name()] = $result;
     }
 }

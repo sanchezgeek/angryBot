@@ -4,7 +4,8 @@ namespace App\Command\Account;
 
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Command\AbstractCommand;
-use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\Mixin\CoinAwareCommand;
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\V5\Enum\Account\AccountType;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use InvalidArgumentException;
@@ -19,18 +20,18 @@ use function sprintf;
 #[AsCommand(name: 'asset:uni-transfer')]
 class UniTransferCommand extends AbstractCommand
 {
-    use SymbolAwareCommand;
+    use CoinAwareCommand;
 
-    private const TRANSFER_AMOUNT_OPTION = 'transferAmount';
-    private const FROM_ACCOUNT = 'from';
-    private const TO_ACCOUNT = 'to';
+    private const string TRANSFER_AMOUNT_OPTION = 'transferAmount';
+    private const string FROM_ACCOUNT = 'from';
+    private const string TO_ACCOUNT = 'to';
 
     private array $accountUids;
 
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs()
+            ->configureCoinArgs()
             ->addOption(self::TRANSFER_AMOUNT_OPTION, 'a', InputOption::VALUE_REQUIRED, 'Transfer amount')
             ->addOption(self::FROM_ACCOUNT, 'f', InputOption::VALUE_REQUIRED)
             ->addOption(self::TO_ACCOUNT, 't', InputOption::VALUE_REQUIRED)
@@ -39,8 +40,7 @@ class UniTransferCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $coin = $this->getSymbol()->associatedCoin();
-
+        $coin = $this->getCoin();
         $amount = $this->paramFetcher->requiredFloatOption(self::TRANSFER_AMOUNT_OPTION);
 
         $from = $this->parseAccountAndType($this->paramFetcher->getStringOption(self::FROM_ACCOUNT), 'from');

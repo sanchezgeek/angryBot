@@ -8,17 +8,17 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Bot\Domain\Helper\SymbolHelper;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Helper\ConsoleTableHelper as CTH;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -40,6 +40,8 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -56,38 +58,38 @@ use function sprintf;
  * @todo | UI | opened-positions | Capture specific position state to cache?
  */
 #[AsCommand(name: 'p:opened')]
-class AllOpenedPositionsInfoCommand extends AbstractCommand
+class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
 
-    private const DEFAULT_UPDATE_INTERVAL = '15';
-    private const DEFAULT_SAVE_CACHE_INTERVAL = '150';
+    private const string DEFAULT_UPDATE_INTERVAL = '15';
+    private const string DEFAULT_SAVE_CACHE_INTERVAL = '150';
 
-    private const SortCacheKey = 'opened_positions_sort';
-    private const SavedDataKeysCacheKey = 'saved_data_cache_keys';
-    private const Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
+    private const string SortCacheKey = 'opened_positions_sort';
+    private const string SavedDataKeysCacheKey = 'saved_data_cache_keys';
+    private const string Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
 
-    private const MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
-    private const WITH_SAVED_SORT_OPTION = 'sorted';
-    private const USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
-    private const USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
-    private const SAVE_SORT_OPTION = 'save-sort';
-    private const FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
-    private const MOVE_UP_OPTION = 'move-up';
-    private const MOVE_DOWN_OPTION = 'move-down';
-    private const DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
-    private const CURRENT_STATE_OPTION = 'current-state';
-    private const REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
-    private const SHOW_CACHE_OPTION = 'show-cache';
-    private const UPDATE_OPTION = 'update';
-    private const UPDATE_INTERVAL_OPTION = 'update-interval';
-    private const SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
-    private const SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
+    private const string MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
+    private const string WITH_SAVED_SORT_OPTION = 'sorted';
+    private const string USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
+    private const string USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
+    private const string SAVE_SORT_OPTION = 'save-sort';
+    private const string FIRST_ITERATION_SAVE_CACHE_COMMENT = 'comment';
+    private const string MOVE_UP_OPTION = 'move-up';
+    private const string MOVE_DOWN_OPTION = 'move-down';
+    private const string DIFF_WITH_SAVED_CACHE_OPTION = 'diff';
+    private const string CURRENT_STATE_OPTION = 'current-state';
+    private const string REMOVE_PREVIOUS_CACHE_OPTION = 'remove-prev';
+    private const string SHOW_CACHE_OPTION = 'show-cache';
+    private const string UPDATE_OPTION = 'update';
+    private const string UPDATE_INTERVAL_OPTION = 'update-interval';
+    private const string SAVE_EVERY_N_ITERATION_OPTION = 'save-cache-interval';
+    private const string SHOW_FULL_TICKER_DATA_OPTION = 'show-full-ticker';
 
-    private const SHOW_SYMBOLS_OPTION = 'show-symbols';
-    private const HIDE_SYMBOLS_OPTION = 'hide-symbols';
+    private const string SHOW_SYMBOLS_OPTION = 'show-symbols';
+    private const string HIDE_SYMBOLS_OPTION = 'hide-symbols';
 
     private bool $currentStateGonnaBeSaved = false;
     private array $cacheCollector = [];
@@ -101,7 +103,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     private ?array $rawSymbolsSetToMoveUp = null;
     private ?array $rawSymbolsSetToMoveDown = null;
 
-    /** @var Symbol[] */
+    /** @var SymbolInterface[] */
     private array $symbols;
 
     /** @var array<Position[]> */
@@ -137,6 +139,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         ;
     }
 
+    private array $showSymbolsRawValues = [];
+    private array $hideSymbolsRawValues = [];
+
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
         parent::initialize($input, $output);
@@ -150,16 +155,28 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
 
         if (
             ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false))
-            && ($providedItems = self::parseProvidedSymbols($moveUpOption))
+            && ($providedItems = $this->parseProvidedSymbols($moveUpOption))
         ) {
             $this->rawSymbolsSetToMoveUp = SymbolHelper::symbolsToRawValues(...$providedItems);
         }
 
         if (
             ($moveDownOption = $this->paramFetcher->getStringOption(self::MOVE_DOWN_OPTION, false))
-            && ($providedItems = self::parseProvidedSymbols($moveDownOption))
+            && ($providedItems = $this->parseProvidedSymbols($moveDownOption))
         ) {
             $this->rawSymbolsSetToMoveDown = SymbolHelper::symbolsToRawValues(...$providedItems);
+        }
+
+        if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
+            if ($providedItems = $this->parseProvidedSymbols($showSymbols)) {
+                $this->showSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
+            }
+        }
+
+        if ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
+            if ($providedItems = $this->parseProvidedSymbols($hideSymbols)) {
+                $this->hideSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
+            }
         }
     }
 
@@ -311,16 +328,16 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     /**
      * @return array<DataRow|SeparatorRow>
      */
-    private function posInfo(Symbol $symbol, float &$unrealizedTotal, array $specifiedCache = [], array $prevCache = []): array
+    private function posInfo(SymbolInterface $symbol, float &$unrealizedTotal, array $specifiedCache = [], array $prevCache = []): array
     {
         $result = [];
 
-        $positions = $this->positions[$symbol->value];
+        $positions = $this->positions[$symbol->name()];
         if (!$positions) {
             return [];
         }
 
-        $markPrice = $this->lastMarkPrices[$symbol->value];
+        $markPrice = $this->lastMarkPrices[$symbol->name()];
 
         $hedge = $positions[array_key_first($positions)]->getHedge();
         $isEquivalentHedge = $hedge?->isEquivalentHedge();
@@ -402,7 +419,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
                 $liquidationContent,
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
-            sprintf('%.1f', $this->ims[$main->symbol->value]),
+            sprintf('%.1f', $this->ims[$main->symbol->name()]),
         ]);
 
         # PNL%
@@ -526,7 +543,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     private static function formatPnlDiffCell(
-        Symbol $symbol,
+        SymbolInterface $symbol,
         bool $isMainWithoutSupport,
         float $a,
         float $b,
@@ -602,21 +619,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         }
 
         if (!$this->currentStateGonnaBeSaved) {
-            if ($showSymbols = $this->paramFetcher->getStringOption(self::SHOW_SYMBOLS_OPTION, false)) {
-                $providedItems = self::parseProvidedSymbols($showSymbols);
-                if ($providedItems) {
-                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
-                    $symbolsRaw = array_intersect($providedItems, $symbolsRaw);
-                }
-            } elseif ($hideSymbols = $this->paramFetcher->getStringOption(self::HIDE_SYMBOLS_OPTION, false)) {
-                $providedItems = self::parseProvidedSymbols($hideSymbols);
-                if ($providedItems) {
-                    $providedItems = SymbolHelper::symbolsToRawValues(...$providedItems);
-                    $providedItems = array_intersect($providedItems, $symbolsRaw);
-                    if ($providedItems) {
-                        $symbolsRaw = array_diff($symbolsRaw, $providedItems);
-                    }
-                }
+            if ($this->showSymbolsRawValues) {
+                $symbolsRaw = array_intersect($this->showSymbolsRawValues, $symbolsRaw);
+            } elseif (
+                $this->hideSymbolsRawValues
+                && $hideSymbolsRawValues = array_intersect($this->hideSymbolsRawValues, $symbolsRaw)
+            ) {
+                $symbolsRaw = array_diff($symbolsRaw, $hideSymbolsRawValues);
             }
         }
 
@@ -631,7 +640,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $symbolsRaw = array_merge($equivalentHedgedSymbols, array_diff($symbolsRaw, $equivalentHedgedSymbols));
         }
 
-        return SymbolHelper::rawSymbolsToValueObjects(...$symbolsRaw);
+        return $this->rawSymbolsToValueObjects(...$symbolsRaw);
+    }
+
+    /**
+     * @return SymbolInterface[]
+     */
+    private function rawSymbolsToValueObjects(string ...$symbolsRaw): array
+    {
+        return array_map(fn (string $symbolRaw) => $this->symbolProvider->getOrInitialize($symbolRaw), $symbolsRaw);
     }
 
     public function getTotalUnrealizedProfit(): float
@@ -664,7 +681,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
     }
 
     /**
-     * @param Symbol[] $symbols
+     * @param SymbolInterface[] $symbols
      */
     private function getTotalUnrealizedProfitFromCache(array $cache, array $symbols): float
     {
@@ -762,10 +779,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
         return $color ? CTH::colorizeText($value, $color) : $value;
     }
 
-    private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->value, $position->side->value);}
-    private static function positionCacheKeyByRaw(Symbol $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->value, $side->value);}
+    private static function positionCacheKey(Position $position): string {return sprintf('position_%s_%s', $position->symbol->name(), $position->side->value);}
+    private static function positionCacheKeyByRaw(SymbolInterface $symbol, Side $side): string {return sprintf('position_%s_%s', $symbol->name(), $side->value);}
 
-    private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->value);}
+    private static function tickerCacheKey(Ticker $ticker): string {return sprintf('ticker_%s', $ticker->symbol->name());}
 
     private function getSavedDataCacheKeys(): array
     {
@@ -895,11 +912,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand
             $markPrice->differenceWith($firstStopPrice)->absDelta(),
             $markPrice
         );
+        // @todo | symbol | some way to get values based on symbol -> move to settings?
         $bounds = [
-            Symbol::BTCUSDT->value => 100,
-            Symbol::ETHUSDT->value => 200,
+            SymbolEnum::BTCUSDT->value => 100,
+            SymbolEnum::ETHUSDT->value => 200,
         ];
-        $bound = $bounds[$symbol->value] ?? 300;
+        $bound = $bounds[$symbol->name()] ?? 300;
         $firstStopDistanceColor = 'none';
         if (
             $firstStopDistancePnlPctWithTicker->value() < $bound

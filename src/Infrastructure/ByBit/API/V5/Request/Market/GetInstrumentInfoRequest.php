@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -35,11 +35,11 @@ final readonly class GetInstrumentInfoRequest extends AbstractByBitApiRequest
     {
         return [
             'category' => $this->category->value,
-            'symbol' => $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol,
+            'symbol' => $this->symbol instanceof SymbolInterface ? $this->symbol->name() : $this->symbol,
         ];
     }
 
-    public function __construct(private AssetCategory $category, private Symbol|string $symbol)
+    public function __construct(private AssetCategory $category, private SymbolInterface|string $symbol)
     {
     }
 }

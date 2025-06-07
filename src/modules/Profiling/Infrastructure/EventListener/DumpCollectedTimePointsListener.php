@@ -9,6 +9,7 @@ use App\Profiling\Application\Settings\ProfilingSettings;
 use App\Profiling\Application\Storage\ProfilingPointStorage;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Worker\AppContext;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
@@ -44,6 +45,10 @@ final readonly class DumpCollectedTimePointsListener implements EventSubscriberI
 
     public static function getSubscribedEvents(): array
     {
+        if (!AppContext::isProfilingEnabled()) {
+            return [];
+        }
+
         return [
             WorkerMessageHandledEvent::class => 'onWorkerMessageHandled',
             WorkerMessageFailedEvent::class => 'onWorkerMessageFailed',

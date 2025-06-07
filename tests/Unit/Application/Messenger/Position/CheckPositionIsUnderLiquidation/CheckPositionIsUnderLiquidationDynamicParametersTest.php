@@ -8,9 +8,9 @@ use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPosi
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\SymbolPrice;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -38,7 +38,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $criticalPartOfLiqDistance = 10;
         $settingsMock = $this->settingsProviderMock([LiquidationHandlerSettings::CriticalPartOfLiquidationDistance->getSettingKey() => $criticalPartOfLiqDistance]);
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 35000);
 
@@ -150,7 +150,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
 // manual
         #### corner cases
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
 
@@ -198,6 +198,17 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
 
+        // @todo | liquidation | corner cases
+//        $ticker = TickerFactory::withEqualPrices($symbol, 30001);
+//        $expectedPriceRange = PriceRange::create(30093.97, 30179.65);
+//        $expectedStopPrice = $symbol->makePrice(30099.0);
+//        $warningDistance = 301.0;
+//        $criticalDistance = 180.6;
+//        $acceptableStoppedPart = 66.4451827242525;
+//        yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | corner.cases | liq. right after entry / ticker between entry and liquidation (in loss)') => [
+//            $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, true
+//        ];
+//return;
         #### simple
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(25000)->build();
 

@@ -4,12 +4,12 @@ namespace App\Command\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Hedge\Hedge;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\PositionDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Price\PriceRange;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
@@ -23,7 +23,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'p:move-info')]
-class PositionMoveInfoCommand extends AbstractCommand
+class PositionMoveInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

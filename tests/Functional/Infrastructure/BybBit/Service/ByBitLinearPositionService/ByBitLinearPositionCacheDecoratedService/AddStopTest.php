@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearPositionService\ByBitLinearPositionCacheDecoratedService;
 
-use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService;
 use App\Tests\Factory\Position\PositionBuilder;
-use App\Tests\Factory\TickerFactory;
 
 use function uuid_create;
 
@@ -22,7 +19,7 @@ final class AddStopTest extends ByBitLinearPositionCacheDecoratedServiceTestAbst
     public function testCallInnerServiceToAddStop(): void
     {
         // Arrange
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionBuilder::bySide($side)->build();
         $volume = 0.1;

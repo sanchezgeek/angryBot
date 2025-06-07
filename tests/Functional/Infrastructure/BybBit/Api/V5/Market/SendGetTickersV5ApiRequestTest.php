@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Market;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Tests\Functional\Infrastructure\BybBit\Api\V5\ByBitV5ApiRequestTestAbstract;
@@ -19,7 +19,7 @@ final class SendGetTickersV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     public function testSendGetTickersRequest(): void
     {
         // Arrange
-        $request = new GetTickersRequest(AssetCategory::linear, Symbol::BTCUSDT);
+        $request = new GetTickersRequest(AssetCategory::linear, SymbolEnum::BTCUSDT);
         $requestUrl = $this->getFullRequestUrl($request);
         $mockRequestKey = $this->httpClientStub->matchGet($requestUrl, $request->data(), MarketResponses::tickers());
 

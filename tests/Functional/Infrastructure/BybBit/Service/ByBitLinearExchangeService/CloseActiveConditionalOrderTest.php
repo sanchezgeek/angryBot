@@ -5,19 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService;
 
 use App\Bot\Domain\Exchange\ActiveStopOrder;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
 use App\Infrastructure\ByBit\API\V5\ByBitV5ApiError;
 use App\Infrastructure\ByBit\API\V5\Enum\ApiV5Errors;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
-use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
 use App\Tests\Mock\Response\ByBitV5Api\Trade\CancelOrderResponseBuilder;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Throwable;
+
 use function sprintf;
 use function uuid_create;
 
@@ -37,7 +38,7 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
      */
     public function testCloseActiveConditionalOrder(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
     ): void {
         // Arrange
@@ -57,10 +58,10 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
     {
         $category = self::ASSET_CATEGORY;
 
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         foreach ($this->positionSideProvider() as [$side]) {
-            yield sprintf('close %s %s ticker (%s)', $symbol->value, $side->value, $category->value) => [
+            yield sprintf('close %s %s ticker (%s)', $symbol->name(), $side->value, $category->value) => [
                 $category, $symbol, $side,
             ];
         }
@@ -71,7 +72,7 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
      */
     public function testFailCloseActiveConditionalOrder(
         AssetCategory $category,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $positionSide,
         MockResponse $apiResponse,
         Throwable $expectedException,
@@ -97,7 +98,7 @@ final class CloseActiveConditionalOrderTest extends ByBitLinearExchangeServiceTe
     private function closeOrderFailTestCases(): iterable
     {
         $category = self::ASSET_CATEGORY;
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         # Ticker not found
         foreach ($this->positionSideProvider() as [$side]) {

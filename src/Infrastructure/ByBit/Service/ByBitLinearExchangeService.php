@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\Service;
 
-use App\Bot\Application\Service\Exchange\Exchange\InstrumentInfoDto;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
@@ -21,16 +19,19 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\Common\Exception\PermissionDeniedException;
 use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\API\V5\Request\Kline\GetKlinesRequest;
-use App\Infrastructure\ByBit\API\V5\Request\Market\GetInstrumentInfoRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
+use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
+use App\Trading\Application\Symbol\SymbolProvider;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use ValueError;
 
 use function is_array;
 use function sprintf;
@@ -43,12 +44,14 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 {
     use ByBitApiCallHandler;
 
-    private const ASSET_CATEGORY = AssetCategory::linear;
+    private const AssetCategory ASSET_CATEGORY = AssetCategory::linear;
 
     private string $workerHash;
 
-    public function __construct(ByBitApiClientInterface $apiClient)
-    {
+    public function __construct(
+        ByBitApiClientInterface $apiClient,
+        private readonly SymbolProvider $symbolProvider,
+    ) {
         $this->apiClient = $apiClient;
     }
 
@@ -56,12 +59,13 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws TickerNotFoundException
      *
      * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetTickerTest
      */
-    public function ticker(Symbol $symbol): Ticker
+    public function ticker(SymbolInterface $symbol): Ticker
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, $symbol);
 
@@ -72,9 +76,9 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $ticker = null;
         foreach ($list as $item) {
-            if ($item['symbol'] === $symbol->value) {
+            if ($item['symbol'] === $symbol->name()) {
                 $ticker = new Ticker(
-                    $symbol,
+                    $this->symbolProvider->getOrInitialize($symbol->name()),
                     (float)$item['markPrice'],
                     (float)$item['indexPrice'],
                     (float)$item['lastPrice'],
@@ -93,10 +97,11 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\GetActiveConditionalOrdersTest
      */
-    public function activeConditionalOrders(?Symbol $symbol = null, ?PriceRange $priceRange = null): array
+    public function activeConditionalOrders(?SymbolInterface $symbol = null, ?PriceRange $priceRange = null): array
     {
         if (!$symbol && $priceRange) {
             throw new InvalidArgumentException('Wrong usage: cannot apply priceRange when Symbol not specified');
@@ -112,15 +117,10 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
             $reduceOnly = $item['reduceOnly'];
             $closeOnTrigger = $item['closeOnTrigger'];
 
-            try {
-                $itemSymbol = Symbol::from($item['symbol']);
-                if ($symbol && $itemSymbol !== $symbol) {
-                    continue;
-                }
-            } catch (ValueError) {
-                # in case of symbol not defined yet
+            if ($symbol && $symbol->name() !== $item['symbol']) {
                 continue;
             }
+            $itemSymbol = $this->symbolProvider->getOrInitialize($item['symbol']);
 
             // Only orders created by bot
             if (
@@ -155,6 +155,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\ByBitLinearExchangeService\CloseActiveConditionalOrderTest
      */
@@ -168,29 +169,35 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         }
     }
 
-    public function getInstrumentInfo(Symbol|string $symbol): InstrumentInfoDto
-    {
-        $request = new GetInstrumentInfoRequest(self::ASSET_CATEGORY, $symbol);
-        $data = $this->sendRequest($request)->data();
-
-        return new InstrumentInfoDto(
-            (float)$data['list'][0]['lotSizeFilter']['minOrderQty'],
-            (float)$data['list'][0]['lotSizeFilter']['minNotionalValue'],
-            (float)$data['list'][0]['leverageFilter']['minLeverage'],
-            (float)$data['list'][0]['leverageFilter']['maxLeverage'],
-            (float)$data['list'][0]['priceFilter']['tickSize'],
-        );
-    }
-
     /**
-     * @return array<string, array{last: float, index: float, mark: float}> SymbolRaw -> Ticker
+     * @return string[]
      *
      * @throws ApiRateLimitReached
      * @throws PermissionDeniedException
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function getAllTickersRaw(Coin $settleCoin): array
+    public function getAllAvailableSymbolsRaw(Coin $settleCoin): array
+    {
+        $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
+
+        $data = $this->sendRequest($request)->data();
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        return array_map(static fn(array $item) => $item['symbol'], $list);
+    }
+
+    /**
+     * @return Ticker[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws PermissionDeniedException
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     */
+    public function getAllTickers(Coin $settleCoin): array
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
 
@@ -201,17 +208,19 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $result = [];
         foreach ($list as $item) {
-            $result[$item['symbol']] = [
-                'mark' => (float)$item['markPrice'],
-                'last' => (float)$item['lastPrice'],
-                'index' => (float)$item['indexPrice'],
-            ];
+            try {
+                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($item['symbol'], $settleCoin);
+            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
+                continue;
+            }
+
+            $result[] = new Ticker($symbol, (float)$item['markPrice'], (float)$item['indexPrice'], (float)$item['lastPrice']);
         }
 
         return $result;
     }
 
-    public function getKlines(Symbol|string $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
+    public function getCandles(SymbolInterface $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
     {
         $request = new GetKlinesRequest(self::ASSET_CATEGORY, $symbol, $interval, $from, $to, $limit);
         $data = $this->sendRequest($request)->data();

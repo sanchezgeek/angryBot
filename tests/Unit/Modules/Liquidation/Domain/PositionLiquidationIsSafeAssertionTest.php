@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Modules\Liquidation\Domain;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
 use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum as Strategy;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -31,7 +31,7 @@ final class PositionLiquidationIsSafeAssertionTest extends TestCase
 
     public function cases(): iterable
     {
-        $s = Symbol::BTCUSDT;
+        $s = SymbolEnum::BTCUSDT;
 
         ### SHORT
         $safeDistance = 5000;

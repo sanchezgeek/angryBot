@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Domain\Price;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceMovement;
 use App\Helper\FloatHelper;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +18,7 @@ class PriceMovementTest extends TestCase
 {
     public function testLossMovementDirection(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         # 1
         $priceMovement = PriceMovement::fromToTarget($symbol->makePrice(50000), $symbol->makePrice(51000.2));

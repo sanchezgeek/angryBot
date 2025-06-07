@@ -11,7 +11,6 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
@@ -19,6 +18,10 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolContainerInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
 
@@ -26,7 +29,7 @@ use DomainException;
  * @see \App\Tests\Unit\Domain\Entity\BuyOrderTest
  */
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
-class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface
+class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
     use HasWithoutOppositeContext;
 
@@ -43,10 +46,11 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public const string IS_OPPOSITE_AFTER_SL_CONTEXT = 'isOppositeBuyOrderAfterStopLoss';
     public const string OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
 
+    public const string ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT = 'activeStateSetAtTimestamp';
+
     use HasVolume;
     use HasExchangeOrderContext;
     use WithOppositeOrderDistanceContext;
-
     use RecordEvents;
 
     #[ORM\Id]
@@ -59,8 +63,9 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     #[ORM\Column]
     private float $volume;
 
-    #[ORM\Column(type: 'string', enumType: Symbol::class)]
-    private Symbol $symbol;
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
+    private SymbolInterface $symbol;
 
     #[ORM\Column(type: 'string', enumType: Side::class)]
     private Side $positionSide;
@@ -76,7 +81,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     private bool $isOppositeStopExecuted = false;
 
-    public function __construct(int $id, SymbolPrice|float $price, float $volume, Symbol $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
@@ -84,6 +89,16 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+    }
+
+    /**
+     * @internal For tests
+     */
+    public function replaceSymbolEntity(Symbol $symbol): self
+    {
+        $this->symbol = $symbol;
+
+        return $this;
     }
 
     public function getId(): int
@@ -94,7 +109,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     /**
      * @todo | new column
      */
-    public function getSymbol(): Symbol
+    public function getSymbol(): SymbolInterface
     {
         return $this->symbol;
     }
@@ -279,20 +294,43 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return $this->isOppositeStopExecuted;
     }
 
-    public function setActive(): self
+    public function setActive(DateTimeImmutable $datetime): self
     {
         $this->state = BuyOrderState::Active;
+        $this->setActiveStateChangeTimestamp($datetime);
+
         return $this;
     }
 
     public function setIdle(): self
     {
         $this->state = BuyOrderState::Idle;
+        $this->resetActiveStateChangeTimestamp();
+
         return $this;
     }
 
     public function isOrderActive(): bool
     {
         return $this->state === BuyOrderState::Active;
+    }
+
+    public function getActiveStateChangeTimestamp(): ?int
+    {
+        return $this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT] ?? null;
+    }
+
+    public function setActiveStateChangeTimestamp(DateTimeImmutable $time): self
+    {
+        $this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT] = $time->getTimestamp();
+
+        return $this;
+    }
+
+    public function resetActiveStateChangeTimestamp(): self
+    {
+        unset($this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT]);
+
+        return $this;
     }
 }

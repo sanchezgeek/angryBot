@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Market;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -42,7 +42,7 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
         ];
 
         if ($this->symbol) {
-            $data['symbol'] = $this->symbol->value;
+            $data['symbol'] = $this->symbol->name();
         } else {
             $data['settleCoin'] = $this->settleCoin->value;
         }
@@ -52,7 +52,7 @@ final readonly class GetTickersRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private ?Symbol $symbol = null,
+        private ?SymbolInterface $symbol = null,
         private ?Coin $settleCoin = null
     ) {
         if (!$this->symbol && !$this->settleCoin) {

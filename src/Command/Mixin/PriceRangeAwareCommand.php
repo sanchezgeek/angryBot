@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;

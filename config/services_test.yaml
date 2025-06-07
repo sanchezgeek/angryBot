@@ -2,6 +2,7 @@ services:
     _defaults:
         public: true
         autowire: true
+        autoconfigure: true
 
     Symfony\Contracts\HttpClient\HttpClientInterface:
         class: App\Tests\Stub\Request\SymfonyHttpClientStub

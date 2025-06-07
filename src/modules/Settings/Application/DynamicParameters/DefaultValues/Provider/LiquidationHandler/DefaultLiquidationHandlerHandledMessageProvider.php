@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
+use App\Trading\Application\Symbol\SymbolProvider;
 use InvalidArgumentException;
 
 final readonly class DefaultLiquidationHandlerHandledMessageProvider implements ParameterDefaultValueProviderInterface
 {
+    public function __construct(
+        private SymbolProvider $symbolProvider,
+    ) {
+    }
+
     public function getRequiredKeys(): array
     {
         return ['symbol'];
@@ -22,6 +27,6 @@ final readonly class DefaultLiquidationHandlerHandledMessageProvider implements 
             throw new InvalidArgumentException('Symbol must be specified');
         }
 
-        return new CheckPositionIsUnderLiquidation(Symbol::fromShortName(strtoupper($input['symbol'])));
+        return new CheckPositionIsUnderLiquidation($this->symbolProvider->getOrInitialize($input['symbol']));
     }
 }

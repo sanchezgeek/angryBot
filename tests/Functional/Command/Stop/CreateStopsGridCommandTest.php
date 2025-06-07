@@ -7,7 +7,7 @@ namespace App\Tests\Functional\Command\Stop;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
@@ -15,6 +15,7 @@ use App\Tests\Factory\PositionFactory;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mock\UniqueIdGeneratorStub;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -37,8 +38,6 @@ final class CreateStopsGridCommandTest extends KernelTestCase
     protected function setUp(): void
     {
         self::getContainer()->set(UniqueIdGeneratorInterface::class, new UniqueIdGeneratorStub(self::UNIQID_CONTEXT));
-
-        self::truncateStops();
     }
 
     /**
@@ -48,7 +47,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
      */
     public function testCanCreateStopsGrid(
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         Side $side,
         string $forVolume,
         string $from,
@@ -84,7 +83,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
     private function createStopsGridDataProvider(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 1.5);
 
@@ -94,7 +93,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '%d stops for %d%% part of `%s %s` position (in %s .. %s pnl range)',
             $qnt, $volumePart,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '10%', $toPnl = '100%',
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
@@ -121,7 +120,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '%d stops for %.3f of `%s %s` position (in %s .. %s pnl range)',
             $qnt, $volume,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '10%', $toPnl = '100%',
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
@@ -148,7 +147,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '%d stops for %.3f of `%s %s` (from %d to %d)',
             $qnt, $volume,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $from = 28900, $to = 29100,
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
@@ -176,7 +175,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '%d stops for %d%% part of `%s %s` (in mixed %s .. %d range)',
             $qnt, $volumePart,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '0%', $to = 29300,
         ) => [
             '$position' => $position, '$symbol' => $symbol, '$side' => $side,
@@ -202,7 +201,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '[%d stops (but recalculated to 5)] for %d%% part of `%s %s` (in mixed %s .. %d range)',
             $qnt, $volumePart,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '0%', $to = 29300,
         ) => [
             '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
@@ -223,7 +222,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '[without passing qnt option] for %d%% part of `%s %s` (in mixed %s .. %d range)',
             $volumePart,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '0%', $to = 29300,
         ) => [
             '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
@@ -249,7 +248,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         yield sprintf(
             '[without passing qnt option] for %d%% part of `%s %s` (in mixed %s .. %d range)',
             $volumePart,
-            $symbol->value, $side->title(),
+            $symbol->name(), $side->title(),
             $fromPnl = '0%', $to = 29300,
         ) => [
             '$position' => $position = PositionFactory::short($symbol, 29000, 0.1), '$symbol' => $symbol, '$side' => $side,
@@ -277,7 +276,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
      */
     public function testFailCreateStopsGrid(
         Position $position,
-        Symbol $symbol,
+        SymbolInterface $symbol,
         ?Side $side,
         ?string $forVolume,
         ?string $from,
@@ -304,7 +303,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
 
     private function failCases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
         $position = PositionFactory::short($symbol, 29000, 0.5);
 
@@ -360,7 +359,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         ];
     }
 
-    private static function buildExpectedStop(Symbol $symbol, Side $side, int $id, float $volume, float $price, ?float $tD = null): Stop
+    private static function buildExpectedStop(SymbolInterface $symbol, Side $side, int $id, float $volume, float $price, ?float $tD = null): Stop
     {
         $tD = $tD ?: $symbol->stopDefaultTriggerDelta();
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Domain\Stop;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Stop\PositionStopRangesCollection;
 use App\Domain\Stop\StopsCollection;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -35,7 +35,7 @@ final class PositionStopRangesCollectionTest extends TestCase
     private function rangesTestDataProvider(): iterable
     {
         yield [
-            PositionFactory::short(Symbol::BTCUSDT, 30000, 1, 100),
+            PositionFactory::short(SymbolEnum::BTCUSDT, 30000, 1, 100),
             [
                 StopBuilder::short(10, 29549, 0.001)->build(),
                 StopBuilder::short(20, 29551, 0.002)->build(),

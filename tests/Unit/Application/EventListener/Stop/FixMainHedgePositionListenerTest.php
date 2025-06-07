@@ -4,20 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Application\EventListener\Stop;
 
-use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Order\Service\OrderCostCalculator;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
-use App\Infrastructure\ByBit\Service\ByBitCommissionProvider;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\EventListener\FixOppositePositionListener;
 use App\Stop\Application\Settings\FixOppositePositionSettings;
@@ -31,7 +28,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 {
     use SettingsAwareTest;
 
-    const APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
+    const int APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT = 200;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -44,15 +41,10 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         $this->positionService = $this->createMock(PositionServiceInterface::class);
         $this->stopService = $this->createMock(StopServiceInterface::class);
 
-        $orderCostCalculator = new OrderCostCalculator(new ByBitCommissionProvider());
-        $exchangeAccountService = $this->createMock(ExchangeAccountServiceInterface::class);
-
         $this->overrideSetting(FixOppositePositionSettings::FixOppositePosition_If_OppositePositionPnl_GreaterThan, sprintf('%d%%', self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT));
 
         $this->listener = new FixOppositePositionListener(
             self::getContainerSettingsProvider(),
-            $orderCostCalculator,
-            $exchangeAccountService,
             $this->exchangeService,
             $this->positionService,
             $this->stopService,
@@ -133,7 +125,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
     public function cases(): iterable
     {
         # BTCUSDT support closed
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(60000)->size(0.5)->build($main);
@@ -148,7 +140,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         yield self::caseDescription($support, $stop, $expectedStopPrice, $expectedStopVolume) => [$support, $stop, $expectedStopPrice, $expectedStopVolume];
 
         # ADAUSDT support
-        $symbol = Symbol::ADAUSDT;
+        $symbol = SymbolEnum::ADAUSDT;
         $main = PositionBuilder::long()->symbol($symbol)->entry(0.8336)->size(4470)->build();
         $support = PositionBuilder::short()->symbol($symbol)->entry(0.9052)->size(2700)->build($main);
         $stop = (new Stop(1, 0.9442, 10, null, $symbol, $support->side));
@@ -163,7 +155,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 
         # BTCUSDT main closed
         ### -- entry prices equal
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $support = PositionBuilder::short()->symbol($symbol)->entry(50000)->size(0.5)->build();
         $main = PositionBuilder::long()->symbol($symbol)->entry(50000)->size(1)->build($support);
         $stop = (new Stop(1, 48000, 0.1, null, $symbol, $main->side));

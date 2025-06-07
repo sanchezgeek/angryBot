@@ -21,7 +21,6 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChainFactory;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -30,6 +29,7 @@ use App\Command\Orders\OrdersInfoTable\Dto\OrdersInfoTableRowAtPriceInterface;
 use App\Command\Orders\OrdersInfoTable\Dto\PositionLiquidationRow;
 use App\Command\Orders\OrdersInfoTable\Dto\SandboxExecStepRow;
 use App\Command\Orders\OrdersInfoTable\Dto\SummaryRow;
+use App\Command\PositionDependentCommand;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Pnl\Helper\PnlFormatter;
 use App\Domain\Position\ValueObject\Side;
@@ -43,6 +43,7 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -69,7 +70,7 @@ use function sprintf;
  *   2) добавить какой-то фоновый обработчик, который будет кидать оповещение, если что-то идёт не так?
  */
 #[AsCommand(name: 'o:t')]
-class OrdersTotalInfoCommand extends AbstractCommand
+class OrdersTotalInfoCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
 
@@ -138,11 +139,10 @@ class OrdersTotalInfoCommand extends AbstractCommand
 
         $positionServiceStub = new class implements PositionServiceInterface
         {
-            public function getPosition(Symbol $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
-            public function getPositions(Symbol $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getPosition(SymbolInterface $symbol, Side $side): ?Position {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getPositions(SymbolInterface $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
-            public function getOpenedPositionsSymbols(array $except = []): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
-            public function getOpenedPositionsRawSymbols(): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function getOpenedPositionsSymbols(SymbolInterface ...$except): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
         };
 
         $tradingSandbox->setChecks($this->buyChecksChainFactory->full());
@@ -385,7 +385,7 @@ class OrdersTotalInfoCommand extends AbstractCommand
                 $ticker = $row->ticker;
                 $position = $row->initialSandboxState->getPosition($this->getPositionSide());
                 $cells = array_merge([
-                    Cell::colspan(4, sprintf('%s ticker: %s[l], %s[m], %s[i]', $ticker->symbol->value, $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
+                    Cell::colspan(4, sprintf('%s ticker: %s[l], %s[m], %s[i]', $ticker->symbol->name(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)),
                     Cell::resetToDefaults(sprintf('pos:%s', $position ? sprintf(' %s', $position->side->title()) : '')),
                     # probably some default table behaviour instead of $columnsCount - $tickerColspan
                 ], !$position ? [Cell::restColumnsMerged('No position found')] : [

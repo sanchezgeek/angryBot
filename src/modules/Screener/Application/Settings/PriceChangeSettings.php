@@ -14,6 +14,9 @@ enum PriceChangeSettings: string implements AppSettingInterface, AppSettingsGrou
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
     case SignificantDelta_OneDay_PricePercent = 'priceChange.significantDelta.oneDay.pricePercent';
 
+    #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
+    case SignificantDelta_OneDay_BaseMultiplier = 'priceChange.significantDelta.oneDay.baseMultiplier';
+
     public function getSettingKey(): string
     {
         return $this->value;

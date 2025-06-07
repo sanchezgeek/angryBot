@@ -3,6 +3,8 @@
 namespace App\Screener\Domain\Entity;
 
 use App\Screener\Domain\Repository\SymbolPriceHistoryRepository;
+use App\Trading\Domain\Symbol\Entity\Symbol;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -15,8 +17,9 @@ class SymbolPriceHistory
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string')]
-    public string $symbol;
+    #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
+    #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
+    public SymbolInterface $symbol;
 
     #[ORM\Column(type: 'float')]
     public float $lastPrice;
@@ -30,7 +33,7 @@ class SymbolPriceHistory
     }
 
     public function __construct(
-        string $symbol,
+        SymbolInterface $symbol,
         float $lastPrice,
         DateTimeImmutable $dateTimeImmutable
     ) {

@@ -12,7 +12,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyAndCheckFurtherPositionLiquidation;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
@@ -27,6 +27,7 @@ use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Sandbox\SandboxUnitTester;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
@@ -69,7 +70,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
 
     public function testCheckWrapExceptionThrownBySandbox(): void
     {
-        $symbol = Symbol::ETHUSDT;
+        $symbol = SymbolEnum::ETHUSDT;
         $side = Side::Buy;
         $ticker = TickerFactory::withEqualPrices($symbol, 1050);
         $orderDto = self::simpleBuyDto($symbol, $side);
@@ -126,7 +127,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
 
     public function cases(): iterable
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
         $ticker = TickerFactory::withEqualPrices($symbol, 65000);
         $safeDistance = 5000;
 
@@ -211,14 +212,14 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         );
     }
 
-    private static function simpleBuyDto(Symbol $symbol, Side $side): MarketBuyEntryDto
+    private static function simpleBuyDto(SymbolInterface $symbol, Side $side): MarketBuyEntryDto
     {
         $buyOrder = new BuyOrder(1, 100500, 0.005, $symbol, $side);
 
         return MarketBuyEntryDto::fromBuyOrder($buyOrder);
     }
 
-    private static function forceBuyDto(Symbol $symbol, Side $side): MarketBuyEntryDto
+    private static function forceBuyDto(SymbolInterface $symbol, Side $side): MarketBuyEntryDto
     {
         return new MarketBuyEntryDto($symbol, $side, 0.001, true);
     }

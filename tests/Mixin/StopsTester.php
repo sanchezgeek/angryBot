@@ -6,6 +6,7 @@ namespace App\Tests\Mixin;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 
@@ -17,6 +18,7 @@ trait StopsTester
     use TestWithDoctrineRepository;
     use PositionSideAwareTest;
     use TestWithDbFixtures;
+    use SymbolsDependentTester;
 
     /**
      * @return Stop[]
@@ -45,7 +47,7 @@ trait StopsTester
         usort($expectedStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
         usort($actualStops, static fn (Stop $a, Stop $b) => $a->getId() <=> $b->getId());
 
-        self::assertEquals($expectedStops, $actualStops);
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals($expectedStops, $actualStops);
     }
 
     protected static function getStopRepository(): StopRepository
@@ -53,6 +55,9 @@ trait StopsTester
         return self::getContainer()->get(StopRepository::class);
     }
 
+    /**
+     * @before
+     */
     protected static function truncateStops(): int
     {
         $qnt = self::truncate(Stop::class);

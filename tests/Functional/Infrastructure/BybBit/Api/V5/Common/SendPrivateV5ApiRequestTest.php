@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Infrastructure\BybBit\Api\V5\Common;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
@@ -58,8 +58,8 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
     private function privateGetRequests(): array
     {
         return [
-            [new GetPositionsRequest(AssetCategory::linear, Symbol::BTCUSDT)],
-            [GetCurrentOrdersRequest::openOnly(AssetCategory::linear, Symbol::BTCUSDT)],
+            [new GetPositionsRequest(AssetCategory::linear, SymbolEnum::BTCUSDT)],
+            [GetCurrentOrdersRequest::openOnly(AssetCategory::linear, SymbolEnum::BTCUSDT)],
         ];
     }
 
@@ -97,7 +97,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
             [
                 PlaceOrderRequest::stopConditionalOrder(
                     AssetCategory::linear,
-                    Symbol::BTCUSDT,
+                    SymbolEnum::BTCUSDT,
                     Side::Sell,
                     0.01,
                     30000.1,
@@ -105,7 +105,7 @@ final class SendPrivateV5ApiRequestTest extends ByBitV5ApiRequestTestAbstract
                 )
             ],
             [
-                CancelOrderRequest::byOrderId(AssetCategory::linear, Symbol::BTCUSDT, uuid_create())
+                CancelOrderRequest::byOrderId(AssetCategory::linear, SymbolEnum::BTCUSDT, uuid_create())
             ],
         ];
     }

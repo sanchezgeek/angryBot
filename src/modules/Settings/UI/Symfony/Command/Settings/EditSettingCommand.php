@@ -2,9 +2,10 @@
 
 namespace App\Settings\UI\Symfony\Command\Settings;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\SymbolDependentCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsService;
@@ -13,6 +14,9 @@ use App\Settings\Application\Service\SettingsLocator;
 use App\Settings\Application\Storage\AssignedSettingValueFactory;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Domain\SettingValueValidator;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
+use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,9 +25,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:edit')]
-class EditSettingCommand extends AbstractCommand
+#[AutoconfigureTag(name: 'command.symbol_dependent')]
+class EditSettingCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 
@@ -42,6 +48,10 @@ class EditSettingCommand extends AbstractCommand
         ;
     }
 
+    /**
+     * @throws UnsupportedAssetCategoryException
+     * @throws QuoteCoinNotEqualsSpecifiedOneException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -71,9 +81,7 @@ class EditSettingCommand extends AbstractCommand
         }
 
         if (!$reset) {
-            if (!($this->symbolIsSpecified() && $symbol = $this->getSymbol())) {
-                $symbol = $io->ask("Symbol (default = `null`):"); $symbol = $symbol !== null ? Symbol::fromShortName(strtoupper($symbol)) : null;
-            }
+            $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : $this->parseProvidedSingleSymbolAnswer($io->ask("Symbol (default = `null`):"));
             $side = $io->ask("Side (default = `null`):"); $side = $side !== null ? Side::from($side) : null;
         } else {
             $symbol = null;
@@ -82,7 +90,6 @@ class EditSettingCommand extends AbstractCommand
 
         if ($reset) {
             $this->settingsService->resetSetting($selectedSetting);
-
             return Command::SUCCESS;
         }
 

@@ -8,7 +8,7 @@ use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use Psr\Log\LoggerInterface;
@@ -19,9 +19,10 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 final class CheckPositionIsInProfitHandler
 {
     /** @todo | MainSymbols DRY? */
+    /** @todo | symbol | some way to get values based on symbol -> move to settings? */
     private const SYMBOLS_ALERT_PNL_PERCENT_DEFAULT = [
-        Symbol::BTCUSDT->value => 150,
-        Symbol::ETHUSDT->value => 300,
+        SymbolEnum::BTCUSDT->value => 150,
+        SymbolEnum::ETHUSDT->value => 300,
         'other' => 1000
     ];
 
@@ -41,7 +42,7 @@ final class CheckPositionIsInProfitHandler
                     continue;
                 }
 
-                $key = $symbol->value . '_' . $side->value;
+                $key = $symbol->name() . '_' . $side->value;
                 if (!$this->positionInProfitAlertThrottlingLimiter->create($key)->consume()->isAccepted()) {
                     continue;
                 }
@@ -52,7 +53,7 @@ final class CheckPositionIsInProfitHandler
                 if ($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side))) {
                     $alertPercentSpecifiedManually = true;
                 } else {
-                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->value] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
+                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->name()] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
                     $alertPercentSpecifiedManually = false;
                 }
 

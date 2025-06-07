@@ -27,7 +27,7 @@ trait PositionAwareCommand
 
         if (!$position = $this->positionService->getPosition($symbol, $side)) {
             if ($throwException) {
-                throw new RuntimeException(sprintf('"%s" "%s" position not found', $symbol->value, $side->title()));
+                throw new RuntimeException(sprintf('"%s" "%s" position not found', $symbol->name(), $side->title()));
             }
 
             return null;

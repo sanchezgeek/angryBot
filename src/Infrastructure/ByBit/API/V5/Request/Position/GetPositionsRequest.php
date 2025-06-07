@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Position;
 
-use App\Bot\Domain\ValueObject\Symbol;
+use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -36,15 +37,15 @@ final readonly class GetPositionsRequest extends AbstractByBitApiRequest
         }
 
         if ($this->symbol) {
-            $data['symbol'] = $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol;
+            $data['symbol'] = $this->symbol->name();
         } else {
-            $data['settleCoin'] = Symbol::BTCUSDT->associatedCoin()->value;
+            $data['settleCoin'] = Coin::USDT->value;
         }
 
         return $data;
     }
 
-    public function __construct(private AssetCategory $category, private Symbol|string|null $symbol)
+    public function __construct(private AssetCategory $category, private ?SymbolInterface $symbol)
     {
     }
 }

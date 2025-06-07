@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Kline;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -38,7 +38,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
     {
         $data = [
             'category' => $this->category->value,
-            'symbol' => $this->symbol instanceof Symbol ? $this->symbol->value : $this->symbol,
+            'symbol' => $this->symbol->name(),
             'interval' => $this->interval,
         ];
 
@@ -56,7 +56,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
 
     public function __construct(
         private AssetCategory $category,
-        private Symbol|string $symbol,
+        private SymbolInterface $symbol,
         private int $interval,
         private DateTimeImmutable $from,
         private DateTimeImmutable $to,

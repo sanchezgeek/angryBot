@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Tests\Factory;
 
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
-use App\Domain\Coin\CoinAmount;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\PositionFactory;
@@ -19,7 +18,7 @@ final class PositionFactoryTest extends TestCase
 {
     public function testShortFactory(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $entry = 30000;
         $size = 0.5;
@@ -39,7 +38,7 @@ final class PositionFactoryTest extends TestCase
 
     public function testShortFactoryWithDefaultValues(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $entry = 30000;
         $size = 0.5;
@@ -63,7 +62,7 @@ final class PositionFactoryTest extends TestCase
 
     public function testLongFactoryWithDefaultValues(): void
     {
-        $symbol = Symbol::BTCUSDT;
+        $symbol = SymbolEnum::BTCUSDT;
 
         $entry = 30000;
         $size = 0.5;
