@@ -43,9 +43,4 @@ enum CandleIntervalEnum: string
         // @todo | cache
         return DateInterval::createFromDateString(self::DATE_INTERVALS[$this->value]);
     }
-
-    public function toMinutesCount(): int
-    {
-
-    }
 }

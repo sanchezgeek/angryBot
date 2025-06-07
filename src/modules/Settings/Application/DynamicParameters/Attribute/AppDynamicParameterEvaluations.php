@@ -10,7 +10,7 @@ use Attribute;
 #[Attribute]
 final class AppDynamicParameterEvaluations
 {
-    public function __construct(public DefaultValueProviderEnum $defaultValueProvider, public bool $skipUserInput = false)
+    public function __construct(public DefaultValueProviderEnum|string $defaultValueProvider, public bool $skipUserInput = false)
     {
     }
 }

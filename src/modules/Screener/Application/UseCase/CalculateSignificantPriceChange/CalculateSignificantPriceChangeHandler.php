@@ -7,13 +7,18 @@ namespace App\Screener\Application\UseCase\CalculateSignificantPriceChange;
 use App\Chart\Application\Service\CandlesProvider;
 use App\Clock\ClockInterface;
 use App\Helper\DateTimeHelper;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use DatePeriod;
 use DateTimeImmutable;
 
 final readonly class CalculateSignificantPriceChangeHandler
 {
-    public function handle(CalculateSignificantPriceChangeEntry $entry): float
-    {
+    #[AppDynamicParameter(group: 'priceChange', name: 'significantPriceChangeByStatistics')]
+    public function handle(
+        #[AppDynamicParameterEvaluations(defaultValueProvider: CalculateSignificantPriceChangeEntryEvaluationParametersProvider::class, skipUserInput: true)]
+        CalculateSignificantPriceChangeEntry $entry
+    ): float {
         $cacheKey = sprintf(
             'significantPriceChange_%s_onInterval_%s_count_%d',
             $entry->symbol->name(),

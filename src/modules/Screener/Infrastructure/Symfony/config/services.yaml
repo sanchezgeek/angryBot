@@ -18,3 +18,10 @@ services:
 
     App\Screener\Application\Parameters\PriceChangeDynamicParameters:
         public: true
+
+### dynamic parameters
+    _instanceof:
+        App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface:
+            public: true
+    App\Screener\Application\UseCase\CalculateSignificantPriceChange\CalculateSignificantPriceChangeHandler:
+        public: true
