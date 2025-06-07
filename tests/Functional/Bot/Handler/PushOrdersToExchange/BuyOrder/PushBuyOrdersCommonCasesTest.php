@@ -15,6 +15,7 @@ use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
+use App\Tests\Helper\Buy\BuyOrderTestHelper;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\OrderCasesTester;
@@ -86,31 +87,31 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $ticker = TickerFactory::create($symbol, 29050);
         $buyOrders = [
             # [2] must be pushed | with stop
-            10 => BuyOrderBuilder::short(10, 29060, 0.01)->build()->setActive(),
+            10 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(10, 29060, 0.01)->build()),
 
             # -- must not be pushed (idle) --
             20 => BuyOrderBuilder::short(20, 29155, 0.002)->build()->setIdle(),
 
             # [1] must be pushed | with stop
-            30 => BuyOrderBuilder::short(30, 29060, 0.005)->build()->setActive(),
+            30 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(30, 29060, 0.005)->build()),
 
             # -- must not be pushed (idle) --
             40 => BuyOrderBuilder::short(40, 29105, 0.003)->build()->setIdle(),
 
             # [0] must be pushed | with stop
-            50 => BuyOrderBuilder::short(50, 29060, 0.001)->build()->setActive(),
+            50 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(50, 29060, 0.001)->build()),
 
             # [4] must be pushed | withOUT stop
-            60 => BuyOrderBuilder::short(60, 29060, 0.035)->build()->setActive()->setIsWithoutOppositeOrder(),
+            60 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(60, 29060, 0.035)->build())->setIsWithoutOppositeOrder(),
 
             # must not be pushed (already executed)
-            70 => BuyOrderBuilder::short(70, 29055, 0.031)->build()->setActive()->setExchangeOrderId($existedExchangeOrderId = uuid_create()),
+            70 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(70, 29055, 0.031)->build())->setExchangeOrderId($existedExchangeOrderId = uuid_create()),
 
             # [3] must be pushed | with stop
-            80 => BuyOrderBuilder::short(80, 29055, 0.03)->build()->setActive(),
+            80 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(80, 29055, 0.03)->build()),
 
             # other must not be pushed
-            90 => BuyOrderBuilder::short(90, 29049, 0.032)->build()->setActive(),
+            90 => BuyOrderTestHelper::setActive(BuyOrderBuilder::short(90, 29049, 0.032)->build()),
         ];
         $buyOrdersExpectedToPush = [$buyOrders[50], $buyOrders[30], $buyOrders[10], $buyOrders[80], $buyOrders[60]];
         $exchangeOrderIds = [];
@@ -122,17 +123,17 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
             'expectedMarketBuyCalls' => self::successMarketBuyApiCallExpectations($symbol, $buyOrdersExpectedToPush, $exchangeOrderIds),
             'buyOrdersExpectedAfterHandle' => [
                 ### pushed (in right order) ###
-                BuyOrderBuilder::short(50, 29060, 0.001)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[0]),
-                BuyOrderBuilder::short(30, 29060, 0.005)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[1]),
-                BuyOrderBuilder::short(10, 29060, 0.01)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[2]),
-                BuyOrderBuilder::short(80, 29055, 0.03)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[3]),
-                BuyOrderBuilder::short(60, 29060, 0.035)->build()->setActive()->setExchangeOrderId($exchangeOrderIds[4])->setIsWithoutOppositeOrder(),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(50, 29060, 0.001)->build())->setExchangeOrderId($exchangeOrderIds[0]),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(30, 29060, 0.005)->build())->setExchangeOrderId($exchangeOrderIds[1]),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(10, 29060, 0.01)->build())->setExchangeOrderId($exchangeOrderIds[2]),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(80, 29055, 0.03)->build())->setExchangeOrderId($exchangeOrderIds[3]),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(60, 29060, 0.035)->build())->setExchangeOrderId($exchangeOrderIds[4])->setIsWithoutOppositeOrder(),
 
                 ### unchanged ###
                 BuyOrderBuilder::short(20, 29155, 0.002)->build()->setIdle(),
                 BuyOrderBuilder::short(40, 29105, 0.003)->build()->setIdle(),
-                BuyOrderBuilder::short(70, 29055, 0.031)->build()->setActive()->setExchangeOrderId($existedExchangeOrderId),
-                BuyOrderBuilder::short(90, 29049, 0.032)->build()->setActive(),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(70, 29055, 0.031)->build())->setExchangeOrderId($existedExchangeOrderId),
+                BuyOrderTestHelper::setActive(BuyOrderBuilder::short(90, 29049, 0.032)->build()),
             ],
             'stopsExpectedAfterHandle' => [
                 StopBuilder::short(1, self::expectedStopPrice($buyOrders[50]), $buyOrders[50]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),

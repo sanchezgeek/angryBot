@@ -20,6 +20,7 @@ use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
+use App\Tests\Helper\Buy\BuyOrderTestHelper;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 
 /**
@@ -75,7 +76,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         $this->haveTicker($ticker);
         $this->havePosition($ticker->symbol, $position);
 
-        $buyOrder = (new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, SymbolEnum::BTCUSDT, $side))->setActive();
+        $buyOrder = BuyOrderTestHelper::setActive(new BuyOrder(10, $ticker->indexPrice /* trigger by indexPrice */, 0.003, SymbolEnum::BTCUSDT, $side));
         $this->applyDbFixtures(new BuyOrderFixture($buyOrder));
 
         $this->haveAvailableSpotBalance($symbol, $availableSpotBalance);
@@ -186,7 +187,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice),
-            'buyOrder' => (new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, SymbolEnum::BTCUSDT, $position->side))->setActive(),
+            'buyOrder' => BuyOrderTestHelper::setActive(new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, SymbolEnum::BTCUSDT, $position->side)),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
 
@@ -195,7 +196,7 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         yield [
             'position' => $position,
             'ticker' => $ticker = TickerFactory::create(self::SYMBOL, $lastPrice + 20, $lastPrice + 10, $lastPrice + 1),
-            'buyOrder' => (new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, SymbolEnum::BTCUSDT, $position->side))->setActive(),
+            'buyOrder' => BuyOrderTestHelper::setActive(new BuyOrder(10, $ticker->indexPrice, $needBuyOrderVolume, SymbolEnum::BTCUSDT, $position->side)),
             'expectedCloseOrderVolume' => self::getExpectedVolumeToClose($needBuyOrderVolume, $position->symbol->makePrice($lastPrice)->getPnlPercentFor($position)),
         ];
     }

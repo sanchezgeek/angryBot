@@ -51,7 +51,7 @@ final readonly class PriceChangeDynamicParameters
             return $percentOverride;
         }
 
-        return match (true) {
+        $base = match (true) {
             $currentPrice >= 15000 => 1,
             $currentPrice >= 5000 => 2,
             $currentPrice >= 3000 => 3,
@@ -69,6 +69,10 @@ final readonly class PriceChangeDynamicParameters
             $currentPrice >= 0.7 => 18,
             default => 20,
         };
+
+        $multiplier = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantDelta_OneDay_BaseMultiplier, $symbol));
+
+        return $base * $multiplier;
     }
 
     public function __construct(private AppSettingsProviderInterface $settingsProvider)
