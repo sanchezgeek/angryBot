@@ -2,7 +2,6 @@
 
 namespace App\Settings\UI\Symfony\Controller;
 
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Helper\OutputHelper;
 use App\Output\Table\Dto\Style\CellStyle;
 use App\Settings\Api\View\AppSettingGroupView;
@@ -11,6 +10,7 @@ use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +21,7 @@ class SettingsApiController extends AbstractController
     public function __construct(
         private readonly SettingsLocator $settingsLocator,
         private readonly AppSettingsService $settingsProvider,
+        private readonly SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -28,7 +29,7 @@ class SettingsApiController extends AbstractController
     public function all(?string $symbol = null): Response
     {
         $onlyOverrides = false;
-        $symbol = Symbol::tryFrom($symbol);
+        $symbol = $symbol !== null ? $this->symbolProvider->getOrInitialize($symbol) : null;
 
         $items = [];
 

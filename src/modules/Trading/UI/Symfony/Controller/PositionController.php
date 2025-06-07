@@ -6,10 +6,9 @@ namespace App\Trading\UI\Symfony\Controller;
 
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\Symbol;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Trading\Api\View\OpenedPositionInfoView;
-use InvalidArgumentException;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,17 +19,14 @@ final class PositionController extends AbstractController
     public function __construct(
         private readonly PositionServiceInterface $positionService,
         private readonly ByBitLinearPositionService $positionServiceWithoutCache,
+        private readonly SymbolProvider $symbolProvider,
     ) {
     }
 
     #[Route(path: '/opened-positions/{symbol}', requirements: ['symbol' => '\w+'])]
     public function openedPositions(?string $symbol = ''): Response
     {
-        $symbolParsed = Symbol::tryFrom($symbol);
-        if ($symbol && !$symbolParsed) {
-            throw new InvalidArgumentException(sprintf('Cannot fetch symbol from %s', $symbol));
-        }
-        $symbol = $symbolParsed;
+        $symbol = $symbol ? $this->symbolProvider->getOrInitialize($symbol) : null;
 
         if ($symbol) {
             $result = array_map([$this, 'mapToView'], $this->positionService->getPositions($symbol));
