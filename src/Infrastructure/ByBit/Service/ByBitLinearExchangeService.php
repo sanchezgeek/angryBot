@@ -25,7 +25,6 @@ use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
@@ -197,7 +196,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function getAllTickers(Coin $settleCoin): array
+    public function getAllTickers(Coin $settleCoin, ?callable $symbolNameFilter = null): array
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
 
@@ -208,8 +207,14 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $result = [];
         foreach ($list as $item) {
+            $symbolName = $item['symbol'];
+
+            if ($symbolNameFilter && !$symbolNameFilter($symbolName)) {
+                continue;
+            }
+
             try {
-                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($item['symbol'], $settleCoin);
+                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($symbolName, $settleCoin);
             } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
                 continue;
             }

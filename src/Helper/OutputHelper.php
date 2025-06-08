@@ -131,13 +131,15 @@ class OutputHelper
 
     public static function printTimeDiff(string $desc, float $start): void
     {
-        self::print(self::timeDiff($desc, $start));
+        self::print(
+            sprintf('~~~ %s time diff: %.10f ~~~', $desc, self::timeDiff($start))
+        );
     }
 
-    public static function timeDiff(string $desc, float $start): string
+    public static function timeDiff(float $start): float
     {
         $end = microtime(true);
 
-        return sprintf('~~~ %s time diff: %.10f ~~~', $desc, $end - $start);
+        return $end - $start;
     }
 }

@@ -26,7 +26,8 @@ final readonly class SymbolProvider
         private InitializeSymbolsHandler $initializeSymbolsHandler, /** @todo | symbol | messageBus */
         private EntityManagerInterface $entityManager,
         private AppErrorLoggerInterface $appErrorLogger,
-        private RateLimiterFactory $symbolInitializeExceptionThrottlingLimiter
+        private RateLimiterFactory $symbolInitializeExceptionThrottlingLimiter,
+        private SymbolsCache $symbolsCache,
     ) {
     }
 
@@ -81,13 +82,23 @@ final readonly class SymbolProvider
      */
     private function doGetOrInitialize(string $name, ?Coin $coin = null): Symbol
     {
+        $cacheKey = sprintf('symbol_doGetOrInitialize_%s_coin_%s', $name, $coin ? $coin->name : 'null');
+        if ($cachedException = $this->symbolsCache->get($cacheKey)) {
+            throw $cachedException;
+        }
+
         try {
             return $this->getOneByName($name);
         } catch (SymbolEntityNotFoundException $e) {
             try {
-                return $this->initializeSymbolsHandler->handle(
-                    new InitializeSymbolsEntry($name, $coin)
-                );
+                try {
+                    return $this->initializeSymbolsHandler->handle(
+                        new InitializeSymbolsEntry($name, $coin)
+                    );
+                } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+                    $this->symbolsCache->save($cacheKey, $e);
+                    throw $e;
+                }
             } catch (UniqueConstraintViolationException $e) {
                 return $this->getOneByName($name);
             }

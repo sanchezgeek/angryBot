@@ -143,15 +143,9 @@ final readonly class PushAllMainPositionsStopsHandler
         return array_pop($args);
     }
 
-    private static function timeDiffInfo(string $desc, float $startPoint, bool $print = true): string
+    private static function timeDiffInfo(string $desc, float $startPoint): void
     {
-        $diff = OutputHelper::timeDiff(sprintf('PushMainStops: %s', $desc), $startPoint);
-
-        if ($print) {
-            OutputHelper::print($diff);
-        }
-
-        return $diff;
+        OutputHelper::printTimeDiff(sprintf('PushMainStops: %s', $desc), $startPoint);
     }
 
     public function __construct(

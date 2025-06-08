@@ -12,4 +12,12 @@ final class UnsupportedAssetCategoryException extends \Exception
             sprintf('Unknown contractType "%s". Available contract types: "%s"', $assetContractType, implode('", "', $availableContractTypes))
         );
     }
+
+    public function __sleep(): array
+    {
+        return [
+            'message',
+            'code',
+        ];
+    }
 }
