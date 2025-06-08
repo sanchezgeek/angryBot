@@ -13,6 +13,9 @@ use App\Domain\Price\SymbolPrice;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+/**
+ * @see \App\Tests\Functional\Bot\Handler\ButOrder\CheckOrdersIsActiveHandlerTest
+ */
 #[AsMessageHandler]
 final readonly class CheckOrdersNowIsActiveHandler
 {
@@ -38,11 +41,12 @@ final readonly class CheckOrdersNowIsActiveHandler
             $map[$symbolName]['items'][] = $buyOrder;
         }
 
-        foreach ($map as $symbolItems) {
-            $symbol = $symbolItems['symbol'];
+        foreach ($map as $item) {
+            $symbol = $item['symbol'];
+            $orders = $item['items'];
             $ticker = $this->exchangeService->ticker($symbol);
 
-            foreach ($symbolItems['items'] as $buyOrder) {
+            foreach ($orders as $buyOrder) {
                 if (
                     ($createdAfterStopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext())
                     && isset($activeConditionalStopOrders[$createdAfterStopExchangeOrderId])

@@ -214,3 +214,9 @@ analise average price change through some period
 
 ### HOT ###
     PriceChange on short period
+
+
+### priceChange statistics ###
+    usage
+        @todo | priceChange statistics | ResetBuyOrdersActiveStateHandler | use statistics for get appropriate allowed distance
+                                       | ... | ...

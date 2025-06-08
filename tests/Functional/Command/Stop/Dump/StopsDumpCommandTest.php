@@ -6,16 +6,15 @@ namespace App\Tests\Functional\Command\Stop\Dump;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Clock\ClockInterface;
 use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\Json;
 use App\Tests\Fixture\StopFixture;
+use App\Tests\Mixin\Clock\ClockTimeAwareTester;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -23,7 +22,6 @@ use Symfony\Component\Console\Tester\CommandTester;
 use function array_filter;
 use function array_map;
 use function array_values;
-use function date_create_immutable;
 use function file_get_contents;
 use function sprintf;
 use function uuid_create;
@@ -35,20 +33,11 @@ final class StopsDumpCommandTest extends KernelTestCase
 {
     use TestWithDbFixtures;
     use StopsTester;
+    use ClockTimeAwareTester;
 
-    private const COMMAND_NAME = 'sl:dump';
+    private const string COMMAND_NAME = 'sl:dump';
 
     private PositionServiceStub $positionServiceStub;
-
-    private DateTimeImmutable $currentDatetime;
-
-    protected function setUp(): void
-    {
-        $this->currentDatetime = date_create_immutable();
-        $clockMock = $this->createMock(ClockInterface::class);
-        $clockMock->expects(self::once())->method('now')->willReturn($this->currentDatetime);
-        self::getContainer()->set(ClockInterface::class, $clockMock);
-    }
 
     /**
      * @dataProvider dumpStopsTestDataProvider
@@ -67,7 +56,7 @@ final class StopsDumpCommandTest extends KernelTestCase
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $initialStops));
 
         $dirPath = __DIR__ . '/../../../../../tests/_data/dumps';
-        $filepath = sprintf('%s/%s.%s.json', $dirPath, $side->value, $this->currentDatetime->format('Y-m-d_H:i:s'));
+        $filepath = sprintf('%s/%s.%s.json', $dirPath, $side->value, self::getCurrentClockTime()->format('Y-m-d_H:i:s'));
         self::assertFileDoesNotExist($filepath);
 
         $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));

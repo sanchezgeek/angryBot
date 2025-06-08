@@ -10,7 +10,7 @@ use Symfony\Contracts\Service\ResetInterface;
 /**
  * @codeCoverageIgnore - depends on global state - unreasonable to test.
  */
-final class Clock implements ClockInterface, ResetInterface
+final class Clock implements ClockInterface
 {
     private ?DateTimeImmutable $requestTime = null;
 
