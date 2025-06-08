@@ -13,6 +13,7 @@ use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsIn
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
+use App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBuyOrdersActiveState;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
@@ -28,7 +29,6 @@ use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
-use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -158,6 +158,7 @@ final class SchedulerFactory
 
             // -- active BuyOrders
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT30S', AsyncMessage::for(new CheckOrdersNowIsActive())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10M', AsyncMessage::for(new ResetBuyOrdersActiveState())),
 
             // -- active Conditional orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(force: true))),

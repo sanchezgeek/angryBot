@@ -290,7 +290,7 @@ trait ByBitV5ApiRequestsMocker
             $apiResponseBuilder->withActiveConditionalStop(
                 $symbol,
                 $activeStopOrder->positionSide,
-                uuid_create(),
+                $activeStopOrder->orderId ?? uuid_create(),
                 $activeStopOrder->triggerPrice,
                 $activeStopOrder->volume,
             );

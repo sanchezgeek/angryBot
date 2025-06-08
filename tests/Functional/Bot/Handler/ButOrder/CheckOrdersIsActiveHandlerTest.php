@@ -6,7 +6,10 @@ namespace App\Tests\Functional\Bot\Handler\ButOrder;
 
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
 use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Position\ValueObject\Side;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -30,10 +33,12 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
      * @param BuyOrder[] $buyOrdersExpectedAfterHandle
      */
     public function testIdleOrdersBecameActive(
+        array $activeConditionalStops,
         array $buyOrdersFixtures,
         array $tickers,
         array $buyOrdersExpectedAfterHandle,
     ): void {
+        $this->haveActiveConditionalStopsOnMultipleSymbols(...$activeConditionalStops);
         foreach ($tickers as $symbolRaw => $price) {
             $this->haveTicker(TickerFactory::withEqualPrices(SymbolEnum::from($symbolRaw), $price));
         }
@@ -67,12 +72,18 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
 
             BuyOrderBuilder::short(50, 2141, 0.01, SymbolEnum::ETHUSDT)->build(),
             BuyOrderBuilder::short(60, 2139, 0.11, SymbolEnum::ETHUSDT)->build(),
+            BuyOrderBuilder::short(61, 2139, 0.12, SymbolEnum::ETHUSDT)->build()->setOnlyAfterExchangeOrderExecutedContext(
+                $oppositeETHStopExchangeId = '100500'
+            ),
 
             BuyOrderBuilder::long(70, 2141, 0.01, SymbolEnum::ETHUSDT)->build(),
             BuyOrderBuilder::long(80, 2139, 0.11, SymbolEnum::ETHUSDT)->build(),
         ];
 
         yield [
+            '$activeConditionalStops' => [
+                new ActiveStopOrder(SymbolEnum::ETHUSDT, Side::Buy, $oppositeETHStopExchangeId, 0.12, 2139, TriggerBy::IndexPrice->value)
+            ],
             '$buyOrdersFixtures' => array_map(static fn(BuyOrder $buyOrder) => new BuyOrderFixture($buyOrder), $buyOrders),
             '$tickers' => $tickers,
             'buyOrdersExpectedAfterHandle' => [
@@ -84,6 +95,7 @@ final class CheckOrdersIsActiveHandlerTest extends KernelTestCase
 
                 BuyOrderBuilder::short(50, 2141, 0.01, SymbolEnum::ETHUSDT)->build()->setIdle(),
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::short(60, 2139, 0.11, SymbolEnum::ETHUSDT)->build()),
+                BuyOrderBuilder::short(61, 2139, 0.12, SymbolEnum::ETHUSDT)->build()->setOnlyAfterExchangeOrderExecutedContext($oppositeETHStopExchangeId)->setIdle(),
 
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::long(70, 2141, 0.01, SymbolEnum::ETHUSDT)->build()),
                 BuyOrderBuilder::long(80, 2139, 0.11, SymbolEnum::ETHUSDT)->build()->setIdle(),

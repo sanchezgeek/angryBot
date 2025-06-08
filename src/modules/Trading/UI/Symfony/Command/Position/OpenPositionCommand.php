@@ -103,8 +103,8 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             positionSide: $positionSide,
             percentOfDepositToRisk: $this->paramFetcher->requiredPercentOption(self::PERCENT_OF_DEPOSIT_TO_RISK_OPTION, true),
             withStops: $this->paramFetcher->getBoolOption(self::WITH_STOPS_OPTION),
-            removeExistedStops: $this->paramFetcher->getBoolOption(self::REMOVE_EXISTED_STOPS_OPTION),
             closeAndReopenCurrentPosition: $this->paramFetcher->getBoolOption(self::REOPEN_OPTION),
+            removeExistedStops: $this->paramFetcher->getBoolOption(self::REMOVE_EXISTED_STOPS_OPTION),
             dryRun: $this->paramFetcher->getBoolOption(self::DEBUG_OPTION),
             outputEnabled: true,
             buyGridsDefinition: $buyOrdersGridsDef,
@@ -142,9 +142,9 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
         if ($rememberDefinition = $this->paramFetcher->getStringOption(self::REMEMBER_BUY_GRID_DEFINITION, false)) {
             $defParsed = OrdersGridDefinitionCollection::create($rememberDefinition, $priceToRelate, $positionSide, $symbol);
 
-            $choose = $this->io->ask('Remember `buy-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")?');
+            $choose = $this->io->ask('Remember `buy-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")? Default: symbol');
             $settingsAccessor = match ($choose) {
-                'symbol' => SettingAccessor::exact(OpenPositionSettings::SplitToBuyOrders_DefaultGridsDefinition, $symbol),
+                null, 'symbol' => SettingAccessor::exact(OpenPositionSettings::SplitToBuyOrders_DefaultGridsDefinition, $symbol),
                 'both' => SettingAccessor::exact(OpenPositionSettings::SplitToBuyOrders_DefaultGridsDefinition, $symbol, $positionSide),
                 default => throw new InvalidArgumentException('Select one of "symbol" or "both'),
             };
@@ -178,9 +178,9 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
         if ($rememberDefinition = $this->paramFetcher->getStringOption(self::REMEMBER_STOPS_GRID_DEFINITION, false)) {
             $defParsed = OrdersGridDefinitionCollection::create($rememberDefinition, $priceToRelate, $positionSide, $symbol);
 
-            $choose = $this->io->ask('Remember `stops-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")?');
+            $choose = $this->io->ask('Remember `stops-grid` only for `symbol` (-> "symbol") or also use `side` (-> "both")? Default: symbol');
             $settingsAccessor = match ($choose) {
-                'symbol' => SettingAccessor::exact(OpenPositionSettings::Stops_DefaultGridDefinition, $symbol),
+                null, 'symbol' => SettingAccessor::exact(OpenPositionSettings::Stops_DefaultGridDefinition, $symbol),
                 'both' => SettingAccessor::exact(OpenPositionSettings::Stops_DefaultGridDefinition, $symbol, $positionSide),
                 default => throw new InvalidArgumentException('Select one of "symbol" or "both'),
             };

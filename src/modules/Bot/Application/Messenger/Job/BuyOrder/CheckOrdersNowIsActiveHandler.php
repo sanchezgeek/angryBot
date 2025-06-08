@@ -16,8 +16,6 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class CheckOrdersNowIsActiveHandler
 {
-    private const int ACTIVE_STATE_TTL = 20000;
-
     public function __construct(
         private BuyOrderRepository $buyOrderRepository,
         private ExchangeServiceInterface $exchangeService,
@@ -28,22 +26,11 @@ final readonly class CheckOrdersNowIsActiveHandler
 
     public function __invoke(CheckOrdersNowIsActive $message): void
     {
-        $allActiveOrders = $this->buyOrderRepository->getAllActiveOrders();
-        $now = $this->clock->now();
-        foreach ($allActiveOrders as $buyOrder) {
-            if (!$activeStateSetAt = $buyOrder->getActiveStateChangeTimestamp()) {
-                continue;
-            }
+        $activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
 
-            if ($now->getTimestamp() - $activeStateSetAt > self::ACTIVE_STATE_TTL) {
-                $buyOrder->setIdle();
-            }
-        }
-        $this->entityManager->flush();
-
+        /** @var array<array{symbol: string, items: BuyOrder[]}> $map */
         $map = [];
-        $allIdleOrders = $this->buyOrderRepository->getAllIdleOrders();
-        foreach ($allIdleOrders as $buyOrder) {
+        foreach ($this->buyOrderRepository->getAllIdleOrders() as $buyOrder) {
             $symbol = $buyOrder->getSymbol();
             $symbolName = $symbol->name();
 
@@ -56,6 +43,13 @@ final readonly class CheckOrdersNowIsActiveHandler
             $ticker = $this->exchangeService->ticker($symbol);
 
             foreach ($symbolItems['items'] as $buyOrder) {
+                if (
+                    ($createdAfterStopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext())
+                    && isset($activeConditionalStopOrders[$createdAfterStopExchangeOrderId])
+                ) {
+                    continue;
+                }
+
                 /** @var BuyOrder $buyOrder */
                 $comparator = self::getComparator($buyOrder->getPositionSide());
                 if ($comparator($buyOrder->getPrice(), $ticker->indexPrice)) {
@@ -63,6 +57,7 @@ final readonly class CheckOrdersNowIsActiveHandler
                 }
             }
         }
+
         $this->entityManager->flush();
     }
 
