@@ -136,10 +136,10 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::short(90, 29049, 0.032)->build()),
             ],
             'stopsExpectedAfterHandle' => [
-                StopBuilder::short(1, self::expectedStopPrice($buyOrders[50]), $buyOrders[50]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(2, self::expectedStopPrice($buyOrders[30]), $buyOrders[30]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(3, self::expectedStopPrice($buyOrders[10]), $buyOrders[10]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
-                StopBuilder::short(4, self::expectedStopPrice($buyOrders[80]), $buyOrders[80]->getVolume())->withTD(self::DEFAULT_STOP_TD)->build(),
+                StopBuilder::short(1, self::expectedStopPrice($buyOrders[50]), $buyOrders[50]->getVolume())->build(),
+                StopBuilder::short(2, self::expectedStopPrice($buyOrders[30]), $buyOrders[30]->getVolume())->build(),
+                StopBuilder::short(3, self::expectedStopPrice($buyOrders[10]), $buyOrders[10]->getVolume())->build(),
+                StopBuilder::short(4, self::expectedStopPrice($buyOrders[80]), $buyOrders[80]->getVolume())->build(),
             ],
         ];
     }

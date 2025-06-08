@@ -12,6 +12,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
+use App\Domain\BuyOrder\Event\BuyOrderPushedToExchange;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -99,6 +100,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->symbol = $symbol;
 
         return $this;
+    }
+
+    public function wasPushedToExchange(string $exchangeOrderId): self
+    {
+        $this->recordThat(new BuyOrderPushedToExchange($this));
+
+        return $this->setExchangeOrderId($exchangeOrderId);
     }
 
     public function getId(): int

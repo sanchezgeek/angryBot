@@ -207,11 +207,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
-    public function wasPushedToExchange(string $thisExchangeOrderId): self
+    public function wasPushedToExchange(string $exchangeOrderId): self
     {
         $this->recordThat(new StopPushedToExchange($this));
 
-        return $this->setExchangeOrderId($thisExchangeOrderId);
+        return $this->setExchangeOrderId($exchangeOrderId);
     }
 
     public function isCloseByMarketContextSet(): bool

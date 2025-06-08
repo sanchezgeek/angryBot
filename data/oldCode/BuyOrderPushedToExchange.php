@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Events\BuyOrder;
-
 use App\Bot\Application\Events\LoggableEvent;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Domain\Position\ValueObject\Side;
