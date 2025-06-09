@@ -216,8 +216,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 if ($saveCacheComment) {
                     $cachedDataCacheKey .= '_' . $cacheComment;
                 }
-                $item = $this->cache->getItem($cachedDataCacheKey)->set($this->cacheCollector)->expiresAfter(null);
-                $this->cache->save($item);
+
+                $this->saveToCache($cachedDataCacheKey, $this->cacheCollector);
                 $this->addSavedDataCacheKey($cachedDataCacheKey);
                 if ($saveCacheComment) {
                     $this->addManuallySavedDataCacheKey($cachedDataCacheKey);
@@ -230,6 +230,23 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         } while ($updateEnabled);
 
         return Command::SUCCESS;
+    }
+
+    private function saveToCache(string $key, array $data): void
+    {
+        $item = $this->cache->getItem($key)->set($data)->expiresAfter(null);
+        $this->cache->save($item);
+    }
+
+    private function addToCache(string $cacheKey, string $dataKey, mixed $data): void
+    {
+        $cacheItem = $this->cache->getItem($cacheKey);
+        if ($cacheItem->isHit()) {
+            $cache = $cacheItem->get();
+            $cache[$dataKey] = $data;
+
+            $this->saveToCache($cacheKey, $cache);
+        }
     }
 
     public function doOut(?array $selectedCache, ?array $prevCache): void
@@ -362,8 +379,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             }
         }
 
+
+
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
+
+        if (($selectedCacheKey = $this->getSelectedCacheKey()) && !isset($specifiedCache[$mainPositionCacheKey])) {
+            $this->addToCache($selectedCacheKey, $mainPositionCacheKey, $main);
+        }
 
         $initialLiquidationDistance = $main->liquidationDistance();
         $distanceBetweenLiquidationAndTicker = $main->liquidationPrice()->deltaWith($markPrice);
@@ -495,7 +518,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                     CTH::colorizeText(sprintf('%9s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
                     self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
-                ''
+                '',
             ];
 
             $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
@@ -526,6 +549,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[$supportPositionCacheKey] = $support;
+
+            if (($selectedCacheKey = $this->getSelectedCacheKey()) && !isset($specifiedCache[$supportPositionCacheKey])) {
+                $this->addToCache($selectedCacheKey, $supportPositionCacheKey, $support);
+            }
         }
 
         if (count($result) > 1) {
@@ -697,6 +724,30 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         return $result;
+    }
+
+    private ?string $selectedCacheKey = null;
+
+    /**
+     * @todo DRY
+     */
+    private function getSelectedCacheKey(): ?string
+    {
+        if ($this->selectedCacheKey !== null) {
+            return $this->selectedCacheKey;
+        }
+
+        if ($this->showDiffWithOption) {
+            $selectedDataKey = $this->showDiffWithOption;
+            if ($selectedDataKey === 'last') {
+                assert($savedKeys = $this->getManuallySavedDataCacheKeys(), new Exception('Trying to get last manually saved cache: saved cache not found'));
+                $selectedDataKey = $savedKeys[array_key_last($savedKeys)];
+            }
+
+            return $this->selectedCacheKey = $selectedDataKey;
+        }
+
+        return null;
     }
 
     private function getCacheRecordToShowDiffWith(): ?array
