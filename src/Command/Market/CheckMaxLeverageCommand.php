@@ -6,8 +6,10 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -34,6 +36,12 @@ class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependent
             foreach ($symbolPositions as $position) {
                 if ($position->leverage->value() < $maxLeverage) {
                     $this->io->info(sprintf('./bin/console p:leverage:change --symbol=%s %d', $symbolRaw, $maxLeverage));
+                    try {
+                        $this->positionService->setLeverage($position->symbol, $maxLeverage, $maxLeverage);
+                    } catch (Exception $e) {
+                        OutputHelper::print($e->getMessage());
+                    }
+
                     break;
                 }
             }
