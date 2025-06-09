@@ -67,7 +67,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     private float $volume;
 
     #[ORM\Column(nullable: true)]
-    private float $triggerDelta;
+    private ?float $triggerDelta;
 
     #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
     #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
@@ -173,6 +173,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function increaseTriggerDelta(float $withValue): self
     {
         $this->triggerDelta = $this->symbol->makePrice($this->triggerDelta + $withValue)->value();
+
+        return $this;
+    }
+
+    public function resetTriggerDelta(): self
+    {
+        $this->triggerDelta = $this->symbol->stopDefaultTriggerDelta();
 
         return $this;
     }
