@@ -23,4 +23,6 @@ framework:
             settings.cache:
 #                tags: 'settings'
 
-            symbols.cache:
+#            symbols.cache:
+
+#            openedPositions.cache:

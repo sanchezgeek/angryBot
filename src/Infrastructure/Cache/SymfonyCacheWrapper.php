@@ -12,8 +12,6 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class SymfonyCacheWrapper implements CacheServiceInterface
 {
-    private const int DEFAULT_CACHE_TTL = 60;
-
     public function __construct(private CacheInterface $cache)
     {
     }
@@ -29,8 +27,6 @@ final readonly class SymfonyCacheWrapper implements CacheServiceInterface
         }
 
         if ($warmup) {
-            $ttl = $ttl ?? self::DEFAULT_CACHE_TTL;
-
             return $this->cache->get($key, function (ItemInterface $item) use ($ttl, $warmup) {
                 $item->expiresAfter($ttl);
                 return $warmup();

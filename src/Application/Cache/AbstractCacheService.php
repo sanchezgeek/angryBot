@@ -11,18 +11,23 @@ use DateInterval;
  */
 abstract class AbstractCacheService implements CacheServiceInterface
 {
-    public function __construct(private readonly CacheServiceInterface $cache)
+    public function __construct(protected readonly CacheServiceInterface $cache)
     {
     }
 
     public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
     {
-        return $this->cache->get($key, $warmup, $ttl);
+        return $this->cache->get($key, $warmup, $ttl ?? static::getDefaultTtl());
     }
 
     public function save(CacheKeyGeneratorInterface|string $key, mixed $value, DateInterval|int|null $ttl = null): void
     {
-        $this->cache->save($key, $value, $ttl);
+        $this->cache->save($key, $value, $ttl ?? static::getDefaultTtl());
+    }
+
+    protected static function getDefaultTtl(): ?int
+    {
+        return null;
     }
 
     public function clear(): void

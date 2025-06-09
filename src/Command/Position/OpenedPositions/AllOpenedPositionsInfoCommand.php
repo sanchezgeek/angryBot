@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Command\Position;
+namespace App\Command\Position\OpenedPositions;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;

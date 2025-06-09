@@ -70,6 +70,26 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
 ### cache
+    cache.wrapper.default:
+        class: \App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@cache.app'
+
+    App\Application\Cache\CacheServiceInterface:
+        alias: 'cache.wrapper.default'
+    
+    
+    ### Move somewhere ###
+    #    openedPositions.cacheWrapper:
+    #        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+    #        arguments:
+    #            $cache: '@openedPositions.cache'
+    #            
+    #    App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache:
+    #        arguments:
+    #            $cache: '@openedPositions.cacheWrapper'
+    
+    
     App\Infrastructure\Cache\TickersCache:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
@@ -115,8 +135,7 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
 ### commands
-    App\Command\Position\AllOpenedPositionsInfoCommand:
-        class: App\Command\Position\AllOpenedPositionsInfoCommand
+    App\Command\Position\OpenedPositions\AllOpenedPositionsInfoCommand:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
