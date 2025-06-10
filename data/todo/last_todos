@@ -214,7 +214,7 @@ analise average price change through some period
 
 ### HOT ###
     PriceChange on short period
-
+    @todo only if source BuyOrder in chain was with force
 
 ### priceChange statistics ###
     usage

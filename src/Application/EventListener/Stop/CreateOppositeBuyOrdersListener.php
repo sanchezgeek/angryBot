@@ -24,9 +24,9 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 #[AsEventListener]
 final class CreateOppositeBuyOrdersListener
 {
-    public const OPPOSITE_SL_PRICE_MODIFIER = 1.2;
+    public const float OPPOSITE_SL_PRICE_MODIFIER = 1.2;
 
-    private const MAIN_SYMBOLS = [
+    private const array MAIN_SYMBOLS = [
         SymbolEnum::BTCUSDT->value,
         SymbolEnum::ETHUSDT->value
     ];
@@ -34,7 +34,7 @@ final class CreateOppositeBuyOrdersListener
     /**
      * @todo | symbol | some way to get values based on symbol -> move to settings?
      */
-    public const DISTANCES = [
+    public const array DISTANCES = [
         // @todo | settings
         SymbolEnum::ARCUSDT->value => 400,
     ];
@@ -72,7 +72,8 @@ final class CreateOppositeBuyOrdersListener
 
         # force buy only if it's not auto stop-order CheckPositionIsUnderLiquidationHandler
         if (!$stop->isAdditionalStopFromLiquidationHandler()) {
-            $context[BuyOrder::FORCE_BUY_CONTEXT] = true;
+            // @todo only if source BuyOrder in chain was with force
+//            $context[BuyOrder::FORCE_BUY_CONTEXT] = true;
         }
 
         if ($stop->isAdditionalStopFromLiquidationHandler()) {
