@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Screener\Application\UseCase\CalculateSignificantPriceChange;
+namespace App\Screener\Application\UseCase\FindAveragePriceChange;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
 use App\Trading\Application\Symbol\SymbolProvider;
 use InvalidArgumentException;
 
-final readonly class CalculateSignificantPriceChangeEntryEvaluationParametersProvider implements ParameterDefaultValueProviderInterface
+final readonly class FindAveragePriceChangeEntryEvaluationProvider implements ParameterDefaultValueProviderInterface
 {
     public function __construct(
         private SymbolProvider $symbolProvider,
@@ -25,7 +25,7 @@ final readonly class CalculateSignificantPriceChangeEntryEvaluationParametersPro
         ];
     }
 
-    public function get(array $input): CalculateSignificantPriceChangeEntry
+    public function get(array $input): FindAveragePriceChangeEntry
     {
         if (!$input['symbol']) {
             throw new InvalidArgumentException('$symbol must be specified');
@@ -39,7 +39,7 @@ final readonly class CalculateSignificantPriceChangeEntryEvaluationParametersPro
             throw new InvalidArgumentException('$intervalsCount must be specified');
         }
 
-        return new CalculateSignificantPriceChangeEntry(
+        return new FindAveragePriceChangeEntry(
             $this->symbolProvider->getOrInitialize($input['symbol']),
             CandleIntervalEnum::from($input['interval']),
             (int)$input['intervalsCount']

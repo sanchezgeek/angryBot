@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Screener\Application\UseCase\CalculateSignificantPriceChange;
+namespace App\Screener\Application\UseCase\FindAveragePriceChange;
 
 use App\Application\Cache\AbstractCacheService;
 
-final class SignificantPriceChangeCache extends AbstractCacheService
+final class AveragePriceChangeCache extends AbstractCacheService
 {
     protected static function getDefaultTtl(): int
     {

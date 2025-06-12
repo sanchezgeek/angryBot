@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Screener\Application\UseCase\CalculateSignificantPriceChange;
+namespace App\Screener\Application\UseCase\FindAveragePriceChange;
 
 use App\Chart\Application\Service\CandlesProvider;
 use App\Clock\ClockInterface;
@@ -12,12 +12,21 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEval
 use DatePeriod;
 use DateTimeImmutable;
 
-final readonly class CalculateSignificantPriceChangeHandler
+/**
+ * Результат можно использовать для поиска интервала на полученном наборе kniles и получения процента от этого change и дальнейшего принятия решения
+ * либо просто пропорционально
+ * критерии пробоя / разворота: подтверждено объёмами (или  наоборот). чтобы понять в какую сторону открывать
+ *
+ *
+ *
+ * Ещё нужен какой-то определятор повышена ли в моменте (сегодня или за какой-то период) волатильность
+ */
+final readonly class FindAveragePriceChangeHandler
 {
     #[AppDynamicParameter(group: 'priceChange', name: 'significantPriceChangeByStatistics')]
     public function handle(
-        #[AppDynamicParameterEvaluations(defaultValueProvider: CalculateSignificantPriceChangeEntryEvaluationParametersProvider::class, skipUserInput: true)]
-        CalculateSignificantPriceChangeEntry $entry
+        #[AppDynamicParameterEvaluations(defaultValueProvider: FindAveragePriceChangeEntryEvaluationProvider::class, skipUserInput: true)]
+        FindAveragePriceChangeEntry $entry
     ): float {
         $cacheKey = sprintf(
             'significantPriceChange_%s_onInterval_%s_count_%d',
@@ -29,7 +38,7 @@ final readonly class CalculateSignificantPriceChangeHandler
         return $this->cache->get($cacheKey, fn () => $this->doHandle($entry));
     }
 
-    private function doHandle(CalculateSignificantPriceChangeEntry $entry): float
+    private function doHandle(FindAveragePriceChangeEntry $entry): float
     {
         $symbol = $entry->symbol;
         $interval = $entry->averageOnInterval;
@@ -59,7 +68,7 @@ final readonly class CalculateSignificantPriceChangeHandler
     public function __construct(
         private ClockInterface $clock,
         private CandlesProvider $candlesProvider,
-        private SignificantPriceChangeCache $cache,
+        private AveragePriceChangeCache $cache,
     ) {
     }
 }

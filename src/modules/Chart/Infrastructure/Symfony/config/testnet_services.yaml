@@ -1,0 +1,24 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    real.api:
+        class: App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
+        arguments:
+            $host: 'https://api.bybit.com'
+            $apiKey: '%env(default:env_bybit_api_key:BYBIT_API_KEY_OVERRIDE)%'
+            $secretKey: '%env(default:env_bybit_api_secret:BYBIT_API_SECRET_OVERRIDE)%'
+
+    real.exchange.service:
+        class: App\Infrastructure\ByBit\Service\ByBitLinearExchangeService
+        arguments:
+            $apiClient: '@real.api'
+
+    App\Screener\UI\Symfony\Command\TestHandlerCommand:
+        arguments:
+            $exchangeService: '@real.exchange.service'
+    
+    App\Chart\Application\Service\CandlesProvider:
+        arguments:
+            $exchangeService: '@real.exchange.service'
