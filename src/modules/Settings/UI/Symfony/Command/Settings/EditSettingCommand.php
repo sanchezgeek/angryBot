@@ -28,7 +28,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:edit')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class EditSettingCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;

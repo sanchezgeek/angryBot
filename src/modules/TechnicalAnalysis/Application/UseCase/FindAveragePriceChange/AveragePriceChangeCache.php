@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Screener\Application\UseCase\FindAveragePriceChange;
+namespace App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange;
 
 use App\Application\Cache\AbstractCacheService;
 

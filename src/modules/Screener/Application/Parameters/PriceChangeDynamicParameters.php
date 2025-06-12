@@ -6,6 +6,7 @@ namespace App\Screener\Application\Parameters;
 
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -17,7 +18,7 @@ use LogicException;
 /**
  * @see \App\Tests\Unit\Modules\Screener\Application\Parameters\PriceChangeDynamicParametersTest
  */
-final readonly class PriceChangeDynamicParameters
+final readonly class PriceChangeDynamicParameters implements AppDynamicParametersProviderInterface
 {
     #[AppDynamicParameter(group: 'priceChange')]
     public function significantPriceDelta(

@@ -13,7 +13,6 @@ use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCur
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPriceProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentTickerProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler\DefaultLiquidationHandlerHandledMessageProvider;
-use App\Settings\Application\Service\AppSettingsService;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
@@ -43,15 +42,32 @@ final readonly class AppDynamicParameterEvaluator
             $this->container->get($methodReflection->class);
             $constructorArguments = [];
         } catch (ServiceNotFoundException) {
-            $constructorArguments = $this->getRequiredUserInput($methodReflection->getDeclaringClass()->getConstructor()->getParameters());
+            $argumentsReflections = array_filter(
+                $methodReflection->getDeclaringClass()->getConstructor()->getParameters(),
+                fn(ReflectionParameter $parameter) => !$this->hasAutowiredConstructParameter($parameter)
+            );
+
+            $constructorArguments = $this->getRequiredUserInput($argumentsReflections);
         }
 
         $referencedMethodArguments = $this->getRequiredUserInput($this->parametersLocator->getReferencedMethodReflection($group, $parameterName)->getParameters());
 
         return [
             'constructorArguments' => $constructorArguments,
-            'referencedMethodArguments' => $referencedMethodArguments
+            'referencedMethodArguments' => $referencedMethodArguments,
         ];
+    }
+
+    private function hasAutowiredConstructParameter(ReflectionParameter $parameter): bool
+    {
+        $name = $parameter->getType()->getName();
+
+        try {
+            $this->container->get($name);
+            return true;
+        } catch (ServiceNotFoundException) {
+            return false;
+        }
     }
 
     /**
@@ -91,9 +107,19 @@ final readonly class AppDynamicParameterEvaluator
         try {
             $obj = $this->container->get($methodReflection->class);
         } catch (ServiceNotFoundException) {
-            $constructorArguments = $methodReflection->getDeclaringClass()->getConstructor()->getParameters();
+            $constructorArgumentsWithUserInput = $methodReflection->getDeclaringClass()->getConstructor()->getParameters();
+
             $constructorCallArguments = [];
-            foreach ($constructorArguments as $argumentRef) {
+            foreach ($constructorArgumentsWithUserInput as $key => $constructorParameter) {
+                if ($this->hasAutowiredConstructParameter($constructorParameter)) {
+                    try {
+                        $constructorCallArguments[] = $this->container->get($constructorParameter->getType()->getName());
+                        unset($constructorArgumentsWithUserInput[$key]);
+                    } catch (ServiceNotFoundException $e) {}
+                }
+            }
+
+            foreach ($constructorArgumentsWithUserInput as $argumentRef) {
                 $constructorCallArguments[$argumentRef->getName()] = $this->parseArgument($argumentRef, $entry, $entry->constructorArgumentsInput);
             }
 
@@ -101,8 +127,7 @@ final readonly class AppDynamicParameterEvaluator
         }
         $callback = [$obj, $methodReflection->getName()];
 
-//        return $methodReflection->getClosure($obj)->call($obj);
-        return call_user_func_array($callback, $callArguments);
+        return call_user_func_array($callback, $callArguments); // return $methodReflection->getClosure($obj)->call($obj);
     }
 
     private function parseArgument(ReflectionParameter $ref, AppDynamicParameterEvaluationEntry $entry, array $data): mixed
@@ -160,9 +185,6 @@ final readonly class AppDynamicParameterEvaluator
             DefaultValueProviderEnum::CurrentPrice => $this->container->get(DefaultCurrentPriceProvider::class),
             DefaultValueProviderEnum::CurrentTicker => $this->container->get(DefaultCurrentTickerProvider::class),
             DefaultValueProviderEnum::CurrentPositionState => $this->container->get(DefaultCurrentPositionStateProvider::class),
-
-            DefaultValueProviderEnum::SettingsProvider => fn() => $this->container->get(AppSettingsService::class),
-
             DefaultValueProviderEnum::LiquidationHandlerHandledMessage => $this->container->get(DefaultLiquidationHandlerHandledMessageProvider::class),
             default => throw new RuntimeException(sprintf('Cannot find default value provider (%s)', $defaultValueProvider->name))
         };

@@ -26,7 +26,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:show')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class ShowSettingsCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;

@@ -2,39 +2,27 @@
 
 namespace App\Screener\UI\Symfony\Command;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
-use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Command\PositionDependentCommand;
 use App\Command\SymbolDependentCommand;
 use App\Domain\Candle\Enum\CandleIntervalEnum;
-use App\Helper\OutputHelper;
-use App\Screener\Application\UseCase\CalculateSignificantPriceChange\CalculateSignificantPriceChangeEntry;
-use App\Screener\Application\UseCase\CalculateSignificantPriceChange\CalculateSignificantPriceChangeHandler;
+use App\Domain\Coin\Coin;
+use App\Domain\Value\Percent\Percent;
+use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Settings\Application\Service\AppSettingsService;
-use App\Settings\Application\Service\SettingAccessor;
-use App\Trading\Application\Settings\OpenPositionSettings;
-use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
-use App\Trading\Application\UseCase\OpenPosition\Exception\DefaultGridDefinitionNotFound;
-use App\Trading\Application\UseCase\OpenPosition\OpenPositionEntryDto;
+use App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange\FindAveragePriceChangeEntry;
+use App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange\FindAveragePriceChangeHandler;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
-use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
-use Throwable;
 
 #[AsCommand(name: 'screener:test')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class TestHandlerCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
@@ -61,28 +49,52 @@ class TestHandlerCommand extends AbstractCommand implements SymbolDependentComma
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $res = $this->handler->handle(
-            new CalculateSignificantPriceChangeEntry(
-                $this->symbol,
-                CandleIntervalEnum::D1,
-                5
-            )
-        );
+        $tickers = $this->exchangeService->getAllTickers(Coin::USDT, static fn (string $symbolName) => !str_contains($symbolName, '1000'));
 
+        usort($tickers, static fn (Ticker $a, Ticker $b) => $b->indexPrice <=> $a->indexPrice);
 
-        var_dump($res);die;
+        foreach ($tickers as $ticker) {
+            $res = $this->handler->handle(
+                new FindAveragePriceChangeEntry(
+                    $ticker->symbol,
+                    CandleIntervalEnum::D1,
+                    7
+                )
+            );
+
+            // x1.5 - significant one day
+            // /3.5 - /3 - first stops grid
+
+            $res4 = $res / 4;
+            $res3 = $res / 3;
+
+            $this->io->writeln(
+                sprintf(
+                    "%s: %s (%s of current price)\n          % 10s=%s (%s of current price)\n% 10s=%s (%s of current price)\n",
+                    $ticker->symbol->name(),
+                    $res,
+                    Percent::fromPart($res / $ticker->indexPrice->value()),
+                    '/4',
+                    $res4,
+                    Percent::fromPart($res4 / $ticker->indexPrice->value()),
+                    '/3',
+                    $res3,
+                    Percent::fromPart($res3 / $ticker->indexPrice->value()),
+                )
+            );
+        }
 
         return Command::SUCCESS;
     }
 
     public function __construct(
-        private readonly CalculateSignificantPriceChangeHandler $handler,
+        private readonly FindAveragePriceChangeHandler $handler,
 
         private readonly AppSettingsService $settingsService,
         private readonly OpenPositionHandler $openPositionHandler,
         private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
         private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
-        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly ByBitLinearExchangeService $exchangeService,
         ?string $name = null,
     ) {
         parent::__construct($name);

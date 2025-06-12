@@ -9,9 +9,7 @@ imports:
     - { resource: ../src/modules/Profiling/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Screener/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Chart/Infrastructure/Symfony/config/services.yaml }
-
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
+    - { resource: ../src/modules/TechnicalAnalysis/Infrastructure/Symfony/config/services.yaml }
 
 services:
     # default configuration for services in *this* file
@@ -21,9 +19,8 @@ services:
         bind:
             $accountUids: '%account_uids%'
 
-    _instanceof:
-        App\Command\SymbolDependentCommand:
-            tags: ['command.symbol_dependent']
+    App\Clock\ClockInterface:
+        class: App\Clock\Clock
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

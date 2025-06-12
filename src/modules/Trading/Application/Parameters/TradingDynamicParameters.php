@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\Parameters;
 
 use App\Domain\Position\ValueObject\Side;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -16,12 +17,13 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 /**
  * @see \App\Tests\Unit\Modules\Trading\Application\Parameters\TradingParametersProviderTest
  */
-final readonly class TradingDynamicParameters implements TradingParametersProviderInterface
+final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
     // cache ?
 
-    public function __construct(private AppSettingsProviderInterface $settingsProvider)
-    {
+    public function __construct(
+        private AppSettingsProviderInterface $settingsProvider
+    ) {
     }
 
     #[AppDynamicParameter(group: 'trading')]

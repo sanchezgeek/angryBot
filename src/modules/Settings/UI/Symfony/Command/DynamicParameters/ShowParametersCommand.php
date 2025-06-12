@@ -18,11 +18,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'parameters:show')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class ShowParametersCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;

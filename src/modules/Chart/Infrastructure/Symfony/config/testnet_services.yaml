@@ -18,7 +18,7 @@ services:
     App\Screener\UI\Symfony\Command\TestHandlerCommand:
         arguments:
             $exchangeService: '@real.exchange.service'
-    
+
     App\Chart\Application\Service\CandlesProvider:
         arguments:
             $exchangeService: '@real.exchange.service'

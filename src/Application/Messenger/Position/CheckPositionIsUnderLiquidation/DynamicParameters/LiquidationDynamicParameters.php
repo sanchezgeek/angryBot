@@ -14,6 +14,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -24,9 +25,9 @@ use App\Worker\AppContext;
 use LogicException;
 use RuntimeException;
 
-final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface
+final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
@@ -39,7 +40,6 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     private ?PriceRange $actualStopsPriceRange = null;
 
     public function __construct(
-        #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::SettingsProvider, skipUserInput: true)]
         private readonly AppSettingsProviderInterface $settingsProvider,
 
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPositionState, skipUserInput: true)]

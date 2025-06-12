@@ -146,10 +146,6 @@ imports
         @todo | DRY | with OpenPositionHandler
     @todo | open-position | research
 
-### Domain ###
-    @todo | symbol | for all symbols
-    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
-
 ### Statistics ###
     save ticker every minute
         check if symbol hedge other on some distance
@@ -215,6 +211,13 @@ analise average price change through some period
 ### HOT ###
     PriceChange on short period
     @todo only if source BuyOrder in chain was with force
+
+    use CalculateSignificantPriceChangeHandler for TradingDynamicParameters::safeLiquidationPriceDelta
+        ->
+            @todo | symbol | for all symbols
+            @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+
+    exchanges.txt
 
 ### priceChange statistics ###
     usage

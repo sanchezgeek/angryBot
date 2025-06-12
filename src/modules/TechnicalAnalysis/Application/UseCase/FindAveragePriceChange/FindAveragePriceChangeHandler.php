@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Screener\Application\UseCase\FindAveragePriceChange;
+namespace App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange;
 
 use App\Chart\Application\Service\CandlesProvider;
 use App\Clock\ClockInterface;
 use App\Helper\DateTimeHelper;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use DatePeriod;
 use DateTimeImmutable;
@@ -21,7 +23,7 @@ use DateTimeImmutable;
  *
  * Ещё нужен какой-то определятор повышена ли в моменте (сегодня или за какой-то период) волатильность
  */
-final readonly class FindAveragePriceChangeHandler
+final readonly class FindAveragePriceChangeHandler implements AppDynamicParametersProviderInterface
 {
     #[AppDynamicParameter(group: 'priceChange', name: 'significantPriceChangeByStatistics')]
     public function handle(
@@ -66,8 +68,13 @@ final readonly class FindAveragePriceChangeHandler
     }
 
     public function __construct(
+        #[AppDynamicParameterAutowiredArgument]
         private ClockInterface $clock,
+
+        #[AppDynamicParameterAutowiredArgument]
         private CandlesProvider $candlesProvider,
+
+        #[AppDynamicParameterAutowiredArgument]
         private AveragePriceChangeCache $cache,
     ) {
     }

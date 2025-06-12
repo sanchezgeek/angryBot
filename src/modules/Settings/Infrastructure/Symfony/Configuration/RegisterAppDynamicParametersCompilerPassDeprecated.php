@@ -9,9 +9,12 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 
-final readonly class RegisterAppDynamicParametersCompilerPass implements CompilerPassInterface
+/**
+ * @deprecated
+ */
+final readonly class RegisterAppDynamicParametersCompilerPassDeprecated implements CompilerPassInterface
 {
-    private const LOCATOR_SERVICE_ID = AppDynamicParametersLocator::class;
+    private const string LOCATOR_SERVICE_ID = AppDynamicParametersLocator::class;
 
     public function __construct(private array $classNames)
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Infrastructure\Symfony\CompillerPass;
+namespace App\Infrastructure\DependencyInjection\CompilerPass;
 
 use App\Trading\Application\Symbol\SymbolProvider;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
