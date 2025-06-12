@@ -47,16 +47,21 @@ final class CheckSymbolsPriceChangeHandler
 
             $currentPrice = $ticker->lastPrice;
             $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
-            $delta = abs($prevPrice - $currentPrice->value());
+            $delta = $currentPrice->value() - $prevPrice;
 
             $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, $symbol);
-            if ($delta > $significantPriceDelta) {
+
+            if ($partOfDayPassed < 0.15) {
+                $significantPriceDelta *= 2;
+            }
+
+            if (abs($delta) > $significantPriceDelta) {
                 if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbol->name(), $daysDelta))->consume()->isAccepted()) {
                     continue;
                 }
 
                 for ($i = 0; $i < self::ALERT_RETRY_COUNT; $i++) {
-                    $changePercent = Percent::fromPart($delta / $prevPrice,false)->setOutputFloatPrecision(2);
+                    $changePercent = Percent::fromPart($delta / $prevPrice, false)->setOutputFloatPrecision(2);
                     $significantPriceDeltaPercent = Percent::fromPart($significantPriceDelta / $prevPrice, false)->setOutputFloatPrecision(2);
 
                     // @todo | priceChange | save prev percent and notify again if new percent >= prev
