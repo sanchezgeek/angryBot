@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange;
+namespace App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange;
 
 use App\Chart\Application\Service\CandlesProvider;
 use App\Clock\ClockInterface;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\DateTimeHelper;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
-use DatePeriod;
+use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
+use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeResult;
+use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
+use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use DateTimeImmutable;
 
 /**
@@ -23,13 +27,13 @@ use DateTimeImmutable;
  *
  * Ещё нужен какой-то определятор повышена ли в моменте (сегодня или за какой-то период) волатильность
  */
-final readonly class FindAveragePriceChangeHandler implements AppDynamicParametersProviderInterface
+final readonly class FindAveragePriceChangeHandler implements FindAveragePriceChangeHandlerInterface, AppDynamicParametersProviderInterface
 {
-    #[AppDynamicParameter(group: 'priceChange', name: 'significantPriceChangeByStatistics')]
+    #[AppDynamicParameter(group: 'priceChange', name: 'averagePriceChange')]
     public function handle(
         #[AppDynamicParameterEvaluations(defaultValueProvider: FindAveragePriceChangeEntryEvaluationProvider::class, skipUserInput: true)]
-        FindAveragePriceChangeEntry $entry
-    ): float {
+        FindAveragePriceChange $entry
+    ): FindAveragePriceChangeResult {
         $cacheKey = sprintf(
             'significantPriceChange_%s_onInterval_%s_count_%d',
             $entry->symbol->name(),
@@ -40,10 +44,10 @@ final readonly class FindAveragePriceChangeHandler implements AppDynamicParamete
         return $this->cache->get($cacheKey, fn () => $this->doHandle($entry));
     }
 
-    private function doHandle(FindAveragePriceChangeEntry $entry): float
+    private function doHandle(FindAveragePriceChange $entry): FindAveragePriceChangeResult
     {
         $symbol = $entry->symbol;
-        $interval = $entry->averageOnInterval;
+        $candleInterval = $entry->averageOnInterval;
         $intervalsCount = $entry->intervalsCount;
 
         $dateInterval = $entry->averageOnInterval->toDateInterval();
@@ -58,13 +62,26 @@ final readonly class FindAveragePriceChangeHandler implements AppDynamicParamete
         $to = new DateTimeImmutable()->setTimestamp($dayStart->getTimestamp() + (int)$intervalsPassed * $secondsInInterval);
         $start = new DateTimeImmutable()->setTimestamp($to->getTimestamp() - $intervalsCount * $secondsInInterval);
 
-        $diffs = [];
-        foreach (new DatePeriod($start, $dateInterval, $to) as $timePoint) {
-            $candles = $this->candlesProvider->getCandles(symbol: $symbol, interval: $interval, from: $timePoint, limit: 1);
-            $diffs[] = $candles[0]->priceDiffBetweenHighAndLow();
+        $candlesAll = $this->candlesProvider->getCandles(symbol: $symbol, interval: $candleInterval, from: $start, to: $to, limit: $intervalsCount);
+
+        $absoluteDeltas = [];
+        $percentDeltas = [];
+        foreach ($candlesAll as $candleDto) {
+            $priceDiffBetweenHighAndLow = $candleDto->highLowDiff();
+            $open = $candleDto->open;
+
+            $absoluteDeltas[] = $priceDiffBetweenHighAndLow;
+            $percentDeltas[] = $priceDiffBetweenHighAndLow / $open;
         }
 
-        return array_sum($diffs) / count($diffs);
+        return new FindAveragePriceChangeResult(
+            new AveragePriceChange(
+                $candleInterval,
+                $intervalsCount,
+                Percent::fromPart(array_sum($percentDeltas) / count($percentDeltas)),
+                array_sum($absoluteDeltas) / count($absoluteDeltas),
+            )
+        );
     }
 
     public function __construct(

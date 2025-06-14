@@ -7,11 +7,11 @@ namespace App\Chart\Application\Dto;
 final readonly class CandleDto
 {
     public function __construct(
-        private int $time,
-        private float $open,
-        private float $high,
-        private float $low,
-        private float $close,
+        public int $time,
+        public float $open,
+        public float $high,
+        public float $low,
+        public float $close,
     ) {
     }
 
@@ -26,7 +26,7 @@ final readonly class CandleDto
         ];
     }
 
-    public function priceDiffBetweenHighAndLow(): float
+    public function highLowDiff(): float
     {
         return abs($this->high - $this->low);
     }

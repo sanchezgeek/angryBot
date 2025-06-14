@@ -5,3 +5,12 @@ services:
 
     App\TechnicalAnalysis\:
         resource: '../../../'
+
+    technicalAnalysis.cacheWrapper:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@technicalAnalysis.cache'
+
+    App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\AveragePriceChangeCache:
+        arguments:
+            $cache: '@technicalAnalysis.cacheWrapper'

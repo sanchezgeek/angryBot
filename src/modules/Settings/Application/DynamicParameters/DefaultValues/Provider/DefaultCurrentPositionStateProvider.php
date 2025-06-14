@@ -21,7 +21,10 @@ final readonly class DefaultCurrentPositionStateProvider implements ParameterDef
 
     public function getRequiredKeys(): array
     {
-        return ['symbol', 'side'];
+        return [
+            'symbol' => 'symbol',
+            'side' => 'side',
+        ];
     }
 
     public function get(array $input): Position

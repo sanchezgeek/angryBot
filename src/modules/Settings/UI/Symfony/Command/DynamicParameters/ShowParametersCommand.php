@@ -18,6 +18,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Throwable;
 
 #[AsCommand(name: 'parameters:show')]
 class ShowParametersCommand extends AbstractCommand implements SymbolDependentCommand
@@ -78,13 +79,13 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
         $arguments = $this->parameterEvaluator->getParameterArguments($selectedGroup, $selectedParameter);
 
         $constructorInput = [];
-        foreach ($arguments['constructorArguments'] as $argumentName) {
-            $constructorInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s (from constructor): ', $argumentName)));
+        foreach ($arguments['constructorArguments'] as $argumentName => $title) {
+            $constructorInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s (from constructor): ', $title)));
         }
 
         $methodInput = [];
-        foreach ($arguments['referencedMethodArguments'] as $argumentName) {
-            $methodInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s: ', $argumentName)));
+        foreach ($arguments['referencedMethodArguments'] as $argumentName => $title) {
+            $methodInput[$argumentName] = $userInput[$argumentName] ?? $this->parseInputValue($argumentName, $io->ask(sprintf('%s: ', $title)));
         }
 
         $value = $this->parameterEvaluator->evaluate(

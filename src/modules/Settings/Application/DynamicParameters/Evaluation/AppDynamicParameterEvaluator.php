@@ -37,20 +37,20 @@ final readonly class AppDynamicParameterEvaluator
     public function getParameterArguments(string $group, string $parameterName): array
     {
         $methodReflection = $this->parametersLocator->getReferencedMethodReflection($group, $parameterName);
+        $methodArgumentsReflections = $methodReflection->getParameters();
 
         try {
             $this->container->get($methodReflection->class);
             $constructorArguments = [];
         } catch (ServiceNotFoundException) {
-            $argumentsReflections = array_filter(
+            $constructorArgumentsReflections = array_filter(
                 $methodReflection->getDeclaringClass()->getConstructor()->getParameters(),
                 fn(ReflectionParameter $parameter) => !$this->hasAutowiredConstructParameter($parameter)
             );
-
-            $constructorArguments = $this->getRequiredUserInput($argumentsReflections);
+            $constructorArguments = $this->getRequiredUserInput($constructorArgumentsReflections);
         }
 
-        $referencedMethodArguments = $this->getRequiredUserInput($this->parametersLocator->getReferencedMethodReflection($group, $parameterName)->getParameters());
+        $referencedMethodArguments = $this->getRequiredUserInput($methodArgumentsReflections);
 
         return [
             'constructorArguments' => $constructorArguments,
@@ -81,16 +81,17 @@ final readonly class AppDynamicParameterEvaluator
             $requiredInnerArguments = array_merge($requiredInnerArguments, $this->requiredInnerArguments($argumentRef));
         }
 
-        $constructorArguments = array_filter(
+        $arguments = array_filter(
             $argumentsReflections,
             static fn (ReflectionParameter $argumentRef) =>
                 !($evaluationAttributes = $argumentRef->getAttributes(AppDynamicParameterEvaluations::class))
                 || ($evaluationAttributes[0]->getArguments()['skipUserInput'] ?? false) !== true
         );
 
-        $filteredArgumentsToInput = array_map(static fn(ReflectionParameter $ref) => $ref->getName(), $constructorArguments);
+        $names = array_map(static fn(ReflectionParameter $ref) => $ref->getName(), $arguments);
+        $filteredArgumentsToInput = array_combine($names, $names);
 
-        return array_unique(array_merge($filteredArgumentsToInput, $requiredInnerArguments));
+        return array_merge($filteredArgumentsToInput, $requiredInnerArguments);
     }
 
     public function evaluate(AppDynamicParameterEvaluationEntry $entry): mixed

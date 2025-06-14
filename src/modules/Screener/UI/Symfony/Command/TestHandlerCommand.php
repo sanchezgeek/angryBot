@@ -11,8 +11,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Settings\Application\Service\AppSettingsService;
-use App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange\FindAveragePriceChangeEntry;
-use App\TechnicalAnalysis\Application\UseCase\FindAveragePriceChange\FindAveragePriceChangeHandler;
+use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
@@ -54,26 +53,29 @@ class TestHandlerCommand extends AbstractCommand implements SymbolDependentComma
         usort($tickers, static fn (Ticker $a, Ticker $b) => $b->indexPrice <=> $a->indexPrice);
 
         foreach ($tickers as $ticker) {
-            $res = $this->handler->handle(
-                new FindAveragePriceChangeEntry(
-                    $ticker->symbol,
-                    CandleIntervalEnum::D1,
-                    7
-                )
-            );
+            $ta = $this->taFactory->create($ticker->symbol, CandleIntervalEnum::D1);
+
+            $averagePriceChange = $ta->averagePriceChangePrev(3)->averagePriceChange;
+            $absolute = $averagePriceChange->absolute;
 
             // x1.5 - significant one day
-            // /3.5 - /3 - first stops grid
+            // /3.5 - /3 - first stops grid ?
 
-            $res4 = $res / 4;
-            $res3 = $res / 3;
+            // stops grid:
+            //  /3.2 - /3 aggressive
+            //  /4 - /3.5 conservative
+
+            // подобрать для битка 5000 as safe? посмотреть на каком интервале и qnt сегодня было 5000
+
+            $res4 = $absolute / 4;
+            $res3 = $absolute / 3;
 
             $this->io->writeln(
                 sprintf(
                     "%s: %s (%s of current price)\n          % 10s=%s (%s of current price)\n% 10s=%s (%s of current price)\n",
                     $ticker->symbol->name(),
-                    $res,
-                    Percent::fromPart($res / $ticker->indexPrice->value()),
+                    $averagePriceChange,
+                    Percent::fromPart($absolute / $ticker->indexPrice->value()),
                     '/4',
                     $res4,
                     Percent::fromPart($res4 / $ticker->indexPrice->value()),
@@ -88,7 +90,7 @@ class TestHandlerCommand extends AbstractCommand implements SymbolDependentComma
     }
 
     public function __construct(
-        private readonly FindAveragePriceChangeHandler $handler,
+        private readonly TechnicalAnalysisToolsFactory $taFactory,
 
         private readonly AppSettingsService $settingsService,
         private readonly OpenPositionHandler $openPositionHandler,
