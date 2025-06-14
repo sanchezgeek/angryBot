@@ -7,11 +7,10 @@ namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\BuyOrder;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Stop\Application\Contract\Command\CreateOppositeStopsAfterBuy;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
-use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\BuyOrderFixture;
@@ -20,7 +19,6 @@ use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\OrderCasesTester;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
-use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -40,13 +38,10 @@ use function uuid_create;
 final class PushBuyOrdersCommonCasesTest extends KernelTestCase
 {
     use OrderCasesTester;
-    use StopsTester;
     use BuyOrdersTester;
     use MessageConsumerTrait;
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
-
-    private const int DEFAULT_STOP_TD = 37;
 
     /**
      * @dataProvider pushBuyOrdersTestDataProvider
@@ -60,7 +55,7 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         array $buyOrdersFixtures,
         array $expectedMarketBuyApiCalls,
         array $buyOrdersExpectedAfterHandle,
-        array $stopsExpectedAfterHandle,
+        array $expectedMessengerMessages,
     ): void {
         $symbol = $position->symbol;
 
@@ -77,7 +72,8 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
         $this->runMessageConsume(new PushBuyOrders($position->symbol, $position->side));
 
         self::seeBuyOrdersInDb(...$buyOrdersExpectedAfterHandle);
-        self::seeStopsInDb(...$stopsExpectedAfterHandle);
+
+        self::assertMessagesWasDispatched(self::ASYNC_CRITICAL_QUEUE, $expectedMessengerMessages);
     }
 
     public function pushBuyOrdersTestDataProvider(): iterable
@@ -135,24 +131,12 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::short(70, 29055, 0.031)->build())->setExchangeOrderId($existedExchangeOrderId),
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::short(90, 29049, 0.032)->build()),
             ],
-            'stopsExpectedAfterHandle' => [
-                StopBuilder::short(1, self::expectedStopPrice($buyOrders[50]), $buyOrders[50]->getVolume())->build(),
-                StopBuilder::short(2, self::expectedStopPrice($buyOrders[30]), $buyOrders[30]->getVolume())->build(),
-                StopBuilder::short(3, self::expectedStopPrice($buyOrders[10]), $buyOrders[10]->getVolume())->build(),
-                StopBuilder::short(4, self::expectedStopPrice($buyOrders[80]), $buyOrders[80]->getVolume())->build(),
-            ],
+            'expectedMessengerMessages' => [
+                new CreateOppositeStopsAfterBuy(50),
+                new CreateOppositeStopsAfterBuy(30),
+                new CreateOppositeStopsAfterBuy(10),
+                new CreateOppositeStopsAfterBuy(80),
+            ]
         ];
-    }
-
-    private static function expectedStopPrice(BuyOrder $buyOrder): float
-    {
-        $stopDistance = StopCreate::getDefaultStrategyStopOrderDistance($buyOrder->getVolume());
-
-        return $buyOrder->getPrice() + ($buyOrder->getPositionSide()->isShort() ? $stopDistance : -$stopDistance);
-    }
-
-    public function testDummy(): void
-    {
-        self::markTestIncomplete('cases: short_stop, ...');
     }
 }

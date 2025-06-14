@@ -23,12 +23,6 @@ framework:
                     max_retries: 0 # do not retry
 
         routing:
-            # service
-#            App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages: service
-#            App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs: service
-            # account
-#            App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
-
             App\Bot\Application\Messenger\Job\Cache\UpdateTicker: tickers_updater_async
 
             # market
@@ -41,7 +35,6 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            # App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation: async_critical # for now handled synchronously
             App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async_high
             App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async_high
 
@@ -54,9 +47,12 @@ framework:
             # connection
             App\Connection\Application\Messenger\Job\CheckConnection: async
 
-            # orders
+            # BuyOrder
             App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
             App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBuyOrdersActiveState: async_high
+
+            # Stop
+            App\Stop\Application\Contract\Command\CreateOppositeStopsAfterBuy: 'async_critical'
 
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
