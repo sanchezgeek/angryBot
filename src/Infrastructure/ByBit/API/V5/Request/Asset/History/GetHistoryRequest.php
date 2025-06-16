@@ -15,7 +15,8 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final readonly class GetHistoryRequest extends AbstractByBitApiRequest
 {
-    public const string URL = '/v5/order/history';
+//    public const string URL = '/v5/order/history';
+    public const URL = '/v5/account/transaction-log';
 
     public function method(): string
     {
@@ -36,6 +37,7 @@ final readonly class GetHistoryRequest extends AbstractByBitApiRequest
     {
         return [
             'category' => $this->category->value,
+            'limit' => 100,
         ];
     }
 
