@@ -140,12 +140,6 @@ imports
     @todo | DRY | with OpenPositionHandler
     @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
 
-### Uncategorized ###
-    @todo | open-position | add triggerDelta?
-    @todo | open-position | `withOpposite`
-        @todo | DRY | with OpenPositionHandler
-    @todo | open-position | research
-
 ### Statistics ###
     save ticker every minute
         check if symbol hedge other on some distance
@@ -153,9 +147,6 @@ imports
 
 ### openedPositions ###
     save current passed distance
-
-### schedule ###
-    move stops for all symbols
 
 front + liq chart
 analise average price change through some period
@@ -190,6 +181,10 @@ analise average price change through some period
             3.1 try free spot exchanges api
                 + https://youtu.be/_1JaRsXuSb8?t=866
 
+### Schema ###
+    do d:m:d and add constraints
+
+
 ### Symbol###
     @todo | symbols | profiling
     @todo | symbol | performance
@@ -206,6 +201,7 @@ analise average price change through some period
 ### Orders creation ###
     @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         + может быть job, который будет как-то хитро делать rearrange
+
 
 
 
@@ -240,5 +236,8 @@ analise average price change through some period
     @todo | ShortcutContextProcessorInterface | sL=very-long
 
 
-### Schema ###
-    do d:m:d and add constraints
+### Open position ###
+    @todo | DRY | with OpenPositionHandler
+    @todo | open-position | add triggerDelta?
+    @todo | open-position | different logic for support position
+    @todo | open-position | full stops grid

@@ -34,6 +34,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use RuntimeException;
 
+/**
+ * @todo | open-position | full stops grid
+ */
 final class OpenPositionHandler
 {
     private OpenPositionEntryDto $entryDto;
@@ -116,12 +119,8 @@ final class OpenPositionHandler
         }
 
         foreach ($buyOrders as $buyOrder) {
-            if (!$buyOrder->getOppositeOrderDistance()) {
-                $buyOrder->setIsWithoutOppositeOrder(); // only if opposite distance was not provided while orders creation
-            }
-
             if ($resultPosition->isSupportPosition()) {
-                $buyOrder->isForceBuyOrder(); // @todo | open-position | research
+                $buyOrder->setIsForceBuyOrderContext(); // @todo | open-position | different logic for support position
             }
             $this->buyOrderRepository->save($buyOrder);
         }
