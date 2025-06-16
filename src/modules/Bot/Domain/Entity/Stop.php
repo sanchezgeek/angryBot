@@ -20,6 +20,7 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Infrastructure\Doctrine\Identity\SkipIfIdAssignedGenerator;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolContainerInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -58,7 +59,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     #[ORM\Id]
     #[ORM\Column]
-    private int $id;
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: SkipIfIdAssignedGenerator::class)]
+    private ?int $id;
 
     #[ORM\Column]
     private float $price;
@@ -80,9 +83,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
      * @var array<string, mixed>
      */
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
-    private array $context = [];
+    private array $context;
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
+    public function __construct(?int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice($price)->value();

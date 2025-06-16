@@ -16,7 +16,7 @@ final class TechnicalAnalysisTools
     public ?CandleIntervalEnum $candleInterval = null;
 
     public function __construct(
-        private readonly SymbolInterface $symbol,
+        public readonly SymbolInterface $symbol,
         private readonly FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler
     ) {
     }

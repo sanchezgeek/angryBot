@@ -157,9 +157,6 @@ imports
 ### schedule ###
     move stops for all symbols
 
-### Orders execution ###
-    properly create opposite Stops for other symbols
-
 front + liq chart
 analise average price change through some period
     => safePriceDistance
@@ -206,6 +203,10 @@ analise average price change through some period
     [symbol] @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
             (maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler)
 
+### Orders creation ###
+    @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
+        + может быть job, который будет как-то хитро делать rearrange
+
 
 
 ### HOT ###
@@ -223,3 +224,21 @@ analise average price change through some period
     usage
         @todo | priceChange statistics | ResetBuyOrdersActiveStateHandler | use statistics for get appropriate allowed distance
                                        | ... | ...
+
+### oldCode ###
+    data/oldCode/tests
+
+### Opposite STOPS ###
+    !!!!      @todo | !!! PredefinedStopLengthParser parameters
+        чтобы быть способным поменять поведение
+    Не забыть moveStops
+    @todo | based on liquidation if position under hedge?
+    @todo | some logic for StopCreateStrategy::AFTER_FIRST_POSITION_STOP?
+    Посмотреть что со Strategy, когда есть hedge
+
+    @todo | review logic: maybe it must be something like "if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1; else $description = 'because index price over stop)';"
+    @todo | ShortcutContextProcessorInterface | sL=very-long
+
+
+### Schema ###
+    do d:m:d and add constraints

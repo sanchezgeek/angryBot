@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\Contract\Command;
+namespace App\Buy\Application\Command;
 
-final class CreateOppositeStopsAfterBuy
+final class CreateStopsAfterBuy
 {
     public function __construct(public int $buyOrderId)
     {

@@ -34,7 +34,7 @@ services:
       # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 #    ports:
-#      - "${POSTGRES_EXTERNAL_PORT}:5432"
+#      - "127.0.0.1:${POSTGRES_EXTERNAL_PORT}:5432"
 #    networks:
 #      - bot-network
 

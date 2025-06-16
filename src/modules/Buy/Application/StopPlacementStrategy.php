@@ -2,23 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Domain\Strategy;
+namespace App\Buy\Application;
 
-enum StopCreate: string
+enum StopPlacementStrategy: string
 {
     case DEFAULT = 'default';
-
-    case SHORT_STOP = 'short_stop';
     case UNDER_POSITION = 'under_position';
-    case ONLY_BIG_SL_UNDER_POSITION = 'only_big_sl_under_position';
-
     case AFTER_FIRST_STOP_UNDER_POSITION = 'after_first_stop_under_position';
-    case ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION = 'only_big_sl_after_first_stop_under_position';
-
-    case AFTER_FIRST_POSITION_STOP = 'after_first_position_stop';
+//    case AFTER_FIRST_POSITION_STOP = 'after_first_position_stop';
 
     // @todo | symbol | for all symbols
-    public const BIG_SL_VOLUME_STARTS_FROM = 0.006;
+//    public const BIG_SL_VOLUME_STARTS_FROM = 0.006;
 
     private const REGULAR_ORDER_STOP_DISTANCE = 259;
     private const ADDITION_ORDER_STOP_DISTANCE = 211;
@@ -35,3 +29,7 @@ enum StopCreate: string
         return $volume >= 0.005 ? self::REGULAR_ORDER_STOP_DISTANCE : self::ADDITION_ORDER_STOP_DISTANCE;
     }
 }
+
+
+//    case ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION = 'only_big_sl_after_first_stop_under_position';
+//    case ONLY_BIG_SL_UNDER_POSITION = 'only_big_sl_under_position';

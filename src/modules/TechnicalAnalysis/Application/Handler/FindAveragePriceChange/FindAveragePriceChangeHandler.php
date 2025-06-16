@@ -78,7 +78,7 @@ final readonly class FindAveragePriceChangeHandler implements FindAveragePriceCh
             new AveragePriceChange(
                 $candleInterval,
                 $intervalsCount,
-                Percent::fromPart(array_sum($percentDeltas) / count($percentDeltas)),
+                Percent::fromPart(array_sum($percentDeltas) / count($percentDeltas), false),
                 array_sum($absoluteDeltas) / count($absoluteDeltas),
             )
         );

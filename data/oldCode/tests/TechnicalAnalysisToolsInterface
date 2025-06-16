@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\TechnicalAnalysis\Application\Service;
+
+use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeResult;
+use App\Trading\Domain\Symbol\SymbolInterface;
+
+/**
+ * @property-read SymbolInterface $symbol
+ * @property-read CandleIntervalEnum candleInterval
+ */
+interface TechnicalAnalysisToolsInterface
+{
+    public function averagePriceChange(int $intervalsCount): FindAveragePriceChangeResult;
+    public function averagePriceChangePrev(int $intervalsCount): FindAveragePriceChangeResult;
+    public function withInterval(CandleIntervalEnum $candleInterval): self;
+}

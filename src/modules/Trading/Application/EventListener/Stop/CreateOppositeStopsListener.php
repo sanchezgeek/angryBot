@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\EventListener\Stop;
 
+use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Domain\BuyOrder\Event\BuyOrderPushedToExchange;
-use App\Stop\Application\Contract\Command\CreateOppositeStopsAfterBuy;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -16,7 +16,7 @@ final readonly class CreateOppositeStopsListener
     {
         if ($event->buyOrder->isWithOppositeOrder()) {
             $this->messageBus->dispatch(
-                new CreateOppositeStopsAfterBuy($event->buyOrder->getId())
+                new CreateStopsAfterBuy($event->buyOrder->getId())
             );
         }
     }

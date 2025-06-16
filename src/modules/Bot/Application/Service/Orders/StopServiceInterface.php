@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Bot\Application\Service\Orders;
 
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
@@ -19,7 +20,7 @@ interface StopServiceInterface
         float $volume,
         ?float $triggerDelta = null,
         array $context = [],
-    ): int;
+    ): Stop;
 
     public function createIncrementalToPosition(
         Position $position,

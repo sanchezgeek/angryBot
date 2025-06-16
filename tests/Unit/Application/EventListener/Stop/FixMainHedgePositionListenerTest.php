@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Application\EventListener\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -16,6 +15,8 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Stop\Application\Contract\Command\CreateStop;
+use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Stop\Application\EventListener\FixOppositePositionListener;
 use App\Stop\Application\Settings\FixOppositePositionSettings;
 use App\Tests\Factory\Position\PositionBuilder;
@@ -24,6 +25,9 @@ use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
+/**
+ * @covers FixOppositePositionListener
+ */
 final class FixMainHedgePositionListenerTest extends KernelTestCase
 {
     use SettingsAwareTest;
@@ -32,14 +36,14 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
-    private StopServiceInterface $stopService;
+    private CreateStopHandlerInterface $createStopHandler;
     private FixOppositePositionListener $listener;
 
     protected function setUp(): void
     {
         $this->exchangeService = $this->createMock(ExchangeServiceInterface::class);
         $this->positionService = $this->createMock(PositionServiceInterface::class);
-        $this->stopService = $this->createMock(StopServiceInterface::class);
+        $this->createStopHandler = $this->createMock(CreateStopHandlerInterface::class);
 
         $this->overrideSetting(FixOppositePositionSettings::FixOppositePosition_If_OppositePositionPnl_GreaterThan, sprintf('%d%%', self::APPLY_IF_MAIN_POSITION_PNL_GREATER_THAN_DEFAULT));
 
@@ -47,7 +51,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
             self::getContainerSettingsProvider(),
             $this->exchangeService,
             $this->positionService,
-            $this->stopService,
+            $this->createStopHandler,
         );
     }
 
@@ -82,17 +86,19 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 //            }
 //        );
 
-        $this->stopService->expects(self::once())->method('create')->with(
-            $symbol,
-            $stoppedPosition->oppositePosition->side,
-            $expectedSupplyStopPrice,
-            $expectedSupplyStopVolume,
-            null,
-            [
-                Stop::CLOSE_BY_MARKET_CONTEXT => true,
-                Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
-                Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION => true,
-            ]
+        $this->createStopHandler->expects(self::once())->method('__invoke')->with(
+            new CreateStop(
+                symbol: $symbol,
+                positionSide: $stoppedPosition->oppositePosition->side,
+                volume: $expectedSupplyStopVolume,
+                price: $expectedSupplyStopPrice,
+                triggerDelta: null,
+                context: [
+                    Stop::CLOSE_BY_MARKET_CONTEXT => true,
+                    Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
+                    Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION => true,
+                ]
+            )
         );
 
         $event = new StopPushedToExchange($executedStop);
@@ -116,7 +122,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
         $this->haveTicker($ticker);
         $this->haveStoppedSupportPosition($stoppedPosition);
 
-        $this->stopService->expects(self::never())->method('create');
+        $this->createStopHandler->expects(self::never())->method(self::anything());
 
         $event = new StopPushedToExchange($executedStop);
         ($this->listener)($event);

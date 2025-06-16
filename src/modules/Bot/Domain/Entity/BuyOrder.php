@@ -11,6 +11,10 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
+use App\Buy\Domain\ValueObject\StopStrategy\Factory\StopCreationStrategyDefinitionStaticFactory;
+use App\Buy\Domain\ValueObject\StopStrategy\StopCreationStrategyDefinition;
+use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\BuyOrder\Event\BuyOrderPushedToExchange;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
@@ -36,7 +40,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public const string SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const string SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
-    public const string WITH_SHORT_STOP_CONTEXT = 'withShortStop';
     public const string FORCE_BUY_CONTEXT = 'forceBuy';
     public const string ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
 
@@ -48,6 +51,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public const string OPPOSITE_SL_ID_CONTEXT = 'oppositeForStopId';
 
     public const string ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT = 'activeStateSetAtTimestamp';
+
+    public const string STOP_LENGTH_DEFINITION_TYPE = 'stopLengthDefinition';
 
     use HasVolume;
     use HasExchangeOrderContext;
@@ -81,6 +86,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private array $context = [];
 
     private bool $isOppositeStopExecuted = false;
+    private ?StopCreationStrategyDefinition $stopCreationStrategyDefinition = null;
 
     public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
@@ -90,6 +96,35 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+    }
+
+    public function getStopCreationDefinition(): StopCreationStrategyDefinition
+    {
+        if ($this->stopCreationStrategyDefinition !== null) {
+            return $this->stopCreationStrategyDefinition;
+        }
+
+        if ($data = $this->context[self::STOP_LENGTH_DEFINITION_TYPE] ?? null) {
+            $value = StopCreationStrategyDefinitionStaticFactory::fromData($data);
+        } else {
+            $value = new PredefinedStopLength(
+                PredefinedStopLengthSelector::Standard
+            );
+        }
+
+        return $this->stopCreationStrategyDefinition = $value;
+    }
+
+    public function setStopCreationStrategy(StopCreationStrategyDefinition $definition): self
+    {
+        $this->stopCreationStrategyDefinition = $definition;
+
+        $this->context[self::STOP_LENGTH_DEFINITION_TYPE] = [
+            StopCreationStrategyDefinition::TYPE_STORED_KEY => $definition::getType(),
+            StopCreationStrategyDefinition::PARAMS_STORED_KEY => $definition->toArray(),
+        ];
+
+        return $this;
     }
 
     /**
@@ -174,11 +209,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function mustBeExecuted(Ticker $ticker): bool
     {
         return $this->isOrderActive() && $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
-    }
-
-    public function isWithShortStop(): bool
-    {
-        return ($this->context[self::WITH_SHORT_STOP_CONTEXT] ?? null) === true;
     }
 
     public function isForceBuyOrder(): bool

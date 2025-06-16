@@ -6,9 +6,10 @@ namespace App\TechnicalAnalysis\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
+use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
-final readonly class TechnicalAnalysisToolsFactory
+final readonly class TechnicalAnalysisToolsFactory implements TechnicalAnalysisToolsFactoryInterface
 {
     public function __construct(
         private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler

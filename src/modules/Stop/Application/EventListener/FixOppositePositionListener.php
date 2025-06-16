@@ -14,6 +14,8 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Stop\Application\Contract\Command\CreateStop;
+use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Stop\Application\Settings\FixOppositePositionSettings;
 use App\Worker\AppContext;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -26,6 +28,8 @@ use function sprintf;
  *      2) for stops closed by market
  *      3) withOppositeOrder
  * ] => cover losses by adding SL on MainPosition.
+ *
+ * @see \App\Tests\Unit\Application\EventListener\Stop\FixMainHedgePositionListenerTest
  */
 #[AsEventListener]
 final readonly class FixOppositePositionListener
@@ -34,7 +38,7 @@ final readonly class FixOppositePositionListener
         private AppSettingsProviderInterface $settings,
         private ExchangeServiceInterface $exchangeService,
         private PositionServiceInterface $positionService, /** @todo | MB without cache? */
-        private StopServiceInterface $stopService,
+        private CreateStopHandlerInterface $createStopHandler,
     ) {
     }
 
@@ -122,12 +126,14 @@ final readonly class FixOppositePositionListener
 
         $oppositePositionStopVolume = $symbol->roundVolume($oppositePositionStopVolume);
 
-        $this->stopService->create(
-            symbol: $stoppedPosition->symbol,
-            positionSide: $oppositePosition->side,
-            price: $supplyStopPrice,
-            volume: $oppositePositionStopVolume,
-            context: $context
+        ($this->createStopHandler)(
+            new CreateStop(
+                symbol: $stoppedPosition->symbol,
+                positionSide: $oppositePosition->side,
+                volume: $oppositePositionStopVolume,
+                price: $supplyStopPrice,
+                context: $context
+            )
         );
 
         self::echo(sprintf('%s: supply stop created fot %s', __CLASS__, $stoppedPosition->getCaption()));

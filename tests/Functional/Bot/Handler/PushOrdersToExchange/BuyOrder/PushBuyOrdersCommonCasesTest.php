@@ -9,7 +9,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Stop\Application\Contract\Command\CreateOppositeStopsAfterBuy;
+use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
@@ -132,10 +132,10 @@ final class PushBuyOrdersCommonCasesTest extends KernelTestCase
                 BuyOrderTestHelper::setActive(BuyOrderBuilder::short(90, 29049, 0.032)->build()),
             ],
             'expectedMessengerMessages' => [
-                new CreateOppositeStopsAfterBuy(50),
-                new CreateOppositeStopsAfterBuy(30),
-                new CreateOppositeStopsAfterBuy(10),
-                new CreateOppositeStopsAfterBuy(80),
+                new CreateStopsAfterBuy(50),
+                new CreateStopsAfterBuy(30),
+                new CreateStopsAfterBuy(10),
+                new CreateStopsAfterBuy(80),
             ]
         ];
     }
