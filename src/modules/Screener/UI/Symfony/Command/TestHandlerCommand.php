@@ -21,6 +21,9 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * @todo compare with ATR
+ */
 #[AsCommand(name: 'screener:test')]
 class TestHandlerCommand extends AbstractCommand implements SymbolDependentCommand
 {
@@ -56,7 +59,7 @@ class TestHandlerCommand extends AbstractCommand implements SymbolDependentComma
             $ta = $this->taFactory->create($ticker->symbol, CandleIntervalEnum::D1);
 
             $averagePriceChange = $ta->averagePriceChangePrev(3)->averagePriceChange;
-            $absolute = $averagePriceChange->absolute;
+            $absolute = $averagePriceChange->absoluteChange;
 
             // x1.5 - significant one day
             // /3.5 - /3 - first stops grid ?

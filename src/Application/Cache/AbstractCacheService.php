@@ -11,7 +11,7 @@ use DateInterval;
  */
 abstract class AbstractCacheService implements CacheServiceInterface
 {
-    public function __construct(protected readonly CacheServiceInterface $cache)
+    public function __construct(protected CacheServiceInterface $cache)
     {
     }
 

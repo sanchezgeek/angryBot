@@ -6,8 +6,8 @@ namespace App\TechnicalAnalysis\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
-use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeResult;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
+use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 

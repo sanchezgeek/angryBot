@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange;
+namespace App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange;
 
 use App\Application\Cache\AbstractCacheService;
 use App\Application\Cache\CacheServiceInterface;
 use App\TechnicalAnalysis\Application\Cache\TechnicalAnalysisCacheInterface;
 
-final class AveragePriceChangeCache extends AbstractCacheService implements TechnicalAnalysisCacheInterface
+final class AverageTrueRangeCache extends AbstractCacheService implements TechnicalAnalysisCacheInterface
 {
     public function replaceInnerCacheService(CacheServiceInterface $cacheService): void
     {
@@ -17,6 +17,6 @@ final class AveragePriceChangeCache extends AbstractCacheService implements Tech
 
     protected static function getDefaultTtl(): int
     {
-        return 40000; // half of a day
+        return 10000; // every 3 hours
     }
 }

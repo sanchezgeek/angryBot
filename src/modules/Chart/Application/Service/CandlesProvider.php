@@ -6,7 +6,7 @@ namespace App\Chart\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Chart\Application\Dto\CandleDto;
+use App\TechnicalAnalysis\Domain\Dto\CandleDto;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 use LogicException;
@@ -27,6 +27,6 @@ final readonly class CandlesProvider
             throw new LogicException(sprintf('Got %d candles insteadof requested %d', count($data), $limit));
         }
 
-        return array_map(static fn(array $item) => new CandleDto($item['time'], $item['open'], $item['high'], $item['low'], $item['close']), $data);
+        return array_map(static fn(array $item) => new CandleDto($interval, $item['time'], $item['open'], $item['high'], $item['low'], $item['close']), $data);
     }
 }

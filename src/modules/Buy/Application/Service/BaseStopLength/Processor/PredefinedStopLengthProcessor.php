@@ -45,7 +45,7 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
     {
         $ta = $this->taProvider->create($buyOrder->getSymbol(), $this->candleInterval);
 
-        $averagePriceChangePercent = $ta->averagePriceChangePrev($this->intervalsCount)->averagePriceChange->percent->value();
+        $averagePriceChangePercent = $ta->averagePriceChangePrev($this->intervalsCount)->averagePriceChange->percentChange->value();
 
         return match ($definition->length) {
             PredefinedStopLengthSelector::VeryShort => $averagePriceChangePercent / 5,

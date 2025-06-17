@@ -226,6 +226,7 @@ analise average price change through some period
 
 ### Opposite STOPS ###
     !!!!      @todo | !!! PredefinedStopLengthParser parameters
+        тут возможно какой-то селектор типа day/swing/positioning
         чтобы быть способным поменять поведение
     Не забыть moveStops
     @todo | based on liquidation if position under hedge?
@@ -235,9 +236,19 @@ analise average price change through some period
     @todo | review logic: maybe it must be something like "if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1; else $description = 'because index price over stop)';"
     @todo | ShortcutContextProcessorInterface | sL=very-long
 
-
 ### Open position ###
+    какой-то поиск максимума на отрезке
     @todo | DRY | with OpenPositionHandler
     @todo | open-position | add triggerDelta?
     @todo | open-position | different logic for support position
     @todo | open-position | full stops grid
+
+    @todo | ATR | research
+        ... Ещё нужен какой-то определятор повышена ли в моменте (сегодня или за какой-то период) волатильность
+    @todo compare with ATR
+
+    !!!!!!!!!!!! sum.txt !!!!!!!!!!!!!!
+
+### Other ###
+    do d:m:d and add constraints
+    почему-то в tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php ордера пушатся от теста к тесту с разной сортировкой
