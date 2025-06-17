@@ -16,8 +16,8 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
         public CandleIntervalEnum $interval,
         public int $period,
         public float $absoluteChange,
-        // @todo | of what???
         public Percent $percentChange,
+        public ?float $refPrice = null,
     ) {
     }
 
@@ -33,6 +33,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
             $this->period,
             $this->absoluteChange * $multiplier,
             new Percent($this->percentChange->value() * $multiplier, false),
+            $this->refPrice,
         );
     }
 
@@ -43,16 +44,30 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
             $this->period,
             $this->absoluteChange / $divider,
             new Percent($this->percentChange->value() / $divider, false),
+            $this->refPrice,
         );
     }
 
     public function __toString(): string
     {
-        return sprintf('%s (%s) [average`%s`priceChange on last %d intervals]', $this->absoluteChange, $this->percentChange, $this->interval->value, $this->period);
+        return sprintf(
+            '%s [%s%s] (average`%s`priceChange on %d intervals[...-...])',
+            $this->absoluteChange,
+            $this->percentChange,
+            $this->refPrice !== null ? sprintf(', refPrice=%s', $this->refPrice) : '',
+            $this->interval->value,
+            $this->period
+        );
     }
 
-    public function jsonSerialize(): string
+    public function jsonSerialize(): mixed
     {
-        return (string)$this;
+        return [
+            'interval' => $this->interval->value,
+            'period' => $this->period,
+            'percentChange' => $this->percentChange->value(),
+            'absoluteChange' => $this->absoluteChange,
+            'refPrice' => $this->refPrice,
+        ];
     }
 }

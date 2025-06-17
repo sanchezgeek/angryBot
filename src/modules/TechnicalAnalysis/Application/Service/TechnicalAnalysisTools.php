@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\TechnicalAnalysis\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
+use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
+use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
@@ -17,7 +20,8 @@ final class TechnicalAnalysisTools
 
     public function __construct(
         public readonly SymbolInterface $symbol,
-        private readonly FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler
+        private readonly FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
+        private readonly CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
     ) {
     }
 
@@ -42,6 +46,15 @@ final class TechnicalAnalysisTools
 
         return $this->findAveragePriceChangeHandler->handle(
             FindAveragePriceChange::includeCurrentInterval($this->symbol, $this->candleInterval, $intervalsCount)
+        );
+    }
+
+    public function atr(int $intervalsCount): CalcAverageTrueRangeResult
+    {
+        $this->checkIntervalSelected();
+
+        return $this->calcAverageTrueRangeHandler->handle(
+            new CalcAverageTrueRange($this->symbol, $this->candleInterval, $intervalsCount)
         );
     }
 

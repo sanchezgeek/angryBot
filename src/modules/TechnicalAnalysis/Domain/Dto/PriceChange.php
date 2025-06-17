@@ -9,28 +9,28 @@ use App\Domain\Value\Percent\Percent;
 use JsonSerializable;
 use Stringable;
 
-final class TAPriceChange implements JsonSerializable, Stringable
+final class PriceChange implements JsonSerializable, Stringable
 {
     public function __construct(
-        public CandleIntervalEnum $onInterval,
-        public Percent $percentChange,
+        public CandleIntervalEnum $interval,
         public float $absoluteChange,
+        public Percent $percentChange,
         public float $refPrice
     ) {
     }
 
     public function __toString(): string
     {
-        return sprintf('%s (%s) change [from %s] on `%s` interval', $this->absoluteChange, $this->percentChange, $this->refPrice, $this->onInterval->value);
+        return sprintf('%s [%s, refPrice=%s] (`%s`priceChange)', $this->absoluteChange, $this->percentChange, $this->refPrice, $this->interval->value);
     }
 
     public function jsonSerialize(): mixed
     {
         return [
-            'onInterval' => $this->onInterval->value,
-            'refPrice' => $this->refPrice,
-            'percentChange' => $this->percentChange->value(),
+            'interval' => $this->interval->value,
             'absoluteChange' => $this->absoluteChange,
+            'percentChange' => $this->percentChange->value(),
+            'refPrice' => $this->refPrice,
         ];
     }
 }

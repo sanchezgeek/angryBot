@@ -6,14 +6,14 @@ namespace App\TechnicalAnalysis\Domain\SimpleCalculations;
 
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Domain\Dto\CandleDto;
-use App\TechnicalAnalysis\Domain\Dto\TAPriceChange;
+use App\TechnicalAnalysis\Domain\Dto\PriceChange;
 
 final class TrueRangeCalculation
 {
     public static function calc(
         CandleDto $currentCandle,
         ?CandleDto $prevCandle = null,
-    ): TAPriceChange {
+    ): PriceChange {
         $options = [
             abs($currentCandle->high - $currentCandle->low),
         ];
@@ -23,21 +23,21 @@ final class TrueRangeCalculation
             $options[] = abs($prevCandle->close - $currentCandle->low);
         }
 
-        $max = max($options);
+        $result = max($options);
 
-        $key = array_key_first(array_intersect($options, [$max]));
+        $key = array_key_first(array_intersect($options, [$result]));
 
         $refPrice = match($key) {
             0 => $currentCandle->low,
             1, 2 => $prevCandle->close,
         };
 
-        $percent = Percent::fromPart($max / $refPrice);
+        $percent = Percent::fromPart($result / $refPrice);
 
-        return new TAPriceChange(
+        return new PriceChange(
             $currentCandle->interval,
+            $result,
             $percent,
-            $max,
             $refPrice
         );
     }

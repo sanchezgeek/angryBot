@@ -13,7 +13,7 @@ use RuntimeException;
 
 final class TechnicalAnalysisToolsFactoryStub implements TechnicalAnalysisToolsFactoryInterface
 {
-    /** @var array<array{symbol: SymbolInterface, onInterval:CandleIntervalEnum, tools: TechnicalAnalysisToolsInterface}> */
+    /** @var array<array{symbol: SymbolInterface, onInterval:CandleIntervalEnum, tools: TechnicalAnalysisTools}> */
     private array $data = [];
 
     public function addItem(

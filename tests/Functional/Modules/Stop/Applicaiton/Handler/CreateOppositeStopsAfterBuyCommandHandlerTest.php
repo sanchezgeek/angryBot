@@ -15,6 +15,7 @@ use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthPro
 use App\Buy\Application\StopPlacementStrategy;
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Value\Percent\Percent;
+use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
 use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisTools;
@@ -29,6 +30,7 @@ use App\Tests\Mixin\Messenger\MessageConsumerTrait;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\Stub\CalcAverageTrueRangeHandlerStub;
 use App\Tests\Stub\FindAveragePriceChangeHandlerStub;
 use App\Tests\Stub\TechnicalAnalysisToolsFactoryStub;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -82,11 +84,12 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
 
         $this->analysisToolsFactory->addItem($ticker->symbol, self::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL, new TechnicalAnalysisTools(
             $ticker->symbol,
-            $this->averagePriceChangeHandlerStub($ticker, [
-                'entry' => FindAveragePriceChange::previousToCurrentInterval($ticker->symbol, self::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL, self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT),
+            new FindAveragePriceChangeHandlerStub(),
+            $this->calcAtrHandlerStub($ticker, [
+                'entry' => new CalcAverageTrueRange($ticker->symbol, self::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL, self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT),
                 'percentResult' => $averagePriceMoveToSelectStopPriceStrategy,
             ], [
-                'entry' => FindAveragePriceChange::previousToCurrentInterval($ticker->symbol, self::CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL, self::CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT),
+                'entry' => new CalcAverageTrueRange($ticker->symbol, self::CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL, self::CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT),
                 'percentResult' => $averagePriceMoveToCalcStopLength,
             ])
         ));
@@ -119,6 +122,31 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
         }
 
         return $averagePriceChangeHandler;
+    }
+
+    /**
+     * @param Ticker $ticker
+     * @param array<array{entry: CalcAverageTrueRange, percentResult: Percent, atrAbsolute: ?float}> $cases
+     * @return CalcAverageTrueRangeHandlerStub
+     */
+    private function calcAtrHandlerStub(
+        Ticker $ticker,
+        array ...$cases
+    ): CalcAverageTrueRangeHandlerStub {
+        $calcAverageTrueRangeHandler = new CalcAverageTrueRangeHandlerStub();
+
+        foreach ($cases as $case) {
+            $entry = $case['entry'];
+            $percentResult = $case['percentResult'];
+
+            $calcAverageTrueRangeHandler->addItem(
+                $entry,
+                $case['atrAbsolute'] ?? $percentResult->of($ticker->indexPrice->value()),
+                $percentResult,
+            );
+        }
+
+        return $calcAverageTrueRangeHandler;
     }
 
     public function cases(): iterable

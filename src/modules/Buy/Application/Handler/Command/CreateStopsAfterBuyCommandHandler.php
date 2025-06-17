@@ -6,7 +6,6 @@ namespace App\Buy\Application\Handler\Command;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -21,12 +20,10 @@ use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyProcessorInte
 use App\Buy\Application\StopPlacementStrategy;
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Stop\Application\Contract\Command\CreateStop;
-use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
 use App\Trait\DispatchCommandTrait;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
-use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
@@ -116,7 +113,7 @@ final class CreateStopsAfterBuyCommandHandler
         $deltaWithTicker = $position->getDeltaWithTicker($ticker);
 
         $ta = $this->taProvider->create($buyOrder->getSymbol(), self::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL);
-        $averagePriceChange = $ta->averagePriceChangePrev(self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT)->averagePriceChange;
+        $averagePriceChange = $ta->atr(self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT)->atr;
 
         /**
          * (1) After first position existed stop

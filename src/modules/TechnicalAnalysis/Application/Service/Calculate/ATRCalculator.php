@@ -6,7 +6,7 @@ namespace App\TechnicalAnalysis\Application\Service\Calculate;
 
 use App\Helper\OutputHelper;
 use App\TechnicalAnalysis\Domain\Dto\CandleDto;
-use App\TechnicalAnalysis\Domain\Dto\TAPriceChange;
+use App\TechnicalAnalysis\Domain\Dto\PriceChange;
 use App\TechnicalAnalysis\Domain\SimpleCalculations\CurrentATRCalculation;
 use App\TechnicalAnalysis\Domain\SimpleCalculations\TrueRangeCalculation;
 use RuntimeException;
@@ -41,7 +41,7 @@ final class ATRCalculator
             sprintf('%s: something went wrong (count($initialTRs) !== $period)', OutputHelper::shortClassName(__CLASS__))
         ));
 
-        $initialTRsSum = array_sum(array_map(static fn(TAPriceChange $priceChange) => $priceChange->absoluteChange, $initialTRs));
+        $initialTRsSum = array_sum(array_map(static fn(PriceChange $priceChange) => $priceChange->absoluteChange, $initialTRs));
 
         return CurrentATRCalculation::calc($initialTRsSum, $trN->absoluteChange, $period);
     }

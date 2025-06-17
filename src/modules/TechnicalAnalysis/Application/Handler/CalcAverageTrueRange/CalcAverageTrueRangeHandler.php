@@ -54,12 +54,15 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
 
         // @todo | а надо ли фильтровать? Если за указанный период произошло что-то исключительное, значит может произойти снова и должно быть учтено
 
+        $refPrice = $candles[array_key_last($candles)]->open;
+
         return new CalcAverageTrueRangeResult(
             new AveragePriceChange(
                 $candleInterval,
                 $period,
                 $nAtr,
-                Percent::fromPart($nAtr / $candles[array_key_last($candles)]->open, false),
+                Percent::fromPart($nAtr / $refPrice, false),
+                $refPrice
             )
         );
     }
