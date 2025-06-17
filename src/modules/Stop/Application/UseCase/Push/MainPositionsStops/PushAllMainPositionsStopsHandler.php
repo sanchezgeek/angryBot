@@ -25,6 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final readonly class PushAllMainPositionsStopsHandler
 {
     public const int TICKERS_MILLI_TTL = 2000;
+    public const int TICKERS_IN_CHUNK = 4;
 
     public function __invoke(PushAllMainPositionsStops $message): void
     {
@@ -106,7 +107,7 @@ final readonly class PushAllMainPositionsStopsHandler
     {
         if ($lastSort = $this->lastSortStorage->getLastSort()) {
             /** @see bot-consumers.ini -> [program:tickers_updater_async] -> numprocs=4 */
-            $chunkQnt = 3;
+            $chunkQnt = self::TICKERS_IN_CHUNK;
 
             $chunks = [];
             $chunkNumber = 0;
