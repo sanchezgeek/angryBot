@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TechnicalAnalysis\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -12,15 +13,18 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 final readonly class TechnicalAnalysisToolsFactory implements TechnicalAnalysisToolsFactoryInterface
 {
     public function __construct(
-        private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler
+        private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
+        private CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
     ) {
     }
 
     public function create(SymbolInterface $symbol, ?CandleIntervalEnum $candleIntervalEnum = null): TechnicalAnalysisTools
     {
+        // @todo tests
         $tools = new TechnicalAnalysisTools(
             $symbol,
-            $this->findAveragePriceChangeHandler
+            $this->findAveragePriceChangeHandler,
+            $this->calcAverageTrueRangeHandler,
         );
 
         if ($candleIntervalEnum) {
