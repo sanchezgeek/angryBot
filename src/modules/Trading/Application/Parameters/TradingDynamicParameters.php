@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
+use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -11,6 +12,7 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEval
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
@@ -19,10 +21,9 @@ use App\Trading\Domain\Symbol\SymbolInterface;
  */
 final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
-    // cache ?
-
     public function __construct(
-        private AppSettingsProviderInterface $settingsProvider
+        private AppSettingsProviderInterface $settingsProvider,
+        private TechnicalAnalysisToolsFactoryInterface $taProvider,
     ) {
     }
 
@@ -39,20 +40,8 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             return $refPrice * ($percentOverride / 100);
         }
 
-        $base = match (true) {
-            $refPrice >= 10000 => $refPrice / 12,
-            $refPrice >= 5000 => $refPrice / 10,
-            $refPrice >= 2000 => $refPrice / 9,
-            $refPrice >= 1500 => $refPrice / 8,
-            $refPrice >= 1000 => $refPrice / 6,
-            $refPrice >= 100 => $refPrice / 4,
-            $refPrice >= 1 => $refPrice / 3,
-            $refPrice >= 0.1 => $refPrice / 2.5,
-            $refPrice >= 0.05 => $refPrice / 2,
-            $refPrice >= 0.03 => $refPrice,
-            default => $refPrice * 1.4,
-            // default => $closingPosition->entryPrice()->deltaWith($ticker->markPrice) * 2
-        };
+        $base = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
+        $base *= 1.5;
 
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
