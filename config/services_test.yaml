@@ -36,4 +36,5 @@ services:
             $externalCache: null
 
     App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface:
+        class: App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory
         public: true

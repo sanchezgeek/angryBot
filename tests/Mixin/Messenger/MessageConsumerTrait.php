@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Mixin\Messenger;
 
 use App\Tests\Mixin\Console\RunCommandTrait;
+use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Tester\ApplicationTester;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -67,7 +68,10 @@ trait MessageConsumerTrait
     {
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $entityManager->getConnection()->executeQuery('DELETE FROM messenger_messages WHERE 1=1');
+        try {
+            $entityManager->getConnection()->executeQuery('DELETE FROM messenger_messages WHERE 1=1');
+        } catch (Exception\TableNotFoundException $e) {
+        }
     }
 
     protected function assertMessagesWasDispatched(
