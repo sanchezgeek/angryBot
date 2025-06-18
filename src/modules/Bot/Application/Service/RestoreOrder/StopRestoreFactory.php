@@ -21,7 +21,7 @@ final readonly class StopRestoreFactory
     public function restore(array $data): Stop
     {
         return new Stop(
-            $data['id'],
+            null,
             $data['price'],
             $data['volume'],
             $data['triggerDelta'],

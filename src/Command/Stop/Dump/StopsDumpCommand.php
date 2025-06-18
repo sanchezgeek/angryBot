@@ -2,14 +2,12 @@
 
 namespace App\Command\Stop\Dump;
 
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Clock\ClockInterface;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
-use App\Command\Mixin\PositionAwareCommand;
-use App\Command\PositionDependentCommand;
 use App\Helper\Json;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
@@ -28,12 +26,11 @@ use function sprintf;
  * @see StopsDumpCommandTest
  */
 #[AsCommand(name: 'sl:dump')]
-class StopsDumpCommand extends AbstractCommand implements PositionDependentCommand
+class StopsDumpCommand extends AbstractCommand
 {
     use ConsoleInputAwareCommand;
-    use PositionAwareCommand;
 
-    private const DUMPS_DEFAULT_DIR = __DIR__ . '/../../../../_data/dump';
+    private const DUMPS_DEFAULT_DIR = __DIR__ . '/../../../../data/dump';
 
     public const DIR_PATH_OPTION = 'dirPath';
     public const MODE_OPTION = 'mode';
@@ -47,56 +44,54 @@ class StopsDumpCommand extends AbstractCommand implements PositionDependentComma
     protected function configure(): void
     {
         $this
-            ->configurePositionArgs()
             ->addOption(self::DIR_PATH_OPTION, null, InputOption::VALUE_REQUIRED, 'Path to save dump.', self::DUMPS_DEFAULT_DIR)
-            ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::MODE_ALL)
+            ->addOption(self::MODE_OPTION, '-m', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::MODES) . ')', self::MODE_ACTIVE)
             ->addOption(self::DELETE_DUMPED_STOPS_OPTION, '-d', InputOption::VALUE_NEGATABLE, 'Delete dumped stops', false)
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $positionSide = $this->getPositionSide();
+        $dir = $this->paramFetcher->getStringOption(self::DIR_PATH_OPTION);
+        $filepath = sprintf('%s/stops_%s.json', $dir, $this->clock->now()->format('Y-m-d_H:i:s'));
         $mode = $this->getMode();
         $deleteDumpedStops = $this->paramFetcher->getBoolOption(self::DELETE_DUMPED_STOPS_OPTION);
 
-        $dir = $this->paramFetcher->getStringOption(self::DIR_PATH_OPTION);
-        $filepath = sprintf('%s/%s.%s.json', $dir, $positionSide->value, $this->clock->now()->format('Y-m-d_H:i:s'));
+        $positions = $this->positionService->getAllPositions();
 
-        if ($mode === self::MODE_ALL) {
-            $stops = $this->stopRepository->findAllByPositionSide($this->getSymbol(), $positionSide);
-        }
-
-        if ($mode === self::MODE_ACTIVE) {
-            $stops = $this->stopRepository->findActive(
-                symbol: $this->getSymbol(),
-                side: $positionSide,
-                qbModifier: function (QueryBuilder $qb) use ($positionSide) {
-                    $priceField = $qb->getRootAliases()[0] . '.price';
-
-                    $qb->orderBy($priceField, $positionSide->isShort() ? 'ASC' : 'DESC');
-                }
-            );
-        }
-
-        if (!$stops) {
-            $this->io->info('Stops not found!'); return Command::SUCCESS;
-        }
-
+        $allStops = [];
         $dump = [];
-        foreach ($stops as $stop) {
-            $dump[] = $stop->toArray();
+        foreach ($positions as $symbolRaw => $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+                $stops = $mode === self::MODE_ALL
+                    ? $this->stopRepository->findAllByPositionSide($position->symbol, $position->side)
+                    : $this->stopRepository->findActive(
+                        symbol: $position->symbol,
+                        side: $position->side,
+                        qbModifier: function (QueryBuilder $qb) use ($position) {
+                            $priceField = $qb->getRootAliases()[0] . '.price';
+
+                            $qb->orderBy($priceField, $position->isShort() ? 'ASC' : 'DESC');
+                        }
+                    );
+
+                foreach ($stops as $stop) {
+                    $dump[] = $stop->toArray();
+                    $allStops[] = $stop;
+                }
+            }
         }
+
         file_put_contents($filepath, Json::encode($dump));
 
         if ($deleteDumpedStops) {
-            $this->entityManager->wrapInTransaction(function() use ($stops) {
-                foreach ($stops as $stop) {
+            $this->entityManager->wrapInTransaction(function() use ($allStops) {
+                foreach ($allStops as $stop) {
                     $this->entityManager->remove($stop);
                 }
             });
 
-            $this->io->note(sprintf('Stops removed! Qnt: %d', count($stops)));
+            $this->io->note(sprintf('Stops removed! Qnt: %d', count($allStops)));
         }
 
         $this->io->info(sprintf('Dump saved to %s', $filepath));
@@ -119,12 +114,10 @@ class StopsDumpCommand extends AbstractCommand implements PositionDependentComma
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
-        PositionServiceInterface $positionService,
+        private readonly ByBitLinearPositionService $positionService,
         private ClockInterface $clock,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }
