@@ -50,7 +50,7 @@ final class StopRestoreFactoryTest extends KernelTestCase
         ];
 
         CustomAssertions::assertObjectsWithInnerSymbolsEquals(
-            [new Stop($id, $price, $volume, $triggerDelta, SymbolEnum::BTCUSDT, $positionSide, $context)],
+            [new Stop(null, $price, $volume, $triggerDelta, SymbolEnum::BTCUSDT, $positionSide, $context)],
             [$this->stopRestoreFactory->restore($data)]
         );
     }

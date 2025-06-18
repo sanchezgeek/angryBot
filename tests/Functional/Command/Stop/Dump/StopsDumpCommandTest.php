@@ -9,9 +9,11 @@ use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\Stop\Dump\StopsDumpCommand;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\Json;
+use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\Clock\ClockTimeAwareTester;
 use App\Tests\Mixin\StopsTester;
+use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
 use App\Tests\Stub\Bot\PositionServiceStub;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -34,6 +36,7 @@ final class StopsDumpCommandTest extends KernelTestCase
     use TestWithDbFixtures;
     use StopsTester;
     use ClockTimeAwareTester;
+    use ByBitV5ApiRequestsMocker;
 
     private const string COMMAND_NAME = 'sl:dump';
 
@@ -46,21 +49,22 @@ final class StopsDumpCommandTest extends KernelTestCase
      */
     public function testCanDumpStops(
         SymbolInterface $symbol,
-        Side $side,
+        array $allOpenedPositions,
         array $initialStops,
         string $expectedContent,
         array $expectedStopsInDb,
         array $additionalParams = [],
     ): void {
         // Arrange
+        $this->haveAllOpenedPositionsWithLastMarkPrices($allOpenedPositions);
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $initialStops));
 
         $dirPath = __DIR__ . '/../../../../../tests/_data/dumps';
-        $filepath = sprintf('%s/%s.%s.json', $dirPath, $side->value, self::getCurrentClockTime()->format('Y-m-d_H:i:s'));
+        $filepath = sprintf('%s/stops_%s.json', $dirPath, self::getCurrentClockTime()->format('Y-m-d_H:i:s'));
         self::assertFileDoesNotExist($filepath);
 
         $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
-        $params = ['position_side' => $side->value, '-m' => StopsDumpCommand::MODE_ALL, sprintf('--%s', StopsDumpCommand::DIR_PATH_OPTION) => $dirPath];
+        $params = ['-m' => StopsDumpCommand::MODE_ALL, sprintf('--%s', StopsDumpCommand::DIR_PATH_OPTION) => $dirPath];
         foreach ($additionalParams as $name => $value) {
             $params[sprintf('--%s', $name)] = $value;
         }
@@ -81,6 +85,7 @@ final class StopsDumpCommandTest extends KernelTestCase
     private function dumpStopsTestDataProvider(): iterable
     {
         $symbol = SymbolEnum::BTCUSDT; $side = Side::Sell;
+        $btcUsdtPosition = PositionBuilder::bySide($side)->symbol($symbol)->entry(35000)->size(0.5)->liq(40000)->build();
 
         $initialStops = [
             new Stop(1, 28891.1, 0.003, 10, $symbol, $side->getOpposite()),
@@ -92,8 +97,12 @@ final class StopsDumpCommandTest extends KernelTestCase
             new Stop(14, 28972.4, 0.01, 10, $symbol, $side->getOpposite()),
         ];
 
+        $allOpenedPositions = [
+            (string)$btcUsdtPosition->entryPrice()->value() =>  $btcUsdtPosition,
+        ];
+
         yield 'without deletion' => [
-            $symbol, $side, $initialStops,
+            $symbol, $allOpenedPositions, $initialStops,
             Json::encode(array_map(
                 static fn (Stop $stop) => $stop->toArray(),
                 array_values(array_filter($initialStops, static fn(Stop $stop) => $stop->getPositionSide() === $side))
@@ -102,7 +111,7 @@ final class StopsDumpCommandTest extends KernelTestCase
         ];
 
         yield 'with deletion' => [
-            $symbol, $side, $initialStops,
+            $symbol, $allOpenedPositions, $initialStops,
             Json::encode(array_map(
                 static fn (Stop $stop) => $stop->toArray(),
                 array_values(array_filter($initialStops, static fn(Stop $stop) => $stop->getPositionSide() === $side))

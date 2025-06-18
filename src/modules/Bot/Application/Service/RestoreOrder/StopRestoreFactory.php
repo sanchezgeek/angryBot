@@ -6,10 +6,7 @@ namespace App\Bot\Application\Service\RestoreOrder;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Domain\Position\ValueObject\Side;
-use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
-use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 
 final readonly class StopRestoreFactory
 {
@@ -18,10 +15,12 @@ final readonly class StopRestoreFactory
     ) {
     }
 
-    public function restore(array $data): Stop
+    public function restore(array $data, bool $restoreId = false): Stop
     {
+        // @todo | check if sequence rewinds to and move back to restore also id
+
         return new Stop(
-            null,
+            $restoreId ? $data['id'] : null,
             $data['price'],
             $data['volume'],
             $data['triggerDelta'],
