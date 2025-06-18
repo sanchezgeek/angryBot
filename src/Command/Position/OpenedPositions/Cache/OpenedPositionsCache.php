@@ -6,11 +6,14 @@ namespace App\Command\Position\OpenedPositions\Cache;
 
 use App\Application\Cache\AbstractCacheService;
 use App\Bot\Domain\Position;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 
 final class OpenedPositionsCache extends AbstractCacheService
 {
     private const string Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
+    const string SYMBOLS_TO_WATCH_CACHE_KEY = 'symbols_to_watch';
 
     public function saveToCache(string $key, array $data): void
     {
@@ -38,6 +41,38 @@ final class OpenedPositionsCache extends AbstractCacheService
         return $this->cache->get(
             self::positionDataKey($position)
         );
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getSymbolsToWatch(): array
+    {
+        return $this->cache->get(self::SYMBOLS_TO_WATCH_CACHE_KEY) ?? [];
+    }
+
+    public function addSymbolToWatch(SymbolInterface ...$symbols): void
+    {
+        if (!$symbols) {
+            return;
+        }
+
+        $existed = $this->cache->get(self::SYMBOLS_TO_WATCH_CACHE_KEY) ?? [];
+        $new = SymbolHelper::symbolsToRawValues(...$symbols);
+
+        $this->cache->save(self::SYMBOLS_TO_WATCH_CACHE_KEY, array_unique(array_merge($existed, $new)));
+    }
+
+    public function removeSymbolsFromWatch(SymbolInterface ...$symbols): void
+    {
+        if (!$symbols) {
+            return;
+        }
+
+        $existed = $this->cache->get(self::SYMBOLS_TO_WATCH_CACHE_KEY) ?? [];
+        $toRemove = SymbolHelper::symbolsToRawValues(...$symbols);
+
+        $this->cache->save(self::SYMBOLS_TO_WATCH_CACHE_KEY, array_diff($existed, $toRemove));
     }
 
     public static function positionDataKey(Position $position): string

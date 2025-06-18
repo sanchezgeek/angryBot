@@ -18,6 +18,7 @@ use App\Command\Helper\ConsoleTableHelper as CTH;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
+use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Position\ValueObject\Side;
@@ -141,6 +142,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     private array $showSymbolsRawValues = [];
     private array $hideSymbolsRawValues = [];
+    private array $symbolsToWatch = [];
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -178,6 +180,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 $this->hideSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
             }
         }
+
+        $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -467,8 +471,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $cells[] = $mainPositionPnlContent;
 
         $text = $isEquivalentHedge ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
+        $firstExtraSymbolCell = CTH::colorizeText(
+            $text,
+            in_array($symbol->name(), $this->symbolsToWatch, true) ? 'yellow-text' : (
+                $isEquivalentHedge
+                    ? 'none'
+                    : ($main->isShort() ? 'bright-red-text' : 'green-text')
+            )
+        );
+        $cells[] = $firstExtraSymbolCell;
+
         $extraSymbolCell = CTH::colorizeText($text, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
-        $cells[] = $extraSymbolCell;
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
@@ -1003,6 +1016,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         private readonly ClockInterface $clock,
         private readonly StopRepository $stopRepository,
         private readonly AppSettingsProviderInterface $settings,
+        private readonly OpenedPositionsCache $openedPositionsCache,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);
