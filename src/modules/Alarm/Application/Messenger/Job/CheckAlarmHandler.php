@@ -3,6 +3,8 @@
 namespace App\Alarm\Application\Messenger\Job;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -31,6 +33,10 @@ final readonly class CheckAlarmHandler
 
     public function __invoke(CheckAlarm $dto): void
     {
+        if ($this->appNotificationsService->isNowTimeToSleep()) {
+            return;
+        }
+
         foreach (self::ALARMS as $symbol => [$down, $up]) {
             $ticker = $this->exchangeService->ticker(
                 $this->symbolProvider->getOrInitialize($symbol)
@@ -48,6 +54,7 @@ final readonly class CheckAlarmHandler
     }
 
     public function __construct(
+        private AppNotificationsServiceInterface $appNotificationsService,
         private ExchangeServiceInterface $exchangeService,
         private SymbolProvider $symbolProvider,
         private LoggerInterface $appErrorLogger

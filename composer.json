@@ -64,6 +64,7 @@
             "App\\Screener\\": "src/modules/Screener",
             "App\\Chart\\": "src/modules/Chart",
             "App\\TechnicalAnalysis\\": "src/modules/TechnicalAnalysis",
+            "App\\Notification\\": "src/modules/Notification",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }
