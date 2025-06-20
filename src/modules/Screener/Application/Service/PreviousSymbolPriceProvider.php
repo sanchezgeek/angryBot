@@ -6,10 +6,10 @@ namespace App\Screener\Application\Service;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Domain\Entity\SymbolPriceHistory;
 use App\Screener\Domain\Repository\SymbolPriceHistoryRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use DateInterval;
 use DateTimeImmutable;
 
 final readonly class PreviousSymbolPriceProvider
@@ -20,6 +20,9 @@ final readonly class PreviousSymbolPriceProvider
     ) {
     }
 
+    /**
+     * @throws CandlesHistoryNotFound
+     */
     public function getPrevPrice(SymbolInterface $symbol, DateTimeImmutable $onDateTime): float
     {
         if (!$historyValue = $this->historyRepository->fundOnMomentOfTime($symbol, $onDateTime)) {
@@ -27,9 +30,13 @@ final readonly class PreviousSymbolPriceProvider
                 symbol: $symbol,
                 interval: CandleIntervalEnum::m15,
                 from: $onDateTime,
-                to: $onDateTime->add(new DateInterval('PT1M')),
                 limit: 1
             );
+
+            if (!$candles) {
+                throw new CandlesHistoryNotFound($symbol, CandleIntervalEnum::m15, $onDateTime);
+            }
+
             $openPrice = $candles[0]['open'];
 
             $this->historyRepository->save(

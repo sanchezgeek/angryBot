@@ -8,6 +8,7 @@ use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
+use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
 use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -18,6 +19,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
  * @todo | priceChange | some very short period handler
+ * @todo | settings expiration datetime
  */
 #[AsMessageHandler]
 final class CheckSymbolsPriceChangeHandler
@@ -46,7 +48,12 @@ final class CheckSymbolsPriceChangeHandler
             }
 
             $currentPrice = $ticker->lastPrice;
-            $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
+            try {
+                $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
+            } catch (CandlesHistoryNotFound) {
+                continue;
+            }
+
             $delta = $currentPrice->value() - $prevPrice;
 
             $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, $symbol);
