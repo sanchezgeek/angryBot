@@ -43,7 +43,6 @@ imports
 
 ### Other / Minor ###
     #####!!!! UI !!!!!#####
-            @todo | UI | opened-positions | Capture specific position state to cache?
             @todo | UI | parameters | add some description and print in `show` command
 
     symbols_wip_from_main_before_new_m
@@ -101,9 +100,12 @@ imports
     @todo StrictPercent vs CommonPercent
 
 ### AllOpenedPositionsInfoCommand ###
+    @todo | UI | opened-positions | Capture specific position state to cache?
     @todo | AllOpenedPositionsInfoCommand
     @todo | AllOpenedPositionsInfoCommand | when liquidation placed before entry
     @todo | AllOpenedPositionsInfoCommand | research error
+    @todo | AllOpenedPositionsInfoCommand | stops found before ticker not executed (due to big mark/index difference)
+    @todo | AllOpenedPositionsInfoCommand | sort by changes
 
 ### Push ###
     + @todo | stop check mainPosition stops first

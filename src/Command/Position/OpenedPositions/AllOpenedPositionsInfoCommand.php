@@ -57,6 +57,8 @@ use function sprintf;
 
 /**
  * @todo | UI | opened-positions | Capture specific position state to cache?
+ * @todo | AllOpenedPositionsInfoCommand | stops found before ticker not executed (due to big mark/index difference)
+ * @todo | AllOpenedPositionsInfoCommand | sort by changes
  */
 #[AsCommand(name: 'p:opened')]
 class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionDependentCommand

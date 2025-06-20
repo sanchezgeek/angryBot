@@ -17,7 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'p:opened:cache-state:replace-with-current')]
+#[AsCommand(name: 'p:opened:cache:replace-with-current')]
 class SaveCurrentPositionsStateToCacheCommand extends AbstractCommand implements PositionDependentCommand
 {
     use SymbolAwareCommand;
