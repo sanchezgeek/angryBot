@@ -29,7 +29,8 @@
         "symfony/serializer": "*",
         "symfony/uid": "*",
         "symfony/validator": "*",
-        "symfony/yaml": "*"
+        "symfony/yaml": "*",
+        "timirey/trader-php": "^1.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",

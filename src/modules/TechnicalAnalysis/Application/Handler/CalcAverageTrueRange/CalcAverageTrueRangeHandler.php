@@ -11,9 +11,11 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAuto
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
-use App\TechnicalAnalysis\Application\Service\Calculate\ATRCalculator;
+use App\TechnicalAnalysis\Application\Helper\CommonTAHelper;
+use App\TechnicalAnalysis\Application\Helper\TraderInput;
 use App\TechnicalAnalysis\Application\Service\Candles\PreviousCandlesProvider;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
+use Timirey\Trader\TraderService;
 
 /**
  * @todo | ATR | research
@@ -48,20 +50,22 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         $candleInterval = $entry->interval;
         $period = $entry->period;
 
-        $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $period + 1, true);
+        $candlesCount = $period + 1;
+        $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $candlesCount, true);
 
-        $nAtr = ATRCalculator::calculate($period, $candles);
+        $input = new TraderInput(...$candles);
+        $res = new TraderService()->atr($input->highPrices, $input->lowPrices, $input->closePrices, $period);
+        $atr = CommonTAHelper::lastResult($res);
 
-        // @todo | а надо ли фильтровать? Если за указанный период произошло что-то исключительное, значит может произойти снова и должно быть учтено
-
-        $refPrice = $candles[array_key_last($candles)]->open;
+        // @todo | some strategy to get basePrice?
+        $refPrice = $candles[array_key_last($candles)]->close;
 
         return new CalcAverageTrueRangeResult(
             new AveragePriceChange(
                 $candleInterval,
                 $period,
-                $nAtr,
-                Percent::fromPart($nAtr / $refPrice, false),
+                $atr,
+                Percent::fromPart($atr / $refPrice, false),
                 $refPrice
             )
         );

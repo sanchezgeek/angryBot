@@ -259,3 +259,7 @@ analise average price change through some period
 ### Other ###
     do d:m:d and add constraints
     почему-то в tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php ордера пушатся от теста к тесту с разной сортировкой
+
+### Technical analysis ###
+    after SL (s.281, executed) | skip (liq. is too near [Δ=3441.79,safe=5669.2331632653]) | active
+        добавить ещё описание откуда взялись эти числа
