@@ -912,12 +912,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $positionSide->isShort() ? 'ASC' : 'DESC'),
         );
 
+        // @todo | AllOpenedPositionsInfoCommand| какое значение использовать для $mainPosStopsApplicableRange
         $mainPosStopsApplicableRange = null;
         if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
             $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
             // @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
-            $actualStopsRange = $liquidationParameters->actualStopsRange();
-            $boundBeforeLiquidation = $position->isShort() ? $actualStopsRange->to() : $actualStopsRange->from();
+            $criticalRange = $liquidationParameters->criticalRange();
+            $boundBeforeLiquidation = $position->isShort() ? $criticalRange->to() : $criticalRange->from();
             $tickerBound = $position->isShort() ? 0 : 9999999; // all stops from the start =)
             $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol);
         }

@@ -106,6 +106,8 @@ imports
     @todo | AllOpenedPositionsInfoCommand | research error
     @todo | AllOpenedPositionsInfoCommand | stops found before ticker not executed (due to big mark/index difference)
     @todo | AllOpenedPositionsInfoCommand | sort by changes
+    @todo | AllOpenedPositionsInfoCommand| какое значение использовать для $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol); ?
+        criticalRange->to тоже не совсем верно
 
 ### Push ###
     + @todo | stop check mainPosition stops first
