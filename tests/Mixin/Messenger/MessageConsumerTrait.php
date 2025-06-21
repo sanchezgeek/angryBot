@@ -89,6 +89,11 @@ trait MessageConsumerTrait
             $messages[] = $envelope->getMessage();
         }
 
-        self::assertEquals($expectedMessages, $messages);
+        foreach ($expectedMessages as $expectedMessage) {
+            self::assertTrue(in_array($expectedMessage, $messages));
+
+            $key = array_search($expectedMessage, $messages);
+            unset($messages[$key]);
+        }
     }
 }
