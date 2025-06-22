@@ -8,6 +8,7 @@ use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -21,8 +22,12 @@ use App\Trading\Domain\Symbol\SymbolInterface;
  */
 final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
+    private const float LONG_ATR_BASE_MULTIPLIER = 1.5;
+
     public function __construct(
         private AppSettingsProviderInterface $settingsProvider,
+
+        #[AppDynamicParameterAutowiredArgument]
         private TechnicalAnalysisToolsFactoryInterface $taProvider,
     ) {
     }
@@ -40,11 +45,15 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             return $refPrice * ($percentOverride / 100);
         }
 
-        $base = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
-        $base *= 1.5;
-
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
-        return $base * $k;
+        $long = self::LONG_ATR_BASE_MULTIPLIER * $k * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
+
+        $fast = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
+
+        return max(
+            $long * $k,
+            $fast,
+        );
     }
 }

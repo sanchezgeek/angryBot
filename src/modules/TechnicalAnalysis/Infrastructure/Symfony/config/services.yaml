@@ -14,3 +14,6 @@ services:
     App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\AveragePriceChangeCache:
         arguments:
             $cache: '@technicalAnalysis.cacheWrapper'
+
+    App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface:
+        class: App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory
