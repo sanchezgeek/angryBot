@@ -51,9 +51,6 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $fast = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
 
-        return max(
-            $long * $k,
-            $fast,
-        );
+        return $fast > $long ? ($long + $fast) / 2 : $long;
     }
 }
