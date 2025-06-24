@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange;
 
+use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -11,10 +12,11 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAuto
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
-use App\TechnicalAnalysis\Application\Helper\CommonTAHelper;
 use App\TechnicalAnalysis\Application\Helper\TraderInput;
 use App\TechnicalAnalysis\Application\Service\Candles\PreviousCandlesProvider;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
+use App\Trading\Domain\Symbol\SymbolInterface;
+use Throwable;
 use Timirey\Trader\TraderService;
 
 /**
@@ -49,13 +51,36 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         $symbol = $entry->symbol;
         $candleInterval = $entry->interval;
         $period = $entry->period;
+        $result = null;
 
+        while ($result === null && $period >= 2) {
+            try {
+                $result = $this->getForPeriod($period, $symbol, $candleInterval);
+            } catch (Throwable $e) {
+                if ($e->getMessage() === 'Bad parameter') {
+                    $period--;
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        if ($result === null) {
+            $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, 1, true);
+            $result = $candles[0]->highLowDiff();
+        }
+
+        return $result;
+    }
+
+    private function getForPeriod(int $period, SymbolInterface $symbol, CandleIntervalEnum $candleInterval): CalcAverageTrueRangeResult
+    {
         $candlesCount = $period + 1;
         $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $candlesCount, true);
 
         $input = new TraderInput(...$candles);
         $res = new TraderService()->atr($input->highPrices, $input->lowPrices, $input->closePrices, $period);
-        $atr = CommonTAHelper::lastResult($res);
+        $atr = end($res);
 
         // @todo | some strategy to get basePrice?
         $refPrice = $candles[array_key_last($candles)]->close;

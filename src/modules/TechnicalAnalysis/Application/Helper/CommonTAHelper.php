@@ -10,11 +10,6 @@ use JetBrains\PhpStorm\NoReturn;
 
 final class CommonTAHelper
 {
-    public static function lastResult(array $items): mixed
-    {
-        return $items[array_key_last($items)];
-    }
-
     #[NoReturn] public static function candlesDebug(array $candles): void
     {
         OutputHelper::print($candles);
@@ -22,7 +17,7 @@ final class CommonTAHelper
         die;
     }
 
-    public static function getCandlesDebug($candles): array
+    public static function getCandlesDebug(array $candles): array
     {
         return [
             'candles' => Json::encodePretty($candles),

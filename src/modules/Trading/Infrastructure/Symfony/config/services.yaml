@@ -25,3 +25,9 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '5 minute'
+        
+        # can delete
+        cannot_find_history_for_symbol_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '10 minutes'

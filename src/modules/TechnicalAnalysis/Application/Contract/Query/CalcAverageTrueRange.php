@@ -14,5 +14,6 @@ final class CalcAverageTrueRange
         public CandleIntervalEnum $interval,
         public int $period,
     ) {
+        assert($this->period >= 2, 'For ATR calculation period must be >= 2');
     }
 }
