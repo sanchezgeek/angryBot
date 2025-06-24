@@ -65,6 +65,8 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
 
             $selectedGroup = $parametersGroups[$groupKey]['name'];
             $selectedParameter = $parametersGroups[$groupKey]['items'][$parameterKey];
+
+            $this->io->info(sprintf('Selected parameter: %s.%s', $selectedGroup, $selectedParameter));
         } else {
             $explode = explode('.', $name);
             $selectedGroup = $explode[0];
