@@ -22,7 +22,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
  */
 final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
-    private const float LONG_ATR_BASE_MULTIPLIER = 1.5;
+    private const float ATR_BASE_MULTIPLIER = 2;
 
     public function __construct(
         private AppSettingsProviderInterface $settingsProvider,
@@ -47,9 +47,8 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
-        $long = self::LONG_ATR_BASE_MULTIPLIER * $k * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
-
-        $fast = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
+        $long = self::ATR_BASE_MULTIPLIER * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange * $k;
+        $fast = self::ATR_BASE_MULTIPLIER * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
 
         return $fast > $long ? ($long + $fast) / 2 : $long;
     }
