@@ -51,25 +51,35 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         $symbol = $entry->symbol;
         $candleInterval = $entry->interval;
         $period = $entry->period;
-        $result = null;
+        $atr = null;
+        $refPrice = null;
 
-        while ($result === null && $period >= 2) {
+        while ($atr === null && $period >= 2) {
             try {
-                $result = $this->getForPeriod($period, $symbol, $candleInterval);
+                [$atr, $refPrice] = $this->getForPeriod($period, $symbol, $candleInterval);
             } catch (\BadFunctionCallException $e) {
                 $period--;
             }
         }
 
-        if ($result === null) {
+        if ($atr === null) {
             $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, 1, true);
-            $result = $candles[0]->highLowDiff();
+            $atr = $candles[0]->highLowDiff();
+            $refPrice = $candles[array_key_last($candles)]->close;
         }
 
-        return $result;
+        return new CalcAverageTrueRangeResult(
+            new AveragePriceChange(
+                $candleInterval,
+                $period,
+                $atr,
+                Percent::fromPart($atr / $refPrice, false),
+                $refPrice
+            )
+        );
     }
 
-    private function getForPeriod(int $period, SymbolInterface $symbol, CandleIntervalEnum $candleInterval): CalcAverageTrueRangeResult
+    private function getForPeriod(int $period, SymbolInterface $symbol, CandleIntervalEnum $candleInterval): array
     {
         $candlesCount = $period + 1;
         $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $candlesCount, true);
@@ -84,15 +94,7 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         // @todo | some strategy to get basePrice?
         $refPrice = $candles[array_key_last($candles)]->close;
 
-        return new CalcAverageTrueRangeResult(
-            new AveragePriceChange(
-                $candleInterval,
-                $period,
-                $atr,
-                Percent::fromPart($atr / $refPrice, false),
-                $refPrice
-            )
-        );
+        return [$atr, $refPrice];
     }
 
     public function __construct(
