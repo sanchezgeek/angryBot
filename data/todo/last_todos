@@ -269,3 +269,14 @@ analise average price change through some period
 24.06
     default stops grid definition (long / short ATR)
     либо вообще на основе MS (swing high/low    )
+
+
+    https://www.mql5.com/ru/articles/1742
+        Я использую индикатор RSI с периодом 8
+
+      добавить RSI
+        и подумать как его использовать: сколько должно быть диверов перед тем как открывать позицию
+
+
+25.06
+    @todo | ta | !!!обёртка над TraderService!!!

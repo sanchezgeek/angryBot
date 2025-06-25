@@ -74,9 +74,12 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         $candlesCount = $period + 1;
         $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $candlesCount, true);
 
-        $input = new TraderInput(...$candles);
+        // @todo | ta | !!!обёртка над TraderService!!!
+        $multiplier = 10000;
+        $input = new TraderInput($multiplier, ...$candles);
+
         $res = new TraderService()->atr($input->highPrices, $input->lowPrices, $input->closePrices, $period);
-        $atr = end($res);
+        $atr = end($res) / $multiplier;
 
         // @todo | some strategy to get basePrice?
         $refPrice = $candles[array_key_last($candles)]->close;
