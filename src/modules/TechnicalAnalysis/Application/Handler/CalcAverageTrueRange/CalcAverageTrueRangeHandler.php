@@ -56,12 +56,8 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         while ($result === null && $period >= 2) {
             try {
                 $result = $this->getForPeriod($period, $symbol, $candleInterval);
-            } catch (Throwable $e) {
-                if ($e->getMessage() === 'Bad parameter') {
-                    $period--;
-                } else {
-                    throw $e;
-                }
+            } catch (\BadFunctionCallException $e) {
+                $period--;
             }
         }
 
