@@ -35,6 +35,6 @@ services:
             $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
             $externalCache: null
 
-    App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface:
-        class: App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory
+    App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface:
+        class: App\TechnicalAnalysis\Application\Service\TAToolsProvider
         public: true

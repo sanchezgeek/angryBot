@@ -15,5 +15,5 @@ services:
         arguments:
             $cache: '@technicalAnalysis.cacheWrapper'
 
-    App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface:
-        class: App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory
+    App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface:
+        class: App\TechnicalAnalysis\Application\Service\TAToolsProvider

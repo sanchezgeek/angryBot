@@ -13,7 +13,7 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEval
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
-use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
@@ -28,7 +28,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         private AppSettingsProviderInterface $settingsProvider,
 
         #[AppDynamicParameterAutowiredArgument]
-        private TechnicalAnalysisToolsFactoryInterface $taProvider,
+        private TAToolsProviderInterface $taProvider,
     ) {
     }
 

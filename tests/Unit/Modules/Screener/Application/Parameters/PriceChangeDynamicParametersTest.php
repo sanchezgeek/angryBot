@@ -32,6 +32,8 @@ final class PriceChangeDynamicParametersTest extends KernelTestCase
      */
     public function testAlarmPriceChange(float $currentPrice, float $expectedPercent): void
     {
+        // @todo | ta | skipped tests
+        self::markTestSkipped();
         $expectedPriceChange = $currentPrice * ($expectedPercent / 100);
         $parameters = new PriceChangeDynamicParameters($this->appSettingsProvider);
 

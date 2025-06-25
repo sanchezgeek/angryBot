@@ -11,7 +11,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Settings\Application\Service\AppSettingsService;
-use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsFactory;
+use App\TechnicalAnalysis\Application\Service\TAToolsProvider;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
@@ -93,7 +93,7 @@ class TestHandlerCommand extends AbstractCommand implements SymbolDependentComma
     }
 
     public function __construct(
-        private readonly TechnicalAnalysisToolsFactory $taFactory,
+        private readonly TAToolsProvider $taFactory,
 
         private readonly AppSettingsService $settingsService,
         private readonly OpenPositionHandler $openPositionHandler,

@@ -8,7 +8,7 @@ use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisTools;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
-interface TechnicalAnalysisToolsFactoryInterface
+interface TAToolsProviderInterface
 {
     public function create(SymbolInterface $symbol, ?CandleIntervalEnum $candleIntervalEnum = null): TechnicalAnalysisTools;
 }

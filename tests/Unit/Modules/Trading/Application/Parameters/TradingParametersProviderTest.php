@@ -37,6 +37,7 @@ final class TradingParametersProviderTest extends KernelTestCase
      */
     public function testSafeDistanceOnRefPriceDefault(SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): void
     {
+        // @todo | ta | skipped tests
         self::markTestSkipped();
 
         if ($k) {

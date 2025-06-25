@@ -17,7 +17,7 @@ use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
-use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisTools;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -32,7 +32,7 @@ use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Stub\CalcAverageTrueRangeHandlerStub;
 use App\Tests\Stub\FindAveragePriceChangeHandlerStub;
-use App\Tests\Stub\TechnicalAnalysisToolsFactoryStub;
+use App\Tests\Stub\TAToolsProviderStub;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -56,15 +56,15 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
     private const int CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT;
     private const CandleIntervalEnum CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL;
 
-    private MockObject|TechnicalAnalysisToolsFactoryInterface $analysisToolsFactory;
+    private MockObject|TAToolsProviderInterface $analysisToolsFactory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->analysisToolsFactory = new TechnicalAnalysisToolsFactoryStub();
+        $this->analysisToolsFactory = new TAToolsProviderStub();
 
-        self::getContainer()->set(TechnicalAnalysisToolsFactoryInterface::class, $this->analysisToolsFactory);
+        self::getContainer()->set(TAToolsProviderInterface::class, $this->analysisToolsFactory);
     }
 
     /**

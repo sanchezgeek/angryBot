@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Stub;
 
 use App\Domain\Candle\Enum\CandleIntervalEnum;
-use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisTools;
-use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 
-final class TechnicalAnalysisToolsFactoryStub implements TechnicalAnalysisToolsFactoryInterface
+final class TAToolsProviderStub implements TAToolsProviderInterface
 {
     /** @var array<array{symbol: SymbolInterface, onInterval:CandleIntervalEnum, tools: TechnicalAnalysisTools}> */
     private array $data = [];

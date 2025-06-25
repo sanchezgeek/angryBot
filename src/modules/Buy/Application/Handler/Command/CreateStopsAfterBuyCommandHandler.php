@@ -20,7 +20,7 @@ use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyProcessorInte
 use App\Buy\Application\StopPlacementStrategy;
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Stop\Application\Contract\Command\CreateStop;
-use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Trait\DispatchCommandTrait;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -223,7 +223,7 @@ final class CreateStopsAfterBuyCommandHandler
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
-        private readonly TechnicalAnalysisToolsFactoryInterface $taProvider,
+        private readonly TAToolsProviderInterface $taProvider,
         private readonly DefaultStopPlacementStrategyProcessor $defaultStopPlacementStrategyProcessor,
 
         #[AutowireIterator('buy.createStopsAfterBuy.baseStopLength.processor')]

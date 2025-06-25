@@ -11,7 +11,7 @@ use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Value\Percent\Percent;
-use App\TechnicalAnalysis\Application\Contract\TechnicalAnalysisToolsFactoryInterface;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface
 {
@@ -20,7 +20,7 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
     public  const int DEFAULT_INTERVALS_COUNT = 4;
 
     public function __construct(
-        private readonly TechnicalAnalysisToolsFactoryInterface $taProvider,
+        private readonly TAToolsProviderInterface $taProvider,
         private readonly CandleIntervalEnum $candleInterval = self::DEFAULT_INTERVAL,
         private readonly int $intervalsCount = self::DEFAULT_INTERVALS_COUNT,
     ) {
