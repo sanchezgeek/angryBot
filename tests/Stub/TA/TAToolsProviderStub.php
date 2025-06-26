@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Stub\TA;
+
+use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
+use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
+use RuntimeException;
+
+final class TAToolsProviderStub implements TAToolsProviderInterface
+{
+    /** @var array<string, TechnicalAnalysisToolsStub> */
+    private array $taStubs = [];
+
+    public function create(
+        SymbolInterface $symbol,
+        ?CandleIntervalEnum $interval = null
+    ): TechnicalAnalysisToolsInterface {
+        foreach ($this->taStubs as $item) {
+            if (
+                $item->symbol->name() === $symbol->name()
+                && $item->interval === $interval
+            ) {
+                return $item;
+            }
+        }
+
+        throw new RuntimeException(
+            sprintf('Cannot find mocked TechnicalAnalysisToolsInterface for symbol = %s and interval = %s', $symbol->name(), $interval->value)
+        );
+    }
+
+    public function mockedTaTools(SymbolInterface $symbol, CandleIntervalEnum $interval): TechnicalAnalysisToolsStub
+    {
+        $key = sprintf('%s_%s', $symbol->name(), $interval->value);
+
+        return $this->taStubs[$key] ?? $this->taStubs[$key] = new TechnicalAnalysisToolsStub($symbol, $interval);
+    }
+}

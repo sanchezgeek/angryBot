@@ -77,7 +77,7 @@ final readonly class PriceChangeDynamicParameters implements AppDynamicParameter
 //        };
 
         $multiplier = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantDelta_OneDay_BaseMultiplier, $symbol));
-        $ta = $this->taToolsProvider->create($symbol)->withInterval(CandleIntervalEnum::D1);
+        $ta = $this->taToolsProvider->create($symbol, CandleIntervalEnum::D1);
 
         $baseATR = $ta->atr(self::ATR_DEFAULT_INTERVALS_COUNT)->atr;
         $multiplied = $baseATR->multiply($multiplier);

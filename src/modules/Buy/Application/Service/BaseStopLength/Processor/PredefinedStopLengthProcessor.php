@@ -45,16 +45,16 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
     {
         $ta = $this->taProvider->create($buyOrder->getSymbol(), $this->candleInterval);
 
-        $averagePriceChangePercent = $ta->atr($this->intervalsCount)->atr->percentChange->value();
+        $atrChangePercent = $ta->atr($this->intervalsCount)->atr->percentChange->value();
 
         return match ($definition->length) {
-            PredefinedStopLengthSelector::VeryShort => $averagePriceChangePercent / 5,
-            PredefinedStopLengthSelector::Short => $averagePriceChangePercent / 4,
-            PredefinedStopLengthSelector::ModerateShort => $averagePriceChangePercent / 3.5,
-            PredefinedStopLengthSelector::Standard => $averagePriceChangePercent / 3,
-            PredefinedStopLengthSelector::ModerateLong => $averagePriceChangePercent / 2.5,
-            PredefinedStopLengthSelector::Long => $averagePriceChangePercent / 2,
-            PredefinedStopLengthSelector::VeryLong => $averagePriceChangePercent,
+            PredefinedStopLengthSelector::VeryShort => $atrChangePercent / 5,
+            PredefinedStopLengthSelector::Short => $atrChangePercent / 4,
+            PredefinedStopLengthSelector::ModerateShort => $atrChangePercent / 3.5,
+            PredefinedStopLengthSelector::Standard => $atrChangePercent / 3,
+            PredefinedStopLengthSelector::ModerateLong => $atrChangePercent / 2.5,
+            PredefinedStopLengthSelector::Long => $atrChangePercent / 2,
+            PredefinedStopLengthSelector::VeryLong => $atrChangePercent,
         };
     }
 }

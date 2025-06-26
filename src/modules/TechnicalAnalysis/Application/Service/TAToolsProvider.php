@@ -18,19 +18,14 @@ final readonly class TAToolsProvider implements TAToolsProviderInterface
     ) {
     }
 
-    public function create(SymbolInterface $symbol, ?CandleIntervalEnum $candleIntervalEnum = null): TechnicalAnalysisTools
+    public function create(SymbolInterface $symbol, CandleIntervalEnum $interval): TechnicalAnalysisTools
     {
         // @todo tests
-        $tools = new TechnicalAnalysisTools(
+        return new TechnicalAnalysisTools(
             $symbol,
+            $interval,
             $this->findAveragePriceChangeHandler,
             $this->calcAverageTrueRangeHandler,
         );
-
-        if ($candleIntervalEnum) {
-            $tools->withInterval($candleIntervalEnum);
-        }
-
-        return $tools;
     }
 }

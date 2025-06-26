@@ -14,21 +14,14 @@ use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAverage
 use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
-final class TechnicalAnalysisTools
+final readonly class TechnicalAnalysisTools implements TechnicalAnalysisToolsInterface
 {
-    public ?CandleIntervalEnum $candleInterval = null;
-
     public function __construct(
-        public readonly SymbolInterface $symbol,
-        private readonly FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
-        private readonly CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
+        public SymbolInterface $symbol,
+        public CandleIntervalEnum $candleInterval,
+        private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
+        private CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
     ) {
-    }
-
-    public function withInterval(CandleIntervalEnum $candleInterval): self
-    {
-        $this->candleInterval = $candleInterval;
-        return $this;
     }
 
     public function averagePriceChangePrev(int $intervalsCount): FindAveragePriceChangeResult

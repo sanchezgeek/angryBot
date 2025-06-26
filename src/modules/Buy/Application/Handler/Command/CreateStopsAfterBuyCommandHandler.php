@@ -113,20 +113,20 @@ final class CreateStopsAfterBuyCommandHandler
         $deltaWithTicker = $position->getDeltaWithTicker($ticker);
 
         $ta = $this->taProvider->create($buyOrder->getSymbol(), self::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL);
-        $averagePriceChange = $ta->atr(self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT)->atr;
+        $atr = $ta->atr(self::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT)->atr;
 
         /**
          * (1) After first position existed stop
          *      reason: to increase position size (keep all stops volume on some initially selected level)
          */
-        if ($deltaWithTicker >= $averagePriceChange->of($currentPrice)) { // 30000 => 4500 (4%) => m.b. averagePriceChange(1D)
+        if ($deltaWithTicker >= $atr->of($currentPrice)) { // 30000 => 4500 (4%) => m.b. averagePriceChange(1D)
             return [
                 'strategy' => StopPlacementStrategy::AFTER_FIRST_STOP_UNDER_POSITION,
-                'description' => sprintf('deltaWithTicker=%.2f > %s -> increase position size', $deltaWithTicker, $averagePriceChange),
+                'description' => sprintf('deltaWithTicker=%.2f > %s -> increase position size', $deltaWithTicker, $atr),
             ];
         }
 
-        $thirdPart = $averagePriceChange->divide(3);
+        $thirdPart = $atr->divide(3);
 
         /**
          * (2) After position entry

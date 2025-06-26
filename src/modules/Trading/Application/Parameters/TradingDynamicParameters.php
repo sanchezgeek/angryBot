@@ -47,8 +47,11 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
-        $long = self::ATR_BASE_MULTIPLIER * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange * $k;
-        $fast = self::ATR_BASE_MULTIPLIER * $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
+        $longATR = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
+        $fastATR = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
+
+        $long = self::ATR_BASE_MULTIPLIER * $longATR * $k;
+        $fast = self::ATR_BASE_MULTIPLIER * $fastATR;
 
         return $fast > $long ? ($long + $fast) / 2 : $long;
     }
