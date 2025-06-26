@@ -141,12 +141,7 @@ class Symbol implements SymbolInterface, Stringable
 
     public function veryShortName(): string
     {
-        return substr(SymbolEnum::VERY_SHORT_NAMES[$this->name] ?? $this->shortName(), 0, 3);
-    }
-
-    public static function fromShortName(string $name): SymbolInterface
-    {
-
+        return substr(SymbolEnum::VERY_SHORT_NAMES[$this->name] ?? $this->shortName(), 0, 4);
     }
 
     public function __toString(): string

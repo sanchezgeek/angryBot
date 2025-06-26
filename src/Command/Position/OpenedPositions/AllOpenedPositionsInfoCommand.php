@@ -385,8 +385,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             }
         }
 
-
-
         $mainPositionCacheKey = self::positionCacheKey($main);
         $this->cacheCollector[$mainPositionCacheKey] = $main;
 
@@ -472,18 +470,19 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
         $cells[] = $mainPositionPnlContent;
 
-        $text = $isEquivalentHedge ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
-        $firstExtraSymbolCell = CTH::colorizeText(
-            $text,
-            in_array($symbol->name(), $this->symbolsToWatch, true) ? 'yellow-text' : (
-                $isEquivalentHedge
-                    ? 'none'
-                    : ($main->isShort() ? 'bright-red-text' : 'green-text')
-            )
-        );
-        $cells[] = $firstExtraSymbolCell;
+        $extraSymbolText = $isEquivalentHedge ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
+        if (in_array($symbol->name(), $this->symbolsToWatch, true)) {
+            $extraSymbolCell = sprintf(
+                '%s%s',
+                CTH::colorizeText(substr($extraSymbolText, 0, 2), 'yellow-text'),
+                CTH::colorizeText(substr($extraSymbolText, 2, strlen($extraSymbolText)), $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'))
+            );
+        } else {
+            $extraSymbolCell = CTH::colorizeText($extraSymbolText, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
+        }
 
-        $extraSymbolCell = CTH::colorizeText($text, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
+        $cells[] = $extraSymbolCell;
+
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {

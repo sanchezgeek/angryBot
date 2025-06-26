@@ -155,7 +155,6 @@ final readonly class AppDynamicParameterEvaluator
         $type = $ref->getType()->getName();
         $parser = match (true) {
             $argumentName === 'symbol' && !$providedValue instanceof SymbolInterface => fn ($value) => $this->symbolProvider->getOrInitialize(strtoupper($providedValue)),
-            $type === SymbolEnum::class => static fn ($value) => $type::fromShortName(strtoupper($value)),
             is_subclass_of($type, BackedEnum::class) => static fn ($value) => $type::from($value),
             default => static fn($value) => $value,
         };

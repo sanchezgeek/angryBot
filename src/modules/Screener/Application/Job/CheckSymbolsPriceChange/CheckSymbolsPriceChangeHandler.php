@@ -75,14 +75,14 @@ final class CheckSymbolsPriceChangeHandler
 
                     $this->notifications->notify(
                         sprintf(
-                            '%s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (! %s !) (> %s [%s]) %s',
+                            '[! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (> %s [%s]) %s',
+                            $changePercent,
                             $symbol->name(),
                             $partOfDayPassed,
                             $date->format('m-d'),
                             $prevPrice,
                             $currentPrice,
                             $delta,
-                            $changePercent,
                             $significantPriceDelta,
                             $significantPriceDeltaPercent, // @todo | priceChange | +/-
                             $symbol->name(),
