@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\Exception\LiquidationDynamicParametersNotApplicapleException;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Domain\Price\Enum\PriceMovementDirection;
@@ -39,6 +40,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     private ?SymbolPrice $additionalStopPrice = null;
     private ?PriceRange $actualStopsPriceRange = null;
 
+    /**
+     * @throws LiquidationDynamicParametersNotApplicapleException
+     */
     public function __construct(
         private readonly AppSettingsProviderInterface $settingsProvider,
 
@@ -51,6 +55,12 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
         private readonly ?CheckPositionIsUnderLiquidation $handledMessage = null,
     ) {
+        if (AppContext::isParametersEvaluationContext() && (
+            $this->position->isSupportPosition() || $this->position->getHedge()?->isEquivalentHedge())
+        ) {
+            throw new LiquidationDynamicParametersNotApplicapleException('Not applicable for support or equiv.hedge');
+        }
+
         if (!$this->ticker->symbol->eq($this->position->symbol)) {
             throw new LogicException('Something wrong');
         }

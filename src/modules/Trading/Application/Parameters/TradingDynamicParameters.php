@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
+use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
@@ -86,5 +87,30 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             return $multipliedATR->multiply($passedPartOfDay)->percentChange;
         }
 //        $base = match (true) {$currentPrice >= 15000 => 1,$currentPrice >= 5000 => 2,$currentPrice >= 3000 => 3,$currentPrice >= 2000 => 4,$currentPrice >= 1500 => 5,$currentPrice >= 1000 => 6,$currentPrice >= 500 => 7,$currentPrice >= 100 => 8,$currentPrice >= 50 => 9,$currentPrice >= 25 => 10,$currentPrice >= 10 => 13,$currentPrice >= 5 => 14,$currentPrice >= 2.5 => 16,$currentPrice >= 1 => 17,$currentPrice >= 0.7 => 18,default => 20,};
+    }
+
+    // @todo | PredefinedStopLengthParser parameters
+    #[AppDynamicParameter(group: 'trading')]
+    public function regularPredefinedStopLengthPercent(
+        SymbolInterface $symbol,
+        PredefinedStopLengthSelector $predefinedStopLength = PredefinedStopLengthSelector::Standard,
+        TimeFrame $timeframe = TimeFrame::D1,
+        int $period = 4,
+    ): Percent {
+        $ta = $this->taProvider->create($symbol, $timeframe);
+
+        $atrChangePercent = $ta->atr($period)->atr->percentChange->value();
+
+        $result = match ($predefinedStopLength) {
+            PredefinedStopLengthSelector::VeryShort => $atrChangePercent / 5,
+            PredefinedStopLengthSelector::Short => $atrChangePercent / 4,
+            PredefinedStopLengthSelector::ModerateShort => $atrChangePercent / 3.5,
+            PredefinedStopLengthSelector::Standard => $atrChangePercent / 3,
+            PredefinedStopLengthSelector::ModerateLong => $atrChangePercent / 2.5,
+            PredefinedStopLengthSelector::Long => $atrChangePercent / 2,
+            PredefinedStopLengthSelector::VeryLong => $atrChangePercent,
+        };
+
+        return Percent::notStrict($result);
     }
 }

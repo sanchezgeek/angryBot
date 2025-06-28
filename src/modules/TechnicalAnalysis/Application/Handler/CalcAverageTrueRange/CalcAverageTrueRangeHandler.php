@@ -71,7 +71,7 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
             new AveragePriceChange(
                 $candleInterval,
                 $period,
-                $atr,
+                $entry->symbol->makePrice($atr)->value(),
                 Percent::fromPart($atr / $refPrice, false),
                 $refPrice
             )

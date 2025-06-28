@@ -7,11 +7,10 @@ namespace App\Buy\Application\Service\BaseStopLength\Processor;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Buy\Application\Service\BaseStopLength\AbstractBaseStopLengthProcessor;
 use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
-use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
-use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface
 {
@@ -20,8 +19,8 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
     public  const int DEFAULT_INTERVALS_COUNT = 4;
 
     public function __construct(
-        private readonly TAToolsProviderInterface $taProvider,
-        private readonly TimeFrame $candleInterval = self::DEFAULT_INTERVAL,
+        private readonly TradingParametersProviderInterface $tradingParametersProvider,
+        private readonly TimeFrame $timeFrame = self::DEFAULT_INTERVAL,
         private readonly int $intervalsCount = self::DEFAULT_INTERVALS_COUNT,
     ) {
     }
@@ -38,23 +37,16 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
 
         $stopDistancePricePct = $this->getStopPercent($definition, $buyOrder);
 
-        return new Percent($stopDistancePricePct, false)->of($buyOrder->getPrice());
+        return $stopDistancePricePct->of($buyOrder->getPrice());
     }
 
-    private function getStopPercent(PredefinedStopLength $definition, BuyOrder $buyOrder): float
+    private function getStopPercent(PredefinedStopLength $definition, BuyOrder $buyOrder): Percent
     {
-        $ta = $this->taProvider->create($buyOrder->getSymbol(), $this->candleInterval);
-
-        $atrChangePercent = $ta->atr($this->intervalsCount)->atr->percentChange->value();
-
-        return match ($definition->length) {
-            PredefinedStopLengthSelector::VeryShort => $atrChangePercent / 5,
-            PredefinedStopLengthSelector::Short => $atrChangePercent / 4,
-            PredefinedStopLengthSelector::ModerateShort => $atrChangePercent / 3.5,
-            PredefinedStopLengthSelector::Standard => $atrChangePercent / 3,
-            PredefinedStopLengthSelector::ModerateLong => $atrChangePercent / 2.5,
-            PredefinedStopLengthSelector::Long => $atrChangePercent / 2,
-            PredefinedStopLengthSelector::VeryLong => $atrChangePercent,
-        };
+        return $this->tradingParametersProvider->regularPredefinedStopLengthPercent(
+            $buyOrder->getSymbol(),
+            $definition->length,
+            $this->timeFrame,
+            $this->intervalsCount
+        );
     }
 }

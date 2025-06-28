@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Trading\UI\Symfony\Command\Parameters;
+namespace App\Settings\UI\Symfony\Command\DynamicParameters;
 
 use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
@@ -11,6 +11,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
+use App\Settings\Application\DynamicParameters\DefaultValues\Provider\Exception\DefaultPositionCannotBeProvided;
 use App\Settings\Application\DynamicParameters\Evaluation\AppDynamicParameterEvaluationEntry;
 use App\Settings\Application\DynamicParameters\Evaluation\AppDynamicParameterEvaluator;
 use App\Settings\Application\Service\AppSettingsService;
@@ -21,7 +22,6 @@ use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGrid
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,8 +31,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 /**
  * @todo or `info`
  */
-#[AsCommand(name: 'debug:trading-parameters')]
-class OpenedPositionsParametersDebugCommand extends AbstractCommand implements SymbolDependentCommand
+#[AsCommand(name: 'parameters:all')]
+class ShowAllParametersCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 
@@ -42,7 +42,7 @@ class OpenedPositionsParametersDebugCommand extends AbstractCommand implements S
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs()
+            ->configureSymbolArgs(defaultValue: null)
         ;
     }
 
@@ -66,8 +66,6 @@ class OpenedPositionsParametersDebugCommand extends AbstractCommand implements S
         foreach ($tickers as $ticker) {
             $symbol = $ticker->symbol;
             $sides = [Side::Buy, Side::Sell];
-
-//            var_dump(array_map(static fn(array $item) => $item['name'], $this->parametersLocator->getRegisteredParametersByGroups()));die;
 
             foreach ($sides as $side) {
                 foreach ($this->parametersLocator->getRegisteredParametersByGroups() as ['name' => $groupName, 'items' => $parameters]) {
@@ -101,20 +99,22 @@ class OpenedPositionsParametersDebugCommand extends AbstractCommand implements S
                                 $commonUserInput[$argumentName] = $methodInput[$argumentName];
                             }
                         }
+
                         try {
                             $value = $this->parameterEvaluator->evaluate(
                                 new AppDynamicParameterEvaluationEntry($groupName, $parameterName, $methodInput, $constructorInput)
                             );
-                        } catch (Exception $e) {
-                            var_dump($e->getMessage(), $parameterName);die;
+                        } catch (DefaultPositionCannotBeProvided) {
+                            continue;
                         }
 
-                        $io->writeln(sprintf('%s %s: %s', $symbol->name(), $groupName . '.' . $parameterName, $value));
-
-                        var_dump($value);
+                        $io->writeln(sprintf('%10s %5s %60s: %s', $symbol->name(), $side->title(), $groupName . '.' . $parameterName, $value));
                     }
                 }
+                echo "\n";
             }
+
+            echo "\n\n\n";
         }
 
         return Command::SUCCESS;

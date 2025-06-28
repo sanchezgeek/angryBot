@@ -51,7 +51,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
     public function __toString(): string
     {
         return sprintf(
-            '%s [%s%s] (average`%s`priceChange on %d intervals[...-...])',
+            '%s [%s%s] (average`%s`priceChange[period=%d])',
             $this->absoluteChange,
             $this->percentChange,
             $this->refPrice !== null ? sprintf(', refPrice=%s', $this->refPrice) : '',
