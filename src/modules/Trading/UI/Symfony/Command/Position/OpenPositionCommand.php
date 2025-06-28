@@ -38,7 +38,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
     public const string PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 'depositPercentToRisk';
 
     public const string REMOVE_EXISTED_STOPS_OPTION = 'remove-existed-stops';
-    public const string WITH_STOPS_OPTION = 'with-stops';
+    public const string WITHOUT_STOPS_OPTION = 'without-stops';
     public const string STOPS_GRID_DEFINITION = 'stops-grid';
     public const string REMEMBER_STOPS_GRID_DEFINITION = 'remember-stops-grid';
     public const string STOPS_GRID_DEFINITION_DEFAULT = 'default';
@@ -60,7 +60,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             ->addOption(self::PERCENT_OF_DEPOSIT_TO_RISK_OPTION, 'p', InputOption::VALUE_REQUIRED, 'Deposit percent to risk (%)')
             ->addOption(self::REOPEN_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reopen position?')
 
-            ->addOption(self::WITH_STOPS_OPTION, null, InputOption::VALUE_OPTIONAL, 'With stops?', true)
+            ->addOption(self::WITHOUT_STOPS_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without stops?', false)
             ->addOption(self::STOPS_GRID_DEFINITION, null, InputOption::VALUE_REQUIRED, 'Stop grids definition', self::STOPS_GRID_DEFINITION_DEFAULT)
             ->addOption(self::REMEMBER_STOPS_GRID_DEFINITION, null, InputOption::VALUE_OPTIONAL, 'Stop grids definition (with remember)')
             ->addOption(self::REMOVE_EXISTED_STOPS_OPTION, null, InputOption::VALUE_NEGATABLE, 'Remove existed stops?', false)
@@ -96,11 +96,18 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             return Command::FAILURE;
         }
 
+        if (
+            $stopsGridsDef?->isFoundAutomaticallyFromTa()
+            && !$this->io->confirm(sprintf('Stops grid definition found automatically from TA: `%s`. Confirm?', $stopsGridsDef))
+        ) {
+            return Command::FAILURE;
+        }
+
         $inputDto = new OpenPositionEntryDto(
             symbol: $this->symbol,
             positionSide: $positionSide,
             percentOfDepositToRisk: $this->paramFetcher->requiredPercentOption(self::PERCENT_OF_DEPOSIT_TO_RISK_OPTION, true),
-            withStops: $this->paramFetcher->getBoolOption(self::WITH_STOPS_OPTION),
+            withStops: !$this->paramFetcher->getBoolOption(self::WITHOUT_STOPS_OPTION),
             closeAndReopenCurrentPosition: $this->paramFetcher->getBoolOption(self::REOPEN_OPTION),
             removeExistedStops: $this->paramFetcher->getBoolOption(self::REMOVE_EXISTED_STOPS_OPTION),
             dryRun: $this->paramFetcher->getBoolOption(self::DEBUG_OPTION),
@@ -165,7 +172,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
      */
     private function getStopsGridDefinition(): ?OrdersGridDefinitionCollection
     {
-        if (!$this->paramFetcher->getBoolOption(self::WITH_STOPS_OPTION)) {
+        if ($this->paramFetcher->getBoolOption(self::WITHOUT_STOPS_OPTION)) {
             return null;
         }
 

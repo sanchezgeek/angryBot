@@ -8,18 +8,22 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use IteratorAggregate;
+use Stringable;
 use Traversable;
 
 /**
  * @template-implements IteratorAggregate<OrdersGridDefinition>
  */
-final readonly class OrdersGridDefinitionCollection implements IteratorAggregate
+final class OrdersGridDefinitionCollection implements IteratorAggregate, Stringable
 {
     public const string SEPARATOR = ';';
 
-    private array $items;
+    private readonly array $items;
+
+    private bool $foundAutomaticallyFromTa = false;
 
     public function __construct(
+        private string $definition,
         OrdersGridDefinition ...$items
     ) {
         $this->items = $items;
@@ -32,7 +36,7 @@ final readonly class OrdersGridDefinitionCollection implements IteratorAggregate
             $items[] = OrdersGridDefinition::create($child, $refPrice, $positionSide, $symbol);
         }
 
-        return new self(...$items);
+        return new self($collectionDefinition, ...$items);
     }
 
     public function getIterator(): Traversable
@@ -40,5 +44,22 @@ final readonly class OrdersGridDefinitionCollection implements IteratorAggregate
         foreach ($this->items as $item) {
             yield $item;
         }
+    }
+
+    public function setFoundAutomaticallyFromTa(): self
+    {
+        $this->foundAutomaticallyFromTa = true;
+
+        return $this;
+    }
+
+    public function isFoundAutomaticallyFromTa(): bool
+    {
+        return $this->foundAutomaticallyFromTa;
+    }
+
+    public function __toString()
+    {
+        return $this->definition;
     }
 }

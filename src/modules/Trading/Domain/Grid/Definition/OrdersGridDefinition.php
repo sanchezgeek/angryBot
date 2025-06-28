@@ -30,7 +30,7 @@ final readonly class OrdersGridDefinition
         SymbolInterface $symbol
     ): self {
         $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
-        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+        $accurateRangePattern = '/^[-\d]+(?:\.\d+)?%\.\.[-\d]+(?:\.\d+)?%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
         $isEquivRange = preg_match($equivRangePattern, $definition);
         $isAccurateRange = preg_match($accurateRangePattern, $definition);
