@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Service\Exception;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTimeImmutable;
 
@@ -12,7 +12,7 @@ final class CandlesHistoryNotFound extends \Exception
 {
     public function __construct(
         public readonly SymbolInterface $symbol,
-        public readonly CandleIntervalEnum $candleInterval,
+        public readonly TimeFrame $candleInterval,
         public readonly DateTimeImmutable $fromDateTime,
     ) {
         parent::__construct(

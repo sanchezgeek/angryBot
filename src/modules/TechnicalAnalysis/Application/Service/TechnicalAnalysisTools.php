@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Service;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
@@ -18,7 +18,7 @@ final readonly class TechnicalAnalysisTools implements TechnicalAnalysisToolsInt
 {
     public function __construct(
         public SymbolInterface $symbol,
-        public CandleIntervalEnum $candleInterval,
+        public TimeFrame $candleInterval,
         private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
         private CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
     ) {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Service;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\TechnicalAnalysis\Application\Contract\CalcAverageTrueRangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\FindAveragePriceChangeHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
@@ -18,7 +18,7 @@ final readonly class TAToolsProvider implements TAToolsProviderInterface
     ) {
     }
 
-    public function create(SymbolInterface $symbol, CandleIntervalEnum $interval): TechnicalAnalysisTools
+    public function create(SymbolInterface $symbol, TimeFrame $interval): TechnicalAnalysisTools
     {
         // @todo tests
         return new TechnicalAnalysisTools(

@@ -13,7 +13,7 @@ use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Buy\Application\Handler\Command\CreateStopsAfterBuyCommandHandler;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
 use App\Buy\Application\StopPlacementStrategy;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
@@ -46,10 +46,10 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
     use TaToolsProviderMocker;
 
     private const int CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT = PredefinedStopLengthProcessor::DEFAULT_INTERVALS_COUNT;
-    private const CandleIntervalEnum CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL = PredefinedStopLengthProcessor::DEFAULT_INTERVAL;
+    private const TimeFrame CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL = PredefinedStopLengthProcessor::DEFAULT_INTERVAL;
 
     private const int CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT;
-    private const CandleIntervalEnum CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL;
+    private const TimeFrame CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL;
 
     protected function setUp(): void
     {

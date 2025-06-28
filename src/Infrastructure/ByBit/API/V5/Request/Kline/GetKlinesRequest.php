@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ByBit\API\V5\Request\Kline;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Request\AbstractByBitApiRequest;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -21,19 +21,19 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
     public const string URL = '/v5/market/kline';
 
     private const array MINUTES_DEF = [
-        CandleIntervalEnum::m1->value => '1',
-        CandleIntervalEnum::m5->value => '5',
-        CandleIntervalEnum::m15->value => '15',
-        CandleIntervalEnum::m30->value => '30',
-        CandleIntervalEnum::h1->value => '60',
-        CandleIntervalEnum::h2->value => '120',
-        CandleIntervalEnum::h3->value => '180',
-        CandleIntervalEnum::h4->value => '240',
-        CandleIntervalEnum::h6->value => '360',
-        CandleIntervalEnum::h12->value => '720',
-        CandleIntervalEnum::D1->value => 'D',
-        CandleIntervalEnum::W1->value => 'W',
-        CandleIntervalEnum::M1->value => 'M',
+        TimeFrame::m1->value => '1',
+        TimeFrame::m5->value => '5',
+        TimeFrame::m15->value => '15',
+        TimeFrame::m30->value => '30',
+        TimeFrame::h1->value => '60',
+        TimeFrame::h2->value => '120',
+        TimeFrame::h3->value => '180',
+        TimeFrame::h4->value => '240',
+        TimeFrame::h6->value => '360',
+        TimeFrame::h12->value => '720',
+        TimeFrame::D1->value => 'D',
+        TimeFrame::W1->value => 'W',
+        TimeFrame::M1->value => 'M',
     ];
 
     public function method(): string
@@ -74,7 +74,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
     public function __construct(
         private AssetCategory $category,
         private SymbolInterface $symbol,
-        private CandleIntervalEnum $interval,
+        private TimeFrame $interval,
         private DateTimeImmutable $from,
         private ?DateTimeImmutable $to,
         private ?int $limit = null

@@ -6,8 +6,8 @@ use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Coin\Coin;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Settings\Application\Service\AppSettingsService;
@@ -46,7 +46,7 @@ class TaTestCommand extends AbstractCommand implements SymbolDependentCommand
         $tickers = $this->exchangeService->getAllTickers(Coin::USDT, static fn (string $symbolName) => in_array($symbolName, SymbolHelper::symbolsToRawValues(...$symbols)));
 
         foreach ($tickers as $ticker) {
-            $ta = $this->taFactory->create($ticker->symbol, CandleIntervalEnum::D1);
+            $ta = $this->taFactory->create($ticker->symbol, TimeFrame::D1);
 
             $averagePriceChange = $ta->averagePriceChangePrev(3)->averagePriceChange;
             $absolute = $averagePriceChange->absoluteChange;

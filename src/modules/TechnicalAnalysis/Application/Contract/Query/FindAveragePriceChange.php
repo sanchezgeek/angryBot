@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Contract\Query;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class FindAveragePriceChange
 {
     private function __construct(
         public SymbolInterface $symbol,
-        public CandleIntervalEnum $averageOnInterval,
+        public TimeFrame $averageOnInterval,
         public int $intervalsCount,
         public bool $useCurrentUnfinishedIntervalForCalc,
     ) {
@@ -19,7 +19,7 @@ final class FindAveragePriceChange
 
     public static function previousToCurrentInterval(
         SymbolInterface $symbol,
-        CandleIntervalEnum $averageOnInterval,
+        TimeFrame $averageOnInterval,
         int $intervalsCount,
     ): self {
         return new self($symbol, $averageOnInterval, $intervalsCount, false);
@@ -27,7 +27,7 @@ final class FindAveragePriceChange
 
     public static function includeCurrentInterval(
         SymbolInterface $symbol,
-        CandleIntervalEnum $averageOnInterval,
+        TimeFrame $averageOnInterval,
         int $intervalsCount,
     ): self {
         return new self($symbol, $averageOnInterval, $intervalsCount, true);

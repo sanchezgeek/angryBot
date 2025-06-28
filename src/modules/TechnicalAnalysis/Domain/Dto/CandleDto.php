@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Domain\Dto;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use JsonSerializable;
 
 final readonly class CandleDto implements JsonSerializable
 {
     public function __construct(
-        public CandleIntervalEnum $interval,
+        public TimeFrame $interval,
         public int $time,
         public float $open,
         public float $high,
@@ -19,7 +19,7 @@ final readonly class CandleDto implements JsonSerializable
     ) {
     }
 
-    public static function fromArray(CandleIntervalEnum $interval, array $data): self
+    public static function fromArray(TimeFrame $interval, array $data): self
     {
         return new self(
             $interval,

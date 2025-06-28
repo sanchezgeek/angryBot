@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
@@ -50,8 +50,8 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
-        $longATR = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(7)->atr->absoluteChange;
-        $fastATR = $this->taProvider->create($symbol, CandleIntervalEnum::D1)->atr(2)->atr->absoluteChange;
+        $longATR = $this->taProvider->create($symbol, TimeFrame::D1)->atr(7)->atr->absoluteChange;
+        $fastATR = $this->taProvider->create($symbol, TimeFrame::D1)->atr(2)->atr->absoluteChange;
 
         $long = self::ATR_BASE_MULTIPLIER * $longATR * $k;
         $fast = self::ATR_BASE_MULTIPLIER * $fastATR;
@@ -74,7 +74,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         if ($oneDaySignificantChangePercentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantDelta_OneDay_PricePercent, $symbol))) {
             return Percent::notStrict($oneDaySignificantChangePercentOverride * $passedPartOfDay);
         } else {
-            $timeFrame = CandleIntervalEnum::D1;
+            $timeFrame = TimeFrame::D1;
             $atrPeriod = 7;
 
             $ta = $this->taProvider->create($symbol, $timeFrame);

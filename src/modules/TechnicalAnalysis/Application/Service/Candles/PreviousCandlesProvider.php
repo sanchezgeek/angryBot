@@ -6,7 +6,7 @@ namespace App\TechnicalAnalysis\Application\Service\Candles;
 
 use App\Chart\Application\Service\CandlesProvider;
 use App\Clock\ClockInterface;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Helper\DateTimeHelper;
 use App\TechnicalAnalysis\Domain\Dto\CandleDto;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -23,7 +23,7 @@ final readonly class PreviousCandlesProvider
     /**
      * @return CandleDto[]
      */
-    public function getPreviousCandles(SymbolInterface $symbol, CandleIntervalEnum $candleInterval, int $count, bool $includeCurrentUnfinishedInterval = false): array
+    public function getPreviousCandles(SymbolInterface $symbol, TimeFrame $candleInterval, int $count, bool $includeCurrentUnfinishedInterval = false): array
     {
         $dateInterval = $candleInterval->toDateInterval();
         $secondsInInterval = DateTimeHelper::dateIntervalToSeconds($dateInterval);

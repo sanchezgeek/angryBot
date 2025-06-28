@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Stub\TA;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
@@ -21,7 +21,7 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
 
     public function __construct(
         public SymbolInterface $symbol,
-        public CandleIntervalEnum $interval,
+        public TimeFrame $interval,
     ) {
     }
 

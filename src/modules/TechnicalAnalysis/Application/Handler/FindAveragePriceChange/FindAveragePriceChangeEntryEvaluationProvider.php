@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
 use App\Trading\Application\Symbol\SymbolProvider;
@@ -64,7 +64,7 @@ final readonly class FindAveragePriceChangeEntryEvaluationProvider implements Pa
         }
 
         $symbol = $this->symbolProvider->getOrInitialize($input['symbol']);
-        $interval = CandleIntervalEnum::from($input['interval']);
+        $interval = TimeFrame::from($input['interval']);
         $intervalsCount = (int)$input['intervalsCount'];
 
         return match ($input['includeCurrentInterval']) {

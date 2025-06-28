@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Stub\TA;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -17,7 +17,7 @@ final class TAToolsProviderStub implements TAToolsProviderInterface
 
     public function create(
         SymbolInterface $symbol,
-        ?CandleIntervalEnum $interval = null
+        ?TimeFrame $interval = null
     ): TechnicalAnalysisToolsInterface {
         foreach ($this->taStubs as $item) {
             if (
@@ -33,7 +33,7 @@ final class TAToolsProviderStub implements TAToolsProviderInterface
         );
     }
 
-    public function mockedTaTools(SymbolInterface $symbol, CandleIntervalEnum $interval): TechnicalAnalysisToolsStub
+    public function mockedTaTools(SymbolInterface $symbol, TimeFrame $interval): TechnicalAnalysisToolsStub
     {
         $key = sprintf('%s_%s', $symbol->name(), $interval->value);
 

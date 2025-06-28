@@ -8,11 +8,11 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\ExecutionOrderType;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -228,7 +228,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
     public function getCandles(
         SymbolInterface $symbol,
-        CandleIntervalEnum $interval,
+        TimeFrame $interval,
         DateTimeImmutable $from,
         ?DateTimeImmutable $to = null,
         ?int $limit = null

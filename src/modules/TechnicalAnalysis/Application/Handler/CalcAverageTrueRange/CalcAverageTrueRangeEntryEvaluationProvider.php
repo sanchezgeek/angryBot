@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
 use App\Trading\Application\Symbol\SymbolProvider;
@@ -58,7 +58,7 @@ final readonly class CalcAverageTrueRangeEntryEvaluationProvider implements Para
         }
 
         $symbol = $this->symbolProvider->getOrInitialize($input['symbol']);
-        $interval = CandleIntervalEnum::from($input['interval']);
+        $interval = TimeFrame::from($input['interval']);
         $intervalsBack = (int)$input['intervalsBack'];
 
         return new CalcAverageTrueRange($symbol, $interval, $intervalsBack);

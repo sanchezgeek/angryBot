@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Domain\Dto;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use JsonSerializable;
 use Stringable;
@@ -12,7 +12,7 @@ use Stringable;
 final class PriceChange implements JsonSerializable, Stringable
 {
     public function __construct(
-        public CandleIntervalEnum $timeframe,
+        public TimeFrame $timeframe,
         public float $absolute,
         public Percent $percent,
         public float $refPrice
@@ -50,7 +50,7 @@ final class PriceChange implements JsonSerializable, Stringable
     /**
      * @todo YAGNI
      */
-    public static function fromPercentAndRef(CandleIntervalEnum $timeFrame, Percent $percentChange, float $refPrice): self
+    public static function fromPercentAndRef(TimeFrame $timeFrame, Percent $percentChange, float $refPrice): self
     {
         return new self(
             $timeFrame,

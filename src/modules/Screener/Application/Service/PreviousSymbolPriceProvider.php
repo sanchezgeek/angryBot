@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Service;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Domain\Entity\SymbolPriceHistory;
@@ -28,13 +28,13 @@ final readonly class PreviousSymbolPriceProvider
         if (!$historyValue = $this->historyRepository->fundOnMomentOfTime($symbol, $onDateTime)) {
             $candles = $this->exchangeService->getCandles(
                 symbol: $symbol,
-                interval: CandleIntervalEnum::m15,
+                interval: TimeFrame::m15,
                 from: $onDateTime,
                 limit: 1
             );
 
             if (!$candles) {
-                throw new CandlesHistoryNotFound($symbol, CandleIntervalEnum::m15, $onDateTime);
+                throw new CandlesHistoryNotFound($symbol, TimeFrame::m15, $onDateTime);
             }
 
             $openPrice = $candles[0]['open'];

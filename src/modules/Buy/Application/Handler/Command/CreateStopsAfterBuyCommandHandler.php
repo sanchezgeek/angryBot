@@ -18,7 +18,7 @@ use App\Buy\Application\Service\StopPlacement\Exception\OtherStrategySuggestionE
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyContext;
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyProcessorInterface;
 use App\Buy\Application\StopPlacementStrategy;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Stop\Application\Contract\Command\CreateStop;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Trait\DispatchCommandTrait;
@@ -36,7 +36,7 @@ final class CreateStopsAfterBuyCommandHandler
 {
     use DispatchCommandTrait;
 
-    public const CandleIntervalEnum CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = CandleIntervalEnum::D1;
+    public const TimeFrame CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = TimeFrame::D1;
     public const int CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT = 2; // @todo | !!! PredefinedStopLengthParser parameters
 
     /**

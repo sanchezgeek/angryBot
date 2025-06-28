@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Domain\Dto;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Price\SymbolPrice;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use JsonSerializable;
 use Stringable;
@@ -13,7 +13,7 @@ use Stringable;
 final readonly class AveragePriceChange implements JsonSerializable, Stringable
 {
     public function __construct(
-        public CandleIntervalEnum $interval,
+        public TimeFrame $interval,
         public int $period,
         public float $absoluteChange,
         public Percent $percentChange,

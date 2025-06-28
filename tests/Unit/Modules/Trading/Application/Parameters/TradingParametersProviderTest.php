@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
@@ -54,13 +54,13 @@ final class TradingParametersProviderTest extends KernelTestCase
             self::overrideSetting(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $k);
         }
 
-        $this->analysisToolsProviderStub->mockedTaTools($symbol, CandleIntervalEnum::D1)->addAtrResult(
+        $this->analysisToolsProviderStub->mockedTaTools($symbol, TimeFrame::D1)->addAtrResult(
             period: self::LONG_ATR_PERIOD,
             percentChange: $longAtrPercentChange,
             refPrice: $refPrice
         );
 
-        $this->analysisToolsProviderStub->mockedTaTools($symbol, CandleIntervalEnum::D1)->addAtrResult(
+        $this->analysisToolsProviderStub->mockedTaTools($symbol, TimeFrame::D1)->addAtrResult(
             self::FAST_ATR_PERIOD,
             percentChange: $fastAtrPercentChange,
             refPrice: $refPrice

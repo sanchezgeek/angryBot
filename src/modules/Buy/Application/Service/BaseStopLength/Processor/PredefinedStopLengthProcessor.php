@@ -9,19 +9,19 @@ use App\Buy\Application\Service\BaseStopLength\AbstractBaseStopLengthProcessor;
 use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
 use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface
 {
-    public const CandleIntervalEnum DEFAULT_INTERVAL = CandleIntervalEnum::D1;
+    public const TimeFrame DEFAULT_INTERVAL = TimeFrame::D1;
     // @todo | PredefinedStopLengthParser parameters
     public  const int DEFAULT_INTERVALS_COUNT = 4;
 
     public function __construct(
         private readonly TAToolsProviderInterface $taProvider,
-        private readonly CandleIntervalEnum $candleInterval = self::DEFAULT_INTERVAL,
+        private readonly TimeFrame $candleInterval = self::DEFAULT_INTERVAL,
         private readonly int $intervalsCount = self::DEFAULT_INTERVALS_COUNT,
     ) {
     }

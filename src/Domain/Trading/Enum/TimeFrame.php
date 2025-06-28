@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Candle\Enum;
+namespace App\Domain\Trading\Enum;
 
 use DateInterval;
 
-enum CandleIntervalEnum: string
+enum TimeFrame: string
 {
     case m1 = '1m';
     case m5 = '5m';

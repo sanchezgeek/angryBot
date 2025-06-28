@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange;
 
-use App\Domain\Candle\Enum\CandleIntervalEnum;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
@@ -78,7 +78,7 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         );
     }
 
-    private function getForPeriod(int $period, SymbolInterface $symbol, CandleIntervalEnum $candleInterval): array
+    private function getForPeriod(int $period, SymbolInterface $symbol, TimeFrame $candleInterval): array
     {
         $candlesCount = $period + 1;
         $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, $candlesCount, true);
