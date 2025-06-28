@@ -59,7 +59,10 @@ trait PriceRangeAwareCommand
             try {
                 return $symbol->makePrice($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
-                $providedValue = $this->paramFetcher->getStringOption($name);
+                if (!$providedValue = $this->paramFetcher->getStringOption($name, false)) {
+                    return null;
+                }
+
                 $sign = 1;
                 if (str_starts_with($providedValue, '-')) {
                     $sign = -1;
