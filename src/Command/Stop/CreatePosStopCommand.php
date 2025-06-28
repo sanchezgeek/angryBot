@@ -11,7 +11,6 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -30,7 +29,6 @@ class CreatePosStopCommand extends AbstractCommand implements PositionDependentC
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
-    use PriceRangeAwareCommand;
     use AdditionalStopContextAwareCommand;
 
     public const FOR_VOLUME_OPTION = 'forVolume';

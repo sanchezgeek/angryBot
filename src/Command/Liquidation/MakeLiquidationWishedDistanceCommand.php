@@ -19,6 +19,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
 use App\Command\Stop\CreateStopsGridCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
@@ -31,7 +32,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'liq:wish-distance')]
-class MakeLiquidationWishedDistanceCommand extends AbstractCommand implements PositionDependentCommand
+class MakeLiquidationWishedDistanceCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

@@ -10,6 +10,7 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
@@ -31,7 +32,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'buy:edit')]
-class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentCommand
+class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;

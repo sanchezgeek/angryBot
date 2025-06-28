@@ -11,7 +11,6 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
 use App\Domain\Value\Percent\Percent;
@@ -26,7 +25,6 @@ use function sprintf;
 class CoverLossesCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
-    use PriceRangeAwareCommand;
     use CommandRunnerCommand;
 
     protected function configure(): void

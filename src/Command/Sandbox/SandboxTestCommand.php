@@ -15,7 +15,6 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -44,7 +43,6 @@ use function substr;
 class SandboxTestCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
-    use PriceRangeAwareCommand;
 
     public const ORDERS_OPTION = 'orders';
     public const DEBUG_OPTION = 'deb';
@@ -57,7 +55,6 @@ class SandboxTestCommand extends AbstractCommand implements PositionDependentCom
             ->addOption(self::ORDERS_OPTION, 'o', InputOption::VALUE_REQUIRED)
             ->addOption(self::DEBUG_OPTION, null, InputOption::VALUE_NEGATABLE, 'Debug?')
             ->addOption(self::FORCE_OPTION, null, InputOption::VALUE_NEGATABLE)
-            ->configurePriceRangeArgs()
         ;
     }
 

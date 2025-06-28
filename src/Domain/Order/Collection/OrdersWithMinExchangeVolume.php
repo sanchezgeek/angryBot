@@ -61,4 +61,14 @@ final class OrdersWithMinExchangeVolume implements OrdersCollectionInterface
     {
         return count($this->getOrders());
     }
+
+    public function totalVolume(): float
+    {
+        $totalVolume = 0;
+        foreach ($this->getOrders() as $order) {
+            $totalVolume += $order->volume();
+        }
+
+        return $totalVolume;
+    }
 }

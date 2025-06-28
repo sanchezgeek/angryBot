@@ -8,7 +8,6 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Price\PriceRange;
@@ -27,7 +26,6 @@ class PositionMoveInfoCommand extends AbstractCommand implements PositionDepende
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
-    use PriceRangeAwareCommand;
 
     protected function configure(): void
     {

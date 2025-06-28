@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Infrastructure\DependencyInjection\CompilerPass\AddSymbolEntityProviderToCommandsCompilerPass;
+use App\Infrastructure\DependencyInjection\CompilerPass\AddTradingParametersToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\RegisterAppDynamicParametersCompilerPass;
 use App\TechnicalAnalysis\Infrastructure\DependencyInjection\ReplaceCacheCompilerPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
@@ -17,6 +18,7 @@ class Kernel extends BaseKernel
     {
         parent::build($container);
 
+        $container->addCompilerPass(new AddTradingParametersToCommandsCompilerPass());
         $container->addCompilerPass(new AddSymbolEntityProviderToCommandsCompilerPass());
         $container->addCompilerPass(new RegisterAppDynamicParametersCompilerPass());
         $container->addCompilerPass(new ReplaceCacheCompilerPass());

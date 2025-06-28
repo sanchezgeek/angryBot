@@ -11,7 +11,6 @@ use App\Bot\Domain\Position;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
 use App\Domain\Price\PriceMovement;
 use App\Helper\OutputHelper;
@@ -31,7 +30,6 @@ class PositionsInfoCommand extends AbstractCommand implements PositionDependentC
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
-    use PriceRangeAwareCommand;
 
     public const DEBUG_OPTION = 'deb';
 

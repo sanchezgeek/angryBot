@@ -3,7 +3,6 @@
 namespace App\Command\Market;
 
 use App\Command\AbstractCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
 use App\Helper\OutputHelper;
@@ -21,7 +20,6 @@ use function sprintf;
 class CheckMaxLeverageCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
-    use PriceRangeAwareCommand;
 
     protected function configure(): void
     {

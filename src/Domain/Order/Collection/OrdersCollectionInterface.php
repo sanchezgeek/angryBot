@@ -12,4 +12,5 @@ interface OrdersCollectionInterface extends IteratorAggregate, Countable
 {
     /** @return Order[] */
     public function getOrders(): array;
+    public function totalVolume(): float;
 }

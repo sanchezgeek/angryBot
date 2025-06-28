@@ -17,7 +17,6 @@ use App\Command\AbstractCommand;
 use App\Command\Helper\ConsoleTableHelper as CTH;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use App\Domain\Coin\CoinAmount;
@@ -65,7 +64,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
-    use PriceRangeAwareCommand;
 
     private const string DEFAULT_UPDATE_INTERVAL = '15';
     private const string DEFAULT_SAVE_CACHE_INTERVAL = '150';

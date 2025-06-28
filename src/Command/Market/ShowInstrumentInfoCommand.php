@@ -2,9 +2,7 @@
 
 namespace App\Command\Market;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Command\AbstractCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
@@ -20,7 +18,6 @@ use function sprintf;
 class ShowInstrumentInfoCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
-    use PriceRangeAwareCommand;
 
     protected function configure(): void
     {

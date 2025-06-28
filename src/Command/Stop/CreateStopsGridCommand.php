@@ -14,14 +14,15 @@ use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
-use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
+use Exception;
 use InvalidArgumentException;
 use LogicException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -40,7 +41,7 @@ use function sprintf;
 
 /** @see CreateStopsGridCommandTest */
 #[AsCommand(name: 'sl:grid')]
-class CreateStopsGridCommand extends AbstractCommand implements PositionDependentCommand
+class CreateStopsGridCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use PositionAwareCommand;
     use PriceRangeAwareCommand;
@@ -180,6 +181,18 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
                     $orders = new OrdersLimitedWithMaxVolume($orders, $forVolume);
                 }
             }
+
+            if (!$this->io->confirm(
+                sprintf(
+                    'You\'re about to create %d orders in %s range (totalVolume = %s). Sure?',
+                    count($orders),
+                    $priceRange,
+                    $orders->totalVolume()
+                )
+            )) {
+                throw new Exception('OK.');
+            }
+
 //            if (!$this->io->confirm(sprintf('Count: %d, ~Volume: %.3f. Are you sure?', $qnt, $orders[0]->volume()))) {
 //                return Command::FAILURE;
 //            }
