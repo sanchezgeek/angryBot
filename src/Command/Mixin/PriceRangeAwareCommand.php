@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
+use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -17,6 +19,8 @@ use function sprintf;
 trait PriceRangeAwareCommand
 {
     use ConsoleInputAwareCommand;
+
+    private TradingParametersProviderInterface $tradingParametersProvider;
 
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
@@ -37,20 +41,44 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
+    public function withTradingParameters(TradingParametersProviderInterface $tradingParametersProvider): void
+    {
+        $this->tradingParametersProvider = $tradingParametersProvider;
+    }
+
     protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?SymbolPrice
     {
+        $position = $this->getPosition();
+
         try {
             $pnlValue = $this->paramFetcher->requiredPercentOption($name);
-            return PnlHelper::targetPriceByPnlPercentFromPositionEntry($this->getPosition(), $pnlValue);
+            return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);
         } catch (InvalidArgumentException) {
+            $symbol = $this->getSymbol();
+
             try {
-                return $this->getSymbol()->makePrice($this->paramFetcher->requiredFloatOption($name));
+                return $symbol->makePrice($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
-                if ($required) {
-                    throw $e;
+                $providedValue = $this->paramFetcher->getStringOption($name);
+                $sign = 1;
+                if (str_starts_with($providedValue, '-')) {
+                    $sign = -1;
+                    $providedValue = substr($providedValue, 1);
                 }
 
-                return null;
+                if ($length = PredefinedStopLengthSelector::tryFrom($providedValue)) {
+                    $priceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLengthPercent($symbol, $length)->value();
+
+                    $pnlValue = $priceChangePercent * 100 * $sign;
+
+                    return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);
+                } else {
+                    if ($required) {
+                        throw $e;
+                    }
+
+                    return null;
+                }
             }
         }
     }
