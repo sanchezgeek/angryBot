@@ -10,6 +10,7 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputOption;
 
 use function count;
@@ -86,12 +87,20 @@ trait PriceRangeAwareCommand
         }
     }
 
-    protected function getPriceRange(): PriceRange
+    protected function getPriceRange(bool $required = true): ?PriceRange
     {
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
 
-        return PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
+        if ($fromPrice && $toPrice) {
+            return PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
+        }
+
+        if ($required) {
+            throw new RuntimeException('Price range must be provided');
+        }
+
+        return null;
     }
 
     protected function getRangePretty(string $input): array

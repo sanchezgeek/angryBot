@@ -289,7 +289,7 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
     protected function getRange(): ?PriceRange
     {
         try {
-            return $this->getPriceRange();
+            return $this->getPriceRange(false);
         } catch (InvalidArgumentException $e) {
             return null;
         }
