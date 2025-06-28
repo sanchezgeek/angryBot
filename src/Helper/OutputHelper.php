@@ -9,6 +9,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Worker\AppContext;
+use DateTimeImmutable;
 use JsonSerializable;
 
 use function is_array;
@@ -55,19 +56,24 @@ class OutputHelper
         }
     }
 
+    private static function currentDateTime(): string
+    {
+        return new DateTimeImmutable()->format('m/d H:i:s');
+    }
+
     public static function warning(string $message): void
     {
-        echo sprintf('@ %s', $message) . PHP_EOL;
+        echo sprintf('@ [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function success(string $message): void
     {
-        echo sprintf('+ %s', $message) . PHP_EOL;
+        echo sprintf('+ [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function failed(string $message): void
     {
-        echo sprintf('! %s', $message) . PHP_EOL;
+        echo sprintf('! [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function printIfDebug(mixed $data): void
