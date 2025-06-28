@@ -12,25 +12,64 @@ use Stringable;
 final class PriceChange implements JsonSerializable, Stringable
 {
     public function __construct(
-        public CandleIntervalEnum $interval,
-        public float $absoluteChange,
-        public Percent $percentChange,
+        public CandleIntervalEnum $timeframe,
+        public float $absolute,
+        public Percent $percent,
         public float $refPrice
     ) {
     }
 
     public function __toString(): string
     {
-        return sprintf('%s [%s, refPrice=%s] (`%s`priceChange)', $this->absoluteChange, $this->percentChange, $this->refPrice, $this->interval->value);
+        return sprintf('%s [%s, refPrice=%s] (`%s`priceChange)', $this->absolute, $this->percent, $this->refPrice, $this->timeframe->value);
     }
 
     public function jsonSerialize(): mixed
     {
         return [
-            'interval' => $this->interval->value,
-            'absoluteChange' => $this->absoluteChange,
-            'percentChange' => $this->percentChange->value(),
+            'interval' => $this->timeframe->value,
+            'absoluteChange' => $this->absolute,
+            'percentChange' => $this->percent->value(),
             'refPrice' => $this->refPrice,
         ];
+    }
+
+    /**
+     * @todo YAGNI
+     */
+    public function multiply(float $multiplier): self
+    {
+        return new self(
+            $this->timeframe,
+            $this->absolute * $multiplier,
+            new Percent($this->percent->value() * $multiplier, false),
+            $this->refPrice,
+        );
+    }
+
+    /**
+     * @todo YAGNI
+     */
+    public static function fromPercentAndRef(CandleIntervalEnum $timeFrame, Percent $percentChange, float $refPrice): self
+    {
+        return new self(
+            $timeFrame,
+            $percentChange->of($refPrice),
+            $percentChange,
+            $refPrice
+        );
+    }
+
+    /**
+     * @todo YAGNI
+     */
+    public static function fromAveragePriceChange(AveragePriceChange $averagePriceChange): self
+    {
+        return new self(
+            $averagePriceChange->interval,
+            $averagePriceChange->absoluteChange,
+            $averagePriceChange->percentChange,
+            $averagePriceChange->refPrice
+        );
     }
 }

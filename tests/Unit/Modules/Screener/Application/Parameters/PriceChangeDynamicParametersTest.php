@@ -38,7 +38,7 @@ final class PriceChangeDynamicParametersTest extends KernelTestCase
         $parameters = new PriceChangeDynamicParameters($this->appSettingsProvider);
 
         self::assertEquals(Percent::notStrict($expectedPercent), $parameters->significantPricePercent($currentPrice, 1));
-        self::assertEquals($expectedPriceChange, $parameters->significantPriceDelta($currentPrice, 1));
+        self::assertEquals($expectedPriceChange, $parameters->significantPriceChange($currentPrice, 1));
     }
 
     public function defaultValueCases(): iterable

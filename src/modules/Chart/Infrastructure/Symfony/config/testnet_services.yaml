@@ -15,7 +15,11 @@ services:
         arguments:
             $apiClient: '@real.api'
 
-    App\Screener\UI\Symfony\Command\TestHandlerCommand:
+    App\Trading\UI\Symfony\Command\Parameters\OpenedPositionsParametersDebugCommand:
+        arguments:
+            $exchangeService: '@real.exchange.service'
+
+    App\Screener\UI\Symfony\Command\TaTestCommand:
         arguments:
             $exchangeService: '@real.exchange.service'
 

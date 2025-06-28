@@ -41,5 +41,7 @@ final readonly class RegisterAppDynamicParametersCompilerPass implements Compile
             } catch (ReflectionException) {
             }
         }
+
+        $locator->addMethodCall('initialize');
     }
 }

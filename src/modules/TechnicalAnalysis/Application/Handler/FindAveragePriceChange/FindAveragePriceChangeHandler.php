@@ -16,7 +16,7 @@ use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 
 final readonly class FindAveragePriceChangeHandler implements FindAveragePriceChangeHandlerInterface, AppDynamicParametersProviderInterface
 {
-    #[AppDynamicParameter(group: 'priceChange', name: 'averagePriceChange')]
+    #[AppDynamicParameter(group: 'ta', name: 'averagePriceChange')]
     public function handle(
         #[AppDynamicParameterEvaluations(defaultValueProvider: FindAveragePriceChangeEntryEvaluationProvider::class, skipUserInput: true)]
         FindAveragePriceChange $entry

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Settings\Application\DynamicParameters\Evaluation;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
@@ -17,6 +16,7 @@ use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use InvalidArgumentException;
+use ReflectionException;
 use ReflectionParameter;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Container;
@@ -29,6 +29,25 @@ final readonly class AppDynamicParameterEvaluator
         private AppDynamicParametersLocator $parametersLocator,
         private SymbolProvider $symbolProvider,
     ) {
+    }
+
+    /**
+     * @return array{constructorArguments: string[], referencedMethodArguments: string[]}
+     */
+    public function getArgumentsToEvaluateAllParameters(): array
+    {
+        $constructorsArguments = [];
+        $methodsArguments = [];
+        foreach ($this->parametersLocator->getRegisteredParametersByGroups() as ['name' => $groupName, 'items' => $parameters]) {
+            foreach ($parameters as $parameterName) {
+                $res = $this->getParameterArguments($groupName, $parameterName);
+
+                $constructorsArguments = array_merge($constructorsArguments, $res['constructorArguments']);
+                $methodsArguments = array_merge($methodsArguments, $res['referencedMethodArguments']);
+            }
+        }
+
+        return ['constructorsArguments' => $constructorsArguments, 'methodsArguments' => $methodsArguments];
     }
 
     /**
@@ -138,6 +157,16 @@ final readonly class AppDynamicParameterEvaluator
 
         // @todo if ! and without ?
         if ($providedValue === null) {
+            try {
+                $defaultValue = $ref->getDefaultValue();
+            } catch (ReflectionException $e) {
+                $defaultValue = null;
+            }
+
+            if ($defaultValue !== null) {
+                return $defaultValue;
+            }
+
             if (!$evaluationAttributes = $ref->getAttributes(AppDynamicParameterEvaluations::class)) {
                 throw new InvalidArgumentException('Either value must be provided or DefaultValueProviderEnum specified');
             }

@@ -7,13 +7,15 @@ namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Screener\Application\Parameters\PriceChangeDynamicParameters;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
 use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
+use DateTimeImmutable;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
@@ -43,33 +45,32 @@ final class CheckSymbolsPriceChangeHandler
 
         foreach ($this->exchangeService->getAllTickers($message->settleCoin) as $ticker) {
             $symbol = $ticker->symbol;
-            if ($this->settings->optional(SettingAccessor::withAlternativesAllowed(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled)) === false) {
-                return;
-            }
-
-            $currentPrice = $ticker->lastPrice;
-            try {
-                $prevPrice = $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
-            } catch (CandlesHistoryNotFound) {
+            if ($this->disabledFor($symbol)) {
                 continue;
             }
 
-            $delta = $currentPrice->value() - $prevPrice;
-
-            $significantPriceDelta = $this->parameters->significantPriceDelta($prevPrice, $partOfDayPassed, $symbol);
-
-            if ($partOfDayPassed < 0.15) {
-                $significantPriceDelta *= 2;
+            if (!$prevPrice = $this->getPrevPrice($symbol, $date)) {
+                continue;
             }
 
-            if (abs($delta) > $significantPriceDelta) {
+            $currentPrice = $ticker->lastPrice;
+            $delta = $currentPrice->value() - $prevPrice;
+
+            $significantPriceChangePercent = $this->parameters->significantPriceChangePercent($symbol, $partOfDayPassed);
+
+            $significantPriceChange = $significantPriceChangePercent->of($prevPrice);
+            if ($partOfDayPassed < 0.15) {
+                $significantPriceChange *= 2;
+            }
+
+            if (abs($delta) > $significantPriceChange) {
                 if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbol->name(), $daysDelta))->consume()->isAccepted()) {
                     continue;
                 }
 
                 for ($i = 0; $i < self::ALERT_RETRY_COUNT; $i++) {
                     $changePercent = Percent::fromPart($delta / $prevPrice, false)->setOutputFloatPrecision(2);
-                    $significantPriceDeltaPercent = Percent::fromPart($significantPriceDelta / $prevPrice, false)->setOutputFloatPrecision(2);
+                    $significantPriceDeltaPercent = Percent::fromPart($significantPriceChange / $prevPrice, false)->setOutputFloatPrecision(2);
 
                     // @todo | priceChange | save prev percent and notify again if new percent >= prev
 
@@ -83,7 +84,7 @@ final class CheckSymbolsPriceChangeHandler
                             $prevPrice,
                             $currentPrice,
                             $delta,
-                            $significantPriceDelta,
+                            $significantPriceChangePercent,
                             $significantPriceDeltaPercent, // @todo | priceChange | +/-
                             $symbol->name(),
                         )
@@ -93,9 +94,25 @@ final class CheckSymbolsPriceChangeHandler
         }
     }
 
+    private function disabledFor(SymbolInterface $symbol): bool
+    {
+        return $this->settings->optional(
+            SettingAccessor::withAlternativesAllowed(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled, $symbol)
+        ) === false;
+    }
+
+    private function getPrevPrice(SymbolInterface $symbol, DateTimeImmutable $date): ?float
+    {
+        try {
+            return $this->previousSymbolPriceManager->getPrevPrice($symbol, $date);
+        } catch (CandlesHistoryNotFound) {
+            return null;
+        }
+    }
+
     public function __construct(
         private readonly AppSettingsProviderInterface $settings,
-        private readonly PriceChangeDynamicParameters $parameters,
+        private readonly TradingParametersProviderInterface $parameters,
         private readonly ByBitLinearExchangeService $exchangeService,
         private readonly PreviousSymbolPriceProvider $previousSymbolPriceManager,
         private readonly AppNotificationLoggerInterface $notifications,

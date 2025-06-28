@@ -16,7 +16,6 @@ use App\TechnicalAnalysis\Application\Helper\TraderInput;
 use App\TechnicalAnalysis\Application\Service\Candles\PreviousCandlesProvider;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use Throwable;
 use Timirey\Trader\TraderService;
 
 /**
@@ -31,7 +30,7 @@ use Timirey\Trader\TraderService;
  */
 final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRangeHandlerInterface, AppDynamicParametersProviderInterface
 {
-    #[AppDynamicParameter(group: 'priceChange', name: 'ATR')]
+    #[AppDynamicParameter(group: 'ta', name: 'ATR')]
     public function handle(
         #[AppDynamicParameterEvaluations(defaultValueProvider: CalcAverageTrueRangeEntryEvaluationProvider::class, skipUserInput: true)]
         CalcAverageTrueRange $entry
