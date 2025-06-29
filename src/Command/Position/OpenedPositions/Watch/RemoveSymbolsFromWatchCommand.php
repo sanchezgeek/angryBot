@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Command\Position\OpenedPositions;
+namespace App\Command\Position\OpenedPositions\Watch;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -10,22 +10,34 @@ use App\Command\PositionDependentCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'p:opened:watch:add')]
-class AddSymbolsToWatchCommand extends AbstractCommand implements PositionDependentCommand
+#[AsCommand(name: 'p:opened:watch:remove')]
+class RemoveSymbolsFromWatchCommand extends AbstractCommand implements PositionDependentCommand
 {
     use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
 
+    private const string ALL_OPTION = 'all';
+
     protected function configure(): void
     {
-        $this->configureSymbolArgs(defaultValue: null);
+        $this
+            ->configureSymbolArgs(defaultValue: null)
+            ->addOption(self::ALL_OPTION, null, InputOption::VALUE_NEGATABLE)
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->cache->addSymbolToWatch(...$this->getSymbols());
+        if ($this->paramFetcher->getBoolOption(self::ALL_OPTION)) {
+            $this->cache->clearWatch();
+
+            return Command::SUCCESS;
+        }
+
+        $this->cache->removeSymbolsFromWatch(...$this->getSymbols());
 
         return Command::SUCCESS;
     }

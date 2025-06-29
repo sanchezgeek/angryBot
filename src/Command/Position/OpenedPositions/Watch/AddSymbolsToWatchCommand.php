@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Command\Position\OpenedPositions;
+namespace App\Command\Position\OpenedPositions\Watch;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -12,8 +12,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'p:opened:watch:remove')]
-class RemoveSymbolsFromWatchCommand extends AbstractCommand implements PositionDependentCommand
+#[AsCommand(name: 'p:opened:watch:add')]
+class AddSymbolsToWatchCommand extends AbstractCommand implements PositionDependentCommand
 {
     use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
@@ -25,7 +25,7 @@ class RemoveSymbolsFromWatchCommand extends AbstractCommand implements PositionD
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->cache->removeSymbolsFromWatch(...$this->getSymbols());
+        $this->cache->addSymbolToWatch(...$this->getSymbols());
 
         return Command::SUCCESS;
     }

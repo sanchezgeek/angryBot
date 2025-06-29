@@ -15,6 +15,11 @@ abstract class AbstractCacheService implements CacheServiceInterface
     {
     }
 
+    public function remove(CacheKeyGeneratorInterface|string $key): void
+    {
+        $this->cache->remove($key);
+    }
+
     public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
     {
         return $this->cache->get($key, $warmup, $ttl ?? static::getDefaultTtl());

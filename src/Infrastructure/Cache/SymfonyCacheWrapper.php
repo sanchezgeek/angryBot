@@ -16,6 +16,13 @@ final readonly class SymfonyCacheWrapper implements CacheServiceInterface
     {
     }
 
+    public function remove(CacheKeyGeneratorInterface|string $key): void
+    {
+        $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;
+
+        $this->cache->delete($key);
+    }
+
     public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
     {
         $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;

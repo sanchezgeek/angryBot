@@ -74,6 +74,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     private const string MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const string WITH_SAVED_SORT_OPTION = 'sorted';
+    private const string SORT_BY_OPTION = 'sort-by';
     private const string USE_INITIAL_MARGIN_FOR_SORT_OPTION = 'use-im-for-sort';
     private const string USE_LIQ_DISTANCE_FOR_SORT_OPTION = 'use-distance-for-sort'; // @todo | AllOpenedPositionsInfoCommand
     private const string SAVE_SORT_OPTION = 'save-sort';
@@ -97,6 +98,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private ?string $showDiffWithOption;
     private ?string $cacheKeyToUseAsCurrentState;
     private bool $useSavedSort;
+    private array $sortBy;
     private bool $useIMForSort;
     private bool $moveHedgedSymbolsUp;
 
@@ -123,6 +125,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ->addOption(self::MOVE_HEDGED_UP_OPTION, null, InputOption::VALUE_NEGATABLE, 'Move fully-hedge positions up')
             ->addOption(self::WITH_SAVED_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Apply saved sort')
             ->addOption(self::USE_INITIAL_MARGIN_FOR_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Use initial margin for sort (asc)')
+            ->addOption(self::SORT_BY_OPTION, null, InputOption::VALUE_OPTIONAL, 'Sort by (`im`, `watch`, `im,watch`)')
             ->addOption(self::SAVE_SORT_OPTION, null, InputOption::VALUE_NEGATABLE, 'Save current sort')
             ->addOption(self::MOVE_UP_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols up')
             ->addOption(self::MOVE_DOWN_OPTION, null, InputOption::VALUE_OPTIONAL, 'Move specified symbols down')
@@ -152,6 +155,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $this->cacheKeyToUseAsCurrentState = $this->paramFetcher->getStringOption(self::CURRENT_STATE_OPTION, false);
         $this->useSavedSort = $this->paramFetcher->getBoolOption(self::WITH_SAVED_SORT_OPTION);
         $this->useIMForSort = $this->paramFetcher->getBoolOption(self::USE_INITIAL_MARGIN_FOR_SORT_OPTION);
+        $this->sortBy = explode(',', $this->paramFetcher->getStringOption(self::SORT_BY_OPTION, false) ?? '');
         $this->savedRawSymbolsSort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
         $this->moveHedgedSymbolsUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
 
@@ -668,7 +672,25 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             }
         }
 
-        if ($this->useIMForSort) {
+        $sortBy = $this->sortBy;
+
+        $symbolsToWatch = $this->symbolsToWatch;
+        if (
+            in_array('watch', $sortBy, true)
+            && in_array('im', $sortBy, true)
+        ) {
+            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
+            ksort($initialMarginMap);
+            $initialMarginMap = array_values($initialMarginMap);
+
+            $restSymbols = array_diff($symbolsRaw, $symbolsToWatch);
+            $restSymbols = array_intersect($initialMarginMap, $restSymbols);
+
+            $watchSortedByIM = array_intersect($initialMarginMap, $symbolsToWatch);
+            $symbolsRaw = array_merge($restSymbols, $watchSortedByIM);
+        } elseif (in_array('watch', $sortBy, true)) {
+            $symbolsRaw = array_merge(array_diff($symbolsRaw, $symbolsToWatch), $symbolsToWatch);
+        } elseif (in_array('im', $sortBy, true) || $this->useIMForSort) {
             $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
             ksort($initialMarginMap);
             $initialMarginMap = array_values($initialMarginMap);

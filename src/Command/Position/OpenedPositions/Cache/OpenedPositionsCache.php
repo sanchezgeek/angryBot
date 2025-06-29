@@ -75,6 +75,11 @@ final class OpenedPositionsCache extends AbstractCacheService
         $this->cache->save(self::SYMBOLS_TO_WATCH_CACHE_KEY, array_diff($existed, $toRemove));
     }
 
+    public function clearWatch(): void
+    {
+        $this->cache->remove(self::SYMBOLS_TO_WATCH_CACHE_KEY);
+    }
+
     public static function positionDataKey(Position $position): string
     {
         return sprintf('position_%s_%s', $position->symbol->name(), $position->side->value);
