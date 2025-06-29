@@ -147,6 +147,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private array $hideSymbolsRawValues = [];
     private array $symbolsToWatch = [];
     private ?array $selectedCacheToShowDiffWith = null;
+    private ?array $previousIterationCache = null;
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -206,9 +207,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $this->cacheCollector = [];
 
             $this->selectedCacheToShowDiffWith = $cache = $this->getCacheRecordToShowDiffWith();
-            $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
+            $this->previousIterationCache = $prevCache = $previousIterationCache;
 
-            $prevCache = $previousIterationCache;
+            $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
 
             $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
             $saveCacheComment = $cacheComment && $iteration === 1;
@@ -679,10 +680,25 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ($byMaxNegativeChange = in_array('max-negative-change', $sortBy, true))
             || ($byMaxPositiveChange = in_array('max-positive-change', $sortBy, true))
         ) {
-            $maxChangeMap = array_flip($this->getSymbolsMaxChangeMap($byMaxNegativeChange));
-            ksort($maxChangeMap);
-            $maxChangeMap = array_values($maxChangeMap);
-            $symbolsRaw = array_intersect($maxChangeMap, $symbolsRaw);
+            ['withSpecifiedCache' => $maxChangeMap, 'withPrevIteration' => $maxChangeMapWithPrevCache] = $this->getSymbolsMaxChangeMap($byMaxNegativeChange);
+
+            if ($maxChangeMap) {
+                $maxChangeMap = array_flip($maxChangeMap);
+                ksort($maxChangeMap);
+
+                if ($maxChangeMapWithPrevCache) {
+                    $maxChangeMapWithPrevCache = array_flip($maxChangeMapWithPrevCache);
+                    ksort($maxChangeMapWithPrevCache);
+                    if ($last = end($maxChangeMapWithPrevCache)) {
+                        $maxChangeMap = array_diff($maxChangeMap, [$last]);
+                        $maxChangeMap[] = $last;
+                    }
+                }
+
+
+                $maxChangeMap = array_values($maxChangeMap);
+                $symbolsRaw = array_intersect($maxChangeMap, $symbolsRaw);
+            }
         } elseif (
             in_array('watch', $sortBy, true)
             && in_array('im', $sortBy, true)
@@ -732,13 +748,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         return $result;
     }
 
-    public function getSymbolsMaxChangeMap(bool $negative = false): ?array
+    /**
+     * @param bool $negative
+     * @return array{withSpecifiedCache: ?array, withPrevIteration: ?array}
+     */
+    public function getSymbolsMaxChangeMap(bool $negative = false): array
     {
         if (!$specifiedCache = $this->selectedCacheToShowDiffWith) {
-            return null;
+            return ['withSpecifiedCache' => null, 'withPrevIteration' => null];
         }
 
-        $result = [];
+        $prevIteration = $this->previousIterationCache;
+
+        $withSpecifiedCacheResult = [];
+        $withPrevCacheResult = [];
         foreach ($this->positions as $symbolRaw => $positions) {
             $hedge = $positions[array_key_first($positions)]->getHedge();
             $isEquivalentHedge = $hedge?->isEquivalentHedge();
@@ -758,6 +781,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 $supportPositionCacheKey = self::positionCacheKey($support);
 
                 $supportPnlSpecifiedCacheValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+                if ($prevIteration) {
+                    $supportPnlPrevCacheValue = ($prevIteration[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+                }
             }
 
             $mainPositionCacheKey = self::positionCacheKey($main);
@@ -773,12 +799,30 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                     $resultPnlDiff = $currentPositionPnlDiffWithPrevCache;
                 }
 
-                $result[$symbolRaw] = $resultPnlDiff;
+                $withSpecifiedCacheResult[$symbolRaw] = $resultPnlDiff;
+            }
+
+            if ($prevIteration) {
+                if (($cachedValue = ($prevIteration[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
+                    $currentPositionPnlDiffWithPrevCache = $mainPositionPnl - $cachedValue;
+
+                    if ($support && !$isEquivalentHedge && isset($supportPnlPrevCacheValue)) {
+                        $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlPrevCacheValue;
+                        $resultPnlDiff = $supportPnlDiffWithSpecifiedCache + $currentPositionPnlDiffWithPrevCache;
+                    } else {
+                        $resultPnlDiff = $currentPositionPnlDiffWithPrevCache;
+                    }
+
+                    $withPrevCacheResult[$symbolRaw] = $resultPnlDiff;
+                }
             }
         }
 
         $sign = $negative ? -1 : 1;
-        return array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $result);
+        $withSpecifiedCache = array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $withSpecifiedCacheResult);
+        $withPrevCache = array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $withPrevCacheResult);
+
+        return ['withSpecifiedCache' => $withSpecifiedCache, 'withPrevIteration' => $prevIteration ? $withPrevCache : null];
     }
 
     public function getSymbolsInitialMarginMap(): array
