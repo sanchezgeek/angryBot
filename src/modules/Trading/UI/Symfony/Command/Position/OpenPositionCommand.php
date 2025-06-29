@@ -6,6 +6,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Service\AppSettingsService;
@@ -128,6 +129,8 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             return Command::FAILURE;
         }
 
+        $this->cache->addSymbolToWatch($this->symbol);
+
         return Command::SUCCESS;
     }
 
@@ -204,6 +207,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
     }
 
     public function __construct(
+        private readonly OpenedPositionsCache $cache,
         private readonly AppSettingsService $settingsService,
         private readonly OpenPositionHandler $openPositionHandler,
         private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
