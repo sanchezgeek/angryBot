@@ -185,8 +185,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 $this->hideSymbolsRawValues = SymbolHelper::symbolsToRawValues(...$providedItems);
             }
         }
-
-        $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -208,6 +206,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $this->cacheCollector = [];
 
             $this->selectedCacheToShowDiffWith = $cache = $this->getCacheRecordToShowDiffWith();
+            $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
 
             $prevCache = $previousIterationCache;
 
