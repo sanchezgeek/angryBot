@@ -283,3 +283,37 @@ analise average price change through some period
 
 25.06
     @todo | ta | !!!обёртка над TraderService!!!
+
+
+
+add sleep time
+
+
+baed on ta:
+    liquidation-handler.warningDistancePnlPercent
+    liquidation-handler.criticalDistancePnl
+
+    + на максимально грани ( но надо проверить, что нет возможности ликвиднуть )
+
+posSize by TA
+
+
+stopLoss: вспомнить что там нейронка предлагала по поводу ADX
+вариант с входом: быстрый SAR пробивается после signifficantPriceChange + RSI перекуплен перепродан + мб попробовать найти дивер
+    + OB/FVG + RSI
+        reason: спокойно могут вернуть. И хорошо, если остался запас.
+    Второй вариант: не больше опред. риска на сделку! (ограничение на позицию)
+        Тогда на возвратах можно делать доборы
+
+
+
+openHandler не использует логику StopPlacement
+
+
+PriceChangeHandler
+    Добавить разницу с пред. измерением (...+%)
+        И может быть запускать какой-то процесс чека для определённого символа (async)
+
+
+allOpenedPositions
+    сортировку макс негативному pnl?

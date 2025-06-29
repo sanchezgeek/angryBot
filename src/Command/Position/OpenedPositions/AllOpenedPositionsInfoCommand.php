@@ -146,6 +146,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private array $showSymbolsRawValues = [];
     private array $hideSymbolsRawValues = [];
     private array $symbolsToWatch = [];
+    private ?array $selectedCacheToShowDiffWith = null;
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -206,7 +207,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $iteration++;
             $this->cacheCollector = [];
 
-            $cache = $this->getCacheRecordToShowDiffWith();
+            $this->selectedCacheToShowDiffWith = $cache = $this->getCacheRecordToShowDiffWith();
 
             $prevCache = $previousIterationCache;
 
@@ -676,6 +677,14 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $symbolsToWatch = $this->symbolsToWatch;
         if (
+            ($byMaxNegativeChange = in_array('max-negative-change', $sortBy, true))
+            || ($byMaxPositiveChange = in_array('max-positive-change', $sortBy, true))
+        ) {
+            $maxChangeMap = array_flip($this->getSymbolsMaxChangeMap($byMaxNegativeChange));
+            ksort($maxChangeMap);
+            $maxChangeMap = array_values($maxChangeMap);
+            $symbolsRaw = array_intersect($maxChangeMap, $symbolsRaw);
+        } elseif (
             in_array('watch', $sortBy, true)
             && in_array('im', $sortBy, true)
         ) {
@@ -722,6 +731,55 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         return $result;
+    }
+
+    public function getSymbolsMaxChangeMap(bool $negative = false): ?array
+    {
+        if (!$specifiedCache = $this->selectedCacheToShowDiffWith) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($this->positions as $symbolRaw => $positions) {
+            $hedge = $positions[array_key_first($positions)]->getHedge();
+            $isEquivalentHedge = $hedge?->isEquivalentHedge();
+
+            if ($isEquivalentHedge) {
+                $main = $positions[Side::Sell->value];
+                $support = $positions[Side::Buy->value];
+            } else {
+                $main = $hedge?->mainPosition ?? $positions[array_key_first($positions)];
+                $support = $hedge?->supportPosition;
+            }
+
+            $mainPositionPnl = $main->unrealizedPnl;
+
+            if ($support) {
+                $supportPnl = $support->unrealizedPnl;
+                $supportPositionCacheKey = self::positionCacheKey($support);
+
+                $supportPnlSpecifiedCacheValue = ($specifiedCache[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
+            }
+
+            $mainPositionCacheKey = self::positionCacheKey($main);
+
+
+            if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
+                $currentPositionPnlDiffWithPrevCache = $mainPositionPnl - $cachedValue;
+
+                if ($support && !$isEquivalentHedge && isset($supportPnlSpecifiedCacheValue)) {
+                    $supportPnlDiffWithSpecifiedCache = $supportPnl - $supportPnlSpecifiedCacheValue;
+                    $resultPnlDiff = $supportPnlDiffWithSpecifiedCache + $currentPositionPnlDiffWithPrevCache;
+                } else {
+                    $resultPnlDiff = $currentPositionPnlDiffWithPrevCache;
+                }
+
+                $result[$symbolRaw] = $resultPnlDiff;
+            }
+        }
+
+        $sign = $negative ? -1 : 1;
+        return array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $result);
     }
 
     public function getSymbolsInitialMarginMap(): array
