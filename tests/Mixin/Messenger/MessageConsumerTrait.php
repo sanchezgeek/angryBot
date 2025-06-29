@@ -16,6 +16,7 @@ use Symfony\Component\Messenger\Transport\TransportInterface;
 trait MessageConsumerTrait
 {
     public const string ASYNC_CRITICAL_QUEUE = 'async_critical';
+    public const string ASYNC_HIGH_QUEUE = 'async_high';
 
     use RunCommandTrait;
 

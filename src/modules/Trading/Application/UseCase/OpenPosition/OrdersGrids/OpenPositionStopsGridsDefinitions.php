@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\UseCase\OpenPosition\OrdersGrids;
 
-use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -42,15 +43,18 @@ final readonly class OpenPositionStopsGridsDefinitions
 
     public function byTa(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate): OrdersGridDefinitionCollection
     {
-        $shortBound = $this->tradingParametersProvider->regularPredefinedStopLengthPercent($symbol, PredefinedStopLengthSelector::Standard)->value();
-        $veryLongBound = $this->tradingParametersProvider->regularPredefinedStopLengthPercent($symbol, PredefinedStopLengthSelector::VeryLong)->value();
-        $diff = $veryLongBound - $shortBound;
+        $shortBoundPriceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, PredefinedStopLengthSelector::Standard)->value();
+        $shortBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($shortBoundPriceChangePercent);
+        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, PredefinedStopLengthSelector::VeryLong)->value();
+        $veryLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($veryLongBoundPriceChangePercent);
+        $diff = $veryLongBoundPnl - $shortBoundPnl;
 
-        $longBound = $this->tradingParametersProvider->regularPredefinedStopLengthPercent($symbol, PredefinedStopLengthSelector::Long)->value();
+        $longBoundPriceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, PredefinedStopLengthSelector::Long)->value();
+        $longBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($longBoundPriceChangePercent);
 
         $defs = [
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $shortBound * 100, ($shortBound + $diff) * 100),
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $longBound * 100, ($longBound + $diff) * 100),
+            sprintf('-%.2f%%..-%.2f%%|50%%|5', $shortBoundPnl, $shortBoundPnl + $diff),
+            sprintf('-%.2f%%..-%.2f%%|50%%|5', $longBoundPnl, $longBoundPnl + $diff),
         ];
 
         $collectionDef = implode(OrdersGridDefinitionCollection::SEPARATOR, $defs);

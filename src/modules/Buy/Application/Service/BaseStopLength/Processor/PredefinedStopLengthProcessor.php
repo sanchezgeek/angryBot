@@ -14,14 +14,14 @@ use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface
 {
-    public const TimeFrame DEFAULT_INTERVAL = TimeFrame::D1;
     // @todo | PredefinedStopLengthParser parameters
-    public  const int DEFAULT_INTERVALS_COUNT = 4;
+    public const TimeFrame DEFAULT_TIMEFRAME_FOR_ATR = TimeFrame::D1;
+    public  const int DEFAULT_PERIOD_FOR_ATR = 4;
 
     public function __construct(
         private readonly TradingParametersProviderInterface $tradingParametersProvider,
-        private readonly TimeFrame $timeFrame = self::DEFAULT_INTERVAL,
-        private readonly int $intervalsCount = self::DEFAULT_INTERVALS_COUNT,
+        private readonly TimeFrame $timeFrame = self::DEFAULT_TIMEFRAME_FOR_ATR,
+        private readonly int $atrPeriod = self::DEFAULT_PERIOD_FOR_ATR,
     ) {
     }
 
@@ -42,11 +42,11 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
 
     private function getStopPercent(PredefinedStopLength $definition, BuyOrder $buyOrder): Percent
     {
-        return $this->tradingParametersProvider->regularPredefinedStopLengthPercent(
+        return $this->tradingParametersProvider->regularPredefinedStopLength(
             $buyOrder->getSymbol(),
             $definition->length,
             $this->timeFrame,
-            $this->intervalsCount
+            $this->atrPeriod
         );
     }
 }

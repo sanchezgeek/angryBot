@@ -45,8 +45,8 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
     use SymbolsDependentTester;
     use TaToolsProviderMocker;
 
-    private const int CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT = PredefinedStopLengthProcessor::DEFAULT_INTERVALS_COUNT;
-    private const TimeFrame CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL = PredefinedStopLengthProcessor::DEFAULT_INTERVAL;
+    private const int CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT = PredefinedStopLengthProcessor::DEFAULT_PERIOD_FOR_ATR;
+    private const TimeFrame CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL = PredefinedStopLengthProcessor::DEFAULT_TIMEFRAME_FOR_ATR;
 
     private const int CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVALS_COUNT;
     private const TimeFrame CHOOSE_FINAL_STOP_STRATEGY_INTERVAL = CreateStopsAfterBuyCommandHandler::CHOOSE_FINAL_STOP_STRATEGY_INTERVAL;

@@ -6,6 +6,8 @@ namespace App\Infrastructure\DependencyInjection\CompilerPass;
 
 use App\Settings\Application\DynamicParameters\AppDynamicParametersLocator;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
+use App\Worker\AppContext;
+use Error;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -33,7 +35,24 @@ final readonly class RegisterAppDynamicParametersCompilerPass implements Compile
             try {
                 $reflection = new ReflectionClass($id);
 
-                foreach ($reflection->getConstructor()->getParameters() as $constructorParameter) {
+                try {
+                    $constructorParameters = $reflection->getConstructor()->getParameters();
+                } catch (Error $e) {
+                    /**
+                     * @see services_test.yaml
+                     *  App\Trading\Application\Parameters\TradingParametersProviderInterface:
+                     *      class: App\Trading\Application\Parameters\TradingDynamicParameters
+                     *      public: true
+                     */
+                    if ($e->getMessage() === 'Call to a member function getParameters() on null' && AppContext::isTest()) {
+                        var_dump($e->getMessage());
+                        continue;
+                    }
+
+                    throw $e;
+                }
+
+                foreach ($constructorParameters as $constructorParameter) {
                     if ($autowiredAttributes = $constructorParameter->getAttributes(AppDynamicParameterAutowiredArgument::class)) {
                         $container->getDefinition($constructorParameter->getType()->getName())->setPublic(true);
                     }

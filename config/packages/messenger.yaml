@@ -27,7 +27,7 @@ framework:
 
             # market
             App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange: async
-            App\Application\Messenger\Market\TransferFundingFees: async_high
+            App\Application\Messenger\Market\TransferFundingFees: async
 
             # orders
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
@@ -35,8 +35,8 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async_high
-            App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async_high
+            App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async
+            App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async
 
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async
@@ -53,6 +53,7 @@ framework:
 
             # Stop
             App\Buy\Application\Command\CreateStopsAfterBuy: 'async_critical'
+            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: 'async_high'
 
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async

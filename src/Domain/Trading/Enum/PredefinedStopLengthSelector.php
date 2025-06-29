@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Buy\Domain\Enum;
+namespace App\Domain\Trading\Enum;
 
 enum PredefinedStopLengthSelector: string
 {

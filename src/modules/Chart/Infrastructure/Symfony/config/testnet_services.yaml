@@ -15,7 +15,7 @@ services:
         arguments:
             $apiClient: '@real.api'
 
-    App\Trading\UI\Symfony\Command\Parameters\OpenedPositionsParametersDebugCommand:
+    App\Settings\UI\Symfony\Command\DynamicParameters\ShowAllParametersCommand:
         arguments:
             $exchangeService: '@real.exchange.service'
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Buy\Domain\ValueObject\StopStrategy\Strategy;
 
-use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Buy\Domain\Enum\StopPriceDefinitionType;
 use App\Buy\Domain\ValueObject\StopStrategy\AbstractStopStrategyDefinition;
+use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 
 final class PredefinedStopLength extends AbstractStopStrategyDefinition
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Application\EventListener\Stop;
+namespace App\Trading\Application\EventListener;
 
 use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Domain\BuyOrder\Event\BuyOrderPushedToExchange;
@@ -14,15 +14,15 @@ final readonly class CreateOppositeStopsListener
 {
     public function __invoke(BuyOrderPushedToExchange $event): void
     {
-        if ($event->buyOrder->isWithOppositeOrder()) {
-            $this->messageBus->dispatch(
-                new CreateStopsAfterBuy($event->buyOrder->getId())
-            );
+        $buyOrder = $event->buyOrder;
+        if (!$buyOrder->isWithOppositeOrder()) {
+            return;
         }
+
+        $this->messageBus->dispatch(
+            new CreateStopsAfterBuy($buyOrder->getId())
+        );
     }
 
-    public function __construct(
-        private MessageBusInterface $messageBus,
-    ) {
-    }
+    public function __construct(private MessageBusInterface $messageBus) {}
 }

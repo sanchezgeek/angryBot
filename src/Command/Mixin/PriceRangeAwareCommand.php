@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Command\Mixin;
 
-use App\Buy\Domain\Enum\PredefinedStopLengthSelector;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
 use RuntimeException;
@@ -71,9 +71,8 @@ trait PriceRangeAwareCommand
                 }
 
                 if ($length = PredefinedStopLengthSelector::tryFrom($providedValue)) {
-                    $priceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLengthPercent($symbol, $length)->value();
-
-                    $pnlValue = $priceChangePercent * 100 * $sign;
+                    $priceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, $length)->value();
+                    $pnlValue = PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent) * $sign;
 
                     return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);
                 } else {

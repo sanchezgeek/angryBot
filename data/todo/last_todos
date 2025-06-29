@@ -210,11 +210,14 @@ analise average price change through some period
         + может быть job, который будет как-то хитро делать rearrange
 
 
-
+### Opposite orders ###
+    @todo | oppositeBuyOrder | only if source BuyOrder in chain was with force
+    @todo | oppositeBuyOrder | some setting or conditions?
+    @todo | oppositeBuyOrder | stop | либо за цену первоначального стопа?
+    @todo only if source BuyOrder in chain was with force
 
 ### HOT ###
     PriceChange on short period
-    @todo only if source BuyOrder in chain was with force
 
     use CalculateSignificantPriceChangeHandler for TradingDynamicParameters::safeLiquidationPriceDelta
         ->
