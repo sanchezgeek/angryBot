@@ -10,6 +10,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Settings\PushStopSettings;
 use App\Bot\Domain\Entity\Stop;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
@@ -50,7 +51,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $positions = $this->positionServiceWithoutCache->getAllPositions();
         $lastPrices = $this->positionServiceWithoutCache->getLastMarkPrices();
 
-        $res = [];
+        $candidates = [];
 
         foreach ($positions as $symbolRaw => $symbolPositions) {
             if ($symbolRaw === $symbol->name()) {
@@ -69,15 +70,13 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $last = $lastPrices[$symbolRaw];
             $mainPositionPnlPercent = $last->getPnlPercentFor($main);
             if ($mainPositionPnlPercent > self::PNL_PERCENT_TO_CLOSE_POSITIONS) {
-                $res[] = $main;
+                $candidates[] = $main;
             }
         }
 
-        $count = count($res);
-        $perPosition = $symbol->associatedCoinAmount($loss / 2 / $count)->value();
+        $lossToCoverByOtherSymbols = $loss / 2;
+        $count = count($candidates);
         $pct = 100 / $count;
-
-        $commonMessage = sprintf('[ %s loss =( ] to cover %s (%.2f%% of %s)', $closedPosition->getCaption(), $perPosition, $pct, $loss);
 
         $context = [
             Stop::CLOSE_BY_MARKET_CONTEXT => true,
@@ -86,21 +85,35 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         ];
 
         $covered = 0;
-        foreach ($res as $candidate) {
+        while ($candidate = array_shift($candidates)) {
+            $leftToCover = $lossToCoverByOtherSymbols - $covered;
+            $candidatesLeft = count($candidates) + 1;
+
             $candidateSymbol = $candidate->symbol;
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopVolume = PnlHelper::getVolumeForGetWishedProfit($perPosition, $candidate->entryPrice()->deltaWith($lastPrice));
-            $stopVolume = $candidateSymbol->roundVolumeDown($stopVolume);
-            $stopPct = ($stopVolume / $candidate->size) * 100;
-            $this->appNotifications->notify(
-                sprintf('%s => close %s of %s [%.2f%% of whole position size]', $commonMessage, $stopVolume, $candidate->getCaption(), $stopPct)
-            );
-
             $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, PredefinedStopLengthSelector::Short);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
+
+            $lossPerPosition = $leftToCover / $candidatesLeft;
+
+            $stopVolume = PnlHelper::getVolumeForGetWishedProfit($lossPerPosition, $candidate->entryPrice()->deltaWith($lastPrice));
+            $stopVolume = ExchangeOrder::roundedToMin($candidateSymbol, $stopVolume, $supplyStopPrice)->getVolume();
+            $stopPct = ($stopVolume / $candidate->size) * 100;
+            $this->appNotifications->notify(
+                sprintf(
+                    '[%s loss] close %s of %s [%.2f%% of whole position size] to cover %s (%.2f%% of %s)',
+                    $closedPosition->getCaption(),
+                    $stopVolume,
+                    $candidate->getCaption(),
+                    $stopPct,
+                    $symbol->associatedCoinAmount($lossPerPosition)->value(),
+                    $pct,
+                    $lossToCoverByOtherSymbols
+                )
+            );
 
             ($this->createStopHandler)(
                 new CreateStop(
@@ -112,7 +125,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
                 )
             );
 
-            $covered += $perPosition;
+            $covered += $lossPerPosition;
         }
 
         $loss = $loss - $covered;
