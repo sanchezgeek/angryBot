@@ -44,6 +44,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const string FIX_OPPOSITE_MAIN_ON_LOSS = 'fixOppositeMainOnLossEnabled';
     public const string FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
     public const string CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
+    public const string CREATED_AFTER_OTHER_SYMBOL_LOSS = 'createdAfterOtherSymbolLoss';
 
     /** @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols */
     public const int TP_TRIGGER_DELTA = 50;
@@ -275,6 +276,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->context[self::FIX_OPPOSITE_SUPPORT_ON_LOSS] = true;
 
         return $this;
+    }
+
+    public function isStopAfterOtherSymbolLoss(): bool
+    {
+        return ($this->context[self::CREATED_AFTER_OTHER_SYMBOL_LOSS] ?? null) === true;
     }
 
     public function isStopAfterFixHedgeOppositePosition(): bool
