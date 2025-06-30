@@ -148,6 +148,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private array $symbolsToWatch = [];
     private ?array $selectedCacheToShowDiffWith = null;
     private ?array $previousIterationCache = null;
+    private string $bestWorstNote = '';
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -320,7 +321,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $unrealisedPnlCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
         }
 
-        $bottomCells = array_merge($bottomCells, ['', '', '', '']);
+        if ($this->bestWorstNote) {
+            $bottomCells = array_merge($bottomCells, [Cell::colspan(3, $this->bestWorstNote), '', '']);
+        } else {
+            $bottomCells = array_merge($bottomCells, ['', '', '', '']);
+        }
+
         $rows[] = DataRow::default($bottomCells);
         ### bottom END ###
 
@@ -349,6 +355,29 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ->build()
             ->setStyle('box')
             ->render();
+    }
+
+    private function extraSymbolText(SymbolInterface|string $symbol, ?bool $isEquivalentHedge = false, ?Position $main = null): string
+    {
+        $symbol = $symbol instanceof SymbolInterface ? $symbol : $this->symbolProvider->getOrInitialize($symbol);
+
+        if ($main === null) {
+            $symbolPositions = $this->positions[$symbol->name()];
+            $main = ($first = reset($symbolPositions))->getHedge()?->mainPosition ?? $first;
+        }
+
+        $extraSymbolText = $isEquivalentHedge === true ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
+        if (in_array($symbol->name(), $this->symbolsToWatch, true)) {
+            $extraSymbolCell = sprintf(
+                '%s%s',
+                CTH::colorizeText(substr($extraSymbolText, 0, 2), 'yellow-text'),
+                CTH::colorizeText(substr($extraSymbolText, 2, strlen($extraSymbolText)), $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'))
+            );
+        } else {
+            $extraSymbolCell = CTH::colorizeText($extraSymbolText, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
+        }
+
+        return $extraSymbolCell;
     }
 
     /**
@@ -472,20 +501,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $mainPositionPnlContent .= ' /' . $resultPnlContent;
         }
         $cells[] = $mainPositionPnlContent;
-
-        $extraSymbolText = $isEquivalentHedge ? strtolower($symbol->veryShortName()) : $symbol->veryShortName();
-        if (in_array($symbol->name(), $this->symbolsToWatch, true)) {
-            $extraSymbolCell = sprintf(
-                '%s%s',
-                CTH::colorizeText(substr($extraSymbolText, 0, 2), 'yellow-text'),
-                CTH::colorizeText(substr($extraSymbolText, 2, strlen($extraSymbolText)), $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'))
-            );
-        } else {
-            $extraSymbolCell = CTH::colorizeText($extraSymbolText, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));
-        }
-
-        $cells[] = $extraSymbolCell;
-
+        $cells[] = $extraSymbolCell = $this->extraSymbolText($symbol, $isEquivalentHedge, $main);;
 
         if ($specifiedCache) {
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
@@ -688,10 +704,28 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
                 if ($maxChangeMapWithPrevCache) {
                     asort($maxChangeMapWithPrevCache);
+                    $firstSymbol = array_key_first($maxChangeMapWithPrevCache);
+                    $sign = $byMaxNegativeChange ? -1 : 1;
+                    $pnl = $sign * $maxChangeMapWithPrevCache[$firstSymbol];
+
                     $maxChangeMapWithPrevCache = array_keys($maxChangeMapWithPrevCache);
                     if ($last = end($maxChangeMapWithPrevCache)) {
                         $maxChangeMap = array_diff($maxChangeMap, [$last]);
                         $maxChangeMap[] = $last;
+                    }
+
+                    if ($firstSymbol) {
+                        $symbol = $this->symbolProvider->getOrInitialize($firstSymbol);
+                        $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
+
+                        if ($byMaxNegativeChange) {$b = 0; $a = abs($pnl);}
+                        else {$a = 0; $b = abs($pnl);}
+
+                        $this->bestWorstNote = sprintf(
+                            '%s:   %s',
+                            $this->extraSymbolText($firstSymbol),
+                            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange)
+                        );
                     }
                 }
 
