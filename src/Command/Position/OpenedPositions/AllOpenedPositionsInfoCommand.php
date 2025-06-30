@@ -322,7 +322,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         if ($this->bestWorstNote) {
-            $bottomCells = array_merge($bottomCells, [Cell::colspan(3, $this->bestWorstNote), '', '']);
+            $bottomCells = array_merge($bottomCells, [Cell::colspan(4, $this->bestWorstNote), '', '']);
         } else {
             $bottomCells = array_merge($bottomCells, ['', '', '', '']);
         }
@@ -696,7 +696,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ($byMaxNegativeChange = in_array('max-negative-change', $sortBy, true))
             || ($byMaxPositiveChange = in_array('max-positive-change', $sortBy, true))
         ) {
-            ['withSpecifiedCache' => $maxChangeMap, 'withPrevIteration' => $maxChangeMapWithPrevCache] = $this->getSymbolsMaxChangeMap($byMaxNegativeChange);
+            [
+                'withSpecifiedCache' => $maxChangeMap,
+                'withPrevIteration' => $maxChangeMapWithPrevCache,
+                'totalUnrealized' => $totalUnrealized,
+            ] = $this->getSymbolsMaxChangeMap($byMaxNegativeChange);
 
             if ($maxChangeMap) {
                 asort($maxChangeMap);
@@ -718,13 +722,21 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                         $symbol = $this->symbolProvider->getOrInitialize($firstSymbol);
                         $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
 
-                        if ($byMaxNegativeChange) {$b = 0; $a = abs($pnl);}
-                        else {$a = 0; $b = abs($pnl);}
+                        if ($byMaxNegativeChange) {
+                            $b = 0; $a = abs($pnl);
+                        } else {
+                            $a = 0; $b = abs($pnl);
+                        }
+
+                        $totalSymbolPnl = $totalUnrealized[$symbol->name()];
+                        $pnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $totalSymbolPnl));
+                        $pnlContent = $totalSymbolPnl < 0 ? CTH::colorizeText($pnlContent, 'red-text') : $pnlContent;
 
                         $this->bestWorstNote = sprintf(
-                            '%s:   %s',
+                            '%s:   %s (%s)',
                             $this->extraSymbolText($firstSymbol),
-                            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange)
+                            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange),
+                            $pnlContent
                         );
                     }
                 }
@@ -783,22 +795,24 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     /**
      * @param bool $negative
-     * @return array{withSpecifiedCache: ?array, withPrevIteration: ?array}
+     * @return array{withSpecifiedCache: ?array, withPrevIteration: ?array, totalUnrealized: ?array}
      */
     public function getSymbolsMaxChangeMap(bool $negative = false): array
     {
         if (!$specifiedCache = $this->selectedCacheToShowDiffWith) {
-            return ['withSpecifiedCache' => null, 'withPrevIteration' => null];
+            return ['withSpecifiedCache' => null, 'withPrevIteration' => null, 'totalUnrealized' => null];
         }
 
         $prevIteration = $this->previousIterationCache;
 
+        $totalUnrealized = [];
         $withSpecifiedCacheResult = [];
         $withPrevCacheResult = [];
         foreach ($this->positions as $symbolRaw => $positions) {
             $hedge = $positions[array_key_first($positions)]->getHedge();
             $isEquivalentHedge = $hedge?->isEquivalentHedge();
 
+            $support = null;
             if ($isEquivalentHedge) {
                 $main = $positions[Side::Sell->value];
                 $support = $positions[Side::Buy->value];
@@ -809,6 +823,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
             $mainPositionPnl = $main->unrealizedPnl;
 
+            $supportPnl = null;
             if ($support) {
                 $supportPnl = $support->unrealizedPnl;
                 $supportPositionCacheKey = self::positionCacheKey($support);
@@ -818,6 +833,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                     $supportPnlPrevCacheValue = ($prevIteration[$supportPositionCacheKey] ?? null)?->unrealizedPnl;
                 }
             }
+
+            $totalUnrealized[$symbolRaw] = $mainPositionPnl + ($supportPnl??null) ?? 0;
 
             $mainPositionCacheKey = self::positionCacheKey($main);
 
@@ -857,7 +874,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $withSpecifiedCache = array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $withSpecifiedCacheResult);
         $withPrevCache = array_map(static fn(float $totalPnlDiff) => (string)($sign * $totalPnlDiff), $withPrevCacheResult);
 
-        return ['withSpecifiedCache' => $withSpecifiedCache, 'withPrevIteration' => $prevIteration ? $withPrevCache : null];
+        return [
+            'withSpecifiedCache' => $withSpecifiedCache,
+            'totalUnrealized' => $totalUnrealized,
+            'withPrevIteration' => $prevIteration ? $withPrevCache : null,
+        ];
     }
 
     public function getSymbolsInitialMarginMap(): array
