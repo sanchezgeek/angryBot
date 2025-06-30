@@ -9,7 +9,6 @@ use App\Buy\Application\Service\StopPlacement\AbstractStopPlacementStrategyProce
 use App\Buy\Application\Service\StopPlacement\Exception\OtherStrategySuggestionException;
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyContext;
 use App\Buy\Application\StopPlacementStrategy;
-use App\Domain\Position\ValueObject\Side;
 use App\Stop\Application\Contract\Command\CreateStop;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 

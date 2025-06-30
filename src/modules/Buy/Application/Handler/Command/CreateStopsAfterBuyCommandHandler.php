@@ -184,8 +184,9 @@ final class CreateStopsAfterBuyCommandHandler
         $suggestion = null;
         while ($suggestion || $processor = array_shift($processors)) {
             /** @var StopPlacementStrategyProcessorInterface $processor */
-            $processor = $processor ?? $suggestion;
+            $processor = $processor ?? $this->getProcessorBySuggestion($suggestion, $context);;
 
+            $suggestion = null;
             try {
                 // @todo return some note?
                 if ($processor->supports($strategy, $context)) {
@@ -215,6 +216,17 @@ final class CreateStopsAfterBuyCommandHandler
         }
 
         return [$selectedProcessor, $note];
+    }
+
+    private function getProcessorBySuggestion(StopPlacementStrategy $suggestion, StopPlacementStrategyContext $context): StopPlacementStrategyProcessorInterface
+    {
+        foreach ($this->stopPlacementStrategyProcessors as $processor) {
+            if ($processor->supports($suggestion, $context)) {
+                return $processor;
+            }
+        }
+
+        throw new RuntimeException(sprintf('Cannot find placement strategy (%s)', $suggestion->value));
     }
 
     /**
