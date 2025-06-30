@@ -30,6 +30,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 readonly class CoverLossesAfterCloseByMarketConsumer
 {
+    public const int THRESHOLD = 4;
+
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 1000;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
@@ -44,6 +46,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $symbol = $closedPosition->symbol;
         $side = $closedPosition->side;
         $loss = $dto->loss->value();
+
+        if ($loss < self::THRESHOLD) {
+            return;
+        }
 
         if (
             $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol)) === false
