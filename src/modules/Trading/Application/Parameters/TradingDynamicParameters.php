@@ -28,6 +28,8 @@ use LogicException;
 final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
     private const float ATR_BASE_MULTIPLIER = 2;
+    public const int LONG_ATR_PERIOD = 10;
+    public const TimeFrame LONG_ATR_TIMEFRAME = TimeFrame::D1;
 
     public function __construct(
         private AppSettingsProviderInterface $settingsProvider,
@@ -52,8 +54,10 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
-        $longATR = $this->taProvider->create($symbol, TimeFrame::D1)->atr(7)->atr->absoluteChange;
-        $fastATR = $this->taProvider->create($symbol, TimeFrame::D1)->atr(2)->atr->absoluteChange;
+        $longATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(self::LONG_ATR_PERIOD)->atr->absoluteChange;
+
+        var_dump($longATR, $k);
+        $fastATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(2)->atr->absoluteChange;
 
         $long = self::ATR_BASE_MULTIPLIER * $longATR * $k;
         $fast = self::ATR_BASE_MULTIPLIER * $fastATR;
@@ -76,8 +80,8 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         if ($oneDaySignificantChangePercentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantDelta_OneDay_PricePercent, $symbol))) {
             return Percent::notStrict($oneDaySignificantChangePercentOverride * $passedPartOfDay);
         } else {
-            $timeFrame = TimeFrame::D1;
-            $atrPeriod = 7;
+            $timeFrame = self::LONG_ATR_TIMEFRAME;
+            $atrPeriod = self::LONG_ATR_PERIOD;
 
             $ta = $this->taProvider->create($symbol, $timeFrame);
             $baseATR = $ta->atr($atrPeriod)->atr;
