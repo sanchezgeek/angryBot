@@ -683,18 +683,17 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ['withSpecifiedCache' => $maxChangeMap, 'withPrevIteration' => $maxChangeMapWithPrevCache] = $this->getSymbolsMaxChangeMap($byMaxNegativeChange);
 
             if ($maxChangeMap) {
-                $maxChangeMap = array_flip($maxChangeMap);
-                ksort($maxChangeMap);
+                asort($maxChangeMap);
+                $maxChangeMap = array_keys($maxChangeMap);
 
                 if ($maxChangeMapWithPrevCache) {
-                    $maxChangeMapWithPrevCache = array_flip($maxChangeMapWithPrevCache);
-                    ksort($maxChangeMapWithPrevCache);
+                    asort($maxChangeMapWithPrevCache);
+                    $maxChangeMapWithPrevCache = array_keys($maxChangeMapWithPrevCache);
                     if ($last = end($maxChangeMapWithPrevCache)) {
                         $maxChangeMap = array_diff($maxChangeMap, [$last]);
                         $maxChangeMap[] = $last;
                     }
                 }
-
 
                 $maxChangeMap = array_values($maxChangeMap);
                 $symbolsRaw = array_intersect($maxChangeMap, $symbolsRaw);
@@ -703,22 +702,22 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             in_array('watch', $sortBy, true)
             && in_array('im', $sortBy, true)
         ) {
-            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
-            ksort($initialMarginMap);
-            $initialMarginMap = array_values($initialMarginMap);
+            $symbolsInitialMarginMap = $this->getSymbolsInitialMarginMap();
+            asort($symbolsInitialMarginMap);
+            $symbolsInitialMarginMap = array_values(array_keys($symbolsInitialMarginMap));
 
             $restSymbols = array_diff($symbolsRaw, $symbolsToWatch);
-            $restSymbols = array_intersect($initialMarginMap, $restSymbols);
+            $restSymbols = array_intersect($symbolsInitialMarginMap, $restSymbols);
 
-            $watchSortedByIM = array_intersect($initialMarginMap, $symbolsToWatch);
+            $watchSortedByIM = array_intersect($symbolsInitialMarginMap, $symbolsToWatch);
             $symbolsRaw = array_merge($restSymbols, $watchSortedByIM);
         } elseif (in_array('watch', $sortBy, true)) {
             $symbolsRaw = array_merge(array_diff($symbolsRaw, $symbolsToWatch), $symbolsToWatch);
         } elseif (in_array('im', $sortBy, true) || $this->useIMForSort) {
-            $initialMarginMap = array_flip($this->getSymbolsInitialMarginMap());
-            ksort($initialMarginMap);
-            $initialMarginMap = array_values($initialMarginMap);
-            $symbolsRaw = array_intersect($initialMarginMap, $symbolsRaw);
+            $symbolsInitialMarginMap = $this->getSymbolsInitialMarginMap();
+            asort($symbolsInitialMarginMap);
+            $symbolsInitialMarginMap = array_values(array_keys($symbolsInitialMarginMap));
+            $symbolsRaw = array_intersect($symbolsInitialMarginMap, $symbolsRaw);
         }
 
         if ($this->moveHedgedSymbolsUp) {
@@ -788,6 +787,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
             $mainPositionCacheKey = self::positionCacheKey($main);
 
+            $withSpecifiedCacheResult[$symbolRaw] = 0;
+            $withPrevCacheResult[$symbolRaw] = 0;
 
             if (($cachedValue = ($specifiedCache[$mainPositionCacheKey] ?? null)?->unrealizedPnl) !== null) {
                 $currentPositionPnlDiffWithPrevCache = $mainPositionPnl - $cachedValue;
