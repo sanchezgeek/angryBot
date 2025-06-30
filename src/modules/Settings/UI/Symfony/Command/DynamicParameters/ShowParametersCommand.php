@@ -212,7 +212,7 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
             }
             $groupCaption = $groupCaption ? sprintf('%s', implode(' ', $groupCaption)) : null;
 
-            $groupValues = [sprintf('%s.%s', $selectedGroup, $selectedParameter) => $value];
+            $groupValues[$selectedGroup][sprintf('%70s', $selectedGroup . '.' . $selectedParameter)] = $value;
 
             $this->printGroup($groupCaption, $groupValues);
         }
