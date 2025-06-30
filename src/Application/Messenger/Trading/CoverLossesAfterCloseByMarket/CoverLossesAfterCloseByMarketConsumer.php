@@ -23,6 +23,10 @@ use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Worker\AppContext;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+/**
+ * @see \App\Tests\Functional\Application\Messenger\Trading\CoverLossesAfterCloseByMarketConsumer\SkipTransferTest
+ * @see \App\Tests\Functional\Application\Messenger\Trading\CoverLossesAfterCloseByMarketConsumer\SuccessTransferTest
+ */
 #[AsMessageHandler]
 readonly class CoverLossesAfterCloseByMarketConsumer
 {
@@ -70,9 +74,32 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $last = $lastPrices[$symbolRaw];
             $mainPositionPnlPercent = $last->getPnlPercentFor($main);
             if ($mainPositionPnlPercent > self::PNL_PERCENT_TO_CLOSE_POSITIONS) {
-                $candidates[] = $main;
+                $candidates[$symbolRaw] = $main;
             }
         }
+
+        if (!$candidates) {
+            return;
+        }
+
+        $map = [];
+        foreach ($candidates as $candidate) {
+            $symbolRaw = $candidate->symbol->name();
+            $last = $lastPrices[$symbolRaw];
+            $pnlPercent = $last->getPnlPercentFor($candidate);
+
+            $map[$symbolRaw] = $pnlPercent;
+        }
+
+        asort($map);
+        $map = array_reverse($map, true);
+        $sort = array_keys($map);
+        $arr = [];
+        foreach ($sort as $symbolRaw) {
+            $arr[$symbolRaw] = true;
+        }
+
+        $candidates = array_replace($arr, $candidates);
 
         $lossToCoverByOtherSymbols = $loss / 2;
         $count = count($candidates);

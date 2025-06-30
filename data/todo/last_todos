@@ -286,12 +286,21 @@ analise average price change through some period
 
 
 
+
+
 add sleep time
+
+
 
 
 baed on ta:
     liquidation-handler.warningDistancePnlPercent
     liquidation-handler.criticalDistancePnl
+
+~~~~~~~~~~~~!!! REVIEW !!!~~~~~~~~~~~~
+        trading.standardAtrForOrdersLength
+        и подумать какие Atr для чего использовать
+            подходит ли long для significant
 
     + на максимально грани ( но надо проверить, что нет возможности ликвиднуть )
 
@@ -314,4 +323,18 @@ PriceChangeHandler
     Добавить разницу с пред. измерением (...+%)
         И может быть запускать какой-то процесс чека для определённого символа (async)
 
+highlight changed size
+    and push it to bottom (if stop executed and PNL increased)
+    или даже просто размер увеличился: показывать две итерации внизу
 
+
+rewrite fix opposite listener
+    move to async
+        publish from coverLosses (rest loss)
+
+
+
+команду для перестановки стопов в б/у
+
+
+сделать автоматическую раскачку хеджа и депозита (бот сам должен повторить результат)

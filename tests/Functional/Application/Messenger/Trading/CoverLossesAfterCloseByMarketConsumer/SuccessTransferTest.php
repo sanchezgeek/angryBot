@@ -14,6 +14,9 @@ use App\Bot\Domain\Position;
 use App\Domain\Coin\CoinAmount;
 use App\Tests\Factory\Position\PositionBuilder;
 
+/**
+ * @covers \App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
+ */
 class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstract
 {
     /**

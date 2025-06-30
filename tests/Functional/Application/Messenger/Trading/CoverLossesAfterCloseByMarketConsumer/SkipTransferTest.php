@@ -13,6 +13,9 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Tests\Factory\Position\PositionBuilder;
 
+/**
+ * @covers \App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
+ */
 class SkipTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstract
 {
     /**
