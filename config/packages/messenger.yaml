@@ -39,7 +39,7 @@ framework:
             App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async
 
             # trading
-            App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async
+            App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async_critical
 
             # alarm
             App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
