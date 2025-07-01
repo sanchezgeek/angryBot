@@ -9,18 +9,24 @@ use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use DateInterval;
 use DatePeriod;
 use DateTimeImmutable;
+use Psr\Log\LoggerInterface;
 
 final readonly class AppNotificationsService implements AppNotificationsServiceInterface
 {
-    private const string FROM = '08:00';
+    private const string FROM = '07:55';
     private const string TO = '08:20';
+
+    private LoggerInterface $logger;
 
     private DateTimeImmutable $from;
     private DateTimeImmutable $to;
 
     public function __construct(
+        LoggerInterface $appNotificationLogger,
         private ClockInterface $clock
     ) {
+        $this->logger = $appNotificationLogger;
+
         $from = explode(':', self::FROM);
         $to = explode(':', self::TO);
 
@@ -40,5 +46,14 @@ final readonly class AppNotificationsService implements AppNotificationsServiceI
         $now = $this->clock->now();
 
         return $now >= $sleepPeriod->getStartDate() && $now <= $sleepPeriod->getEndDate();
+    }
+
+    public function notify(string $message, array $data = []): void
+    {
+        if ($this->isNowTimeToSleep()) {
+            return;
+        }
+
+        $this->logger->info($message, $data);
     }
 }

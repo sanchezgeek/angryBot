@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
-use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
 use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
@@ -115,7 +115,7 @@ final class CheckSymbolsPriceChangeHandler
         private readonly TradingParametersProviderInterface $parameters,
         private readonly ByBitLinearExchangeService $exchangeService,
         private readonly PreviousSymbolPriceProvider $previousSymbolPriceManager,
-        private readonly AppNotificationLoggerInterface $notifications,
+        private readonly AppNotificationsServiceInterface $notifications,
         private readonly RateLimiterFactory $priceChangeAlarmThrottlingLimiter,
     ) {
     }

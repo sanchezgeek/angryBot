@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\UseCase\Symbol\InitializeSymbols;
 
-use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Domain\Symbol\Entity\Symbol;
@@ -58,7 +58,7 @@ final readonly class InitializeSymbolsHandler
     public function __construct(
         private ByBitLinearMarketService $marketService,
         private SymbolRepository $symbolRepository,
-        private AppNotificationLoggerInterface $notifications,
+        private AppNotificationsServiceInterface $notifications,
     ) {
     }
 }

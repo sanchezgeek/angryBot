@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket;
 
-use App\Application\Notification\AppNotificationLoggerInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -15,6 +14,7 @@ use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateStop;
@@ -208,7 +208,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         private PositionServiceInterface $positionService,
         private ByBitLinearPositionService $positionServiceWithoutCache,
         private AppSettingsProviderInterface $settings,
-        private AppNotificationLoggerInterface $appNotifications,
+        private AppNotificationsServiceInterface $appNotifications,
         private CreateStopHandlerInterface $createStopHandler,
         private TradingParametersProviderInterface $tradingParameters
     ) {
