@@ -55,8 +55,6 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         $k = $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side));
 
         $longATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(self::LONG_ATR_PERIOD)->atr->absoluteChange;
-
-        var_dump($longATR, $k);
         $fastATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(2)->atr->absoluteChange;
 
         $long = self::ATR_BASE_MULTIPLIER * $longATR * $k;
