@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Modules\Buy\Application\Handler;
+namespace App\Tests\Functional\Modules\Stop\Applicaiton\Handler;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
-use App\Buy\Application\StopPlacementStrategy;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -64,6 +63,8 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return
             new TradingParametersProviderStub()
+                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
+                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
                 ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::Standard, $timeframe, $period, Percent::string('1%'))
                 ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
                 ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::Long, $timeframe, $period, Percent::string('2%'))
@@ -188,7 +189,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         if ($distanceOverride !== null) {
             $baseDistance = $distanceOverride;
         } else {
-            $baseDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::oppositeBuyOrderPnlDistance($stop, PredefinedStopLengthSelector::Standard), $stopPrice);
+            $baseDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
         }
 
         $baseBuyOrderPrice = $side->isShort() ? $stopPrice->sub($baseDistance) : $stopPrice->add($baseDistance);
@@ -197,26 +198,35 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $bigStopVolume = $symbol->roundVolume($minOrderQty * self::BIG_STOP_VOLUME_MULTIPLIER);
 
         if ($stopVolume >= $bigStopVolume) {
-            $volumeGrid = [
-                $symbol->roundVolume($stopVolume / 3),
-                $symbol->roundVolume($stopVolume / 4.5),
-                $symbol->roundVolume($stopVolume / 3.5),
-            ];
-
             if ($distanceOverride) {
+                $volumeGrid = [
+                    $symbol->roundVolume($stopVolume / 3),
+                    $symbol->roundVolume($stopVolume / 4.5),
+                    $symbol->roundVolume($stopVolume / 3.5),
+                ];
                 $priceGrid = [
                     $baseBuyOrderPrice,
                     $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 3.8) : $baseBuyOrderPrice->add($baseDistance / 3.8),
                     $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 2)   : $baseBuyOrderPrice->add($baseDistance / 2),
                 ];
             } else {
-                $moderateLongLengthDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::oppositeBuyOrderPnlDistance($stop, PredefinedStopLengthSelector::ModerateLong), $stopPrice);
-                $longLengthDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::oppositeBuyOrderPnlDistance($stop, PredefinedStopLengthSelector::Long), $stopPrice);
+                $volumeGrid = [
+                    $symbol->roundVolume($stopVolume / 5),
+                    $symbol->roundVolume($stopVolume / 5),
+                    $symbol->roundVolume($stopVolume / 3),
+                    $symbol->roundVolume($stopVolume / 3),
+                ];
+
+                $veryShortDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::VeryShort);
+                $moderateShortDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::ModerateShort);
+                $standardDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
+                $longDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Long);
 
                 $priceGrid = [
-                    $baseBuyOrderPrice,
-                    $side->isShort() ? $stopPrice->sub($moderateLongLengthDistance) : $stopPrice->add($moderateLongLengthDistance),
-                    $side->isShort() ? $stopPrice->sub($longLengthDistance) : $stopPrice->add($longLengthDistance),
+                    $side->isShort() ? $stopPrice->sub($veryShortDistance) : $stopPrice->add($veryShortDistance),
+                    $side->isShort() ? $stopPrice->sub($moderateShortDistance) : $stopPrice->add($moderateShortDistance),
+                    $side->isShort() ? $stopPrice->sub($standardDistance) : $stopPrice->add($standardDistance),
+                    $side->isShort() ? $stopPrice->sub($longDistance) : $stopPrice->add($longDistance),
                 ];
             }
 
@@ -252,10 +262,15 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         return $buyOrders;
     }
 
-    private static function oppositeBuyOrderPnlDistance(Stop $stop, PredefinedStopLengthSelector $lengthSelector): Percent
+    private static function getOppositeOrderDistance(Stop $stop, PredefinedStopLengthSelector $lengthSelector): float
     {
-        return PnlHelper::transformPriceChangeToPnlPercent(
-            self::getTradingParametersStub($stop->getSymbol())->regularOppositeBuyOrderLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+        $stopPrice = $stop->getPrice();
+
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
+            PnlHelper::transformPriceChangeToPnlPercent(
+                self::getTradingParametersStub($stop->getSymbol())->regularOppositeBuyOrderLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+            ),
+            $stopPrice
         );
     }
 

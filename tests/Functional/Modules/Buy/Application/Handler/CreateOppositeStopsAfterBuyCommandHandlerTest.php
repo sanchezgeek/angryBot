@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Modules\Stop\Applicaiton\Handler;
+namespace App\Tests\Functional\Modules\Buy\Application\Handler;
 
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;

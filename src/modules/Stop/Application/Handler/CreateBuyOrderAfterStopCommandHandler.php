@@ -51,8 +51,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         if ($distanceOverride !== null) {
             $baseDistance = $distanceOverride;
         } else {
-            $basePnlDistance = $this->getOppositeOrderPnlDistance($stop, PredefinedStopLengthSelector::Standard);
-            $baseDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($basePnlDistance, $stopPrice);
+            $baseDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
         }
 
         $baseBuyOrderPrice = $side->isShort() ? $stopPrice->sub($baseDistance) : $stopPrice->add($baseDistance);
@@ -72,30 +71,39 @@ final class CreateBuyOrderAfterStopCommandHandler
         $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $baseDistance * self::OPPOSITE_SL_PRICE_MODIFIER;
 //        }
 
-        $minOrderQty = ExchangeOrder::roundedToMin($symbol, $symbol->minOrderQty(), $baseBuyOrderPrice)->getVolume();
+        $minOrderQty = ExchangeOrder::roundedToMin($symbol, $symbol->minOrderQty(), $stopPrice)->getVolume();
         $bigStopVolume = $symbol->roundVolume($minOrderQty * self::BIG_STOP_VOLUME_MULTIPLIER);
 
         if ($stopVolume >= $bigStopVolume) {
-            $volumeGrid = [
-                $symbol->roundVolume($stopVolume / 3),
-                $symbol->roundVolume($stopVolume / 4.5),
-                $symbol->roundVolume($stopVolume / 3.5),
-            ];
-
             if ($distanceOverride) {
+                $volumeGrid = [
+                    $symbol->roundVolume($stopVolume / 3),
+                    $symbol->roundVolume($stopVolume / 4.5),
+                    $symbol->roundVolume($stopVolume / 3.5),
+                ];
                 $priceGrid = [
                     $baseBuyOrderPrice,
                     $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 3.8) : $baseBuyOrderPrice->add($baseDistance / 3.8),
                     $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 2)   : $baseBuyOrderPrice->add($baseDistance / 2),
                 ];
             } else {
-                $moderateLongLengthDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->getOppositeOrderPnlDistance($stop, PredefinedStopLengthSelector::ModerateLong), $stopPrice);
-                $longLengthDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->getOppositeOrderPnlDistance($stop, PredefinedStopLengthSelector::Long), $stopPrice);
+                $volumeGrid = [
+                    $symbol->roundVolume($stopVolume / 5),
+                    $symbol->roundVolume($stopVolume / 5),
+                    $symbol->roundVolume($stopVolume / 3),
+                    $symbol->roundVolume($stopVolume / 3),
+                ];
+
+                $veryShortDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::VeryShort);
+                $moderateShortDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::ModerateShort);
+                $standardDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
+                $longDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Long);
 
                 $priceGrid = [
-                    $baseBuyOrderPrice,
-                    $side->isShort() ? $stopPrice->sub($moderateLongLengthDistance) : $stopPrice->add($moderateLongLengthDistance),
-                    $side->isShort() ? $stopPrice->sub($longLengthDistance) : $stopPrice->add($longLengthDistance),
+                    $side->isShort() ? $stopPrice->sub($veryShortDistance) : $stopPrice->add($veryShortDistance),
+                    $side->isShort() ? $stopPrice->sub($moderateShortDistance) : $stopPrice->add($moderateShortDistance),
+                    $side->isShort() ? $stopPrice->sub($standardDistance) : $stopPrice->add($standardDistance),
+                    $side->isShort() ? $stopPrice->sub($longDistance) : $stopPrice->add($longDistance),
                 ];
             }
 
@@ -123,13 +131,18 @@ final class CreateBuyOrderAfterStopCommandHandler
         return $buyOrders;
     }
 
-    public function getOppositeOrderPnlDistance(
+    public function getOppositeOrderDistance(
         Stop $stop,
         // @todo | oppositeBuyOrder | use param from stop?
         PredefinedStopLengthSelector $lengthSelector
-    ): Percent {
-        return PnlHelper::transformPriceChangeToPnlPercent(
-            $this->tradingParametersProvider->regularOppositeBuyOrderLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
+    ): float {
+        $stopPrice = $stop->getPrice();
+
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
+            PnlHelper::transformPriceChangeToPnlPercent(
+                $this->tradingParametersProvider->regularOppositeBuyOrderLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
+            ),
+            $stopPrice
         );
     }
 
