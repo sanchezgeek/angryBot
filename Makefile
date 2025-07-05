@@ -53,6 +53,9 @@ down: ## Stop the docker hub
 logs: ## Show live logs
 	@$(DOCKER_COMP) logs --tail=0 --follow
 
+last-dev-log:
+	@$(DOCKER_COMP) exec php bash -c "tail -n 1 /srv/app/var/log/dev.log"
+
 sh: ## Connect to the PHP FPM container
 	@$(PHP_CONT) sh
 

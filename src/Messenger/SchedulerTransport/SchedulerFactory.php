@@ -27,6 +27,7 @@ use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
 use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
+use App\Service\Infrastructure\Job\Ping\PingMessages;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Worker\AppContext;
@@ -126,6 +127,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
 
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new PingMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 
