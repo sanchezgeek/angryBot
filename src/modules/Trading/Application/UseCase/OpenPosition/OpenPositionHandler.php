@@ -22,6 +22,7 @@ use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Helper\FloatHelper;
@@ -102,6 +103,7 @@ final class OpenPositionHandler
 
 # do market buy
         $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
+        $marketBuyVolume = ExchangeOrder::roundedToMin($symbol, $marketBuyVolume, $this->ticker->indexPrice->value())->getVolume();
 
         if ($entryDto->stopsGridsDefinition) {
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
