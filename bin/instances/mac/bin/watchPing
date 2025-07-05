@@ -48,10 +48,12 @@ for path in "${instances[@]}"
       code=$?
       diff=$(get_timestamp_diff "$last_log")
 
+      common="$(date -u) [$path]"
+
       if [ ! $code -eq 0 ]; then
-          echo "[$path] cannot get last log: $code" >> $LOG_PATH
+          echo "[$common] cannot get last log: $code" >> $LOG_PATH
       elif (( diff > 60  )); then
-          echo "[$path] last log diff with current time greater than 60" >> $LOG_PATH
+          echo "[$common] last log diff with current time greater than 60" >> $LOG_PATH
       fi;
   done
 
