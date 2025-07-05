@@ -1,0 +1,57 @@
+#!/bin/bash
+#set -e
+
+get_timestamp_diff() {
+    local log_line="$1"
+
+    current_timestamp=$(date -u +%s)
+    datetime=$(echo "$log_line" | sed -E 's/.*\[([^]]+)\].*/\1/' | cut -d '+' -f1)
+
+    # Проверка извлечения
+    if [[ -z "$datetime" ]]; then
+        echo "$current_timestamp"
+        exit 0
+    fi
+
+    # Конвертация для macOS (удаляем миллисекунды)
+    log_date="${datetime%.*}"
+
+    # Конвертируем дату из лога в секунды (macOS version)
+    local log_timestamp
+    log_timestamp=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%S" "$log_date" +%s 2>/dev/null)
+
+    echo "$((current_timestamp - log_timestamp))"
+}
+
+if [[ -z "${BOT_LOGS_DIR}" ]]; then
+  echo "BOT_LOGS_DIR is undefined"
+  exit 1
+else
+  LOGS_DIR="${BOT_LOGS_DIR}"
+fi
+LOG_PATH="${LOGS_DIR}/ping.log"
+
+if [[ -z "${BOT_BIN_DIR}" ]]; then
+  echo "BOT_BIN_DIRS is undefined"
+else
+  BIN_DIR="${BOT_BIN_DIR}"
+fi
+
+instances=()
+for line in $(cat ${BIN_DIR}/data/instances.list); do
+    instances+=("$line")
+done
+
+for path in "${instances[@]}"
+  do
+      last_log=$(make -C ${path} last-dev-log )
+      code=$?
+      diff=$(get_timestamp_diff "$last_log")
+
+      if [ ! $code -eq 0 ]; then
+          echo "[$path] cannot get last log: $code" >> $LOG_PATH
+      elif (( diff > 60  )); then
+          echo "[$path] last log diff with current time greater than 60" >> $LOG_PATH
+      fi;
+  done
+
