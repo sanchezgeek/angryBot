@@ -13,7 +13,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 interface TradingParametersProviderInterface
 {
     public function safeLiquidationPriceDelta(SymbolInterface $symbol, Side $side, float $refPrice): float;
-    public function significantPriceChangePercent(SymbolInterface $symbol, float $passedPartOfDay): Percent;
+    public function significantPriceChange(SymbolInterface $symbol, float $passedPartOfDay): Percent;
     public function regularPredefinedStopLength(SymbolInterface $symbol, PredefinedStopLengthSelector $predefinedStopLength, TimeFrame $timeframe, int $period): Percent;
     public function regularOppositeBuyOrderLength(SymbolInterface $symbol, PredefinedStopLengthSelector $sourceStopLength, TimeFrame $timeframe, int $period): Percent;
 }

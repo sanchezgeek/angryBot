@@ -67,7 +67,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
      * @todo | with refPrice?
      */
     #[AppDynamicParameter(group: 'trading')]
-    public function significantPriceChangePercent(
+    public function significantPriceChange(
         SymbolInterface $symbol,
         float $passedPartOfDay = 1
     ): Percent {
@@ -75,7 +75,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             throw new LogicException(sprintf('$passedPartOfDay cannot be less than 0 (%s provided)', $passedPartOfDay));
         }
 
-        if ($oneDaySignificantChangePercentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantDelta_OneDay_PricePercent, $symbol))) {
+        if ($oneDaySignificantChangePercentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantChange_OneDay_PricePercent, $symbol))) {
             return Percent::notStrict($oneDaySignificantChangePercentOverride * $passedPartOfDay);
         } else {
             $timeFrame = self::LONG_ATR_TIMEFRAME;
@@ -84,7 +84,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             $ta = $this->taProvider->create($symbol, $timeFrame);
             $baseATR = $ta->atr($atrPeriod)->atr;
             $multipliedATR = $baseATR->multiply(
-                $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantDelta_OneDay_BaseMultiplier, $symbol))
+                $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantChange_OneDay_AtrBaseMultiplier, $symbol))
             );
 
             return $multipliedATR->multiply($passedPartOfDay)->percentChange;
@@ -96,7 +96,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     #[AppDynamicParameter(group: 'trading')]
     public function standardAtrForOrdersLength(
         SymbolInterface $symbol,
-        TimeFrame $timeframe = TimeFrame::D1,
+        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = 4,
     ): AveragePriceChange {
         return $this->taProvider->create($symbol, $timeframe)->atr($period)->atr;
@@ -107,7 +107,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     public function regularPredefinedStopLength(
         SymbolInterface $symbol,
         PredefinedStopLengthSelector $predefinedStopLength = PredefinedStopLengthSelector::Standard,
-        TimeFrame $timeframe = TimeFrame::D1,
+        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = 4,
     ): Percent {
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();

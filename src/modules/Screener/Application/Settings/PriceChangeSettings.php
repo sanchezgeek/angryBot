@@ -12,10 +12,10 @@ use App\Settings\Domain\Enum\SettingType;
 enum PriceChangeSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
-    case SignificantDelta_OneDay_PricePercent = 'priceChange.significantDelta.oneDay.pricePercent';
+    case SignificantChange_OneDay_PricePercent = 'priceChange.significantDelta.oneDay.pricePercent';
 
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
-    case SignificantDelta_OneDay_BaseMultiplier = 'priceChange.significantDelta.oneDay.atr.baseMultiplier';
+    case SignificantChange_OneDay_AtrBaseMultiplier = 'priceChange.significantDelta.oneDay.atr.baseMultiplier';
 
     public function getSettingKey(): string
     {

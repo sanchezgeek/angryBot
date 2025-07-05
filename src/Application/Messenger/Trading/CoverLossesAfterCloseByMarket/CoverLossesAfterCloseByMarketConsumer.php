@@ -63,6 +63,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $candidates = [];
 
+        // @todo | cover-losses | найти самые профитные, не закрывать раньше времени (или не надо?) (максимальный-минимальный профит...)
         foreach ($positions as $symbolRaw => $symbolPositions) {
             if ($symbolRaw === $symbol->name()) {
                 continue;
@@ -79,6 +80,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
             $last = $lastPrices[$symbolRaw];
             $mainPositionPnlPercent = $last->getPnlPercentFor($main);
+            // @todo | cover-losses | use ta
             if ($mainPositionPnlPercent > self::PNL_PERCENT_TO_CLOSE_POSITIONS) {
                 $candidates[$symbolRaw] = $main;
             }
@@ -86,6 +88,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         if (!$candidates) {
             return;
+            // @todo | cover-losses | from spot
         }
 
         $map = [];
@@ -126,7 +129,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, PredefinedStopLengthSelector::Short);
+            $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, PredefinedStopLengthSelector::ModerateShort);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
 

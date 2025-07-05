@@ -56,7 +56,7 @@ final class CheckSymbolsPriceChangeHandler
             $currentPrice = $ticker->lastPrice;
             $delta = $currentPrice->value() - $prevPrice;
 
-            $significantPriceChangePercent = $this->parameters->significantPriceChangePercent($symbol, $partOfDayPassed);
+            $significantPriceChangePercent = $this->parameters->significantPriceChange($symbol, $partOfDayPassed);
 
             $significantPriceChange = $significantPriceChangePercent->of($prevPrice);
             if ($partOfDayPassed < 0.15) {
