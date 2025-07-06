@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+rm $BOT_LOGS_DIR/ping.log
+touch $BOT_LOGS_DIR/ping.log
+
 $BOT_BIN_DIR/stop
 $BOT_BIN_DIR/up
 $BOT_BIN_DIR/reload
