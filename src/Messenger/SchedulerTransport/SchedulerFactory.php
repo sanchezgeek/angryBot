@@ -91,7 +91,6 @@ final class SchedulerFactory
         OutputHelper::print('main positions stops worker started');
 
         return [
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new PingMessages()),
             PeriodicalJob::create('2023-09-25T00:00:01.77Z', self::interval(self::PUSH_MAIN_POSITIONS_SL_SPEED), new PushAllMainPositionsStops())
         ];
     }
@@ -132,6 +131,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 4))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 5))),
 
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new PingMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 

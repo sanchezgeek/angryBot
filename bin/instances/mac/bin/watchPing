@@ -5,7 +5,8 @@ get_timestamp_diff() {
     local log_line="$1"
 
     current_timestamp=$(date -u +%s)
-    datetime=$(echo "$log_line" | sed -E 's/.*\[([^]]+)\].*/\1/' | cut -d '+' -f1)
+    datetime=$(echo "$log_line" | sed -E 's/[^\[\]]*\[([^]]+)\].*/\1/' | cut -d '+' -f1)
+    datetime=${datetime:1}
 
     # Проверка извлечения
     if [[ -z "$datetime" ]]; then
