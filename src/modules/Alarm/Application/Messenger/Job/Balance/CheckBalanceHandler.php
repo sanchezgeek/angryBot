@@ -32,7 +32,7 @@ final readonly class CheckBalanceHandler
             }
 
             if ($lessThan && $available < $lessThan) {
-                $this->appErrorLogger->critical(sprintf('balance.available < %s', $greaterThan));
+                $this->appErrorLogger->critical(sprintf('balance.available < %s', $lessThan));
             }
         }
     }
