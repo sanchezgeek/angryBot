@@ -226,7 +226,7 @@ final class CreateStopsAfterBuyCommandHandler
             }
         }
 
-        throw new RuntimeException(sprintf('Cannot find placement strategy (%s)', $suggestion->value));
+        return $this->defaultStopPlacementStrategyProcessor;
     }
 
     /**
