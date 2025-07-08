@@ -1,0 +1,14 @@
+allOpenedPositions
+    highlight changed size
+        and push it to bottom (if stop executed and PNL increased)
+        или даже просто размер увеличился: показывать две итерации внизу
+
+    save current passed distance
+
+
+@todo | UI | opened-positions | Capture specific position state to cache?
+@todo | AllOpenedPositionsInfoCommand
+@todo | AllOpenedPositionsInfoCommand | stops found before ticker not executed (due to big mark/index difference)
+@todo | AllOpenedPositionsInfoCommand | sort by changes
+@todo | AllOpenedPositionsInfoCommand| какое значение использовать для $mainPosStopsApplicableRange = PriceRange::create($boundBeforeLiquidation, $tickerBound, $position->symbol); ?
+    criticalRange->to тоже не совсем верно

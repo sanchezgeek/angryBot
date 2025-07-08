@@ -1,0 +1,16 @@
+openHandler не использует логику StopPlacement
+
+posSize by TA
+
+
+какой-то поиск максимума на отрезке
+    @todo | DRY | with OpenPositionHandler
+    @todo | open-position | add triggerDelta?
+    @todo | open-position | different logic for support position
+    @todo | open-position | full stops grid
+
+    @todo | ATR | research
+        ... Ещё нужен какой-то определятор повышена ли в моменте (сегодня или за какой-то период) волатильность
+    @todo compare with ATR
+
+    !!!!!!!!!!!! sum.txt !!!!!!!!!!!!!!

@@ -1,0 +1,7 @@
+### Checks ###
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
+    @todo | buy/check
+    @todo | buy/check | situation when position became main after buy
+    @todo | stop/check
+    Some command to see checks failures?
+    veryHardPriceAv

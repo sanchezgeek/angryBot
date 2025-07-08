@@ -1,0 +1,3 @@
+save ticker every minute
+    check if symbol hedge other on some distance
+position open/close datetime

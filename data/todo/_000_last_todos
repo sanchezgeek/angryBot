@@ -1,0 +1,45 @@
+imports
+    - { todos }
+
+
+вспомнить про админку
+@todo | cover-losses
+
+symbols
+    @todo | symbol | for all symbols
+    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+    @todo | symbols | profiling
+    @todo | symbol | performance
+        check queries (EAGER)
+        symbolProvider profiling
+    @todo | symbol | some way to get values based on symbol -> move to settings?
+    @todo | symbol | for all symbols
+    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+
+
+05.07 21:53 (посмотреть во сколько примерно началсся движ и почему bmt, hifi, ...)
+foewCH ALL
+some pnl triggers check
+    or even every step after that pnl5
+       в итоге при пересечении опред уровня надо докупить минимальный (даже если до этого не был открыт)
+
+   сам atr (или что бы то ни было) нужно вычислять на истории до открытия (оно только такое там может быть и актуально)
+
+[cmd] команду для перестановки стопов в б/у
+
+
+PriceChange on short period
+        тут надо придумать multiply
+
+
+
+
+### Cache ###
+    @todo | cache
+    @todo | cache | pass specific cache ttl?
+    @todo | cache | all symbols?
+
+
+
+сильное усреднение
+    ./bin/console buy:edit -aremove sell --symbol=hft

@@ -1,0 +1,25 @@
+@todo | stop
+
+rewrite fix opposite listener
+    move to async
+        publish from coverLosses (rest loss)
+
+вспомнить что там нейронка предлагала по поводу ADX
+
+@todo | oppositeBuyOrder | only if source BuyOrder in chain was with force
+    @todo | oppositeBuyOrder | some setting or conditions?
+    @todo | oppositeBuyOrder | stop | либо за цену первоначального стопа?
+
+@todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
+        + может быть job, который будет как-то хитро делать rearrange
+
+
+specify initial pnlDistance on SLs creation + periodical check new liquidation for move orders according to initial relative distance
+
+@todo | pushStops
+@todo manual release events
+@todo | all-main | if not in warn/crit // and get without cache if in crit/warn
+
+
++### Orders context promotion ###
++    @todo | stop | isCloseByMarketContextSet | if support

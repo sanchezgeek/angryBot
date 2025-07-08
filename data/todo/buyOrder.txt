@@ -1,0 +1,25 @@
+Актуализировать дату
+    @todo not only idle (update timestamp)
+
+@todo | priceChange statistics | ResetBuyOrdersActiveStateHandler | use statistics for get appropriate allowed distance
+
+
+!!!!      @todo | !!! PredefinedStopLengthParser parameters
+    тут возможно какой-то селектор типа day/swing/positioning
+    чтобы быть способным поменять поведение
+Не забыть moveStops
+@todo | based on liquidation if position under hedge?
+@todo | some logic for StopCreateStrategy::AFTER_FIRST_POSITION_STOP?
+Посмотреть что со Strategy, когда есть hedge
+
+@todo | review logic: maybe it must be something like "if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1; else $description = 'because index price over stop)';"
+@todo | ShortcutContextProcessorInterface | sL=very-long
+
+
+@todo | buy
+@todo | buy | round here?
+
+
+@todo | sandbox | mb troubles with sandbox (inner check will not work)
+
+

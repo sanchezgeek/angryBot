@@ -1,0 +1,15 @@
+### Validation ###
+    @todo StrictPercent vs CommonPercent
+
+### Settings ###
+    @todo | settings
+    @todo | settings | tests
+    @todo | performance | settings | slow cache or db? or foreach
+    @todo specify array of parameters to evaluate after edit
+    default settings values
+        if ($this->settings->required(ConnectionSettings::CheckConnectionEnabled) !== true) {
+
+### Parameters ###
+    Review critical parameters calculations
+        Maybe some distances MUST be calculated in other way. Such as safeLiquidationDistance
+

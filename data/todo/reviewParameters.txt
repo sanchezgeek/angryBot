@@ -1,0 +1,14 @@
+baed on ta:
+    liquidation-handler.warningDistancePnlPercent
+    liquidation-handler.criticalDistancePnl
+
+~~~~~~~~~~~~!!! REVIEW !!!~~~~~~~~~~~~
+        trading.standardAtrForOrdersLength
+        и подумать какие Atr для чего использовать
+            подходит ли long для significant
+
+    + на максимально грани ( но надо проверить, что нет возможности ликвиднуть )
+
+
+default stops grid definition collection
+    либо вообще на основе MS (swing high/low)

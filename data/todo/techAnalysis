@@ -6,3 +6,27 @@
     (пример с PENG) 30.06 19:23 мск
     когда фиксируешь позицию гридом (withoutOppositeOrders) искать разворот (choch на селком таймфрейме) и докупать обратно позицию (но смотреть, чтобы entryPrice не оказался выше верхней точки)
         анализ проводить с момента, когда был активирован первый такой стоп
+
+
+25.06
+    @todo | ta | !!!обёртка над TraderService!!!
+
+https://www.mql5.com/ru/articles/1742
+        Я использую индикатор RSI с периодом 8
+
+добавить RSI
+    и подумать как его использовать: сколько должно быть диверов перед тем как открывать позицию
+
+@todo | ta | skipped tests
+
+after SL (s.281, executed) | skip (liq. is too near [Δ=3441.79,safe=5669.2331632653]) | active
+        добавить ещё описание откуда взялись эти числа
+
+
+priceImpact.txt
+
+
+usage:
+    => auto swipe hedge criteria
+    => profit criteria
+    => move stops parameters

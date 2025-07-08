@@ -1,0 +1,88 @@
+add sleep time
+do d:m:d and add constraints
+почему-то в tests/Functional/Bot/Handler/PushOrdersToExchange/BuyOrder/PushBuyOrdersCommonCasesTest.php ордера пушатся от теста к тесту с разной сортировкой
+
+
+### oldCode ###
+    data/oldCode/tests
+
+[symbol] @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
+    (maybe some problems when opened some linear positon but that cannot be handled with InitializeSymbolsHandler)
+
+
+### DRY ###
+    @todo | DRY | with OpenPositionHandler
+    @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
+
+
+postgres 16
+
+
+
+### Sandbox ###
+    tests/Unit/Application/UseCase/Trading/Sandbox/TradingSandbox/OtherSandboxTests.php
+    regexp CTRL-F: @todo.*sandbox
+    @todo | sandbox | mb troubles with sandbox (inner check will not work)
+    @todo | sandbox | research impact on balance
+    @todo | sandbox | get rid of SandboxState::getAvailableBalance or replace logic based on SandboxState::contractBalance
+    @todo | sandbox | add unrealizedPNL (isUTA)
+    @todo | sandbox | what to use? position entry or stop price
+
+
+
+### SymbolPrice ###
+    @todo | price | handle exception
+    @todo | ctrl-f: round(..., 2)
+
+
+### Forgotten Errors ###
+    @todo | liquidation | log into app_errors?
+    @todo | exceptions
+    !!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)
+
+### Performance ###
++    some settings can be initialized once
++    @todo publish to async
+
+
+
+### Other / Minor ###
+    #####!!!! UI !!!!!#####
+            @todo | UI | parameters | add some description and print in `show` command
+
+    symbols_wip_from_main_before_new_m
+    main_msg_with_critical_context.patch / Тут пытался делать что-то по поводу скипа сообщений PushOrders
++    @todo | liquidation | null
++    @todo | check | other | reserved balance
+    @todo | profit | it's not about leverage ...
+    Commands
+        increase position (by some paams)
+        buy grid for specified volume (that will be divided to some orders qnt and size)
+
+
+### Monitoring ###
+    metrics
+        e.g. PushAllMainPositionsStopsHandler exec time deviation
+
+
+### ??? ###
+    src/Infrastructure/Cache/PositionsCache.php
+    cals
+    написать compByHedge
+    src/modules/Bot/Application/Messenger/Job/Utils/FixupOrdersDoublingHandler.php
+
+        /**
+         * equiv hedge from BuyAndCheckFurtherPositionLiquidation
+         * eth Buy
+         * $liquidationPrice =
+         * $withPrice =
+         * $safePriceDistance =
+         */
+
++### Tests ###
++    ExchangeOrderTest.php
++   PositionBuilderTest.php
++ tests/Unit/Domain/Position/Helper/PositionCloneTest.php
+
+### Dump ###
+    @todo | check if sequence rewinds to and move back to restore also id

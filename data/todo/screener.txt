@@ -1,0 +1,11 @@
+PriceChangeHandler
+    Добавить разницу с пред. измерением (...+%)
+        И может быть запускать какой-то процесс чека для определённого символа (async)
+
+
+
+@todo | priceChange | some very short period handler
+    @todo | priceChange | save prev percent and notify again if new percent >= prev
+    @todo | priceChange | +/-
+
+    [ui] Screener -> dash (top volatility)
