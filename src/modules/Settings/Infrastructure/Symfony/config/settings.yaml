@@ -7,6 +7,8 @@ services:
                 # profit / loss
                 alarm.loss.enabled: false
                 alarm.profit.enabled: false
+                alarm.balance.greater: 'false'
+                alarm.balance.less: 'false'
 
                 # connection
                 connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'

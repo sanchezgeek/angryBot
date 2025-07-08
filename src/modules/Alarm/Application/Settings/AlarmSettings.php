@@ -20,6 +20,12 @@ enum AlarmSettings: string implements AppSettingInterface, AppSettingsGroupInter
     #[SettingParametersAttribute(type: SettingType::Integer)]
     case AlarmOnProfitPnlPercent = 'alarm.profit.pnlPercent';
 
+    #[SettingParametersAttribute]
+    case AlarmOnBalanceGreaterThan = 'alarm.balance.greater';
+
+    #[SettingParametersAttribute]
+    case AlarmOnBalanceLessThan = 'alarm.balance.less';
+
     public function getSettingKey(): string
     {
         return $this->value;
