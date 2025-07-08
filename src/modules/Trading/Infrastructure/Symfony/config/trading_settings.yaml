@@ -8,5 +8,5 @@ safePriceDistance.applyStrategy: 'conservative'
 
 ### \App\Trading\Application\Settings\OpenPositionSettings
 # 10% of whole risked balance will be opened with 4 delayed BuyOrders in -100%..100% range from position entry, ...
-openPosition.splitToBuyOrders.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..100%%|10%%|4|wOO;-200%%..200%%|30%%|10'
-openPosition.stops.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..-120%%|50%%|2;-200%%..-220%%|30%%|6'
+#openPosition.splitToBuyOrders.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..100%%|10%%|4|wOO;-200%%..200%%|30%%|10'
+#openPosition.stops.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..-120%%|50%%|2;-200%%..-220%%|30%%|6'

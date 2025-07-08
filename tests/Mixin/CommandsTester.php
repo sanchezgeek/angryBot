@@ -13,6 +13,6 @@ trait CommandsTester
     {
         self::bootKernel();
 
-        return new CommandTester((new Application(self::$kernel))->find($commandName));
+        return new CommandTester(new Application(self::$kernel)->find($commandName));
     }
 }
