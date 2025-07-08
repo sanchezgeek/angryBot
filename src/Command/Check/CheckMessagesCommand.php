@@ -20,6 +20,11 @@ class CheckMessagesCommand extends Command
 
         $connection = $this->entityManager->getConnection();
 
+        $result = $connection->executeQuery('SELECT * from messenger_messages')->fetchAllAssociative();
+        foreach ($result as $item) {
+            var_dump($item['queue_name']);
+        }
+
         $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetchAssociative();
 
         $count = (int) $result['count'];
