@@ -46,8 +46,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
 {
     public function __invoke(PushStops $message): void
     {
-        // @todo | stop check mainPosition stops first
-
         $positionService = $this->positionService; $orderService = $this->orderService;
         $side = $message->side; $symbol = $message->symbol;
         $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
@@ -159,8 +157,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
         try {
             $exchangeOrderId = $pushStopCallback();
             $stop->wasPushedToExchange($exchangeOrderId);
-            // @todo manual release events
-            // or check what might happen in case of some exception
+            // @todo manual release events or check what might happen in case of some exception
             $checksContext->resetState();
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
