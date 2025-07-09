@@ -30,6 +30,10 @@ trait AdditionalStopContextAwareCommand
             'caption' => 'Close By Market',
             'mappedContext' => Stop::CLOSE_BY_MARKET_CONTEXT,
         ],
+        'sSC' => [
+            'caption' => 'Skip support checks',
+            'mappedContext' => Stop::SKIP_SUPPORT_CHECK_CONTEXT,
+        ],
     ];
 
     private array $addedAdditionalStopContexts = [];
