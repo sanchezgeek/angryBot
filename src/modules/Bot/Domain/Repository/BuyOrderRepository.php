@@ -134,7 +134,6 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
     /**
      * @return BuyOrder[]
-     * @todo MB use current price to find orders?
      */
     public function getAllIdleOrders(SymbolInterface ...$symbols): array
     {
@@ -146,6 +145,46 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return array<Side[]> Symbols names => position sides
+     */
+    public function getNotExecutedOrdersSymbolsMap(): array
+    {
+        $query = "select DISTINCT symbol, position_side from buy_order bo WHERE bo.context->'$this->exchangeOrderIdContext' is null";
+
+        $result = $this->getEntityManager()->getConnection()->executeQuery($query)->fetchAllAssociative();
+
+        $map = [];
+        foreach ($result as $item) {
+            $map[$item['symbol']][] = Side::from($item['position_side']);
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getOrdersAfterPrice(SymbolInterface $symbol, Side $positionSide, float $price): array
+    {
+        $qb = $this->createQueryBuilder('b');
+
+        $qb
+            ->andWhere('b.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere('b.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+        ;
+
+        if ($positionSide->isShort()) {
+            $qb->andWhere('b.price <= :price');
+        } else {
+            $qb->andWhere('b.price >= :price');
+        }
+
+        $qb->setParameter(':price', $price);
 
         return $qb->getQuery()->getResult();
     }

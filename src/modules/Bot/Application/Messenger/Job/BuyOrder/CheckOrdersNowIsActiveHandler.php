@@ -10,6 +10,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -23,6 +24,7 @@ final readonly class CheckOrdersNowIsActiveHandler
         private BuyOrderRepository $buyOrderRepository,
         private ExchangeServiceInterface $exchangeService,
         private EntityManagerInterface $entityManager,
+        private SymbolProvider $symbolProvider,
         private ClockInterface $clock,
     ) {
     }
@@ -33,31 +35,28 @@ final readonly class CheckOrdersNowIsActiveHandler
 
         /** @var array<array{symbol: string, items: BuyOrder[]}> $map */
         $map = [];
-        foreach ($this->buyOrderRepository->getAllIdleOrders() as $buyOrder) {
-            $symbol = $buyOrder->getSymbol();
-            $symbolName = $symbol->name();
 
-            $map[$symbolName] = $map[$symbolName] ?? ['symbol' => $symbol, 'items' => []];
-            $map[$symbolName]['items'][] = $buyOrder;
-        }
-
-        foreach ($map as $item) {
-            $symbol = $item['symbol'];
-            $orders = $item['items'];
+        $notExecutedOrdersSymbols = $this->buyOrderRepository->getNotExecutedOrdersSymbolsMap();
+        foreach ($notExecutedOrdersSymbols as $symbolRaw => $positionSides) {
+            $symbol = $this->symbolProvider->getOneByName($symbolRaw);
             $ticker = $this->exchangeService->ticker($symbol);
 
-            foreach ($orders as $buyOrder) {
-                if (
-                    ($createdAfterStopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext())
-                    && isset($activeConditionalStopOrders[$createdAfterStopExchangeOrderId])
-                ) {
-                    continue;
-                }
+            foreach ($positionSides as $positionSide) {
+                $symbolPrice = $ticker->indexPrice; /** @see BuyOrder::mustBeExecuted */
 
-                /** @var BuyOrder $buyOrder */
-                $comparator = self::getComparator($buyOrder->getPositionSide());
-                if ($comparator($buyOrder->getPrice(), $ticker->indexPrice)) {
-                    $buyOrder->setActive($this->clock->now());
+                $orders = $this->buyOrderRepository->getOrdersAfterPrice($symbol, $positionSide, $symbolPrice->value());
+                foreach ($orders as $buyOrder) {
+                    if (
+                        ($createdAfterStopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext())
+                        && isset($activeConditionalStopOrders[$createdAfterStopExchangeOrderId])
+                    ) {
+                        continue;
+                    }
+
+                    $comparator = self::getComparator($buyOrder->getPositionSide());
+                    if ($comparator($buyOrder->getPrice(), $symbolPrice)) {
+                        $buyOrder->setActive($this->clock->now());
+                    }
                 }
             }
         }
