@@ -22,5 +22,5 @@ unique_symbols=$(printf "%s\n" "${symbols[@]}" | sort -u)
 
 for symbol in $unique_symbols
   do
-    open "https://www.tradingview.com/chart/7mIOwAJ7/?symbol=BINANCE%3A$symbol"
+    open "https://www.tradingview.com/chart/7mIOwAJ7/?symbol=BYBIT%3A$symbol.P"
 done
