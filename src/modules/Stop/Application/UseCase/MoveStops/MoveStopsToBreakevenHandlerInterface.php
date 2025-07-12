@@ -6,5 +6,5 @@ namespace App\Stop\Application\UseCase\MoveStops;
 
 interface MoveStopsToBreakevenHandlerInterface
 {
-    public function handle(MoveStopsEntryDto $entryDto);
+    public function handle(MoveStopsToBreakevenEntryDto $entryDto);
 }

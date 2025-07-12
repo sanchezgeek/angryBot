@@ -7,8 +7,12 @@ namespace App\Stop\Application\UseCase\MoveStops;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Price\Enum\PriceMovementDirection;
+use App\Domain\Stop\Helper\PnlHelper;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * @see \App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\MoveStops\MoveStopsToBreakevenHandlerTest
+ */
 final readonly class MoveStopsToBreakevenHandler implements MoveStopsToBreakevenHandlerInterface
 {
     public function __construct(
@@ -17,41 +21,60 @@ final readonly class MoveStopsToBreakevenHandler implements MoveStopsToBreakeven
     ) {
     }
 
-    public function handle(MoveStopsEntryDto $entryDto): void
+    public function handle(MoveStopsToBreakevenEntryDto $entryDto): void
     {
         $position = $entryDto->position;
         $symbol = $position->symbol;
         $side = $position->side;
 
-        $activeStops = $this->stopRepository->findActive($symbol, $side);
-
-        if (!$activeStops) {
+        if (!$stops = $this->getStopsToHandle($entryDto)) {
             return;
         }
 
-        usort($activeStops, static fn (Stop $a, Stop $b) => $a->getPrice() <=> $b->getPrice());
+        usort(
+            $stops,
+            $side->isShort()
+                ? static fn (Stop $a, Stop $b) => $a->getPrice() <=> $b->getPrice()
+                : static fn (Stop $a, Stop $b) => $b->getPrice() <=> $a->getPrice()
+        );
 
-        $firstStop = $activeStops[array_key_first($activeStops)];
-
+        $firstStop = $stops[array_key_first($stops)];
         $firstStopPrice = $symbol->makePrice($firstStop->getPrice());
-        $priceDelta = $position->entryPrice()->differenceWith($firstStopPrice);
 
-        $isStopsPlacedAfterPosition = $priceDelta->isProfitFor($side);
+        $targetPriceDiffWithPositionEntry = PnlHelper::convertPnlPercentOnPriceToAbsDelta($entryDto->positionPnlPercent, $position->entryPrice());
+        $targetPrice = $position->entryPrice()->modifyByDirection($side, PriceMovementDirection::TO_PROFIT, $targetPriceDiffWithPositionEntry);
 
-        if (!$isStopsPlacedAfterPosition) {
+        $priceDifference = $targetPrice->differenceWith($firstStopPrice);
+        $isStopsPlacedAfterTarget = $priceDifference->isProfitFor($side);
+
+        if (!$isStopsPlacedAfterTarget) {
             return;
         }
 
-        $delta = $priceDelta->absDelta();
+        $priceDelta = $priceDifference->absDelta();
 
-        $this->entityManager->wrapInTransaction(static function() use ($activeStops, $symbol, $delta, $side) {
-            foreach ($activeStops as $stop) {
+        $this->entityManager->wrapInTransaction(static function() use ($stops, $symbol, $priceDelta, $side) {
+            foreach ($stops as $stop) {
                 $initialPrice = $symbol->makePrice($stop->getPrice());
 
                 $stop->setPrice(
-                    $initialPrice->modifyByDirection($side, PriceMovementDirection::TO_PROFIT, $delta)->value()
+                    $initialPrice->modifyByDirection($side, PriceMovementDirection::TO_PROFIT, $priceDelta)->value()
                 );
             }
         });
+    }
+
+    /**
+     * @return Stop[]
+     */
+    private function getStopsToHandle(MoveStopsToBreakevenEntryDto $entryDto): array
+    {
+        $position = $entryDto->position;
+        $activeStops = $this->stopRepository->findActive($position->symbol, $position->side);
+
+        return $entryDto->excludeFixations
+            ? array_filter($activeStops, static fn (Stop $stop) => !($stop->isStopAfterOtherSymbolLoss() || $stop->isStopAfterFixHedgeOppositePosition()))
+            : $activeStops
+        ;
     }
 }

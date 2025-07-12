@@ -283,9 +283,23 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return ($this->context[self::CREATED_AFTER_OTHER_SYMBOL_LOSS] ?? null) === true;
     }
 
+    public function setIsStopAfterOtherSymbolLoss(): self
+    {
+        $this->context[self::CREATED_AFTER_OTHER_SYMBOL_LOSS] = true;
+
+        return $this;
+    }
+
     public function isStopAfterFixHedgeOppositePosition(): bool
     {
         return ($this->context[self::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION] ?? null) === true;
+    }
+
+    public function setStopAfterFixHedgeOppositePositionContest(): self
+    {
+        $this->context[self::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION] = true;
+
+        return $this;
     }
 
     public function isManuallyCreatedStop(): bool
