@@ -42,9 +42,19 @@ class HistoryCommand extends AbstractCommand
             'change' => (float)$item['change'],
             'datetime' => new DateTimeImmutable()->setTimestamp($item['transactionTime'] / 1000)->format('d-m-Y H:i:s'),
         ], $list);
+        $data = array_reverse($data);
 
         foreach ($data as $item) {
-            OutputHelper::print(sprintf('[%10s] %20s: %s %s %s => %s', $item['datetime'], $item['symbol'], $item['cashBalance'], $item['change'] > 0 ? '+' : '-', abs($item['change']), $item['cashBalance'] - $item['change']));
+            OutputHelper::print(
+                sprintf('[%10s] %20s: %s %s %s => %s',
+                    $item['datetime'],
+                    $item['symbol'],
+                    $item['cashBalance'] - $item['change'],
+                    $item['change'] > 0 ? '+' : '-',
+                    abs($item['change']),
+                    $item['cashBalance']
+                )
+            );
         }
 
         return Command::SUCCESS;
