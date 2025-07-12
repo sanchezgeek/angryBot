@@ -35,3 +35,6 @@ services:
     App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStopsHandler:
         arguments:
             $innerHandler: '@App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler'
+    
+    App\Stop\Application\UseCase\MoveStops\MoveStopsToBreakevenHandler:
+        public: true
