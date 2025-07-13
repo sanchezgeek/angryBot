@@ -22,20 +22,28 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest;
 use App\Tests\Helper\StopTestHelper;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Utils\TradingSetup\TradingSetup;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
+/**
+ * @covers \App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStopsHandler
+ */
 final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
-    private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
-    private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
+    use TradingParametersMocker;
 
-    const CATEGORY = AssetCategory::linear;
+    private const int LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
+    private const int LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 10;
+
+    const AssetCategory CATEGORY = AssetCategory::linear;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        self::createTradingParametersStub();
     }
 
     /**
@@ -44,6 +52,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     public function testPushAllMainPositionsStops(
         TradingSetup $setup,
         array $apiCalls,
+        array $mockedDistances,
         array $stopsAfterHandle
     ): void {
         $tickers = $setup->getTickers();
@@ -52,6 +61,8 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
+            self::mockTradingParametersForLiquidationTests($ticker->symbol, $mockedDistances[$ticker->symbol->name()] ?? null);
+
             $tickersApiCalls[] = self::tickerApiCallExpectation($ticker)->setNoNeedToTrackRequestCallToFurtherCheck();
         }
 
@@ -87,7 +98,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $symbol = SymbolEnum::BTCUSDT;
         $btcShort = $setup->getPosition($symbol, Side::Sell);
 
-        $markPrice = $btcShort->liquidationPrice - PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $btcShort->liquidationPrice) - 100;
+        $markPrice = 29030; //        $markPrice = $btcShort->liquidationPrice - PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $btcShort->liquidationPrice) - 100;
         $btcTicker = TickerFactory::create($symbol, ceil($markPrice + 20), ceil($markPrice), ceil($markPrice)); // @todo index?
         $setup->addTicker($btcTicker);
 
@@ -151,8 +162,11 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         yield [
             'setup' => $setup,
             'apiCalls' => array_merge($linkShortStopsApiCalls, $btcShortStopsApiCalls), # order matters
+            'mockedWarningDistances' => [
+                SymbolEnum::LINKUSDT->name() => '0.0907%',
+                SymbolEnum::BTCUSDT->name() => '0.09%',
+            ],
             'stopsAfterHandle' => array_merge($linkShortResultStopsAfter, $btcStopsAfter),
-            // @todo BuyOrders after handle
         ];
     }
 }

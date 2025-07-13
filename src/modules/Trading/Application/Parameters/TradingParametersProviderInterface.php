@@ -20,6 +20,6 @@ interface TradingParametersProviderInterface
     public function safeLiquidationPriceDelta(SymbolInterface $symbol, Side $side, float $refPrice): float;
     public function significantPriceChange(SymbolInterface $symbol, float $passedPartOfDay): Percent;
     public function standardAtrForOrdersLength(SymbolInterface $symbol, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): AveragePriceChange;
-    public function regularPredefinedStopLength(SymbolInterface $symbol, PredefinedStopLengthSelector $predefinedStopLength, TimeFrame $timeframe, int $period): Percent;
-    public function regularOppositeBuyOrderLength(SymbolInterface $symbol, PredefinedStopLengthSelector $sourceStopLength, TimeFrame $timeframe, int $period): Percent;
+    public function regularPredefinedStopLength(SymbolInterface $symbol, PredefinedStopLengthSelector $predefinedStopLength, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
+    public function regularOppositeBuyOrderLength(SymbolInterface $symbol, PredefinedStopLengthSelector $sourceStopLength, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
 }

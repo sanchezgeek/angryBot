@@ -20,6 +20,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
@@ -30,6 +31,8 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
+use App\Tests\Stub\TA\TradingParametersProviderStub;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function min;
@@ -47,6 +50,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     use PositionSideAwareTest;
     use AppErrorsSymfonyLoggerTrait;
     use SettingsAwareTest;
+    use TradingParametersMocker;
 
     private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
@@ -66,6 +70,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 
     private const DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
 
+    private TradingParametersProviderStub $tradingParametersProvider;
+
     protected function setUp(): void
     {
         $this->exchangeService = $this->createMock(ExchangeServiceInterface::class);
@@ -75,6 +81,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
         $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
         $this->settingsProvider = $this->createMock(AppSettingsProviderInterface::class);
+
+        self::createTradingParametersStub();
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
@@ -96,6 +104,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
      */
     public function testDoNothingWhenPositionIsNotUnderLiquidation(Ticker $ticker, Position $position): void
     {
+        self::mockTradingParametersForLiquidationTests($ticker->symbol);
+
         $this->havePositions($position);
         $this->haveTicker($ticker);
 
@@ -132,6 +142,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
         float $spotAvailableBalance,
         ?float $expectedTransferAmount,
     ): void {
+        self::mockTradingParametersForLiquidationTests($position->symbol);
+
         $liquidationPrice = $position->liquidationPrice;
 
         $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);

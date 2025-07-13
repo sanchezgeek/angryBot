@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Stop\Application\UseCase\Push\MainPositionsStops;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
@@ -21,6 +21,9 @@ use RuntimeException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+/**
+ * @see \App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push\PushMainPositionsStopsTest
+ */
 #[AsMessageHandler]
 final readonly class PushAllMainPositionsStopsHandler
 {
@@ -62,7 +65,7 @@ final readonly class PushAllMainPositionsStopsHandler
             $possibleTriggeredStops = $stopsToSymbolsMap[$symbolRaw] ?? [];
             $currentPrice = $lastMarkPrices[$positionSymbol->name()];
             $ticker = new Ticker($positionSymbol, $currentPrice, $currentPrice, $currentPrice);
-            $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
+            $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
             $warningRange = $liquidationParameters->warningRange();
             $passedDistancePart = 0;
             if ($ticker->markPrice->isPriceInRange($warningRange)) {
@@ -156,6 +159,7 @@ final readonly class PushAllMainPositionsStopsHandler
         private ByBitLinearPositionService $positionService,
         private StopRepository $stopRepository,
         private PushStopsHandler $innerHandler,
+        private LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
     ) {
     }
 }

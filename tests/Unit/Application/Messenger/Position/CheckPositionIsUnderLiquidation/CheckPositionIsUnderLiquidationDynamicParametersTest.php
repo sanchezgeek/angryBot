@@ -20,6 +20,8 @@ use App\Tests\Functional\Application\Messenger\Position\CheckPositionIsUnderLiqu
 use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
+use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Worker\AppContext;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -32,6 +34,14 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelTestCase
 {
     use SettingsAwareTest;
+    use TradingParametersMocker;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        self::createTradingParametersStub();
+    }
 
     public function testCriticalPartOfLiquidationDistance(): void
     {
@@ -44,17 +54,20 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
-        $dynamicParameters = new LiquidationDynamicParameters(settingsProvider: $settingsMock, position: $position, ticker: $ticker, handledMessage: $message);
+        $dynamicParameters = new LiquidationDynamicParameters(
+            tradingParametersProvider: self::getMockedTradingParametersStub(),
+            settingsProvider: $settingsMock,
+            position: $position, ticker: $ticker, handledMessage: $message
+        );
 
         self::assertEquals($criticalPartOfLiqDistance, $dynamicParameters->criticalPartOfLiquidationDistance());
 
         # with override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance = 50);
         $dynamicParameters = new LiquidationDynamicParameters(
+            tradingParametersProvider: self::getMockedTradingParametersStub(),
             settingsProvider: $this->createMock(AppSettingsProviderInterface::class),
-            position: $position,
-            ticker: $ticker,
-            handledMessage: $message
+            position: $position, ticker: $ticker, handledMessage: $message
         );
 
         self::assertEquals(
@@ -80,10 +93,9 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $debug && AppContext::setIsDebug($debug);
 
         $dynamicParameters = new LiquidationDynamicParameters(
+            tradingParametersProvider: self::getMockedTradingParametersStub(),
             settingsProvider: self::getContainerSettingsProvider(),
-            position: $position,
-            ticker: $ticker,
-            handledMessage: $message
+            position: $position, ticker: $ticker, handledMessage: $message
         );
 
         $actualStopsRange = $dynamicParameters->actualStopsRange();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\TakeProfit;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -27,6 +28,7 @@ use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -46,6 +48,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
     use StopsTester;
     use RateLimiterAwareTest;
     use SettingsAwareTest;
+    use TradingParametersMocker;
 
     private const SYMBOL = SymbolEnum::BTCUSDT;
 
@@ -75,11 +78,15 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
 
+        self::createTradingParametersStub();
+
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
             $this->orderServiceMock,
             self::getContainerSettingsProvider(),
             self::getContainer()->get(PushStopSettingsWrapper::class),
+            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
+
             $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,
@@ -102,6 +109,8 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
         array $stopsExpectedAfterHandle,
         array $mockedExchangeOrderIds
     ): void {
+        self::mockTradingParametersForLiquidationTests($position->symbol, '0.09%');
+
         $this->haveTicker($ticker);
         $this->positionServiceMock->method('getPosition')->with(self::SYMBOL, $position->side)->willReturn($position);
         $this->applyDbFixtures(...$stopsFixtures);

@@ -60,3 +60,7 @@ pushStops
 
 
 попробовать вписать технику глайда
+
+
+
+@todo | liquidation | CheckPositionIsUnderLiquidationHandler | stops from liquidation handler on long distance without BO

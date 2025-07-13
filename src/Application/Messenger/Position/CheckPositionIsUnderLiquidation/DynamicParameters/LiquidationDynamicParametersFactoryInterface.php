@@ -15,4 +15,9 @@ interface LiquidationDynamicParametersFactoryInterface
         Position $position,
         Ticker $ticker,
     ): LiquidationDynamicParametersInterface;
+
+    public function fakeWithoutHandledMessage(
+        Position $position,
+        Ticker $ticker,
+    ): LiquidationDynamicParametersInterface;
 }

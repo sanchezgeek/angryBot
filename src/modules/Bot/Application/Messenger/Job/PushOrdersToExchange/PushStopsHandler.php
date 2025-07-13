@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Helper\StopHelper;
@@ -68,7 +68,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
 
         // ta? or markPrice anyway?
 
-        $liquidationParameters = $this->liquidationDynamicParameters($position, $ticker);
+        $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
         $distanceToUseMarkPrice = $this->pushStopSettings->rangeToUseWhileChooseMarkPriceAsTriggerPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
             ? $liquidationParameters->warningDistanceRaw()
             : $liquidationParameters->criticalDistance();
@@ -207,16 +207,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
     }
 
-    private function liquidationDynamicParameters(Position $position, Ticker $ticker): LiquidationDynamicParameters
-    {
-        return new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
-    }
-
     public function __construct(
         private readonly StopRepository $repository,
         private readonly OrderServiceInterface $orderService,
         private readonly AppSettingsProviderInterface $settingsProvider,
         private readonly PushStopSettingsWrapper $pushStopSettings,
+        private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
 
         private readonly MessageBusInterface $messageBus,
         ExchangeServiceInterface $exchangeService,

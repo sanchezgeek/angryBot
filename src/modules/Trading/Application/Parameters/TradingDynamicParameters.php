@@ -106,7 +106,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         SymbolInterface $symbol,
         PredefinedStopLengthSelector $predefinedStopLength = PredefinedStopLengthSelector::Standard,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
-        int $period = 4,
+        int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
@@ -129,7 +129,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         SymbolInterface $symbol,
         PredefinedStopLengthSelector $sourceStopLength = PredefinedStopLengthSelector::Standard,
         TimeFrame $timeframe = TimeFrame::D1,
-        int $period = 4,
+        int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         // @todo | settings
         $multiplier = 1.2;

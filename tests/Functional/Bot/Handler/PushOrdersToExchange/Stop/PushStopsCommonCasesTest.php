@@ -28,6 +28,7 @@ use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Mock\Response\ByBitV5Api\PlaceOrderResponseBuilder;
 use App\Trading\Application\EventListener\CreateOppositeBuyOrdersListener;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -49,6 +50,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     use MessageConsumerTrait;
     use ByBitV5ApiRequestsMocker;
     use SettingsAwareTest;
+    use TradingParametersMocker;
 
     /**
      * @todo | DRY
@@ -67,6 +69,13 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     private const LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT = 10;
     private const LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT = 18;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        self::createTradingParametersStub();
+    }
+
     /**
      * @dataProvider pushStopsTestCases
      *
@@ -80,6 +89,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         array $stopsExpectedAfterHandle,
         array $expectedMessengerMessages,
     ): void {
+        self::mockTradingParametersForLiquidationTests($position->symbol, '0.09%');
+
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 

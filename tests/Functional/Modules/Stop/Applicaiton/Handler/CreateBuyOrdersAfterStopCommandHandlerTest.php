@@ -29,6 +29,7 @@ use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -49,27 +50,11 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     use BuyOrdersTester;
     use SymbolsDependentTester;
     use TaToolsProviderMocker;
-
-    private static TradingParametersProviderStub $tradingParametersProviderStub;
+    use TradingParametersMocker;
 
     private const int DEFAULT_ATR_PERIOD = CreateBuyOrderAfterStopCommandHandler::DEFAULT_ATR_PERIOD;
     private const TimeFrame DEFAULT_TIMEFRAME_FOR_ATR = PredefinedStopLengthProcessor::DEFAULT_TIMEFRAME_FOR_ATR;
     private const int BIG_STOP_VOLUME_MULTIPLIER = CreateBuyOrderAfterStopCommandHandler::BIG_STOP_VOLUME_MULTIPLIER;
-
-    private static function getTradingParametersStub(SymbolInterface $symbol): TradingParametersProviderStub
-    {
-        $timeframe = self::DEFAULT_TIMEFRAME_FOR_ATR;
-        $period = self::DEFAULT_ATR_PERIOD;
-
-        return
-            new TradingParametersProviderStub()
-                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
-                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
-                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::Standard, $timeframe, $period, Percent::string('1%'))
-                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
-                ->addRegularOppositeBuyOrderLengthResults($symbol, PredefinedStopLengthSelector::Long, $timeframe, $period, Percent::string('2%'))
-        ;
-    }
 
     public function testDummy(): void
     {
@@ -88,7 +73,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     ): void {
         $symbol = $ticker->symbol;
         // @todo get from stop
-        self::getContainer()->set(TradingParametersProviderInterface::class, self::getTradingParametersStub($symbol));
+        self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol));
 
         $this->haveTicker($ticker);
         $this->applyDbFixtures(new StopFixture($stop));
@@ -293,5 +278,20 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             $stop->getVolume(),
             $boDef
         );
+    }
+
+    private static function getTradingParametersStub(SymbolInterface $symbol): TradingParametersProviderStub
+    {
+        $timeframe = self::DEFAULT_TIMEFRAME_FOR_ATR;
+        $period = self::DEFAULT_ATR_PERIOD;
+
+        return
+            new TradingParametersProviderStub()
+                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
+                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
+                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::Standard, $timeframe, $period, Percent::string('1%'))
+                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
+                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::Long, $timeframe, $period, Percent::string('2%'))
+            ;
     }
 }
