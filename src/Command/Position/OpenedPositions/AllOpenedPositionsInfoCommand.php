@@ -3,6 +3,7 @@
 namespace App\Command\Position\OpenedPositions;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -1107,7 +1108,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         // @todo | AllOpenedPositionsInfoCommand| какое значение использовать для $mainPosStopsApplicableRange
         $mainPosStopsApplicableRange = null;
         if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
-            $liquidationParameters = new LiquidationDynamicParameters(settingsProvider: $this->settings, position: $position, ticker: new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
+            $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, new Ticker($position->symbol, $markPrice, $markPrice, $markPrice));
             // @todo some `actualStopsRangeBoundNearestToPositionLiquidation`
             $criticalRange = $liquidationParameters->criticalRange();
             $boundBeforeLiquidation = $position->isShort() ? $criticalRange->to() : $criticalRange->from();
@@ -1212,6 +1213,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         private readonly StopRepository $stopRepository,
         private readonly AppSettingsProviderInterface $settings,
         private readonly OpenedPositionsCache $openedPositionsCache,
+        private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);
