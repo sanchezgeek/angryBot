@@ -250,6 +250,10 @@ trait ByBitV5ApiRequestsMocker
                 throw new RuntimeException('Only for same AssetCategory');
             }
             $resultResponse->withPosition($position, (float)$lastMarkPrice);
+
+            if ($position->oppositePosition) {
+                $resultResponse->withPosition($position->oppositePosition, (float)$lastMarkPrice);
+            }
         }
 
         $this->expectsToMakeApiCalls(
