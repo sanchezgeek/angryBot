@@ -72,6 +72,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private const string SavedDataKeysCacheKey = 'saved_data_cache_keys';
     private const string Manually_SavedDataKeysCacheKey = 'manually_saved_data_cache_keys';
 
+    private const string SHOW_STOPS = 'show-stops';
     private const string MOVE_HEDGED_UP_OPTION = 'move-hedged-up';
     private const string WITH_SAVED_SORT_OPTION = 'sorted';
     private const string SORT_BY_OPTION = 'sort-by';
@@ -140,6 +141,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             ->addOption(self::SAVE_EVERY_N_ITERATION_OPTION, null, InputOption::VALUE_REQUIRED, 'Number of iterations to wait before save current state', self::DEFAULT_SAVE_CACHE_INTERVAL)
             ->addOption(self::SHOW_CACHE_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show cache records?')
             ->addOption(self::SHOW_FULL_TICKER_DATA_OPTION, null, InputOption::VALUE_NEGATABLE, 'Show full ticker data?')
+            ->addOption(self::SHOW_STOPS, null, InputOption::VALUE_NEGATABLE)
         ;
     }
 
@@ -149,6 +151,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     private ?array $selectedCacheToShowDiffWith = null;
     private ?array $previousIterationCache = null;
     private string $bestWorstNote = '';
+    private bool $showStops;
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -161,6 +164,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $this->sortBy = explode(',', $this->paramFetcher->getStringOption(self::SORT_BY_OPTION, false) ?? '');
         $this->savedRawSymbolsSort = ($item = $this->cache->getItem(self::SortCacheKey))->isHit() ? $item->get() : null;
         $this->moveHedgedSymbolsUp = $this->paramFetcher->getBoolOption(self::MOVE_HEDGED_UP_OPTION);
+        $this->showStops = $this->paramFetcher->getBoolOption(self::SHOW_STOPS);
 
         if (
             ($moveUpOption = $this->paramFetcher->getStringOption(self::MOVE_UP_OPTION, false))
@@ -346,8 +350,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             "curr.liq.dist.\n /entry price",
             "smb",
             "liq.\ndistance\npassed",
-            "stops(\n between liq.\n and entry\n)\n[auto/manual]",
         ]);
+
+        if ($this->showStops) {
+            $headerColumns[] = "stops(\n between liq.\n and entry\n)\n[auto/manual]";
+        }
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader($headerColumns)
@@ -453,7 +460,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $mainPositionPnl = $main->unrealizedPnl;
 
-        if (!$main->isShortWithoutLiquidation()) {
+        if ($this->showStops && !$main->isShortWithoutLiquidation()) {
             $stoppedVolume = $this->prepareStoppedPartContent($main, $markPrice);
         }
 
@@ -531,8 +538,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             sprintf('%s %.2f', $distanceBetweenLiquidationAndTickerPercentOfEntry, $distanceBetweenLiquidationAndTicker),
             $extraSymbolCell,
             !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
-            $stoppedVolume ?? '',
         ]);
+
+        if ($this->showStops) {
+            $cells[] = $stoppedVolume ?? '';
+        }
 
         $result[$main->side->value] = DataRow::default($cells);
 
@@ -540,7 +550,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         if ($support) {
             $supportPnl = $support->unrealizedPnl;
-            $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
+            $stoppedVolume = null;
+            if ($this->showStops) {
+                $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
+            }
 
             $cells = [
                 '',
@@ -576,7 +589,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 }
             }
 
-            $cells = array_merge($cells, ['', '', '', '',  '', $stoppedVolume ?? '']);
+            $cells = array_merge($cells, ['', '', '', '',  '']);
+            if ($this->showStops) {
+                $cells[] = $stoppedVolume ?? '';
+            }
 
             $result[$support->side->value] = DataRow::default($cells);
 
