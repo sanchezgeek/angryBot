@@ -86,3 +86,6 @@ postgres 16
 
 ### Dump ###
     @todo | check if sequence rewinds to and move back to restore also id
+
+### API
+    при формировании EXCEPTION добавлять symbol если есть

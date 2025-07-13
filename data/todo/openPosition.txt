@@ -14,3 +14,11 @@ posSize by TA
     @todo compare with ATR
 
     !!!!!!!!!!!! sum.txt !!!!!!!!!!!!!!
+
+
+@todo | open-position
+@todo | open-position | positions lifetime
+
+
+
+

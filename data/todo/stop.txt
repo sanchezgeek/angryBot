@@ -23,3 +23,7 @@ specify initial pnlDistance on SLs creation + periodical check new liquidation f
 
 +### Orders context promotion ###
 +    @todo | stop | isCloseByMarketContextSet | if support
+
+
+### PUSHED STOPS
+    мб удалять? надо подумать где использовать

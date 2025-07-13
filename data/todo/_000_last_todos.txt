@@ -32,14 +32,24 @@ PriceChange on short period
         тут надо придумать multiply
 
 
-
-
-### Cache ###
-    @todo | cache
-    @todo | cache | pass specific cache ttl?
-    @todo | cache | all symbols?
-
-
-
 сильное усреднение
     ./bin/console buy:edit -aremove sell --symbol=hft
+
+### TRADING
+    remove stale stops after position closed
+
+команду, чтобы опустить/поднять все стопы на опред PNL-процент
+
+
+opened
+    удалять из watch после некоторого профита
+
+
+держать fixations на то же profit-расстоянии
+
+
+
+
+
+
+autoOpen | если больше 100% (или подобрать. мб как-то ta использовать) <= чем за 1 день - полюбому

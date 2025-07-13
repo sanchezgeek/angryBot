@@ -20,7 +20,6 @@ final readonly class MoveOpenedPositionStopsToBreakevenHandler
 
     public function __invoke(MoveOpenedPositionStopsToBreakeven $job): void
     {
-        var_dump($job);
         $pnlGreaterThan = $job->pnlGreaterThan;
         $targetPositionPnlPercent = $job->targetPositionPnlPercent;
         $excludeFixationsStop = $job->excludeFixationsStop;

@@ -30,3 +30,7 @@ usage:
     => auto swipe hedge criteria
     => profit criteria
     => move stops parameters
+
+
+купить подписку на tv и посмотреть сколько оповещений об ордерблоках можно добавить (сколько символов)
+и спросить про tvCharts
