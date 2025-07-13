@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Stop\Application\UseCase\MoveStops;
+namespace App\Stop\Application\UseCase\MoveStopsToBreakeven;
 
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;

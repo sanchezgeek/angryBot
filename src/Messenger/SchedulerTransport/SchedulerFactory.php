@@ -28,6 +28,7 @@ use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
 use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Service\Infrastructure\Job\Ping\PingMessages;
+use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Worker\AppContext;
@@ -155,6 +156,8 @@ final class SchedulerFactory
             // --- stops
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Sell))),
             PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Buy))),
+
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT1M', AsyncMessage::for(new MoveOpenedPositionStopsToBreakeven(pnlGreaterThan: 700, targetPositionPnlPercent: 0, excludeFixationsStop: true))),
 
             // -- main positions loss
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2M', AsyncMessage::for(new CheckPositionIsInLoss())),

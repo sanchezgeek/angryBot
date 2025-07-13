@@ -36,5 +36,5 @@ services:
         arguments:
             $innerHandler: '@App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler'
     
-    App\Stop\Application\UseCase\MoveStops\MoveStopsToBreakevenHandler:
+    App\Stop\Application\UseCase\MoveStopsToBreakeven\MoveStopsToBreakevenHandler:
         public: true

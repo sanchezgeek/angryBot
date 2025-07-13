@@ -6,9 +6,9 @@ namespace App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\MoveStops;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Stop\Application\UseCase\MoveStops\MoveStopsToBreakevenEntryDto;
-use App\Stop\Application\UseCase\MoveStops\MoveStopsToBreakevenHandler;
-use App\Stop\Application\UseCase\MoveStops\MoveStopsToBreakevenHandlerInterface;
+use App\Stop\Application\UseCase\MoveStopsToBreakeven\MoveStopsToBreakevenEntryDto;
+use App\Stop\Application\UseCase\MoveStopsToBreakeven\MoveStopsToBreakevenHandler;
+use App\Stop\Application\UseCase\MoveStopsToBreakeven\MoveStopsToBreakevenHandlerInterface;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Fixture\StopFixture;
