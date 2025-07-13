@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Trading\Enum;
 
+use App\Domain\Trading\Helper\TimeframeHelper;
 use DateInterval;
 
 enum TimeFrame: string
@@ -22,7 +23,7 @@ enum TimeFrame: string
     case W1 = '1W';
     case M1 = '1M';
 
-    private const array DATE_INTERVALS = [
+    public const array DATE_INTERVALS = [
         self::m1->value => '1 minute',
         self::m5->value => '5 minutes',
         self::m15->value => '15 minutes',
@@ -40,7 +41,6 @@ enum TimeFrame: string
 
     public function toDateInterval(): DateInterval
     {
-        // @todo | cache
-        return DateInterval::createFromDateString(self::DATE_INTERVALS[$this->value]);
+        return TimeframeHelper::timeframeToDateInterval($this);
     }
 }

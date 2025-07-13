@@ -25,8 +25,7 @@ final readonly class PreviousCandlesProvider
      */
     public function getPreviousCandles(SymbolInterface $symbol, TimeFrame $candleInterval, int $count, bool $includeCurrentUnfinishedInterval = false): array
     {
-        $dateInterval = $candleInterval->toDateInterval();
-        $secondsInInterval = DateTimeHelper::dateIntervalToSeconds($dateInterval);
+        $secondsInInterval = DateTimeHelper::dateIntervalToSeconds($candleInterval->toDateInterval());
 
         $now = $this->clock->now();
         $dayStart = $now->setTime(0, 0);
