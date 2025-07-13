@@ -35,8 +35,8 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async
-            App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async
+            App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async
+            App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit: async
 
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async_critical

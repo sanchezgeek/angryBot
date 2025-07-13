@@ -8,8 +8,6 @@ use App\Alarm\Application\Messenger\Job\Balance\CheckBalance;
 use App\Alarm\Application\Messenger\Job\CheckAlarm;
 use App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay;
 use App\Application\Messenger\Market\TransferFundingFees;
-use App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
-use App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive;
@@ -31,6 +29,8 @@ use App\Service\Infrastructure\Job\Ping\PingMessages;
 use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
+use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
+use App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
 use DateInterval;
@@ -157,12 +157,10 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Sell))),
             PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Buy))),
 
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT1M', AsyncMessage::for(new MoveOpenedPositionStopsToBreakeven(pnlGreaterThan: 700, targetPositionPnlPercent: -100, excludeFixationsStop: true))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT1M', AsyncMessage::for(new MoveOpenedPositionStopsToBreakeven(pnlGreaterThan: 900, targetPositionPnlPercent: -100, excludeFixationsStop: true))),
 
-            // -- main positions loss
+            // -- watch
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2M', AsyncMessage::for(new CheckPositionIsInLoss())),
-
-            // -- positions profit
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckPositionIsInProfit())),
 
             // -- active BuyOrders

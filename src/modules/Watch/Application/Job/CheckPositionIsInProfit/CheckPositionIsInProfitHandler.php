@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger\Position\CheckPositionIsInProfit;
+namespace App\Watch\Application\Job\CheckPositionIsInProfit;
 
 use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;

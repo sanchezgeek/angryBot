@@ -1,0 +1,16 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Watch\:
+        resource: '../../../'
+
+
+    App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLossHandler:
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
+
+    App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfitHandler:
+        arguments:
+            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

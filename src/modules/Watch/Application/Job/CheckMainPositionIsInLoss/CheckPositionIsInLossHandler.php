@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger\Position\CheckMainPositionIsInLoss;
+namespace App\Watch\Application\Job\CheckMainPositionIsInLoss;
 
 use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;

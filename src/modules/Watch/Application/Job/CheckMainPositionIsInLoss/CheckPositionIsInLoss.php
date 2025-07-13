@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messenger\Position\CheckPositionIsInProfit;
+namespace App\Watch\Application\Job\CheckMainPositionIsInLoss;
 
 /**
  * @codeCoverageIgnore
  */
-final readonly class CheckPositionIsInProfit
+final readonly class CheckPositionIsInLoss
 {
     public function __construct()
     {

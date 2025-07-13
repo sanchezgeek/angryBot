@@ -1,5 +1,6 @@
 imports:
     - { resource: parameters.yaml }
+    - { resource: ../src/modules/Watch/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Notification/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Settings/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Service/Infrastructure/Symfony/config/services.yaml }
@@ -154,11 +155,3 @@ services:
         arguments:
             $handlersLocator: '@messenger.bus.default.messenger.handlers_locator'
 
-### handlers
-    App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLossHandler:
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
-
-    App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfitHandler:
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

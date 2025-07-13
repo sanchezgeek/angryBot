@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Price;
 
+use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -46,6 +47,19 @@ readonly class PriceMovement
         return -$this->deltaForPositionProfit($positionSide);
     }
 
+    public function getPercentChange(Side|Position $positionSide): Percent
+    {
+        $positionSide = $positionSide instanceof Side ? $positionSide : $positionSide->side;
+
+        $sign = $positionSide->isShort() ? -1 : +1;
+        $delta = $this->fromPrice->value() - $this->toTargetPrice->value();
+
+        return Percent::fromPart($sign * ($delta / $this->fromPrice->value()));
+    }
+
+    /**
+     * @todo rename to `PNLPercent`
+     */
     public function absPercentDelta(float|SymbolPrice|null $forPrice = null): Percent
     {
         $forPrice ??= $this->fromPrice;
