@@ -189,11 +189,26 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             );
         }
 
-        $regular = PnlHelper::transformPriceChangeToPnlPercent(
-            $this->tradingParametersProvider->regularPredefinedStopLength($this->symbol, PredefinedStopLengthSelector::ModerateShort)
+        // @todo | liquidation | CheckPositionIsUnderLiquidationHandler | нужно придумать что-то, чтобы точно не ликвиднуло (atr, maxWarningPnlPercent, ...)
+        $max = $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnlPercentMax, $this->symbol, $this->position->side)
         );
 
-        return max($minimal, $regular->value());
+        $period = $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnlPercentAtrPeriod, $this->symbol, $this->position->side)
+        );
+
+        $regular = PnlHelper::transformPriceChangeToPnlPercent(
+            $this->tradingParametersProvider->regularPredefinedStopLength(
+                symbol: $this->symbol,
+                predefinedStopLength: PredefinedStopLengthSelector::Long,
+                period: $period
+            )
+        )->value();
+
+        $regular = min($regular, $max);
+
+        return max($minimal, $regular);
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]

@@ -36,6 +36,8 @@ services:
                 liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
                 liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
                 liquidationHandlerSettings.afterStop.addOppositeBuyOrders: true
+                liquidationHandlerSettings.warningDistancePnlPercent.max: 1500
+                liquidationHandlerSettings.warningDistancePnlPercent.atrPeriod: 7
 
                 # @todo Must be based on current price? or volatility
                 liquidationHandlerSettings.actualStopsRangeFromAdditionalStop: 50
