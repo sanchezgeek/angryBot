@@ -35,6 +35,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 1000;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
+    public const float WHOLE_LOSS_MULTIPLIER = 0.7;
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
@@ -110,7 +111,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $candidates = array_replace($arr, $candidates);
 
-        $lossToCoverByOtherSymbols = $loss / 2;
+        $lossToCoverByOtherSymbols = $loss * self::WHOLE_LOSS_MULTIPLIER;
         $count = count($candidates);
         $pct = 100 / $count;
 
