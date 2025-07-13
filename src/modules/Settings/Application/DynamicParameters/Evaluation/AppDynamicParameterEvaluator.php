@@ -12,6 +12,7 @@ use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCur
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentPriceProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\DefaultCurrentTickerProvider;
 use App\Settings\Application\DynamicParameters\DefaultValues\Provider\LiquidationHandler\DefaultLiquidationHandlerHandledMessageProvider;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
@@ -27,6 +28,7 @@ final readonly class AppDynamicParameterEvaluator
     public function __construct(
         private Container $container,
         private AppDynamicParametersLocator $parametersLocator,
+        private TradingParametersProviderInterface $tradingParametersProvider,
         private SymbolProvider $symbolProvider,
     ) {
     }
@@ -133,7 +135,7 @@ final readonly class AppDynamicParameterEvaluator
             foreach ($constructorArgumentsWithUserInput as $key => $constructorParameter) {
                 if ($this->hasAutowiredConstructParameter($constructorParameter)) {
                     try {
-                        $constructorCallArguments[] = $this->container->get($constructorParameter->getType()->getName());
+                        $constructorCallArguments[$constructorParameter->getName()] = $this->container->get($constructorParameter->getType()->getName());
                         unset($constructorArgumentsWithUserInput[$key]);
                     } catch (ServiceNotFoundException $e) {}
                 }
@@ -165,6 +167,17 @@ final readonly class AppDynamicParameterEvaluator
 
             if ($defaultValue !== null) {
                 return $defaultValue;
+            }
+
+            $type = $ref->getType()->getName();
+
+            $service = match (true) {
+                $type === TradingParametersProviderInterface::class => $this->tradingParametersProvider,
+                default => null
+            };
+
+            if ($service) {
+                return $service;
             }
 
             if (!$evaluationAttributes = $ref->getAttributes(AppDynamicParameterEvaluations::class)) {
