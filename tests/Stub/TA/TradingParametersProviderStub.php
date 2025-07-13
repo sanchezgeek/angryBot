@@ -8,6 +8,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
+use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
@@ -74,5 +75,13 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         }
 
         return $this->regularOppositeBuyOrderLengthResults[$key];
+    }
+
+    public function standardAtrForOrdersLength(
+        SymbolInterface $symbol,
+        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
+        int $period = self::ATR_PERIOD_FOR_ORDERS
+    ): AveragePriceChange {
+        throw new RuntimeException('Not implemented yet');
     }
 }

@@ -6,41 +6,68 @@ namespace App\Application\Messenger\Position\CheckPositionIsInProfit;
 
 use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
+use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Value\Percent\Percent;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
+/**
+ * команда для установки изначальной точки (position, current, middle, ...)
+ */
 #[AsMessageHandler]
 final class CheckPositionIsInProfitHandler
 {
-    /** @todo | MainSymbols DRY? */
-    /** @todo | symbol | some way to get values based on symbol -> move to settings? */
-    private const SYMBOLS_ALERT_PNL_PERCENT_DEFAULT = [
-        SymbolEnum::BTCUSDT->value => 150,
-        SymbolEnum::ETHUSDT->value => 300,
-        'other' => 1000
-    ];
+    private const PredefinedStopLengthSelector DEFAULT_ALARM_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
 
-    private const ALERT_RETRY_COUNT = 5;
+    private const int ALERT_RETRY_COUNT = 2;
+
+    public function __construct(
+        private readonly AppSettingsProviderInterface $settings,
+        private readonly ByBitLinearPositionService $positionService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly LoggerInterface $appErrorLogger,
+        private readonly RateLimiterFactory $positionInProfitAlertThrottlingLimiter,
+        private readonly OpenedPositionsCache $openedPositionsCache,
+        private readonly TradingParametersProviderInterface $tradingParameters,
+    ) {
+    }
 
     public function __invoke(CheckPositionIsInProfit $message): void
     {
+        if ($this->isDisabledAtAll()) return;
+
         /** @var $positions array<Position[]> */
         $positions = $this->positionService->getAllPositions();
+        $lastPrices = $this->positionService->getLastMarkPrices();
+        $watchList = $this->openedPositionsCache->getSymbolsToWatch();
 
-        foreach ($positions as $symbolPositions) {
+        foreach ($positions as $symbolRaw => $symbolPositions) {
+            if (!in_array($symbolRaw, $watchList, true)) {
+                continue;
+            }
+
+            $currentMarkPrice = $lastPrices[$symbolRaw];
+
             foreach ($symbolPositions as $position) {
+                $mutedOnPrice = null;
+
                 $symbol = $position->symbol;
                 $side = $position->side;
 
-                if (!$this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitEnabled, $symbol, $side))) {
+                if ($this->isDisabledForPosition($symbol, $side)) {
                     continue;
                 }
+
+                $refPrice = $symbol->makePrice($mutedOnPrice ?? $position->entryPrice);
 
                 $key = $symbol->name() . '_' . $side->value;
                 if (!$this->positionInProfitAlertThrottlingLimiter->create($key)->consume()->isAccepted()) {
@@ -48,25 +75,35 @@ final class CheckPositionIsInProfitHandler
                 }
 
                 $ticker = $this->exchangeService->ticker($symbol);
-                $currentPnlPercent = $ticker->lastPrice->getPnlPercentFor($position);
 
-                if ($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side))) {
-                    $alertPercentSpecifiedManually = true;
-                } else {
-                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->name()] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
-                    $alertPercentSpecifiedManually = false;
-                }
+                $percentChange = $refPrice->differenceWith($currentMarkPrice)->getPercentChange($position->side);
 
-                if ($currentPnlPercent > $alertOnPnlPercent) {
+                $alarmPercent = $this->getAlarmPriceChangePercent($symbol);
+
+
+
+                $currentPnlPercent = $currentMarkPrice->differenceWith($position->entryPrice())->getPercentChange($position);
+//                if ($alertOnPnlPercent = $this->settings->optional(SettingAccessor::withAlternativesAllowed(AlarmSettings::AlarmOnProfitPnlPercent, $symbol, $side))) {
+//                    $alertPercentSpecifiedManually = true;
+//                } else {
+//                    $alertOnPnlPercent = self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT[$symbol->name()] ?? self::SYMBOLS_ALERT_PNL_PERCENT_DEFAULT['other'];
+//                    $alertPercentSpecifiedManually = false;
+//                }
+
+                if ($percentChange->value() > $alarmPercent->value()) {
+
+                    $desc = sprintf('+%.f%% from position.entry', $currentPnlPercent);
+                    if ($mutedOnPrice) {
+                        $percentChangeFromLastMute = $currentMarkPrice->differenceWith($position->entryPrice())->getPercentChange($position)->setOutputFloatPrecision(2);
+                        $desc .= sprintf(' (and + %s from last muted price [%s])', $percentChangeFromLastMute, $mutedOnPrice);
+                    }
+
+                    $msg = sprintf('[%s] profit%s = %s %s', $position, $symbol->associatedCoin()->value, $position->unrealizedPnl, $desc);
+
+                    // нужно откуда-то взять изменение pnl (usdt / pct)
                     for ($i = 0; $i < self::ALERT_RETRY_COUNT; $i++) {
                         $this->appErrorLogger->error(
-                            sprintf(
-                                '%s profit%% = %.1f%% (greater than %s%%%s)',
-                                $position->getCaption(),
-                                $currentPnlPercent,
-                                $alertOnPnlPercent,
-                                $alertPercentSpecifiedManually ? ' [specified manually]' : ''
-                            )
+                            $msg
                         );
                     }
                 }
@@ -74,12 +111,32 @@ final class CheckPositionIsInProfitHandler
         }
     }
 
-    public function __construct(
-        private readonly AppSettingsProviderInterface $settings,
-        private readonly PositionServiceInterface $positionService,
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly LoggerInterface $appErrorLogger,
-        private readonly RateLimiterFactory $positionInProfitAlertThrottlingLimiter,
-    ) {
+    private function isDisabledForPosition(SymbolInterface $symbol, Side $side): bool
+    {
+        return $this->settings->optional(SettingAccessor::exact(AlarmSettings::AlarmOnProfitEnabled, $symbol, $side)) === false;
+    }
+
+    private function isDisabledAtAll(): bool
+    {
+        return $this->settings->optional(SettingAccessor::exact(AlarmSettings::AlarmOnProfitEnabled)) === false;
+    }
+
+    private function getAlarmPriceChangePercent(SymbolInterface $symbol): Percent
+    {
+        $standardAtr = $this->tradingParameters->standardAtrForOrdersLength($symbol)->percentChange->value();
+
+        $length = self::DEFAULT_ALARM_PRICE_CHANGE;
+
+        $result = match ($length) {
+            PredefinedStopLengthSelector::VeryShort => $standardAtr / 5,
+            PredefinedStopLengthSelector::Short => $standardAtr / 4,
+            PredefinedStopLengthSelector::ModerateShort => $standardAtr / 3.5,
+            PredefinedStopLengthSelector::Standard => $standardAtr / 3,
+            PredefinedStopLengthSelector::ModerateLong => $standardAtr / 2.5,
+            PredefinedStopLengthSelector::Long => $standardAtr / 2,
+            PredefinedStopLengthSelector::VeryLong => $standardAtr,
+        };
+
+        return Percent::notStrict($result);
     }
 }

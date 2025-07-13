@@ -28,8 +28,6 @@ use LogicException;
 final readonly class TradingDynamicParameters implements TradingParametersProviderInterface, AppDynamicParametersProviderInterface
 {
     private const float ATR_BASE_MULTIPLIER = 2;
-    public const int LONG_ATR_PERIOD = 10;
-    public const TimeFrame LONG_ATR_TIMEFRAME = TimeFrame::D1;
 
     public function __construct(
         private AppSettingsProviderInterface $settingsProvider,
@@ -97,7 +95,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     public function standardAtrForOrdersLength(
         SymbolInterface $symbol,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
-        int $period = 4,
+        int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): AveragePriceChange {
         return $this->taProvider->create($symbol, $timeframe)->atr($period)->atr;
     }
