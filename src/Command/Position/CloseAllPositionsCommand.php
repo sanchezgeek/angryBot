@@ -27,9 +27,12 @@ class CloseAllPositionsCommand extends AbstractCommand
 
     public const string FILTER_CALLBACKS_OPTION = 'fC';
     public const string PERCENT_OPTION = 'percent';
-    public const string START_FROM_PNL_PERCENT = 'pnl-greater-than';
+    public const string PNL_GREATER_THAN = 'pnl-greater-than';
+    public const string PNL_LESS_THAN = 'pnl-less-than';
+    public const string DRY = 'dry';
 
     private array $filterCallbacks = [];
+    private bool $dry;
 
     protected function configure(): void
     {
@@ -37,7 +40,9 @@ class CloseAllPositionsCommand extends AbstractCommand
             ->configureSymbolArgs(defaultValue: null)
             ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
             ->addOption(self::PERCENT_OPTION, null, InputOption::VALUE_REQUIRED, 'Percent', self::DEFAULT_PERCENT)
-            ->addOption(self::START_FROM_PNL_PERCENT, null, InputOption::VALUE_REQUIRED, 'If pnl percent greater than ...')
+            ->addOption(self::PNL_GREATER_THAN, null, InputOption::VALUE_REQUIRED)
+            ->addOption(self::PNL_LESS_THAN, null, InputOption::VALUE_REQUIRED)
+            ->addOption(self::DRY, null, InputOption::VALUE_NEGATABLE)
         ;
     }
 
@@ -48,17 +53,20 @@ class CloseAllPositionsCommand extends AbstractCommand
         if ($filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false)) {
             $this->filterCallbacks = array_map('trim', explode(',', $filterCallbacksOption));
         }
+
+        $this->dry = $this->paramFetcher->getBoolOption(self::DRY);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $positionPart = $this->paramFetcher->requiredFloatOption(self::PERCENT_OPTION);
         $positionPart = new Percent($positionPart);
-        $ifPnlGreaterThan = $this->paramFetcher->floatOption(self::START_FROM_PNL_PERCENT);
+        $ifPnlGreaterThan = $this->paramFetcher->floatOption(self::PNL_GREATER_THAN);
+        $ifPnlLessThan = $this->paramFetcher->floatOption(self::PNL_LESS_THAN);
 
         $symbolsRaw = SymbolHelper::symbolsToRawValues(...$this->getSymbols());
 
-        $res = [];
+        $candidates = [];
         $allPositions = $this->positionService->getAllPositions();
         $lastPrices = $this->positionService->getLastMarkPrices();
 
@@ -70,24 +78,36 @@ class CloseAllPositionsCommand extends AbstractCommand
             $markPrice = $lastPrices[$symbolRaw];
 
             foreach ($positions as $position) {
-                if ($ifPnlGreaterThan) {
-                    $pnlPercent = $markPrice->getPnlPercentFor($position);
-                    if ($pnlPercent < $ifPnlGreaterThan) {
-                        continue;
-                    }
+                $pnlPercent = $markPrice->getPnlPercentFor($position);
+
+                if (
+                    ($ifPnlGreaterThan && $pnlPercent < $ifPnlGreaterThan)
+                    || ($ifPnlLessThan && $pnlPercent > $ifPnlLessThan)
+                ) {
+                    continue;
                 }
 
                 if (!$this->applyFilters($position)) {
                     continue;
                 }
 
-                $res[] = $position;
+                $candidates[] = $position;
             }
         }
 
-        foreach ($res as $position) {
-            $this->orderService->closeByMarket($position, $positionPart->of($position->size));
+        if ($this->dry) {
+            $map = array_map(
+                static fn (Position $position) => sprintf('%s => %s, %s', $position->getCaption(), $position->unrealizedPnl, $position->initialMargin),
+                $candidates
+            );
+
+            var_dump($map);
+        } else {
+            foreach ($candidates as $position) {
+                $this->orderService->closeByMarket($position, $positionPart->of($position->size));
+            }
         }
+
 
         return Command::SUCCESS;
     }
