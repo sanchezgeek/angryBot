@@ -66,10 +66,14 @@ final class PushStopsHandler extends AbstractOrdersPusher
 //            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->name(), $diff, $updatedByWorker->value));
 //        }
 
+        // ta? or markPrice anyway?
+
         $liquidationParameters = $this->liquidationDynamicParameters($position, $ticker);
         $distanceToUseMarkPrice = $this->pushStopSettings->rangeToUseWhileChooseMarkPriceAsTriggerPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
             ? $liquidationParameters->warningDistanceRaw()
             : $liquidationParameters->criticalDistance();
+
+        $distanceToUseMarkPrice *= 2;
 
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
         if ($distanceWithLiquidation <= $distanceToUseMarkPrice) {

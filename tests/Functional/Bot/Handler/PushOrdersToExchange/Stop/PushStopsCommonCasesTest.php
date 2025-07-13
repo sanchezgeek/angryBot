@@ -96,6 +96,11 @@ final class PushStopsCommonCasesTest extends KernelTestCase
         self::assertMessagesWasDispatched(self::ASYNC_HIGH_QUEUE, $expectedMessengerMessages);
     }
 
+    public static function getDistanceAfterWhichMarkPriceUsedForTrigger(Ticker $ticker): float
+    {
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice) * 2;
+    }
+
     public function pushStopsTestCases(): iterable
     {
         # BTCUSDT
@@ -104,7 +109,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 29050, 29030, 29030);
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        $liquidationWarningDistance = self::getDistanceAfterWhichMarkPriceUsedForTrigger($ticker);
         $position = PositionFactory::short($symbol, 29000, 1, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1);
         $triggerBy = TriggerBy::IndexPrice;
         $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->indexPrice);
@@ -153,7 +158,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 29010, 29030, 29010);
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        $liquidationWarningDistance = self::getDistanceAfterWhichMarkPriceUsedForTrigger($ticker);
         $position = PositionFactory::short($symbol, 29000, 1, 99, $ticker->markPrice->value() + $liquidationWarningDistance);
         $triggerBy = TriggerBy::MarkPrice;
         $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->markPrice);
@@ -272,7 +277,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         $exchangeOrderIds = [];
         $ticker = TickerFactory::create($symbol, 3.685, 3.687, 3.688);
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+        $liquidationWarningDistance = self::getDistanceAfterWhichMarkPriceUsedForTrigger($ticker);
         $position = PositionFactory::short($symbol, 24.894, 30, 100, $ticker->markPrice->value() + $liquidationWarningDistance + 1);
         $triggerBy = TriggerBy::IndexPrice;
         $addPriceDelta = StopHelper::priceModifierIfCurrentPriceOverStop($ticker->indexPrice);

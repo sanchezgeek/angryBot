@@ -142,7 +142,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     public function closeByMarketWhenExceptionWasThrewTestDataProvider(): iterable
     {
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+
+        $liquidationWarningDistance = PushStopsCommonCasesTest::getDistanceAfterWhichMarkPriceUsedForTrigger($ticker);
 
         yield '[BTCUSDT SHORT] liquidation is not in warning range => use IndexPrice' => [
             'ticker' => $ticker,
