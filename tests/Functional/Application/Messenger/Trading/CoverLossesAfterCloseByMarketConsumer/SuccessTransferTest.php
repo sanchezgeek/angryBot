@@ -9,10 +9,15 @@ use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesA
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Domain\Coin\CoinAmount;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Tests\Factory\Position\PositionBuilder;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
 /**
  * @covers \App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
@@ -25,6 +30,10 @@ class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstr
     public function testSuccessTransfer(Position $closedPosition): void
     {
         $loss = 10.101;
+
+        $this->haveAllOpenedPositionsWithLastMarkPrices([
+            $closedPosition->entryPrice => $closedPosition,
+        ]);
 
         $this->havePosition($symbol = $closedPosition->symbol, $closedPosition);
         $this->haveAvailableSpotBalance($symbol, $loss); # sufficient for cover loss
@@ -57,15 +66,24 @@ class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstr
         $freeContractBalance = -20;
         $availableSpotBalance = 19.9;
 
+        $this->haveAllOpenedPositionsWithLastMarkPrices([
+            $closedPosition->entryPrice => $closedPosition,
+        ]);
+
         $this->havePosition($symbol, $closedPosition);
 
         $exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
         $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn(new ContractBalance($coin, 100, 0, $freeContractBalance));
         $exchangeAccountServiceMock->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(new SpotBalance($coin, $availableSpotBalance, $availableSpotBalance));
         $consumer = new CoverLossesAfterCloseByMarketConsumer(
+            self::getContainer()->get(ExchangeServiceInterface::class),
             $exchangeAccountServiceMock,
             self::getContainer()->get(PositionServiceInterface::class),
-            $this->settingsProvider
+            self::getContainer()->get(ByBitLinearPositionService::class),
+            $this->settingsProvider,
+            self::createMock(AppNotificationsServiceInterface::class),
+            self::createMock(CreateStopHandlerInterface::class),
+            self::createMock(TradingParametersProviderInterface::class),
         );
 
         # assert
