@@ -18,21 +18,41 @@ final readonly class CheckBalanceHandler
 
     public function __invoke(CheckBalance $dto): void
     {
-        $greaterThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnBalanceGreaterThan));
-        $lessThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnBalanceLessThan));
-        if (!$greaterThan && !$lessThan) {
+        $contractAvailableGreaterThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnContractAvailableBalanceGreaterThan));
+        $contractAvailableLessThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnContractAvailableBalanceLessThan));
+
+        $contractTotalGreaterThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnTotalBalanceGreaterThan));
+        $contractTotalLessThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnTotalBalanceLessThan));
+
+        if (
+            !$contractAvailableGreaterThan
+            && !$contractAvailableLessThan
+            && !$contractTotalGreaterThan
+            && !$contractTotalLessThan
+        ) {
             return;
         }
 
         if ($this->limiter->consume()->isAccepted()) {
-            $available = $this->exchangeAccountService->getContractWalletBalance(Coin::USDT)->available();
+            $contractBalance = $this->exchangeAccountService->getContractWalletBalance(Coin::USDT);
 
-            if ($greaterThan && $available > $greaterThan) {
-                $this->appErrorLogger->critical(sprintf('balance.available > %s', $greaterThan));
+            $available = $contractBalance->available();
+            $total = $contractBalance->totalWithUnrealized();
+
+            if ($contractAvailableGreaterThan && $available > $contractAvailableGreaterThan) {
+                $this->appErrorLogger->critical(sprintf('contractBalance.available > %s', $contractAvailableGreaterThan));
             }
 
-            if ($lessThan && $available < $lessThan) {
-                $this->appErrorLogger->critical(sprintf('balance.available < %s', $lessThan));
+            if ($contractAvailableLessThan && $available < $contractAvailableLessThan) {
+                $this->appErrorLogger->critical(sprintf('contractBalance.available < %s', $contractAvailableLessThan));
+            }
+
+            if ($contractTotalGreaterThan && $total > $contractTotalGreaterThan) {
+                $this->appErrorLogger->critical(sprintf('contractBalance.TOTAL > %s', $contractTotalGreaterThan));
+            }
+
+            if ($contractTotalLessThan && $total < $contractTotalLessThan) {
+                $this->appErrorLogger->critical(sprintf('contractBalance.TOTAL < %s', $contractTotalLessThan));
             }
         }
     }

@@ -28,6 +28,7 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
         CoinAmount|float $total,
         CoinAmount|float $available,
         CoinAmount|float $free,
+        public ?float $unrealisedPnl = null,
     ) {
         $this->total = $total instanceof CoinAmount ? $total : new CoinAmount($this->assetCoin, $total);
         $this->available = $available instanceof CoinAmount ? $available : new CoinAmount($this->assetCoin, $available);
@@ -47,6 +48,11 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
     public function free(): float
     {
         return $this->free->value();
+    }
+
+    public function totalWithUnrealized(): float
+    {
+        return $this->total->add($this->unrealisedPnl)->value();
     }
 
     public function __toString(): string

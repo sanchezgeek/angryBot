@@ -21,10 +21,14 @@ enum AlarmSettings: string implements AppSettingInterface, AppSettingsGroupInter
     case AlarmOnProfitPnlPercent = 'alarm.profit.pnlPercent';
 
     #[SettingParametersAttribute]
-    case AlarmOnBalanceGreaterThan = 'alarm.balance.greater';
+    case AlarmOnContractAvailableBalanceGreaterThan = 'alarm.balance.greater';
+    #[SettingParametersAttribute]
+    case AlarmOnContractAvailableBalanceLessThan = 'alarm.balance.less';
 
     #[SettingParametersAttribute]
-    case AlarmOnBalanceLessThan = 'alarm.balance.less';
+    case AlarmOnTotalBalanceGreaterThan = 'alarm.balance.total.greater';
+    #[SettingParametersAttribute]
+    case AlarmOnTotalBalanceLessThan = 'alarm.balance.total.less';
 
     public function getSettingKey(): string
     {
