@@ -154,6 +154,13 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $map = [];
         foreach ($candidates as $candidate) {
+            if (
+                $this->settings->optional(SettingAccessor::exact(self::SETTING, $candidate->symbol)) === false
+                || $this->settings->optional(SettingAccessor::exact(self::SETTING, $candidate->symbol, $candidate->side)) === false
+            ) {
+                continue;
+            }
+
             $symbolRaw = $candidate->symbol->name();
             $last = $lastPrices[$symbolRaw];
             $pnlPercent = $last->getPnlPercentFor($candidate);
