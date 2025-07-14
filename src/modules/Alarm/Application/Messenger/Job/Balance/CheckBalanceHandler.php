@@ -18,11 +18,11 @@ final readonly class CheckBalanceHandler
 
     public function __invoke(CheckBalance $dto): void
     {
-        $contractAvailableGreaterThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnContractAvailableBalanceGreaterThan));
-        $contractAvailableLessThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnContractAvailableBalanceLessThan));
+        $contractAvailableGreaterThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnContractAvailableBalanceGreaterThan));
+        $contractAvailableLessThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnContractAvailableBalanceLessThan));
 
-        $contractTotalGreaterThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnTotalBalanceGreaterThan));
-        $contractTotalLessThan = self::parseSetting($this->settings->required(AlarmSettings::AlarmOnTotalBalanceLessThan));
+        $contractTotalGreaterThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceGreaterThan));
+        $contractTotalLessThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceLessThan));
 
         if (
             !$contractAvailableGreaterThan
