@@ -16,3 +16,5 @@ stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=ETHUSDT]: '200%'
 
 stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[symbol=BTCUSDT]: '300%'
 stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=BTCUSDT]: '120%'
+
+stop.movePositionStops.moveToBreakeven.after.positionPnlPercent: 900

@@ -157,7 +157,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Sell))),
             PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT2M', AsyncMessage::for(new MoveStops(SymbolEnum::BTCUSDT, Side::Buy))),
 
-            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT1M', AsyncMessage::for(new MoveOpenedPositionStopsToBreakeven(pnlGreaterThan: 900, targetPositionPnlPercent: -100, excludeFixationsStop: true))),
+            PeriodicalJob::create('2023-09-24T23:49:10Z', 'PT10S', AsyncMessage::for(new MoveOpenedPositionStopsToBreakeven(targetPositionPnlPercent: -100, excludeFixationsStop: true))),
 
             // -- watch
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2M', AsyncMessage::for(new CheckPositionIsInLoss())),

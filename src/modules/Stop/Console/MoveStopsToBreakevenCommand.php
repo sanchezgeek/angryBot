@@ -32,7 +32,7 @@ class MoveStopsToBreakevenCommand extends AbstractCommand implements SymbolDepen
     protected function configure(): void
     {
         $this
-            ->addOption(self::START_FROM_PNL_PERCENT, null, InputOption::VALUE_REQUIRED, 'If pnl percent greater than ...')
+            ->addOption(self::START_FROM_PNL_PERCENT, null, InputOption::VALUE_OPTIONAL, 'If pnl percent greater than ...')
             ->addOption(self::TARGET_PNL_PERCENT, null, InputOption::VALUE_REQUIRED, 'PNL% related to position to use as new stops level (delta will be calculated from first stop and applied to other stops)', self::DEFAULT_TARGET_PNL_PERCENT)
             ->addOption(self::EXCLUDE_FIXATIONS_STOP, null, InputOption::VALUE_NEGATABLE, 'Stops created as fixations after loss will be omitted while finding first position stop', false)
         ;
@@ -50,9 +50,9 @@ class MoveStopsToBreakevenCommand extends AbstractCommand implements SymbolDepen
     {
         $this->handler->__invoke(
             new MoveOpenedPositionStopsToBreakeven(
-                $this->paramFetcher->requiredFloatOption(self::START_FROM_PNL_PERCENT),
                 $this->positionPnlPercent,
-                $this->excludeFixationsStop
+                $this->excludeFixationsStop,
+                $this->paramFetcher->floatOption(self::START_FROM_PNL_PERCENT),
             )
         );
 
