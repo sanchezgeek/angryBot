@@ -14,9 +14,11 @@ use App\Command\TradingParametersDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Helper\OutputHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -85,8 +87,21 @@ class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentC
 
         $buyOrdersCollection = new BuyOrdersCollection(...$orders);
 
-        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
-        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
+        try {
+            $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
+        } catch (Exception $e) {
+            OutputHelper::print($e->getMessage());
+            $fromPrice = null;
+
+        }
+
+        try {
+            $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
+        } catch (Exception $e) {
+            OutputHelper::print($e->getMessage());
+            $toPrice = null;
+        }
+
         if ($toPrice && $fromPrice) {
             $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice, $this->getSymbol()));
         }
