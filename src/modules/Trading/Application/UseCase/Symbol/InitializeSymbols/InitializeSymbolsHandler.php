@@ -6,6 +6,7 @@ namespace App\Trading\Application\UseCase\Symbol\InitializeSymbols;
 
 use App\Domain\Coin\Coin;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
+use App\Infrastructure\ByBit\Service\Exception\Market\SymbolNotFoundException;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
@@ -24,6 +25,7 @@ final readonly class InitializeSymbolsHandler
      * @throws UniqueConstraintViolationException
      * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws SymbolNotFoundException
      */
     public function handle(InitializeSymbolsEntry $entry): Symbol
     {

@@ -13,14 +13,12 @@ symbols
         check queries (EAGER)
         symbolProvider profiling
     @todo | symbol | some way to get values based on symbol -> move to settings?
-    @todo | symbol | for all symbols
-    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
 
 
 05.07 21:53 (посмотреть во сколько примерно началсся движ и почему bmt, hifi, ...)
 foewCH ALL
 some pnl triggers check
-    or even every step after that pnl5
+    or even every step after that pnl%
        в итоге при пересечении опред уровня надо докупить минимальный (даже если до этого не был открыт)
 
    сам atr (или что бы то ни было) нужно вычислять на истории до открытия (оно только такое там может быть и актуально)
@@ -30,10 +28,6 @@ some pnl triggers check
 
 PriceChange on short period
         тут надо придумать multiply
-
-
-сильное усреднение
-    ./bin/console buy:edit -aremove sell --symbol=hft
 
 ### TRADING
     remove stale stops after position closed
@@ -45,11 +39,7 @@ opened
     удалять из watch после некоторого профита
 
 
-держать fixations на то же profit-расстоянии
-
-
-
-
+держать fixations на том же profit-расстоянии, что и при создании (позиция погла сдвинуться)
 
 
 autoOpen | если больше 100% (или подобрать. мб как-то ta использовать) <= чем за 1 день - полюбому
@@ -62,5 +52,6 @@ pushStops
 попробовать вписать технику глайда
 
 
+@todo | symbols | cache SymbolNotFoundException too
 
-@todo | liquidation | CheckPositionIsUnderLiquidationHandler | stops from liquidation handler on long distance without BO
+

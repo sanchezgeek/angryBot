@@ -24,6 +24,7 @@ use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Infrastructure\ByBit\Service\Exception\Market\SymbolNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Trading\Application\Symbol\SymbolProvider;
@@ -216,7 +217,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
             try {
                 $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($symbolName, $settleCoin);
-            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
+            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException|SymbolNotFoundException) {
                 continue;
             }
 

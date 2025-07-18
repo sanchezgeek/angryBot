@@ -7,6 +7,7 @@ namespace App\Trading\Application\Symbol;
 use App\Application\Logger\AppErrorLoggerInterface;
 use App\Domain\Coin\Coin;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\Service\Exception\Market\SymbolNotFoundException;
 use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
@@ -47,6 +48,7 @@ final readonly class SymbolProvider
      * Can be safely used when there is no stored entity yet
      *
      * @throws UnsupportedAssetCategoryException
+     * @throws SymbolNotFoundException
      *
      * @todo | symbol | TRY TO OPEN SOME UNSUPPORTED POSITON ON TESTNET (UnsupportedAssetCategoryException, QuoteCoinNotEqualsSpecifiedOneException)
      */
@@ -65,6 +67,7 @@ final readonly class SymbolProvider
      *
      * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws SymbolNotFoundException
      */
     public function getOrInitializeWithCoinSpecified(string $name, ?Coin $coin = null, bool $logException = false): Symbol
     {
@@ -79,6 +82,7 @@ final readonly class SymbolProvider
     /**
      * @throws UnsupportedAssetCategoryException
      * @throws QuoteCoinNotEqualsSpecifiedOneException
+     * @throws SymbolNotFoundException
      */
     private function doGetOrInitialize(string $name, ?Coin $coin = null): Symbol
     {
@@ -96,6 +100,7 @@ final readonly class SymbolProvider
                         new InitializeSymbolsEntry($name, $coin)
                     );
                 } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException $e) {
+                    // @todo | symbols | cache SymbolNotFoundException too
                     $this->symbolsCache->save($cacheKey, $e);
                     throw $e;
                 }
