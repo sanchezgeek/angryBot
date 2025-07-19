@@ -64,6 +64,7 @@ final class CheckSymbolsPriceChangeHandler
             }
 
             if (abs($delta) > $significantPriceChange) {
+                // добавить в ключ какой-то ценовой уровень, за которым оповещение сработает ещё раз
                 if (!$this->priceChangeAlarmThrottlingLimiter->create(sprintf('%s_daysDelta_%d', $symbol->name(), $daysDelta))->consume()->isAccepted()) {
                     continue;
                 }
@@ -76,7 +77,8 @@ final class CheckSymbolsPriceChangeHandler
 
                     $this->notifications->notify(
                         sprintf(
-                            '[! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (> %s [%s]) %s',
+                            'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (> %s [%s]) %s',
+                            $partOfDayPassed,
                             $changePercent,
                             $symbol->name(),
                             $partOfDayPassed,
