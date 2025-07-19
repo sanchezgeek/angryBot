@@ -2,11 +2,11 @@
 
 namespace App\Command\Position\OpenedPositions;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -475,7 +475,12 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $this->cacheCollector[self::tickerCacheKey($ticker)] = $ticker;
             $cells = [sprintf('%8s: %8s   %8s   %8s', $symbol->shortName(), $ticker->lastPrice, $ticker->markPrice, $ticker->indexPrice)];
         } else {
-            $cells = [sprintf('%8s: %8s', $symbol->shortName(), $markPrice)];
+            $funding = $this->marketService->getPreviousPeriodFundingRate($symbol);
+            $fundingContent = sprintf('%.5f', $funding);
+            if ($funding < 0) {
+                $fundingContent = CTH::colorizeText($fundingContent, 'light-yellow-text');
+            }
+            $cells = [sprintf('%10s: % 8s / %8s', $symbol->shortName(), $fundingContent, $markPrice)];
         }
 
         $cells = array_merge($cells, [
@@ -1214,6 +1219,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         private readonly AppSettingsProviderInterface $settings,
         private readonly OpenedPositionsCache $openedPositionsCache,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
+        private readonly MarketServiceInterface $marketService,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);

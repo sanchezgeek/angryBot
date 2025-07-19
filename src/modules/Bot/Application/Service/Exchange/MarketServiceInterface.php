@@ -6,7 +6,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface MarketServiceInterface
 {
-    public function getPreviousPeriodFundingRate(SymbolInterface $symbol): float;
+    public function getPreviousPeriodFundingRate(SymbolInterface $symbol, int $limit = 1): float;
 
     public function isNowFundingFeesPaymentTime(): bool;
 }

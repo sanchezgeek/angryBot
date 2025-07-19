@@ -9,8 +9,10 @@ use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetFundingRateHistoryRequest;
+use App\Infrastructure\ByBit\Cache\MarketDataCache;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use DateTimeImmutable;
 use RuntimeException;
 
 use function is_array;
@@ -23,13 +25,20 @@ final class ByBitMarketService implements MarketServiceInterface
     public function __construct(
         private ClockInterface $clock,
         ByBitApiClientInterface $apiClient,
+        private readonly MarketDataCache $cache,
     ) {
         $this->apiClient = $apiClient;
     }
 
-    public function getPreviousPeriodFundingRate(SymbolInterface $symbol): float
+    public function getPreviousPeriodFundingRate(SymbolInterface $symbol, int $limit = 1): float
     {
-        $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol);
+        $last = $this->cache->getLastFundingRate($symbol);
+
+        if ($last !== null) {
+            return $last;
+        }
+
+        $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol, $limit);
 
         $data = $this->sendRequest($request)->data();
 
@@ -47,6 +56,8 @@ final class ByBitMarketService implements MarketServiceInterface
         if (!$fundingRate) {
             throw new RuntimeException(sprintf('Cannot find fundingRate for "%s (%s)"', $symbol->name(), $symbol->associatedCategory()->name));
         }
+
+        $this->cache->setLastFundingRate($symbol, $fundingRate);
 
         return $fundingRate;
     }
