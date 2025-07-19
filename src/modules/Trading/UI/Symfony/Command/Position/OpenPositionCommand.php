@@ -8,6 +8,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
@@ -23,6 +24,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -49,8 +51,11 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
     public const string REMEMBER_BUY_GRID_DEFINITION = 'remember-buy-grid';
     public const string BUY_ORDERS_GRID_DEFINITION_DEFAULT = 'default';
 
+    public const string TRADING_STYLE = 'style';
+
     private SymbolInterface $symbol;
     private Ticker $ticker;
+    private TradingStyle $tradingStyle;
 
     protected function configure(): void
     {
@@ -69,6 +74,8 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             ->addOption(self::SPLIT_BUY_WITH_BUY_ORDERS, null, InputOption::VALUE_NEGATABLE, 'Buy some part with delayed BuyOrders?')
             ->addOption(self::BUY_ORDERS_GRID_DEFINITION, null, InputOption::VALUE_REQUIRED, 'BuyOrders grid definition', self::BUY_ORDERS_GRID_DEFINITION_DEFAULT)
             ->addOption(self::REMEMBER_BUY_GRID_DEFINITION, null, InputOption::VALUE_OPTIONAL, 'BuyOrders grid definition (with remember)')
+
+            ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
 //            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta')
         ;
     }
@@ -81,6 +88,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
 
         $this->symbol = $this->getSymbol();
         $this->ticker = $this->exchangeService->ticker($this->symbol);
+        $this->tradingStyle = TradingStyle::from($this->paramFetcher->getStringArgument(self::TRADING_STYLE));
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -203,7 +211,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             return OrdersGridDefinitionCollection::create($definition, $priceToRelate, $positionSide, $symbol);
         }
 
-        return $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate);
+        return $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $this->tradingStyle);
     }
 
     public function __construct(
