@@ -20,4 +20,5 @@ interface LiquidationDynamicParametersInterface
     public function actualStopsRange(): PriceRange;
 
     public function addOppositeBuyOrdersAfterStop(): bool;
+    public function warningDistancePnlPercent(): float;
 }

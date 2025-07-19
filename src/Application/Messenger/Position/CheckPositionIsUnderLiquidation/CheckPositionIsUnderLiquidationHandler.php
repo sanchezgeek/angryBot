@@ -176,27 +176,20 @@ final class CheckPositionIsUnderLiquidationHandler
             return; # skip checks if price didn't move to position loss direction AND liquidation is not in warning range
         }
 
-//        $this->switchPositionService($ticker, $distanceWithLiquidation);
-
-        $decreaseStopDistance = false;
+//        $decreaseStopDistance = false;
         $transferFromSpotOnDistance = $this->transferFromSpotOnDistance($ticker);
         if ($distanceWithLiquidation <= $transferFromSpotOnDistance) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
                 if ($spotBalance->available() > 2) {
-                    $amountToTransfer = FloatHelper::modify($this->getAmountToTransfer($position)->value(), self::TRANSFER_AMOUNT_MODIFIER);
+                    $amountToTransfer = $this->getAmountToTransfer($position)->value();
                     $amountTransferred = min($amountToTransfer, $spotBalance->available->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value());
 
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amountTransferred);
 
-                    $availableAfterTransfer = $spotBalance->available->sub($amountTransferred)->value();
-                    if ($availableAfterTransfer / $amountToTransfer >= self::SPOT_TRANSFERS_BEFORE_ADD_STOP) {
-                        return;
-                    }
-
-                    if ($amountTransferred >= $amountToTransfer) {
-                        $decreaseStopDistance = true;
-                    }
+//                    $availableAfterTransfer = $spotBalance->available->sub($amountTransferred)->value();
+//                    if ($availableAfterTransfer / $amountToTransfer >= self::SPOT_TRANSFERS_BEFORE_ADD_STOP) return;}
+//                    if ($amountTransferred >= $amountToTransfer) $decreaseStopDistance = true;
                 }
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
@@ -315,10 +308,10 @@ final class CheckPositionIsUnderLiquidationHandler
 
     public function getAmountToTransfer(Position $position): CoinAmount
     {
-        $distanceForCalcTransferAmount = $this->distanceForCalcTransferAmount !== null ? $this->distanceForCalcTransferAmount : random_int(300, 500);
-        $amountCalcByDistance = $distanceForCalcTransferAmount * $position->getNotCoveredSize();
+//        $distanceForCalcTransferAmount = $this->distanceForCalcTransferAmount !== null ? $this->distanceForCalcTransferAmount : random_int(300, 500);
+//        $amountCalcByDistance = $distanceForCalcTransferAmount * $position->getNotCoveredSize();
 
-        return (new CoinAmount($position->symbol->associatedCoin(), min($amountCalcByDistance, self::MAX_TRANSFER_AMOUNT)));
+        return new CoinAmount($position->symbol->associatedCoin(), self::MAX_TRANSFER_AMOUNT);
     }
 
     private function getPositionOld(SymbolInterface $symbol): ?Position
@@ -342,7 +335,10 @@ final class CheckPositionIsUnderLiquidationHandler
 
     private function transferFromSpotOnDistance(Ticker $ticker): float
     {
-        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::TRANSFER_FROM_SPOT_ON_DISTANCE, $ticker->markPrice);
+        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
+            $this->dynamicParameters->warningDistancePnlPercent(),
+            $ticker->markPrice
+        );
     }
 
     private function getStaleStops(Position $position): StopsCollection
