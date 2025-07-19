@@ -13,6 +13,7 @@ use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -28,7 +29,7 @@ final class TradingParametersProviderTest extends KernelTestCase
     use SettingsAwareTest;
     use TaToolsProviderMocker;
 
-    const int LONG_ATR_PERIOD = 7;
+    const int LONG_ATR_PERIOD = TradingParametersProviderInterface::LONG_ATR_PERIOD;
     const int FAST_ATR_PERIOD = 2;
     private AppSettingsProviderInterface|MockObject $appSettingsProvider;
 

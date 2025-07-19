@@ -52,11 +52,13 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     use SettingsAwareTest;
     use TradingParametersMocker;
 
-    private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
-    private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
+    private const int TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
+    private const int CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
-    private const MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
-    private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
+    private const int MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
+    private const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
+
+    private const int DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -67,8 +69,6 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     private AppSettingsProviderInterface $settingsProvider;
 
     private CheckPositionIsUnderLiquidationHandler $handler;
-
-    private const DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
 
     private TradingParametersProviderStub $tradingParametersProvider;
 
@@ -203,10 +203,11 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
                 'expectedTransferAmount' => null,
             ];
 
+            $spotBalance = $expectedAmountToTransferFromSpot->sub(2);
             yield sprintf('[%s] spotBalance is more than default min value => transfer min default value', $position) => [
                 'position' => $position,
-                'spotAvailableBalance' => $expectedAmountToTransferFromSpot->add(2)->value(),
-                'expectedTransferAmount' => $expectedAmountToTransferFromSpot->value(),
+                'spotAvailableBalance' => $spotBalance->value(),
+                'expectedTransferAmount' => $spotBalance->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value(),
             ];
 
             $spotBalance = $expectedAmountToTransferFromSpot->sub(2.22);
