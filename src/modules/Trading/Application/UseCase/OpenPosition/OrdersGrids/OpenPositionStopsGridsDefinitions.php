@@ -13,10 +13,8 @@ use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\OpenPositionSettings;
-use App\Trading\Application\UseCase\OpenPosition\Exception\DefaultGridDefinitionNotFound;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use RuntimeException;
 
 final readonly class OpenPositionStopsGridsDefinitions
 {
@@ -28,9 +26,6 @@ final readonly class OpenPositionStopsGridsDefinitions
     ) {
     }
 
-    /**
-     * @throws DefaultGridDefinitionNotFound
-     */
     public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, TradingStyle $tradingStyle): OrdersGridDefinitionCollection
     {
         $symbolSideDef = $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol, $positionSide));
@@ -42,7 +37,7 @@ final readonly class OpenPositionStopsGridsDefinitions
 
         return match ($tradingStyle) {
             TradingStyle::Aggressive => $this->aggressive($symbol, $positionSide, $priceToRelate),
-            TradingStyle::Cautious => throw new RuntimeException(sprintf('%s not implemented yet', TradingStyle::Conservative->value)),
+            TradingStyle::Cautious => $this->cautious($symbol, $positionSide, $priceToRelate),
             TradingStyle::Conservative => $this->conservative($symbol, $positionSide, $priceToRelate),
         };
     }
@@ -83,6 +78,28 @@ final readonly class OpenPositionStopsGridsDefinitions
         ];
 
         return self::makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
+    }
+
+    public function cautious(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate): OrdersGridDefinitionCollection
+    {
+        $positionEntry = 0;
+
+        $shortPnlPercent = $this->getBoundPnlPercent($symbol, PredefinedStopLengthSelector::Short);
+        $moderateLongPnlPercent = $this->getBoundPnlPercent($symbol, PredefinedStopLengthSelector::ModerateLong);
+
+        $defs = [
+            sprintf('-%.2f%%..-%.2f%%|50%%|5', $positionEntry, $shortPnlPercent),
+            sprintf('-%.2f%%..-%.2f%%|50%%|5', $positionEntry, $moderateLongPnlPercent),
+        ];
+
+        return self::makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
+    }
+
+    private function getBoundPnlPercent(SymbolInterface $symbol, PredefinedStopLengthSelector $lengthSelector): float
+    {
+        $priceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, $lengthSelector)->value();
+
+        return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
     private static function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection
