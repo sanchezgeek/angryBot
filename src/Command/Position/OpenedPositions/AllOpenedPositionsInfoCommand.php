@@ -353,9 +353,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             "liq.\ndistance\npassed",
         ]);
 
-        if ($this->showStops) {
-            $headerColumns[] = "stops(\n between liq.\n and entry\n)\n[auto/manual]";
-        }
+        $headerColumns[] = "stops(\n between liq.\n and entry\n)\n[auto/manual]";
 
         ConsoleTableBuilder::withOutput($this->output)
             ->withHeader($headerColumns)
@@ -461,7 +459,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $mainPositionPnl = $main->unrealizedPnl;
 
-        if ($this->showStops && !$main->isShortWithoutLiquidation()) {
+        if (!$main->isShortWithoutLiquidation()) {
             $stoppedVolume = $this->prepareStoppedPartContent($main, $markPrice);
         }
 
@@ -546,9 +544,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
         ]);
 
-        if ($this->showStops) {
-            $cells[] = $stoppedVolume ?? '';
-        }
+        $cells[] = $stoppedVolume ?? '';
 
         $result[$main->side->value] = DataRow::default($cells);
 
@@ -556,10 +552,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         if ($support) {
             $supportPnl = $support->unrealizedPnl;
-            $stoppedVolume = null;
-            if ($this->showStops) {
-                $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
-            }
+            $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
 
             $cells = [
                 '',
@@ -596,9 +589,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             }
 
             $cells = array_merge($cells, ['', '', '', '',  '']);
-            if ($this->showStops) {
-                $cells[] = $stoppedVolume ?? '';
-            }
+            $cells[] = $stoppedVolume ?? '';
 
             $result[$support->side->value] = DataRow::default($cells);
 
@@ -1132,23 +1123,31 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $stoppedVolume = [];
         if ($manualStops) {
-            $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
             $stoppedVolume[] = self::getStopsCollectionInfo($manualStops, $position, $markPrice,
-                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
-                    sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('m', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                $this->showStops
+                    ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[m.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                    : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[m]', $stoppedPartPct, $stopsCount)
             );
         }
         if ($stopsAfterFixOppositeHedgePosition) {
-            $stopsColor = $position->isMainPosition() ? 'red-text' : 'yellow-text';
+            $stopsColor = $position->isMainPositionOrWithoutHedge() ? ($position->isShort() ? 'bright-red-text' : 'green-text') : 'yellow-text';
             $stoppedVolume[] = self::getStopsCollectionInfo($stopsAfterFixOppositeHedgePosition, $position, $markPrice,
-                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
-                    sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                $this->showStops
+                    ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                    : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor))
             );
         }
         if ($autoStops) {
             $stoppedVolume[] = self::getStopsCollectionInfo($autoStops, $position, $markPrice,
-                static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
-                    sprintf('%s|%d[a.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                $this->showStops
+                    ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        CTH::colorizeText(sprintf('%s|%d[a.%s]', $stoppedPartPct, $stopsCount, $firstStopDistancePnlPct), $firstStopDistanceColor)
+                    : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        CTH::colorizeText(sprintf('%s|%d[a]', $stoppedPartPct, $stopsCount), 'red-text')
             );
         }
 
