@@ -23,6 +23,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
+use App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage;
 use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Service\Infrastructure\Job\Ping\PingMessages;
@@ -169,6 +170,9 @@ final class SchedulerFactory
 
             // -- active Conditional orders
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT40S', AsyncMessage::for(new TryReleaseActiveOrders(force: true))),
+
+            // -- liquidation
+            PeriodicalJob::create('2025-07-01T01:01:08Z', 'P1D', AsyncMessage::for(new RemoveStaleStopsMessage())),
         ];
     }
 

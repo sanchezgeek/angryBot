@@ -157,7 +157,8 @@ final class CheckPositionIsUnderLiquidationHandler
         ### remove stale ###
         // @todo | liquidation | works only for by market =(
         foreach ($this->getStaleStops($position) as $stop) {
-            $this->stopRepository->remove($stop);
+            $stop->setFakeExchangeOrderId();
+            $this->stopRepository->save($stop);
         }
 
         if ($this->onlyRemoveStale) {

@@ -247,4 +247,14 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
         return $qb->getQuery()->getResult();
     }
+
+    public function findStopsWithFakeExchangeOrderId(): array
+    {
+        $fakeExchangeOrderId = Stop::FAKE_EXCHANGE_ORDER_ID;
+
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$fakeExchangeOrderId') = true");
+
+        return $qb->getQuery()->getResult();
+    }
 }

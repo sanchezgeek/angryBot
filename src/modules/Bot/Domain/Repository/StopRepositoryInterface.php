@@ -11,10 +11,16 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface StopRepositoryInterface
 {
+    public function save(Stop $stop);
+    public function remove(Stop $stop);
+
     /**
      * @return Stop[]
      */
     public function findActive(SymbolInterface $symbol, Side $side, ?Ticker $nearTicker = null, bool $exceptOppositeOrders = false, ?callable $qbModifier = null): array;
 
-    public function save(Stop $stop);
+    /**
+     * @return Stop[]
+     */
+    public function findStopsWithFakeExchangeOrderId(): array;
 }

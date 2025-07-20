@@ -117,20 +117,22 @@ class RemoveStaleStopsTest extends KernelTestCase
             $long,
             $ticker,
             [
-                (new Stop(10, 30290, 0.1, null, $symbol, $long->side)),
-                (new Stop(20, 30290, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(30, 30250, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(40, 30170, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(50, 30170, 0.1, null, $symbol, $long->side)),
-                (new Stop(60, 30134, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(10, 30290, 0.1, null, $symbol, $long->side),
+                new Stop(20, 30290, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(30, 30250, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(40, 30170, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(50, 30170, 0.1, null, $symbol, $long->side),
+                new Stop(60, 30134, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
             ],
             $actualStopsPriceRange,
             $criticalPriceRange,
             [
-                (new Stop(10, 30290, 0.1, null, $symbol, $long->side)),
-                (new Stop(30, 30250, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(50, 30170, 0.1, null, $symbol, $long->side)),
-                (new Stop(60, 30134, 0.1, null, $symbol, $long->side))->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(10, 30290, 0.1, null, $symbol, $long->side),
+                self::markAsStale(new Stop(20, 30290, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler()),
+                new Stop(30, 30250, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
+                self::markAsStale(new Stop(40, 30170, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler()),
+                new Stop(50, 30170, 0.1, null, $symbol, $long->side),
+                new Stop(60, 30134, 0.1, null, $symbol, $long->side)->setIsAdditionalStopFromLiquidationHandler(),
             ],
         ];
 
@@ -145,21 +147,28 @@ class RemoveStaleStopsTest extends KernelTestCase
             $short,
             $ticker,
             [
-                (new Stop(10, 29500, 0.1, null, $symbol, $short->side)),
-                (new Stop(20, 29500, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(30, 29650, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(40, 29750, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(50, 29750, 0.1, null, $symbol, $short->side)),
-                (new Stop(60, 29850, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(10, 29500, 0.1, null, $symbol, $short->side),
+                new Stop(20, 29500, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(30, 29650, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(40, 29750, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(50, 29750, 0.1, null, $symbol, $short->side),
+                new Stop(60, 29850, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
             ],
             $actualStopsPriceRange,
             $criticalPriceRange,
             [
-                (new Stop(10, 29500, 0.1, null, $symbol, $short->side)),
-                (new Stop(30, 29650, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
-                (new Stop(50, 29750, 0.1, null, $symbol, $short->side)),
-                (new Stop(60, 29850, 0.1, null, $symbol, $short->side))->setIsAdditionalStopFromLiquidationHandler(),
+                new Stop(10, 29500, 0.1, null, $symbol, $short->side),
+                self::markAsStale(new Stop(20, 29500, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler()),
+                new Stop(30, 29650, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
+                self::markAsStale(new Stop(40, 29750, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler()),
+                new Stop(50, 29750, 0.1, null, $symbol, $short->side),
+                new Stop(60, 29850, 0.1, null, $symbol, $short->side)->setIsAdditionalStopFromLiquidationHandler(),
             ],
         ];
+    }
+
+    private static function markAsStale(Stop $stop): Stop
+    {
+        return $stop->setFakeExchangeOrderId();
     }
 }

@@ -37,6 +37,8 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
+    public const string FAKE_EXCHANGE_ORDER_ID = 'fakeExchangeOrderId';
+
     public const string SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
     public const string IS_TP_CONTEXT = 'isTakeProfit';
     public const string CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
@@ -385,6 +387,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public function disableSupportChecks(): self
     {
         $this->context[self::SKIP_SUPPORT_CHECK_CONTEXT] = true;
+
+        return $this;
+    }
+
+    public function setFakeExchangeOrderId(): self
+    {
+        $this->setExchangeOrderId(self::FAKE_EXCHANGE_ORDER_ID);
 
         return $this;
     }

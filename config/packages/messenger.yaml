@@ -57,6 +57,9 @@ framework:
 
             App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async
 
+            # liquidation
+            App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage: async
+
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async
 
