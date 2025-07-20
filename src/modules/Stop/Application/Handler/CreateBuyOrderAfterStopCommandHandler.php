@@ -13,23 +13,22 @@ use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthPro
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
-use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Trading\Enum\TimeFrame;
-use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
- * @see \App\Tests\Functional\Modules\Buy\Application\Handler\CreateBuyOrdersAfterStopCommandHandlerTest
+ * @see \App\Tests\Functional\Modules\Stop\Applicaiton\Handler\CreateBuyOrdersAfterStopCommandHandlerTest
  */
 #[AsMessageHandler]
 final class CreateBuyOrderAfterStopCommandHandler
 {
-    public const float OPPOSITE_SL_PRICE_MODIFIER = 1.2;
     public const int BIG_STOP_VOLUME_MULTIPLIER = 10;
 
     public const int DEFAULT_ATR_PERIOD = PredefinedStopLengthProcessor::DEFAULT_PERIOD_FOR_ATR;
@@ -48,73 +47,22 @@ final class CreateBuyOrderAfterStopCommandHandler
         $stopPrice = $symbol->makePrice($stop->getPrice()); // $price = $stop->getOriginalPrice() ?? $stop->getPrice();
 
         $distanceOverride = $stop->getOppositeOrderDistance();
-        if ($distanceOverride !== null) {
-            $baseDistance = $distanceOverride;
+
+        $isMinVolume = $stopVolume <= $symbol->minOrderQty();
+        $isBigStop = FloatHelper::round($stopVolume / $command->prevPositionSize) >= 0.1;
+
+        $orders = [];
+        if ($isMinVolume || !$isBigStop || $distanceOverride) {
+            $distance = $distanceOverride ?? $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
+
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
-            $baseDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
-        }
+            $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
-        $baseBuyOrderPrice = $side->isShort() ? $stopPrice->sub($baseDistance) : $stopPrice->add($baseDistance);
-
-        $context = [
-            BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
-            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
-            BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
-        ];
-        # force buy only if it's not auto stop-order CheckPositionIsUnderLiquidationHandler // @todo | oppositeBuyOrder | only if source BuyOrder in chain was with force // if (!$stop->isAdditionalStopFromLiquidationHandler()) {$context[BuyOrder::FORCE_BUY_CONTEXT] = true;}
-
-//        if ($stop->isAdditionalStopFromLiquidationHandler()) {
-            // @todo | oppositeBuyOrder | some setting or conditions?
-//            $context[BuyOrder::WITHOUT_OPPOSITE_ORDER_CONTEXT] = true;
-            // @todo | oppositeBuyOrder | stop | либо за цену первоначального стопа?
-//        } else {
-        $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $baseDistance * self::OPPOSITE_SL_PRICE_MODIFIER;
-//        }
-
-        $minOrderQty = ExchangeOrder::roundedToMin($symbol, $symbol->minOrderQty(), $stopPrice)->getVolume();
-        $bigStopVolume = $symbol->roundVolume($minOrderQty * self::BIG_STOP_VOLUME_MULTIPLIER);
-
-        if ($stopVolume >= $bigStopVolume) {
-            if ($distanceOverride) {
-                $volumeGrid = [
-                    $symbol->roundVolume($stopVolume / 3),
-                    $symbol->roundVolume($stopVolume / 4.5),
-                    $symbol->roundVolume($stopVolume / 3.5),
-                ];
-                $priceGrid = [
-                    $baseBuyOrderPrice,
-                    $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 3.8) : $baseBuyOrderPrice->add($baseDistance / 3.8),
-                    $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 2)   : $baseBuyOrderPrice->add($baseDistance / 2),
-                ];
-            } else {
-                $volumeGrid = [
-                    $symbol->roundVolume($stopVolume / 5),
-                    $symbol->roundVolume($stopVolume / 5),
-                    $symbol->roundVolume($stopVolume / 3),
-                    $symbol->roundVolume($stopVolume / 3),
-                ];
-
-                $veryShortDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::VeryShort);
-                $moderateShortDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::ModerateShort);
-                $standardDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
-                $longDistance = $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Long);
-
-                $priceGrid = [
-                    $side->isShort() ? $stopPrice->sub($veryShortDistance) : $stopPrice->add($veryShortDistance),
-                    $side->isShort() ? $stopPrice->sub($moderateShortDistance) : $stopPrice->add($moderateShortDistance),
-                    $side->isShort() ? $stopPrice->sub($standardDistance) : $stopPrice->add($standardDistance),
-                    $side->isShort() ? $stopPrice->sub($longDistance) : $stopPrice->add($longDistance),
-                ];
-            }
-
-            $orders = [];
-            foreach ($priceGrid as $key => $price) {
-                $orders[] = new Order($price, $volumeGrid[$key]);
-            }
-        } else {
-            $orders = [
-                new Order($baseBuyOrderPrice, $symbol->roundVolume($stopVolume))
-            ];
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::VeryShort);
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort, $withForceBuy);
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PredefinedStopLengthSelector::Standard);
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::Long, $withForceBuy);
         }
 
         $orders = new OrdersLimitedWithMaxVolume(
@@ -124,18 +72,37 @@ final class CreateBuyOrderAfterStopCommandHandler
 
         $buyOrders = [];
         foreach ($orders as $order) {
-            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $context);
+            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context());
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
 
         return $buyOrders;
     }
 
-    public function getOppositeOrderDistance(
-        Stop $stop,
-        // @todo | oppositeBuyOrder | use param from stop?
-        PredefinedStopLengthSelector $lengthSelector
-    ): float {
+    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PredefinedStopLengthSelector|float $length, array $additionalContext = []): Order
+    {
+        $commonContext = [
+            BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
+            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
+            BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
+        ];
+
+        $side = $stop->getPositionSide();
+
+        $distance = $length instanceof PredefinedStopLengthSelector ? $this->getOppositeOrderDistance($stop, $length) : $length;
+
+        $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
+        $volume = $stop->getSymbol()->roundVolume($volume);
+        $context = array_merge($commonContext, $additionalContext);
+
+        return new Order($price, $volume, $context);
+    }
+
+    /**
+     * @param PredefinedStopLengthSelector $lengthSelector // @todo | oppositeBuyOrder | use param from stop?
+     */
+    public function getOppositeOrderDistance(Stop $stop, PredefinedStopLengthSelector $lengthSelector): float
+    {
         $stopPrice = $stop->getPrice();
 
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(

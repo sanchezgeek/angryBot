@@ -15,4 +15,6 @@ interface StopRepositoryInterface
      * @return Stop[]
      */
     public function findActive(SymbolInterface $symbol, Side $side, ?Ticker $nearTicker = null, bool $exceptOppositeOrders = false, ?callable $qbModifier = null): array;
+
+    public function save(Stop $stop);
 }

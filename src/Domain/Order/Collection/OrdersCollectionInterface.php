@@ -8,6 +8,9 @@ use App\Domain\Order\Order;
 use Countable;
 use IteratorAggregate;
 
+/**
+ * @template-implements IteratorAggregate<Order>
+ */
 interface OrdersCollectionInterface extends IteratorAggregate, Countable
 {
     /** @return Order[] */

@@ -218,9 +218,11 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
-    public function wasPushedToExchange(string $exchangeOrderId): self
+    public function wasPushedToExchange(string $exchangeOrderId, Position $prevPositionState): self
     {
-        $this->recordThat(new StopPushedToExchange($this));
+        if (!$this->isTakeProfitOrder()) {
+            $this->recordThat(new StopPushedToExchange($this, $prevPositionState));
+        }
 
         return $this->setExchangeOrderId($exchangeOrderId);
     }

@@ -11,7 +11,7 @@ use App\Domain\Price\SymbolPrice;
  */
 final readonly class Order
 {
-    public function __construct(private SymbolPrice $price, private float $volume)
+    public function __construct(private SymbolPrice $price, private float $volume, private array $context = [])
     {
     }
 
@@ -23,5 +23,10 @@ final readonly class Order
     public function volume(): float
     {
         return $this->volume;
+    }
+
+    public function context(): array
+    {
+        return $this->context;
     }
 }

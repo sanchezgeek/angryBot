@@ -15,12 +15,14 @@ final readonly class CreateOppositeBuyOrdersListener
     public function __invoke(StopPushedToExchange $event): void
     {
         $stop = $event->stop;
+        $prevPositionState = $event->prevPositionState;
+
         if (!$stop->isWithOppositeOrder()) {
             return;
         }
 
         $this->messageBus->dispatch(
-            new CreateBuyOrderAfterStop($stop->getId())
+            new CreateBuyOrderAfterStop($stop->getId(), $prevPositionState->size)
         );
     }
 

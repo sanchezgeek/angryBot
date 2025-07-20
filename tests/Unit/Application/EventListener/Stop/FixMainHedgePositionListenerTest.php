@@ -101,7 +101,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
             )
         );
 
-        $event = new StopPushedToExchange($executedStop);
+        $event = new StopPushedToExchange($executedStop, $stoppedPosition);
         ($this->listener)($event);
     }
 
@@ -124,7 +124,7 @@ final class FixMainHedgePositionListenerTest extends KernelTestCase
 
         $this->createStopHandler->expects(self::never())->method(self::anything());
 
-        $event = new StopPushedToExchange($executedStop);
+        $event = new StopPushedToExchange($executedStop, $stoppedPosition);
         ($this->listener)($event);
     }
 

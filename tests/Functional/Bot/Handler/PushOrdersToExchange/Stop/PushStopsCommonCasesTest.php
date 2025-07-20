@@ -162,8 +162,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 StopBuilder::short(40, 29029, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
             ],
             'expectedMessengerMessages' => [
-                new CreateBuyOrderAfterStop(30),
-                new CreateBuyOrderAfterStop(10),
+                new CreateBuyOrderAfterStop(30, $position->size),
+                new CreateBuyOrderAfterStop(10, $position->size),
             ],
         ];
 
@@ -204,8 +204,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 StopBuilder::short(40, 29009, 0.33)->withTD(5)->build()->setIsTakeProfitOrder(),
             ],
             'expectedMessengerMessages' => [
-                new CreateBuyOrderAfterStop(5),
-                new CreateBuyOrderAfterStop(10),
+                new CreateBuyOrderAfterStop(5, $position->size),
+                new CreateBuyOrderAfterStop(10, $position->size),
             ],
         ];
 
@@ -239,7 +239,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 StopBuilder::short(10, 29050, 0.1)->build()->setIsCloseByMarketContext(),
             ],
             'expectedMessengerMessages' => [
-                new CreateBuyOrderAfterStop(15),
+                new CreateBuyOrderAfterStop(15, $position->size),
             ],
         ];
 
@@ -277,8 +277,8 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 StopBuilder::long(20, 28949, 0.2)->withTD(100)->build(),
             ],
             'expectedMessengerMessages' => [
-                new CreateBuyOrderAfterStop(5),
-                new CreateBuyOrderAfterStop(30),
+                new CreateBuyOrderAfterStop(5, $position->size),
+                new CreateBuyOrderAfterStop(30, $position->size),
             ],
         ];
 
@@ -328,7 +328,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
                 StopBuilder::short(15, 3.696, 12, $symbol)->withTD($defaultTd)->build(),
             ],
             'expectedMessengerMessages' => [
-                new CreateBuyOrderAfterStop(10),
+                new CreateBuyOrderAfterStop(10, $position->size),
             ],
         ];
     }

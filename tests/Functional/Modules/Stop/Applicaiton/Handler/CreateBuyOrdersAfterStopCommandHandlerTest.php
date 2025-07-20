@@ -12,12 +12,13 @@ use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthPro
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
-use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Order;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Stop\Application\Handler\CreateBuyOrderAfterStopCommandHandler;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -31,7 +32,6 @@ use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
-use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -69,6 +69,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     public function testCreateBuyOrdersAfterStop(
         Ticker $ticker,
         Stop $stop,
+        float $wholePositionSize,
         array $expectedBuyOrders
     ): void {
         $symbol = $ticker->symbol;
@@ -78,7 +79,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $this->haveTicker($ticker);
         $this->applyDbFixtures(new StopFixture($stop));
 
-        $this->runMessageConsume(new CreateBuyOrderAfterStop($stop->getId()));
+        $this->runMessageConsume(new CreateBuyOrderAfterStop($stop->getId(), $wholePositionSize));
 
         $this->seeBuyOrdersInDb(...$expectedBuyOrders);
     }
@@ -91,64 +92,103 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $ticker = TickerFactory::create($symbol, 100100);
 
         $stop = StopBuilder::short(10, 100000, 0.001)->build()->setExchangeOrderId('123456')->setIsWithoutOppositeOrder();
-        yield self::caseDescription($stop, []) => [
+        $wholePositionSize = 0.006;
+        yield self::caseDescription($stop, $wholePositionSize, []) => [
             $ticker,
             $stop,
+            $wholePositionSize,
             [],
         ];
 
         $stop = StopBuilder::short(10, 100000, 0.001)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
+        $wholePositionSize = 0.006;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
             $ticker,
             $stop,
+            $wholePositionSize,
+            $expectedBuyOrders,
+        ];
+
+        $stop = StopBuilder::short(10, 100000, 0.001)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.01;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
+            $ticker,
+            $stop,
+            $wholePositionSize,
+            $expectedBuyOrders,
+        ];
+
+        $stop = StopBuilder::short(10, 100000, 0.002)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.01;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
+            $ticker,
+            $stop,
+            $wholePositionSize,
+            $expectedBuyOrders,
+        ];
+
+        $stop = StopBuilder::short(10, 100000, 0.004)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.01;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
+            $ticker,
+            $stop,
+            $wholePositionSize,
             $expectedBuyOrders,
         ];
 
         $stop = StopBuilder::short(10, 100000, 0.01)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
+        $wholePositionSize = 0.1;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
             $ticker,
             $stop,
+            $wholePositionSize,
             $expectedBuyOrders,
         ];
 
         ### BTCUSDT LONG
         $ticker = TickerFactory::create($symbol, 99000);
 
-        $stop = StopBuilder::long(10, 100000, 0.001)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
+        $stop = StopBuilder::long(10, 100000, 0.001)->build()->setExchangeOrderId('123456')->setIsWithoutOppositeOrder();
+        $wholePositionSize = 0.006;
+        yield self::caseDescription($stop, $wholePositionSize, []) => [
             $ticker,
             $stop,
+            $wholePositionSize,
+            [],
+        ];
+
+        $stop = StopBuilder::long(10, 100000, 0.001)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.006;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
+            $ticker,
+            $stop,
+            $wholePositionSize,
+            $expectedBuyOrders,
+        ];
+
+        $stop = StopBuilder::long(10, 100000, 0.002)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.01;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
+            $ticker,
+            $stop,
+            $wholePositionSize,
             $expectedBuyOrders,
         ];
 
         $stop = StopBuilder::long(10, 100000, 0.01)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
+        $wholePositionSize = 0.1;
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
             $ticker,
             $stop,
-            $expectedBuyOrders,
-        ];
-
-        ### AAVEUSDT LONG
-        $symbol = SymbolEnum::AAVEUSDT;
-        $ticker = TickerFactory::create($symbol, 391.2);
-
-        $stop = StopBuilder::short(10, 391.22, 0.02, $symbol)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
-            $ticker,
-            $stop,
-            $expectedBuyOrders,
-        ];
-
-        $stop = StopBuilder::short(10, 391.22, 0.5, $symbol)->build()->setExchangeOrderId('123456');
-        $expectedBuyOrders = self::expectedBuyOrders($stop);
-        yield self::caseDescription($stop, $expectedBuyOrders) => [
-            $ticker,
-            $stop,
+            $wholePositionSize,
             $expectedBuyOrders,
         ];
     }
@@ -159,70 +199,35 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
      */
     private static function expectedBuyOrders(
         Stop $stop,
+        float $wholePositionSize,
         int $fromId = 1,
     ): array {
         if (!$stop->getExchangeOrderId()) {
             throw new RuntimeException('exchangeOrderId must be set');
         }
+
         $symbol = $stop->getSymbol();
         $side = $stop->getPositionSide();
         $stopPrice = $symbol->makePrice($stop->getPrice());
         $stopVolume = $stop->getVolume();
 
-
         $distanceOverride = $stop->getOppositeOrderDistance();
-        if ($distanceOverride !== null) {
-            $baseDistance = $distanceOverride;
+
+        $isMinVolume = $stopVolume <= $symbol->minOrderQty();
+        $isBigStop = FloatHelper::round($stopVolume / $wholePositionSize) >= 0.1;
+
+        $orders = [];
+        if ($isMinVolume || !$isBigStop || $distanceOverride) {
+            $distance = $distanceOverride ?? self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
+
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
-            $baseDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
-        }
+            $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
-        $baseBuyOrderPrice = $side->isShort() ? $stopPrice->sub($baseDistance) : $stopPrice->add($baseDistance);
-
-        $minOrderQty = ExchangeOrder::roundedToMin($symbol, $symbol->minOrderQty(), $baseBuyOrderPrice)->getVolume();
-        $bigStopVolume = $symbol->roundVolume($minOrderQty * self::BIG_STOP_VOLUME_MULTIPLIER);
-
-        if ($stopVolume >= $bigStopVolume) {
-            if ($distanceOverride) {
-                $volumeGrid = [
-                    $symbol->roundVolume($stopVolume / 3),
-                    $symbol->roundVolume($stopVolume / 4.5),
-                    $symbol->roundVolume($stopVolume / 3.5),
-                ];
-                $priceGrid = [
-                    $baseBuyOrderPrice,
-                    $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 3.8) : $baseBuyOrderPrice->add($baseDistance / 3.8),
-                    $side->isShort() ? $baseBuyOrderPrice->sub($baseDistance / 2)   : $baseBuyOrderPrice->add($baseDistance / 2),
-                ];
-            } else {
-                $volumeGrid = [
-                    $symbol->roundVolume($stopVolume / 5),
-                    $symbol->roundVolume($stopVolume / 5),
-                    $symbol->roundVolume($stopVolume / 3),
-                    $symbol->roundVolume($stopVolume / 3),
-                ];
-
-                $veryShortDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::VeryShort);
-                $moderateShortDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::ModerateShort);
-                $standardDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
-                $longDistance = self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Long);
-
-                $priceGrid = [
-                    $side->isShort() ? $stopPrice->sub($veryShortDistance) : $stopPrice->add($veryShortDistance),
-                    $side->isShort() ? $stopPrice->sub($moderateShortDistance) : $stopPrice->add($moderateShortDistance),
-                    $side->isShort() ? $stopPrice->sub($standardDistance) : $stopPrice->add($standardDistance),
-                    $side->isShort() ? $stopPrice->sub($longDistance) : $stopPrice->add($longDistance),
-                ];
-            }
-
-            $orders = [];
-            foreach ($priceGrid as $key => $price) {
-                $orders[] = new Order($price, $volumeGrid[$key]);
-            }
-        } else {
-            $orders = [
-                new Order($baseBuyOrderPrice, $symbol->roundVolume($stopVolume))
-            ];
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::VeryShort);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort, $withForceBuy);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PredefinedStopLengthSelector::Standard);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::Long, $withForceBuy);
         }
 
         $orders = new OrdersLimitedWithMaxVolume(
@@ -232,19 +237,30 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $buyOrders = [];
         foreach ($orders as $order) {
-            $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side);
+            $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
             $fromId++;
         }
 
-        foreach ($buyOrders as $buyOrder) {
-            $buyOrder->setOnlyAfterExchangeOrderExecutedContext($stop->getExchangeOrderId());
-            $buyOrder->setOppositeStopId($stop->getId());
-            $buyOrder->setIsOppositeBuyOrderAfterStopLossContext();
-            // @todo | oppositeBuyOrder | only if source BuyOrder in chain was with force // $order->setIsForceBuyOrderContext();
-            $buyOrder->setOppositeOrdersDistance($baseDistance * CreateBuyOrderAfterStopCommandHandler::OPPOSITE_SL_PRICE_MODIFIER);
-        }
-
         return $buyOrders;
+    }
+
+    private static function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PredefinedStopLengthSelector|float $length, array $additionalContext = []): Order
+    {
+        $commonContext = [
+            BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
+            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
+            BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
+        ];
+
+        $side = $stop->getPositionSide();
+
+        $distance = $length instanceof PredefinedStopLengthSelector ? self::getOppositeOrderDistance($stop, $length) : $length;
+
+        $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
+        $volume = $stop->getSymbol()->roundVolume($volume);
+        $context = array_merge($commonContext, $additionalContext);
+
+        return new Order($price, $volume, $context);
     }
 
     private static function getOppositeOrderDistance(Stop $stop, PredefinedStopLengthSelector $lengthSelector): float
@@ -262,7 +278,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     /**
      * @param BuyOrder[] $createdBoyOrders
      */
-    private static function caseDescription(Stop $stop, array $createdBoyOrders): string
+    private static function caseDescription(Stop $stop, float $wholePositionSize, array $createdBoyOrders): string
     {
         $boDef = [];
         foreach ($createdBoyOrders as $boyOrder) {
@@ -271,12 +287,13 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $boDef = implode(' | ', $boDef);
 
         return sprintf(
-            '[%s %s] stop[price=%s, volume=%s] => %s',
+            '[%s %s] stop[price=%s, volume=%s] wholePositionSize=%s => %s',
             $stop->getSymbol()->name(),
             $stop->getPositionSide()->title(),
             $stop->getPrice(),
             $stop->getVolume(),
-            $boDef
+            $wholePositionSize,
+            $boDef,
         );
     }
 

@@ -89,7 +89,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
-                    $this->pushStopToExchange($ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                    $this->pushStopToExchange($position, $ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
                 }
                 continue;
             }
@@ -119,7 +119,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 }
             }
 
-            $this->pushStopToExchange($ticker, $stop, $checksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+            $this->pushStopToExchange($position, $ticker, $stop, $checksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
                 try {
                     return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                 } catch (Throwable) {
@@ -156,11 +156,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $checkResult->success;
     }
 
-    private function pushStopToExchange(Ticker $ticker, Stop $stop, TradingCheckContext $checksContext, callable $pushStopCallback): void
+    private function pushStopToExchange(Position $prevPositionState, Ticker $ticker, Stop $stop, TradingCheckContext $checksContext, callable $pushStopCallback): void
     {
         try {
             $exchangeOrderId = $pushStopCallback();
-            $stop->wasPushedToExchange($exchangeOrderId);
+            $stop->wasPushedToExchange($exchangeOrderId, $prevPositionState);
             // @todo manual release events or check what might happen in case of some exception
             $checksContext->resetState();
         } catch (ApiRateLimitReached $e) {

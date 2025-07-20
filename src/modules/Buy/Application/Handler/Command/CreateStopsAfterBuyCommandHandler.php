@@ -29,7 +29,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
 
 /**
- * @see \App\Tests\Functional\Modules\Stop\Applicaiton\Handler\CreateOppositeStopsAfterBuyCommandHandlerTest
+ * @see \App\Tests\Functional\Modules\Buy\Application\Handler\CreateOppositeStopsAfterBuyCommandHandlerTest
  */
 #[AsMessageHandler]
 final class CreateStopsAfterBuyCommandHandler

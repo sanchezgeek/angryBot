@@ -6,7 +6,9 @@ namespace App\Stop\Application\Contract\Command;
 
 final class CreateBuyOrderAfterStop
 {
-    public function __construct(public int $stopId)
-    {
+    public function __construct(
+        public int $stopId,
+        public float $prevPositionSize
+    ) {
     }
 }
