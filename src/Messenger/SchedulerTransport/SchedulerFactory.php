@@ -16,6 +16,7 @@ use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
@@ -27,9 +28,11 @@ use App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage;
 use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Service\Infrastructure\Job\Ping\PingMessages;
+use App\Service\Infrastructure\Job\RestartWorker\RestartWorkerMessage;
 use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
+use App\Trading\Application\Symbol\SymbolProvider;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Worker\AppContext;
@@ -63,6 +66,8 @@ final class SchedulerFactory
 
     public function __construct(
         private readonly PositionServiceInterface $positionService,
+        private readonly BuyOrderRepository $buyOrderRepository,
+        private readonly SymbolProvider $symbolProvider,
     ) {
     }
 
@@ -111,10 +116,17 @@ final class SchedulerFactory
     {
         $items = [];
 
-        foreach ($this->positionService->getOpenedPositionsSymbols() as $symbol) {
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Sell));
-            $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, Side::Buy));
+        $notExecutedOrdersSymbols = $this->buyOrderRepository->getNotExecutedOrdersSymbolsMap();
+        foreach ($notExecutedOrdersSymbols as $symbolRaw => $positionSides) {
+            $symbol = $this->symbolProvider->getOneByName($symbolRaw);
+            // var_dump(sprintf('%s => %s', $symbol->name(), implode(', ', array_map(static fn (Side $side) => $side->title(), $positionSides))));
+
+            foreach ($positionSides as $positionSide) {
+                $items[] = PeriodicalJob::create('2023-09-25T00:00:01.01Z', self::interval(self::PUSH_BUY_ORDERS_SPEED), new PushBuyOrders($symbol, $positionSide));
+            }
         }
+
+        $items[] = PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT1M', new RestartWorkerMessage());
 
         return $items;
     }
