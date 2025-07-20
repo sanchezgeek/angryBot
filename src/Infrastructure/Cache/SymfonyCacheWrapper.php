@@ -7,6 +7,7 @@ namespace App\Infrastructure\Cache;
 use App\Application\Cache\CacheKeyGeneratorInterface;
 use App\Application\Cache\CacheServiceInterface;
 use DateInterval;
+use DateTimeInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
@@ -23,7 +24,7 @@ final readonly class SymfonyCacheWrapper implements CacheServiceInterface
         $this->cache->delete($key);
     }
 
-    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
+    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|DateTimeInterface|int|null $ttl = null): mixed
     {
         $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;
 
@@ -35,7 +36,12 @@ final readonly class SymfonyCacheWrapper implements CacheServiceInterface
 
         if ($warmup) {
             return $this->cache->get($key, function (ItemInterface $item) use ($ttl, $warmup) {
-                $item->expiresAfter($ttl);
+                if ($ttl instanceof DateTimeInterface) {
+                    $item->expiresAt($ttl);
+                } else {
+                    $item->expiresAfter($ttl);
+                }
+
                 return $warmup();
             });
         }
@@ -43,11 +49,16 @@ final readonly class SymfonyCacheWrapper implements CacheServiceInterface
         return null;
     }
 
-    public function save(CacheKeyGeneratorInterface|string $key, mixed $value, DateInterval|int|null $ttl = null): void
+    public function save(CacheKeyGeneratorInterface|string $key, mixed $value, DateInterval|DateTimeInterface|int|null $ttl = null): void
     {
         $key = $key instanceof CacheKeyGeneratorInterface ? $key->generate() : $key;
 
-        $item = $this->cache->getItem($key)->set($value)->expiresAfter($ttl);
+        $item = $this->cache->getItem($key)->set($value);
+        if ($ttl instanceof DateTimeInterface) {
+            $item->expiresAt($ttl);
+        } else {
+            $item->expiresAfter($ttl);
+        }
 
         $this->cache->save($item);
     }

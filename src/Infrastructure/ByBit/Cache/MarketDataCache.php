@@ -6,12 +6,16 @@ namespace App\Infrastructure\ByBit\Cache;
 
 use App\Application\Cache\AbstractCacheService;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use DateTime;
 
 final class MarketDataCache extends AbstractCacheService
 {
-    protected static function getDefaultTtl(): ?int
+    protected static function getDefaultTtl(): DateTime
     {
-        return 600;
+        $date = new DateTime();
+        $date->setTime((int)$date->format('H') + 1, 0, 0);
+
+        return $date;
     }
 
     public function getLastFundingRate(SymbolInterface $symbol): ?float

@@ -114,13 +114,6 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
         ];
     }
 
-    private static function expectedStopPrice(BuyOrder $buyOrder): float
-    {
-        $stopDistance = StopPlacementStrategy::getDefaultStrategyStopOrderDistance($buyOrder->getVolume());
-
-        return $buyOrder->getPrice() + ($buyOrder->getPositionSide()->isShort() ? $stopDistance : -$stopDistance);
-    }
-
     public function testDummy(): void
     {
         self::markTestIncomplete('cases: short_stop, ...');
