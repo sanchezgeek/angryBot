@@ -721,17 +721,31 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
                 if ($maxChangeMapWithPrevCache) {
                     asort($maxChangeMapWithPrevCache);
-                    $firstSymbol = array_key_first($maxChangeMapWithPrevCache);
-                    $sign = $byMaxNegativeChange ? -1 : 1;
-                    $pnl = $sign * $maxChangeMapWithPrevCache[$firstSymbol];
 
-                    $maxChangeMapWithPrevCache = array_keys($maxChangeMapWithPrevCache);
-                    if ($last = end($maxChangeMapWithPrevCache)) {
+                    $maxChangeSymbolsWithPrevCache = array_keys($maxChangeMapWithPrevCache);
+                    if ($last = end($maxChangeSymbolsWithPrevCache)) {
                         $maxChangeMap = array_diff($maxChangeMap, [$last]);
                         $maxChangeMap[] = $last;
                     }
 
+                    if ($byMaxPositiveChange ?? null) {
+                        $firstSymbol = array_key_first($maxChangeMapWithPrevCache);
+                    } else {
+                        // finding best by true initial margin
+                        $symbolsInitialMarginMap = $this->getSymbolsInitialMarginMap();
+                        $maxChangeMapWithPrevCacheByTrueIm = [];
+                        foreach ($maxChangeMapWithPrevCache as $symbolRaw => $item) {
+                            $maxChangeMapWithPrevCacheByTrueIm[$symbolRaw] = $item / $symbolsInitialMarginMap[$symbolRaw];
+                        }
+                        asort($maxChangeMapWithPrevCacheByTrueIm);
+
+                        $firstSymbol = array_key_first($maxChangeMapWithPrevCacheByTrueIm);
+                    }
+
                     if ($firstSymbol) {
+                        $sign = $byMaxNegativeChange ? -1 : 1;
+                        $pnl = $sign * $maxChangeMapWithPrevCache[$firstSymbol];
+
                         $symbol = $this->symbolProvider->getOrInitialize($firstSymbol);
                         $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
 
@@ -745,8 +759,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                         $pnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $totalSymbolPnl));
                         $pnlContent = $totalSymbolPnl < 0 ? CTH::colorizeText($pnlContent, 'red-text') : $pnlContent;
 
+                        $index = array_search($firstSymbol, $maxChangeMap);
+
                         $this->bestWorstNote = sprintf(
-                            '%s:   %s (%s)',
+                            '[%d] %s:   %s (%s)',
+                            $index,
                             $this->extraSymbolText($firstSymbol),
                             self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange),
                             $pnlContent
