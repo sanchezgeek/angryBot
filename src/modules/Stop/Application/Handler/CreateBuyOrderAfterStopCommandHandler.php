@@ -18,6 +18,7 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -53,6 +54,10 @@ final class CreateBuyOrderAfterStopCommandHandler
 
         $orders = [];
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
+            if ($distanceOverride instanceof Percent) {
+                $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
+            }
+
             $distance = $distanceOverride ?? $this->getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
 
             $orders[] = $this->orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);

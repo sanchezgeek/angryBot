@@ -34,7 +34,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    public const ALIAS = 'check-mainPos-before-stop-support';
+    public const string ALIAS = 'STOP-SUPPORT/MAIN-LIQUIDATION';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,

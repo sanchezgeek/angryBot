@@ -17,7 +17,7 @@ final class WithoutOppositeOrderContextShortcutProcessor extends AbstractShortcu
         return $shortcut === self::KNOWN_CONTEXT;
     }
 
-    protected function rawContextPart(string $shortcut, BuyOrder|Stop $order): array
+    protected function rawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order): array
     {
         return [Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true];
     }

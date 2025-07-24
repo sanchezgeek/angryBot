@@ -73,7 +73,7 @@ class CreateBuyGridCommand extends AbstractCommand implements PositionDependentC
             }
 
             // @todo | calc real distance for each order in handler (or maybe in cmd, but for each BO)
-            if ($stopDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
+            if ($stopDistance = $this->getOppositeOrdersDistanceOption()) {
                 $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $stopDistance;
             }
 

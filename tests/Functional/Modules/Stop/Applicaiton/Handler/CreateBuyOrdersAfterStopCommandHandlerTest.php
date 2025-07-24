@@ -218,6 +218,10 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $orders = [];
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
+            if ($distanceOverride instanceof Percent) {
+                $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
+            }
+
             $distance = $distanceOverride ?? self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
 
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);

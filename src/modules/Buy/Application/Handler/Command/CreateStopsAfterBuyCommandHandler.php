@@ -18,7 +18,9 @@ use App\Buy\Application\Service\StopPlacement\Exception\OtherStrategySuggestionE
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyContext;
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyProcessorInterface;
 use App\Buy\Application\StopPlacementStrategy;
+use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Value\Percent\Percent;
 use App\Stop\Application\Contract\Command\CreateStop;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Trait\DispatchCommandTrait;
@@ -63,7 +65,13 @@ final class CreateStopsAfterBuyCommandHandler
         }
 
         if ($specifiedStopDistance = $buyOrder->getOppositeOrderDistance()) {
-            $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
+            $buyOrderPrice = $buyOrder->getPrice();
+
+            if ($specifiedStopDistance instanceof Percent) {
+                $specifiedStopDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($specifiedStopDistance, $buyOrderPrice);
+            }
+
+            $triggerPrice = $side->isShort() ? $buyOrderPrice + $specifiedStopDistance : $buyOrderPrice - $specifiedStopDistance;
             $stop = $this->dispatchCommand(
                 new CreateStop(
                     symbol: $position->symbol,

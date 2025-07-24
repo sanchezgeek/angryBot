@@ -8,6 +8,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Common\HasExchangeOrderContext;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Value\Percent\Percent;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use PHPUnit\Framework\TestCase;
 
@@ -139,26 +140,6 @@ final class BuyOrderTest extends TestCase
     /**
      * @dataProvider positionSideProvider
      */
-    public function testIsWithShortStop(Side $side): void
-    {
-        // @todo | ShortcutContextProcessorInterface | sL=very-long
-        self::markTestSkipped();
-//        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
-//        self::assertFalse($buyOrder->isWithShortStop());
-//
-//        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => 100500]);
-//        self::assertFalse($buyOrder->isWithShortStop());
-//
-//        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => false]);
-//        self::assertFalse($buyOrder->isWithShortStop());
-//
-//        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::WITH_SHORT_STOP_CONTEXT => true]);
-//        self::assertTrue($buyOrder->isWithShortStop());
-    }
-
-    /**
-     * @dataProvider positionSideProvider
-     */
     public function testIsForceBuyOrder(Side $side): void
     {
         $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
@@ -207,9 +188,18 @@ final class BuyOrderTest extends TestCase
         $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => 100500]);
         self::assertSame(100500.0, $buyOrder->getOppositeOrderDistance());
 
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => 100500.1]);
+        self::assertSame(100500.1, $buyOrder->getOppositeOrderDistance());
+
         $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side);
         $buyOrder->setOppositeOrdersDistance(123.1);
         self::assertSame(123.1, $buyOrder->getOppositeOrderDistance());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => '100500%']);
+        self::assertEquals(Percent::notStrict(100500), $buyOrder->getOppositeOrderDistance());
+
+        $buyOrder = new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side, [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => Percent::notStrict(100500.5)]);
+        self::assertEquals(Percent::notStrict(100500.5), $buyOrder->getOppositeOrderDistance());
     }
 
     /**

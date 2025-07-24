@@ -109,6 +109,13 @@ final class Position implements Stringable
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
     }
 
+    public function isMainPositionOrWithoutHedge(): bool
+    {
+        $hedge = $this->getHedge();
+
+        return $hedge === null || $hedge->isMainPosition($this);
+    }
+
     public function isPositionWithoutHedge(): bool
     {
         return $this->getHedge() === null;

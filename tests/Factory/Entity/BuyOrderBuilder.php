@@ -27,6 +27,13 @@ final class BuyOrderBuilder
         $this->symbol = $symbol;
     }
 
+    public function withContext(array $context): self
+    {
+        $this->context = $context;
+
+        return $this;
+    }
+
     public static function short(int $id, float $price, float $volume, SymbolInterface $symbol = SymbolEnum::BTCUSDT): self
     {
         return new self($symbol, Side::Sell, $id, $price, $volume);

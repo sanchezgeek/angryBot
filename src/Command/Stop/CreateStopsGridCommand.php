@@ -140,7 +140,7 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
             $context = array_merge($context, $additionalContext);
         }
 
-        if ($oppositeBuyOrdersDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
+        if ($oppositeBuyOrdersDistance = $this->getOppositeOrdersDistanceOption()) {
             $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
         }
 

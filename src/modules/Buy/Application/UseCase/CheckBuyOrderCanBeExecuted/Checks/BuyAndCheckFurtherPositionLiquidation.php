@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
+use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
@@ -35,7 +36,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    public const string ALIAS = 'check-liq-before-buy';
+    public const string ALIAS = 'BUY/LIQUIDATION';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
@@ -70,8 +71,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
 
         return
             !$checkMustBeSkipped && (
-                $position->isPositionWithoutHedge()
-                || $position->isMainPosition()
+                $position->isMainPositionOrWithoutHedge()
                 // @todo | buy/check | situation when position became main after buy
 //                || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
             )

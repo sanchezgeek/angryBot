@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Order\ContextShortcut\Processor;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Order\OrderType;
-use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Value\Percent\Percent;
 use InvalidArgumentException;
-use RuntimeException;
 
 final class OppositeOrderDistanceContextShortcutProcessor extends AbstractShortcutContextProcessor
 {
@@ -18,41 +16,34 @@ final class OppositeOrderDistanceContextShortcutProcessor extends AbstractShortc
 
     public function supports(string $shortcut, BuyOrder|Stop|OrderType $orderType): bool
     {
-        return (bool)preg_match('/^' . self::KNOWN_CONTEXT . '=\d+(?:%)?$/', $shortcut);
+        return (bool)preg_match('/^' . self::KNOWN_CONTEXT . '=[\d\.]+(?:%)?$/', $shortcut);
     }
 
-    private function parseDistance(string $shortcut, BuyOrder|Stop|OrderType $order): float
-    {
-        if ($order instanceof OrderType) {
-            throw new RuntimeException('Applicable only for concrete order');
-        }
-
-        $providedValue = explode('=', $shortcut)[1];
-
-        try {
-            $pnlValue = $this->fetchPercentValue($providedValue);
-            $basedOnPrice = $this->exchangeService->ticker($order->getSymbol())->indexPrice;
-
-            $distance = PnlHelper::convertPnlPercentOnPriceToAbsDelta($pnlValue, $basedOnPrice);
-        } catch (InvalidArgumentException) {
-            $distance = (float)$providedValue;
-        }
-
-        return $distance;
-    }
     protected function rawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order): array
     {
-        return [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => $this->parseDistance($shortcut, $order)];
+        return [BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT => (string)$this->parseDistance($shortcut)];
     }
-
     public function doModifyOrder(string $shortcut, BuyOrder|Stop $order): void
     {
         $order->setOppositeOrdersDistance(
-            $this->parseDistance($shortcut, $order)
+            $this->parseDistance($shortcut)
         );
     }
 
-    private function fetchPercentValue(string $value): float
+    private function parseDistance(string $shortcut): float|Percent
+    {
+        $providedValue = explode('=', $shortcut)[1];
+
+        try {
+            $pnlValue = $this->fetchPercent($providedValue);
+
+            return Percent::notStrict($pnlValue);
+        } catch (InvalidArgumentException) {
+            return (float)$providedValue;
+        }
+    }
+
+    private function fetchPercent(string $value): float
     {
         if (
             !str_ends_with($value, '%')
@@ -64,10 +55,5 @@ final class OppositeOrderDistanceContextShortcutProcessor extends AbstractShortc
         }
 
         return (float)substr($value, 0, -1);
-    }
-
-    public function __construct(
-        private readonly ExchangeServiceInterface $exchangeService
-    ) {
     }
 }

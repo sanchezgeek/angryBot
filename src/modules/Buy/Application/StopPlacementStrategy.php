@@ -11,9 +11,6 @@ enum StopPlacementStrategy: string
     case AFTER_FIRST_STOP_UNDER_POSITION = 'after_first_stop_under_position';
 //    case AFTER_FIRST_POSITION_STOP = 'after_first_position_stop';
 
-    // @todo | symbol | for all symbols
-//    public const BIG_SL_VOLUME_STARTS_FROM = 0.006;
-
     private const REGULAR_ORDER_STOP_DISTANCE = 259;
     private const ADDITION_ORDER_STOP_DISTANCE = 211;
 
@@ -22,12 +19,6 @@ enum StopPlacementStrategy: string
 
 //    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
 //    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
-
-    public static function getDefaultStrategyStopOrderDistance(float $volume): float
-    {
-        // @todo | symbol | for all symbols
-        return $volume >= 0.005 ? self::REGULAR_ORDER_STOP_DISTANCE : self::ADDITION_ORDER_STOP_DISTANCE;
-    }
 }
 
 
