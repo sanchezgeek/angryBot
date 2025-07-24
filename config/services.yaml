@@ -114,6 +114,12 @@ services:
 #        tags:
 #            - { name: 'cache.pool', namespace: 'shared' }
 
+### attempts limitimg
+    App\Infrastructure\Symfony\AttemptsLimit\SymfonyAttemptLimitCheckerProvider:
+        arguments:
+            $cachePool: '@cache.rate_limiter'
+            $lockFactory: '@lock.factory'
+
 ### events
     App\Bot\Application\Events\LogLoggableEventListener:
         tags:
@@ -154,4 +160,3 @@ services:
     App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageReceivedEvent\CheckShouldMessageRunHandlerListener:
         arguments:
             $handlersLocator: '@messenger.bus.default.messenger.handlers_locator'
-
