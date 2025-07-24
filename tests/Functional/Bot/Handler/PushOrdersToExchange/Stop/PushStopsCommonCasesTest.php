@@ -15,6 +15,7 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\PlaceOrderRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -91,7 +92,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
     ): void {
         self::mockTradingParametersForLiquidationTests($position->symbol, '0.09%');
 
-        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        $this->overrideSetting(SettingAccessor::exact(WarningDistanceSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 
         $this->haveTicker($ticker);

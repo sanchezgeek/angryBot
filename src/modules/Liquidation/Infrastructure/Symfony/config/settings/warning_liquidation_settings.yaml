@@ -1,0 +1,10 @@
+### \App\Trading\Application\Settings\SafePriceDistanceSettings
+liquidationHandlerSettings.warningDistancePnl: 300
+liquidationHandlerSettings.warningDistancePnl[symbol=BTCUSDT]: 80
+liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 150
+liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 400
+liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 350
+
+liquidationHandlerSettings.warningDistancePnlPercent.max: 1500
+liquidationHandlerSettings.warningDistancePnlPercent.atr.period: 7
+liquidationHandlerSettings.warningDistancePnlPercent.atr.multiplier: 1

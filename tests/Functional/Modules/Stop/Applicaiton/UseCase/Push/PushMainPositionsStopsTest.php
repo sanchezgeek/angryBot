@@ -10,10 +10,10 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -68,7 +68,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
 
         $positionsApiResponse = (new PositionResponseBuilder(self::CATEGORY));
         foreach ($setup->getPositions() as $position) {
-            $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+            $this->overrideSetting(SettingAccessor::exact(WarningDistanceSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
             $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 
             $this->havePosition($position->symbol, $position); // fallback for PositionServiceInterface
@@ -82,7 +82,7 @@ final class PushMainPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $setup->getStopsCollection()->getItems()));
 
         self::warmupSettings([
-            LiquidationHandlerSettings::WarningDistancePnl,
+            WarningDistanceSettings::WarningDistancePnl,
             LiquidationHandlerSettings::CriticalPartOfLiquidationDistance,
         ], $symbols);
 

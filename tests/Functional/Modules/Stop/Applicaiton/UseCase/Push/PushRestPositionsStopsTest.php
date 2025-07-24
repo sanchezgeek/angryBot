@@ -12,6 +12,7 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -70,7 +71,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $setup->getStopsCollection()->getItems()));
 
         self::warmupSettings([
-            LiquidationHandlerSettings::WarningDistancePnl,
+            WarningDistanceSettings::WarningDistancePnl,
             LiquidationHandlerSettings::CriticalPartOfLiquidationDistance,
         ], $symbols);
 

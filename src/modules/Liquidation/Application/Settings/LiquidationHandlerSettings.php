@@ -21,9 +21,6 @@ enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSetti
     case PercentOfLiquidationDistanceToAddStop = 'liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop';
 
     #[SettingParametersAttribute(type: SettingType::Float)]
-    case WarningDistancePnl = 'liquidationHandlerSettings.warningDistancePnl';
-
-    #[SettingParametersAttribute(type: SettingType::Float)]
     case CriticalDistancePnl = 'liquidationHandlerSettings.criticalDistancePnl';
 
     #[SettingParametersAttribute(type: SettingType::Float)]
@@ -40,12 +37,6 @@ enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSetti
 
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case AddOppositeBuyOrdersAfterStop = 'liquidationHandlerSettings.afterStop.addOppositeBuyOrders';
-
-    #[SettingParametersAttribute(type: SettingType::Float)]
-    case WarningDistancePnlPercentMax = 'liquidationHandlerSettings.warningDistancePnlPercent.max';
-
-    #[SettingParametersAttribute(type: SettingType::Integer)]
-    case WarningDistancePnlPercentAtrPeriod = 'liquidationHandlerSettings.warningDistancePnlPercent.atrPeriod';
 
     public function getSettingKey(): string
     {

@@ -17,5 +17,7 @@ final class LiquidationModule extends AbstractBundle
         parent::build($container);
 
         $this->registerSettings($container, __NAMESPACE__, __DIR__ . '/Application/Settings');
+        $this->registerSettingsValues($container,__DIR__ . '/Infrastructure/Symfony/config/settings/root_liquidation_settings.yaml');
+        $this->registerSettingsValues($container,__DIR__ . '/Infrastructure/Symfony/config/settings/warning_liquidation_settings.yaml');
     }
 }

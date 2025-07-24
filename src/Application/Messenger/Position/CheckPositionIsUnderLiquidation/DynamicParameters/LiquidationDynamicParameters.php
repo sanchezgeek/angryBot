@@ -16,6 +16,7 @@ use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
@@ -165,21 +166,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
-    public function minimalWarningDistancePnlPercent(): float
-    {
-        return max(
-            $this->settingsProvider->required(
-                SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnl, $this->symbol, $this->position->side)
-            ),
-            $this->criticalDistancePnl() // foolproof
-        );
-    }
-
-    #[AppDynamicParameter(group: 'liquidation-handler')]
     public function warningDistancePnlPercent(): float
     {
-        $minimal = $this->minimalWarningDistancePnlPercent();
-
         if ($this->handledMessage?->warningPnlDistance !== null) {
             // @todo | liquidation | CheckPositionIsUnderLiquidationHandler | что-то придумать с моканьем в тестах (хотя в целом ничего не ломает)
             //      перенёс $this->criticalDistancePnl() из верхнего блока
@@ -191,11 +179,11 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
         // @todo | liquidation | CheckPositionIsUnderLiquidationHandler | нужно придумать что-то, чтобы точно не ликвиднуло (atr, maxWarningPnlPercent, ...)
         $max = $this->settingsProvider->required(
-            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnlPercentMax, $this->symbol, $this->position->side)
+            SettingAccessor::withAlternativesAllowed(WarningDistanceSettings::WarningDistancePnlPercentMax, $this->symbol, $this->position->side)
         );
 
         $period = $this->settingsProvider->required(
-            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::WarningDistancePnlPercentAtrPeriod, $this->symbol, $this->position->side)
+            SettingAccessor::withAlternativesAllowed(WarningDistanceSettings::WarningDistancePnlPercentAtrPeriod, $this->symbol, $this->position->side)
         );
 
         $regular = PnlHelper::transformPriceChangeToPnlPercent(
@@ -206,9 +194,26 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             )
         )->value();
 
+        $multiplier = $this->settingsProvider->required(
+            SettingAccessor::withAlternativesAllowed(WarningDistanceSettings::WarningDistancePnlPercentAtrMultiplier, $this->symbol, $this->position->side)
+        );
+
+        $regular *= $multiplier;
+
         $regular = min($regular, $max);
 
-        return max($minimal, $regular);
+        return max($this->minimalWarningDistancePnlPercent(), $regular);
+    }
+
+    #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function minimalWarningDistancePnlPercent(): float
+    {
+        return max(
+            $this->settingsProvider->required(
+                SettingAccessor::withAlternativesAllowed(WarningDistanceSettings::WarningDistancePnl, $this->symbol, $this->position->side)
+            ),
+            $this->criticalDistancePnl() // foolproof
+        );
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]
