@@ -8,9 +8,12 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\EnumHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
+use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -30,9 +33,12 @@ class CloseAllPositionsCommand extends AbstractCommand
     public const string PNL_GREATER_THAN = 'pnl-greater-than';
     public const string PNL_LESS_THAN = 'pnl-less-than';
     public const string DRY = 'dry';
+    public const string WITH_ORDERS = 'with-orders';
+    const array ORDER_TYPES = ['all', 'sl', 'buy'];
 
     private array $filterCallbacks = [];
     private bool $dry;
+    private ?string $truncateOrders = null;
 
     protected function configure(): void
     {
@@ -43,6 +49,7 @@ class CloseAllPositionsCommand extends AbstractCommand
             ->addOption(self::PNL_GREATER_THAN, null, InputOption::VALUE_REQUIRED)
             ->addOption(self::PNL_LESS_THAN, null, InputOption::VALUE_REQUIRED)
             ->addOption(self::DRY, null, InputOption::VALUE_NEGATABLE)
+            ->addOption(self::WITH_ORDERS, null, InputOption::VALUE_NEGATABLE)
         ;
     }
 
@@ -55,6 +62,15 @@ class CloseAllPositionsCommand extends AbstractCommand
         }
 
         $this->dry = $this->paramFetcher->getBoolOption(self::DRY);
+        $withOrders = $this->paramFetcher->getBoolOption(self::WITH_ORDERS);
+
+        if ($withOrders) {
+            $valuesList = EnumHelper::toStringList(self::ORDER_TYPES, '`, `');
+            $this->truncateOrders = $this->io->ask(sprintf('`%s`?', $valuesList));
+            if (!in_array($this->truncateOrders, self::ORDER_TYPES)) {
+                throw new InvalidArgumentException(sprintf('Select one of %s', $valuesList));
+            }
+        }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -103,11 +119,21 @@ class CloseAllPositionsCommand extends AbstractCommand
 
             var_dump($map);
         } else {
+            $connection = $this->entityManager->getConnection();
+
             foreach ($candidates as $position) {
                 $this->orderService->closeByMarket($position, $positionPart->of($position->size));
+
+                if ($this->truncateOrders === 'all') {
+                    $connection->executeQuery(sprintf('DELETE FROM buy_order WHERE symbol=\'%s\'', $position->symbol->name()));
+                    $connection->executeQuery(sprintf('DELETE FROM stop WHERE symbol=\'%s\'', $position->symbol->name()));
+                } elseif ($this->truncateOrders === 'sl') {
+                    $connection->executeQuery(sprintf('DELETE FROM stop WHERE symbol=\'%s\'', $position->symbol->name()));
+                } elseif ($this->truncateOrders === 'buy') {
+                    $connection->executeQuery(sprintf('DELETE FROM buy_order WHERE symbol=\'%s\'', $position->symbol->name()));
+                }
             }
         }
-
 
         return Command::SUCCESS;
     }
@@ -127,6 +153,7 @@ class CloseAllPositionsCommand extends AbstractCommand
     public function __construct(
         private readonly ByBitLinearPositionService $positionService,
         private readonly OrderServiceInterface $orderService,
+        private readonly EntityManagerInterface $entityManager,
         SymbolProvider $symbolProvider,
         ?string $name = null,
     ) {

@@ -62,19 +62,19 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     {
         $orderDto = self::extractMarketBuyEntryDto($orderDto);
 
+        $checkMustBeSkipped = $orderDto->force;
+        if ($checkMustBeSkipped) {
+            return false;
+        }
+
         // position and order mismatch? => logic
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
-
-        $symbol = $orderDto->symbol;
         $position = $context->currentPositionState;
-        $checkMustBeSkipped = $orderDto->force;
 
         return
-            !$checkMustBeSkipped && (
-                $position->isMainPositionOrWithoutHedge()
-                // @todo | buy/check | situation when position became main after buy
-//                || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
-            )
+            $position->isMainPositionOrWithoutHedge()
+            // @todo | buy/check | situation when position became main after buy
+//            || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
         ;
     }
 
