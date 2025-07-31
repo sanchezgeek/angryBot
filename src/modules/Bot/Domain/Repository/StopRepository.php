@@ -78,8 +78,8 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
      * @return Stop[]
      */
     public function findActive(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
@@ -88,17 +88,23 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     }
 
     public function findActiveQB(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): QueryBuilder {
         $qb = $this->createQueryBuilder('s')
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
+
+        if ($side) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         // а это тут вообще зачем? Для случая ConditionalBO?
         if ($exceptOppositeOrders) {

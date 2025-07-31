@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Trading\UI\Symfony\Command\Symbol;
+namespace App\Trading\Console\Symbol;
 
 use App\Command\AbstractCommand;
 use App\Domain\Coin\Coin;

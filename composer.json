@@ -67,6 +67,7 @@
             "App\\TechnicalAnalysis\\": "src/modules/TechnicalAnalysis",
             "App\\Notification\\": "src/modules/Notification",
             "App\\Watch\\": "src/modules/Watch",
+            "App\\UserInteraction\\": "src/modules/UserInteraction",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

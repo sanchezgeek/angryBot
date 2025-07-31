@@ -53,17 +53,23 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActive(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('bo')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
+
+        if ($side) {
+            $qb->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         if ($exceptOppositeOrders) {
             $qb->andWhere("HAS_ELEMENT(bo.context, 'onlyAfterExchangeOrderExecuted') = false");

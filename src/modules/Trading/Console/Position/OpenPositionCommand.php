@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Trading\UI\Symfony\Command\Position;
+namespace App\Trading\Console\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
