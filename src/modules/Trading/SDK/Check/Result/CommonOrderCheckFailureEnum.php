@@ -8,5 +8,5 @@ enum CommonOrderCheckFailureEnum implements TradingCheckFailedReason
 {
     case TooManyTries;
     case ReferencedPositionNotFound;
-    case UnexpectedSandboxExecutionExceptionThrown;
+    case UnexpectedSandboxException;
 }

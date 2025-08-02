@@ -4,22 +4,26 @@ declare(strict_types=1);
 
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted;
 
+use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
+use App\Helper\OutputHelper;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
-use App\Trading\SDK\Check\Result\CommonOrderCheckFailureEnum;
+use App\Trading\SDK\Check\Result\CommonOrderCheckFailureEnum as CheckFailures;
 
 final class BuyChecksChain
 {
     /** @var TradingCheckInterface[] */
     private array $checks;
 
-    public function __construct(TradingCheckInterface ...$checks)
-    {
+    public function __construct(
+        private readonly AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
+        TradingCheckInterface ...$checks
+    ) {
         $this->checks = $checks;
     }
 
@@ -36,14 +40,15 @@ final class BuyChecksChain
             try {
                 $result = $check->check($orderCheckDto, $context);
             } catch (TooManyTriesForCheck) {
-                return TradingCheckResult::failed($check, CommonOrderCheckFailureEnum::TooManyTries, 'Too many tries => no result => order must not be executed', true); // quiet
+                return TradingCheckResult::failed($check, CheckFailures::TooManyTries, 'Too many tries => no result => order must not be executed', true); // quiet
             } catch (UnexpectedSandboxExecutionException $e) {
-                return TradingCheckResult::failed(
-                    $check,
-                    CommonOrderCheckFailureEnum::UnexpectedSandboxExecutionExceptionThrown,
-                    sprintf('sandbox error (%s)', $e->getMessage()),
-                    true // quiet
-                );
+                $throttlingKey = sprintf('sandboxError_quiet_flag_throttling_%s_%s_%s', OutputHelper::shortClassName($check), $marketBuyEntryDto->symbol->name(), $marketBuyEntryDto->positionSide->value);
+                if ($marketBuyEntryDto->sourceBuyOrder) {
+                    $throttlingKey .= sprintf('_b_id_%d', $marketBuyEntryDto->sourceBuyOrder->getId());
+                }
+                $quiet = !$this->attemptLimitCheckerProvider->get($throttlingKey, 600)->attemptIsAvailable();
+
+                return TradingCheckResult::failed($check, CheckFailures::UnexpectedSandboxException, sprintf('sandbox error (%s)', $e->getMessage()), $quiet);
             }
 
             if (!$result->success) {

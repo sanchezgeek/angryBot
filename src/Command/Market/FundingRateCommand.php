@@ -18,7 +18,7 @@ class FundingRateCommand extends AbstractCommand implements SymbolDependentComma
     use ConsoleInputAwareCommand;
     use SymbolAwareCommand;
 
-    protected function configure()
+    protected function configure(): void
     {
         $this->configureSymbolArgs();
     }

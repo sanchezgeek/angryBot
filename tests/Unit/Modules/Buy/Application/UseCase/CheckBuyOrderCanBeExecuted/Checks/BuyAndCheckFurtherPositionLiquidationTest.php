@@ -61,7 +61,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
-            self::getUnexpectedSandboxExecutionExceptionHandler(),
+            $this->getUnexpectedSandboxExecutionExceptionHandler(),
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,
@@ -82,7 +82,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $this->mockFactoryToReturnSandbox($symbol, $sandbox);
 
         // Assert
-        $message = sprintf('[%s] Got "%s" error while processing %s order in sandbox (id = %d)', OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $thrownException->getMessage(), SandboxBuyOrder::class, $orderDto->sourceBuyOrder->getId());
+        $message = sprintf('[%s] Got "%s" error while processing %s order in sandbox (b.id = %d)', OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $thrownException->getMessage(), SandboxBuyOrder::class, $orderDto->sourceBuyOrder->getId());
         self::expectExceptionObject(new UnexpectedSandboxExecutionException($message, 0, $thrownException));
 
         // Assert

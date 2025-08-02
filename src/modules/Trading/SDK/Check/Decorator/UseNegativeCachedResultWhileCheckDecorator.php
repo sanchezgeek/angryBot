@@ -45,13 +45,13 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
     {
         // @todo use position state?
         $symbol = $orderDto->symbol();
-        $cacheKey = (new CheckResultKeyBasedOnOrderAndPricePnlStep(
+        $cacheKey = new CheckResultKeyBasedOnOrderAndPricePnlStep(
             $orderDto->priceValueWillBeingUsedAtExecution(),
             $orderDto->orderQty(),
             $symbol,
             $orderDto->positionSide(),
             self::pnlPercentStep($symbol, $orderDto->priceValueWillBeingUsedAtExecution())
-        ))->generate();
+        )->generate();
 
         /** @var AbstractTradingCheckResult $cachedResult */
         if ($cachedResult = $this->cache->get($cacheKey)) {
