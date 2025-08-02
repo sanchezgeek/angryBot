@@ -42,3 +42,6 @@ services:
     App\Trading\Application\Parameters\TradingParametersProviderInterface:
         class: App\Trading\Application\Parameters\TradingDynamicParameters
         public: true
+
+    App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice:
+        public: true

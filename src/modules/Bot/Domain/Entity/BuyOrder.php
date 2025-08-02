@@ -44,9 +44,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public const string SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const string SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
-    public const string FORCE_BUY_CONTEXT = 'forceBuy';
-    public const string SKIP_AVERAGE_PRICE_CHECK_KEY = 'skipAveragePriceCheck';
-    public const string SKIP_FURTHER_LIQUIDATION_CHECK_KEY = 'skipFurtherLiquidationCheck';
     public const string ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
 
     /**
@@ -59,6 +56,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public const string ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT = 'activeStateSetAtTimestamp';
 
     public const string STOP_LENGTH_DEFINITION_TYPE = 'stopLengthDefinition';
+
+    # checks
+    public const string FORCE_BUY_CONTEXT = 'forceBuy';
+    public const string ROOT_CHECKS_KEY = 'checks';
+
+    public const string SKIP_AVERAGE_PRICE_CHECK_KEY = 'skipAveragePriceCheck';
+    public const string SKIP_FURTHER_LIQUIDATION_CHECK_KEY = 'skipFurtherLiquidationCheck';
 
     #[ORM\Id]
     #[ORM\Column]
@@ -371,5 +375,24 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         unset($this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT]);
 
         return $this;
+    }
+
+    public function disableAveragePriceCheck(): self
+    {
+        $this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY] = true;
+
+        return $this;
+    }
+
+    public function enableAveragePriceCheck(): self
+    {
+        unset($this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY]);
+
+        return $this;
+    }
+
+    public function isAveragePriceCheckDisabled(): bool
+    {
+        return $this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY] ?? null === true;
     }
 }

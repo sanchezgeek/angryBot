@@ -85,7 +85,6 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
-//        var_dump('111111');
         $key = self::regularPredefinedStopLengthResultKey($symbol, $predefinedStopLength, $timeframe, $period);
         if (!isset($this->regularPredefinedStopLengthResults[$key])) {
             throw new RuntimeException(sprintf('Cannot find mocked regularPredefinedStopLengthResults result for %s', $key));

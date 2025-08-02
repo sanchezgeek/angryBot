@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
-use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
@@ -12,6 +11,7 @@ use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
@@ -115,11 +115,11 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
             return TradingCheckResult::succeed($this, 'position became support after buy');
         }
 
-        $executionPrice = $ticker->lastPrice;
+        $executionPrice = $ticker->lastPrice; // @todo | buy | переделать расчёт pnl на основе markPrice
         $liquidationPrice = $positionAfterBuy->liquidationPrice();
 
         // @todo | liquidation | null
-        $identifierInfo = $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '';
+        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ', ') : '';
         if ($liquidationPrice->eq(0)) {
             return TradingCheckResult::succeed(
                 $this,

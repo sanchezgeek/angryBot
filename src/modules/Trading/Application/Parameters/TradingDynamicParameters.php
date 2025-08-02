@@ -128,7 +128,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     public function regularOppositeBuyOrderLength(
         SymbolInterface $symbol,
         PredefinedStopLengthSelector $sourceStopLength = PredefinedStopLengthSelector::Standard,
-        TimeFrame $timeframe = TimeFrame::D1,
+        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         // @todo | settings

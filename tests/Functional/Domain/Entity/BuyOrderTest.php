@@ -78,4 +78,19 @@ final class BuyOrderTest extends KernelTestCase
         );
         self::assertEquals(Percent::notStrict(100500.5), $this->buyOrderRepository->find(7)->getOppositeOrderDistance());
     }
+
+    /**
+     * @dataProvider positionSideProvider
+     */
+    public function testDisabledChecks(Side $side): void
+    {
+        $this->saveOrder(
+            new BuyOrder(1, 100500, 123.456, SymbolEnum::ADAUSDT, $side)->disableAveragePriceCheck()
+        );
+        $order = $this->buyOrderRepository->find(1);
+        self::assertTrue($order->isAveragePriceCheckDisabled());
+
+        $this->buyOrderRepository->save($order->enableAveragePriceCheck());
+        self::assertFalse($order->isAveragePriceCheckDisabled());
+    }
 }

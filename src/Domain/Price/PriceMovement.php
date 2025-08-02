@@ -54,7 +54,7 @@ readonly class PriceMovement
         $sign = $positionSide->isShort() ? -1 : +1;
         $delta = $this->fromPrice->value() - $this->toTargetPrice->value();
 
-        return Percent::fromPart($sign * ($delta / $this->fromPrice->value()));
+        return Percent::fromPart($sign * ($delta / $this->fromPrice->value()), false);
     }
 
     /**
