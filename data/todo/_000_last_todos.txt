@@ -55,3 +55,40 @@ pushStops
 @todo | symbols | cache SymbolNotFoundException too
 
 
+@todo | liquidation | CheckPositionIsUnderLiquidationHandler | stops from liquidation handler on long distance without BO
+@todo | liquidation | CheckPositionIsUnderLiquidationHandler | нужно придумать что-то, чтобы точно не ликвиднуло (atr, maxWarningPnlPercent, ...)
+
+@todo | check | может всё таки пускать дальше, чтобы потом в логах видеть почему allowed? Хотя возможно это лучше в базу. Anyway, возможно лучше проверку disabled внутри supports не делать
+
+push buy neggative balance
+
+может быть очень бюольшая волатильность. альты плюсанут, баланса станет много. safePriceDistance будет неактуален. а потом обратно
+    нужно среднее значение по балансу за период
+
+
+сильное усреднение
+    ./bin/console buy:edit -aremove sell --symbol=hft
+        вроде реализовал в BuyOnLongDistanceAndCheckAveragePrice
+
+можно в зависимости от соотношение +unrealized/TOTAL выставлять safeLiquidationDistance,baseMultiplier
+
+как использовать разницу mark/last/index
+    mark_index_fundingRate.txt
+
+@todo | buy | переделать расчёт pnl на основе markPrice
+    нужно найти где ещё накосячил
+
+оповещать о высокой волатильности по открытой монете
+
+
+open: стопы за позицию (возможно интерактивно)
+breakeven ta
+
+посмотреть переоткроется ли elx (0.1914)
+    не переоткроется - scheduler надо поправить
+
+покупка по marketPrice?
+    например вот тут: src/modules/Buy/Application/UseCase/CheckBuyOrderCanBeExecuted/Checks/BuyAndCheckFurtherPositionLiquidation.php
+
+
+использовать \App\Bot\Domain\Entity\BuyOrder::SKIP_FURTHER_LIQUIDATION_CHECK_KEY для пропуска проверки. Или старый ключ?
