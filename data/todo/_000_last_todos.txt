@@ -74,9 +74,6 @@ push buy neggative balance
 как использовать разницу mark/last/index
     mark_index_fundingRate.txt
 
-@todo | buy | переделать расчёт pnl на основе markPrice
-    нужно найти где ещё накосячил
-
 оповещать о высокой волатильности по открытой монете
 
 
@@ -91,3 +88,13 @@ breakeven ta
 
 
 использовать \App\Bot\Domain\Entity\BuyOrder::SKIP_FURTHER_LIQUIDATION_CHECK_KEY для пропуска проверки. Или старый ключ?
+
+
+
+посмотреть в @todo для OpenPositionHandler
+
+@todo | buy | переделать расчёт pnl на основе markPrice
+    нужно найти где ещё накосячил
+
+
+src/modules/Stop/Console/CreateFixationGridCommand.php

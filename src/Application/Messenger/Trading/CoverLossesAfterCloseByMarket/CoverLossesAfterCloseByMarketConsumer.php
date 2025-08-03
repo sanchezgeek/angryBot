@@ -35,7 +35,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const int THRESHOLD = 4;
 
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
-    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 1000;
+    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 700;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
     public const float WHOLE_LOSS_MULTIPLIER = 0.7;
 
@@ -205,18 +205,18 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $stopVolume = PnlHelper::getVolumeForGetWishedProfit($lossPerPosition, $candidate->entryPrice()->deltaWith($lastPrice));
             $stopVolume = ExchangeOrder::roundedToMin($candidateSymbol, $stopVolume, $supplyStopPrice)->getVolume();
             $stopPct = ($stopVolume / $candidate->size) * 100;
-            $this->appNotifications->notify(
-                sprintf(
-                    '[%s loss] close %s of %s [%.2f%% of whole position size] to cover %s (%.2f%% of %s)',
-                    $closedPosition->getCaption(),
-                    $stopVolume,
-                    $candidate->getCaption(),
-                    $stopPct,
-                    $symbol->associatedCoinAmount($lossPerPosition)->value(),
-                    $pct,
-                    $lossToCoverByOtherSymbols
-                )
-            );
+//            $this->appNotifications->notify(
+//                sprintf(
+//                    '[%s loss] close %s of %s [%.2f%% of whole position size] to cover %s (%.2f%% of %s)',
+//                    $closedPosition->getCaption(),
+//                    $stopVolume,
+//                    $candidate->getCaption(),
+//                    $stopPct,
+//                    $symbol->associatedCoinAmount($lossPerPosition)->value(),
+//                    $pct,
+//                    $lossToCoverByOtherSymbols
+//                )
+//            );
 
             $this->createStopHandler->__invoke(
                 new CreateStop(

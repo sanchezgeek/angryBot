@@ -36,7 +36,15 @@ use Exception;
 use RuntimeException;
 
 /**
+ * @todo | open-position | positions lifetime
  * @todo | open-position | full stops grid
+ * @todo | default buy-grid from ta
+ * @todo | а позиции сами точно переоткрываются (usual 11.07 17:43 мск) что с ним кстати было? разобрать ся
+ * lumia usual 11.07 ~17:00мск тоже хороший пример (надо ловить)
+ *
+ * FORMUSDT (11.07 ~19:00 мск) не поймался скринером: надо чаще
+ * BANK (18.07 ~20:00 мск) поймался скринером. посмотреть что можно сделать автоматически
+ *          [2025-07-18T16:49:20.124992+00:00] app_notification.INFO: days=0.70 [! 41.70% !] BANKUSDT [days=0.70 from 07-18].price=0.05895 vs curr.price = 0.08353: Δ = 0.02458 (> 17.868% [17.87%]) BANKUSDT [] {"acc_name":"sub1","worker_name":"ASYNC"}
  */
 final class OpenPositionHandler
 {
@@ -104,6 +112,7 @@ final class OpenPositionHandler
 # do market buy
         $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
         $marketBuyVolume = ExchangeOrder::roundedToMin($symbol, $marketBuyVolume, $this->ticker->indexPrice->value())->getVolume();
+        $marketBuyVolume = $symbol->roundVolumeUp($marketBuyVolume);
 
         if ($entryDto->stopsGridsDefinition) {
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
