@@ -6,6 +6,7 @@ namespace App\Screener\Application\Job\CheckSymbolsPriceChange;
 
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
@@ -13,6 +14,7 @@ use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use DateTimeImmutable;
@@ -43,8 +45,15 @@ final class CheckSymbolsPriceChangeHandler
 
         $partOfDayPassed = (date_create_immutable()->getTimestamp() - $date->getTimestamp()) / 86400;
 
+        $openedPositionsSymbols = SymbolHelper::symbolsToRawValues(...$this->positionService->getOpenedPositionsSymbols());
+
         foreach ($this->exchangeService->getAllTickers($message->settleCoin) as $ticker) {
             $symbol = $ticker->symbol;
+
+            if (in_array($symbol->name(), $openedPositionsSymbols, true)) {
+                continue;
+            }
+
             if ($this->disabledFor($symbol)) {
                 continue;
             }
@@ -119,6 +128,7 @@ final class CheckSymbolsPriceChangeHandler
         private readonly PreviousSymbolPriceProvider $previousSymbolPriceManager,
         private readonly AppNotificationsServiceInterface $notifications,
         private readonly RateLimiterFactory $priceChangeAlarmThrottlingLimiter,
+        private readonly ByBitLinearPositionService $positionService,
     ) {
     }
 }

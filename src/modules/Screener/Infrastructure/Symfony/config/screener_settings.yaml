@@ -3,4 +3,4 @@
 ### \App\Screener\Application\Settings\ScreenerEnabledHandlersSettings
 screener.significantPriceChange.enabled: false
 
-priceChange.significantDelta.oneDay.atr.baseMultiplier: 2
+priceChange.significantDelta.oneDay.atr.baseMultiplier: 3

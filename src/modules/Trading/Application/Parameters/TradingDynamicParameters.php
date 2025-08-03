@@ -81,9 +81,12 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
             $ta = $this->taProvider->create($symbol, $timeFrame);
             $baseATR = $ta->atr($atrPeriod)->atr;
-            $multipliedATR = $baseATR->multiply(
-                $this->settingsProvider->required(SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantChange_OneDay_AtrBaseMultiplier, $symbol))
+
+            $multiplier = $this->settingsProvider->required(
+                SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantChange_OneDay_AtrBaseMultiplier, $symbol)
             );
+
+            $multipliedATR = $baseATR->multiply($multiplier);
 
             return $multipliedATR->multiply($passedPartOfDay)->percentChange;
         }
