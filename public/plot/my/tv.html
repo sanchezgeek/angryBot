@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradingView Widget with Price Level</title>
+  <script
+    type="text/javascript"
+    src="https://charting-library.tradingview-widget.com/charting_library/charting_library.js">
+  </script>
+</head>
+<body>
+<div id="tradingview-widget"></div>
+<script type="text/javascript">
+  const priceLevel = 100;
+
+  // Создание виджета TradingView
+  new TradingView.widget({
+    "container_id": "tradingview-widget",
+    "autosize": true,
+    "symbol": "NASDAQ:AAPL",
+    "interval": "D",
+    "timezone": "Etc/UTC",
+    "theme": "Light",
+    "style": "1", // "1" означает свечной стиль графика
+    "toolbar_bg": "#f1f3f6",
+    "enable_publishing": false,
+    "hide_side_toolbar": false,
+    "allow_symbol_change": true,
+    "studies": [
+      // Добавление уровня цены
+      hline@{"price": ${priceLevel}, "title": "Level ${priceLevel}"},
+  ],
+  "container_id": "tradingview-widget-container",
+    "show_popup_button": true,
+    "popup_width": "1000",
+    "popup_height": "650"
+  });
+</script>
+</body>
+</html>
