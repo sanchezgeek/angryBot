@@ -98,3 +98,13 @@ breakeven ta
 
 
 src/modules/Stop/Console/CreateFixationGridCommand.php
+
+
+
+
+ветки в testnet:
+      admin
+      master
+      prod
+      stops_based_on_ta
+    * stops_based_on_ta_from_testnet_wip
