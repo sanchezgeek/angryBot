@@ -55,7 +55,6 @@ pushStops
 @todo | symbols | cache SymbolNotFoundException too
 
 
-@todo | liquidation | CheckPositionIsUnderLiquidationHandler | stops from liquidation handler on long distance without BO
 @todo | liquidation | CheckPositionIsUnderLiquidationHandler | нужно придумать что-то, чтобы точно не ликвиднуло (atr, maxWarningPnlPercent, ...)
 
 @todo | check | может всё таки пускать дальше, чтобы потом в логах видеть почему allowed? Хотя возможно это лучше в базу. Anyway, возможно лучше проверку disabled внутри supports не делать

@@ -82,8 +82,16 @@ final readonly class CalcPositionLiquidationPriceHandler
 
     private static function checkPrerequisites(Position $position): void
     {
-        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
+        if (!$hedge = $position->getHedge()) {
+            return;
+        }
+
+        if ($hedge->isSupportPosition($position)) {
             throw new LogicException(__CLASS__ . ': incorrect usage (support position cannot be under liquidation)');
+        }
+
+        if ($hedge->isEquivalentHedge()) {
+            throw new LogicException(__CLASS__ . ': incorrect usage (equivalent hedge cannot be under liquidation)');
         }
     }
 }

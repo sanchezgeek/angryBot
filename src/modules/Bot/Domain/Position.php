@@ -132,11 +132,11 @@ final class Position implements Stringable
             return $this->size;
         }
 
-        if (!$hedge->isMainPosition($this)) {
-            throw new RuntimeException(
-                sprintf('Trying to get `notCoveredSize` of %s, but position is not mainPosition of the hedge.', $this)
-            );
-        }
+//        if (!$hedge->isMainPosition($this)) {
+//            throw new RuntimeException(
+//                sprintf('Trying to get `notCoveredSize` of %s, but position is not mainPosition of the hedge.', $this)
+//            );
+//        }
 
         return $this->symbol->roundVolume($hedge->mainPosition->size - $hedge->supportPosition->size);
     }

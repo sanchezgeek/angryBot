@@ -104,10 +104,6 @@ final class CheckPositionIsUnderLiquidationHandler
                     continue;
                 }
 
-                if ($main->getHedge()?->isEquivalentHedge()) {
-                    continue;
-                }
-
                 $symbol = $main->symbol;
 
                 if (self::isSymbolIgnored($symbol)) {
