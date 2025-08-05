@@ -209,6 +209,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
         $iteration = 0;
         do {
+            echo '...';
+
             $iteration++;
             $this->cacheCollector = [];
 
