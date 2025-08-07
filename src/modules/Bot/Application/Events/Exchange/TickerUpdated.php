@@ -7,6 +7,7 @@ namespace App\Bot\Application\Events\Exchange;
 use App\Bot\Application\Events\LoggableEvent;
 use App\Bot\Domain\Ticker;
 use App\Worker\AppContext;
+use App\Worker\RunningWorker;
 
 final class TickerUpdated extends LoggableEvent
 {
@@ -23,6 +24,15 @@ final class TickerUpdated extends LoggableEvent
             return null;
         }
 
-        return \sprintf('%9s: %s', $this->ticker->symbol->name(), $this->ticker->indexPrice->value());
+        $log = \sprintf('%9s: %s', $this->ticker->symbol->name(), $this->ticker->indexPrice->value());
+
+        if (
+            ($worker = AppContext::runningWorker())
+            && $worker !== RunningWorker::TICKERS_UPDATER
+        ) {
+            $log .= sprintf(' [%s]', $worker->value);
+        }
+
+        return $log;
     }
 }

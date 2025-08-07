@@ -124,11 +124,10 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         Percent $maxAllowedPercentChange
     ): string {
         return sprintf(
-            '%s | %s, qty=%s, price=%s | pos.entry=%s, %%Δ=%s, allowed%%Δ=%s',
+            '%s | %s (%s) | entry=%s | %%Δ=%s, allowed%%Δ=%s',
             $position,
             BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
-            $order->volume,
-            $orderPrice,
+            BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
             $positionEntryPrice,
             $percentChange,
             $maxAllowedPercentChange,

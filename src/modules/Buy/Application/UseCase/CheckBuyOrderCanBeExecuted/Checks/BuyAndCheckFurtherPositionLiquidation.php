@@ -119,11 +119,11 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $liquidationPrice = $positionAfterBuy->liquidationPrice();
 
         // @todo | liquidation | null
-        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ', ') : '';
+        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ' ') : '';
         if ($liquidationPrice->eq(0)) {
             return TradingCheckResult::succeed(
                 $this,
-                sprintf('%s | %sqty=%s, price=%s | liq=0', $positionAfterBuy, $identifierInfo, $order->volume, $executionPrice)
+                sprintf('%s | %s(%s) | liq=0', $positionAfterBuy, $identifierInfo, BuyOrderInfoHelper::shortInlineInfo($order->volume, $executionPrice))
             );
         }
 
@@ -136,11 +136,10 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
 
         $info = sprintf(
-            '%s | %sqty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
+            '%s | %s(%s) | liq=%s | Δ=%s, safeΔ=%s',
             $positionAfterBuy,
             $identifierInfo,
-            $order->volume,
-            $executionPrice,
+            BuyOrderInfoHelper::shortInlineInfo($order->volume, $executionPrice),
             $liquidationPrice,
             $liquidationPrice->deltaWith($withPrice),
             $symbol->makePrice($safeDistance)
