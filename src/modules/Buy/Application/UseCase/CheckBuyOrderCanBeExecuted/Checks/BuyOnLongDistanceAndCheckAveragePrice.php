@@ -34,6 +34,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
     use CheckBasedOnCurrentPositionState;
 
     public const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
+    public const int MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE = 10;
 
     public const string ALIAS = 'BUY/AVG-PRICE_check';
 
@@ -82,7 +83,12 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         $orderPrice = $context->ticker->markPrice;
 
         $percentChange = $orderPrice->differenceWith($positionEntryPrice)->getPercentChange($order->positionSide)->abs();
-        $maxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($order->symbol);
+        $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($order->symbol);
+
+        $maxAllowedPercentChange = new Percent(
+            min($calculatedMaxAllowedPercentChange->value(), self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE),
+            false
+        );
 
         $info = $this->info($position, $order, $orderPrice, $positionEntryPrice, $percentChange, $maxAllowedPercentChange);
 
