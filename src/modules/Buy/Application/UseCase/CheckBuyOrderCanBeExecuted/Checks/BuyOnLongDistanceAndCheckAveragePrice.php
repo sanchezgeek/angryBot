@@ -70,7 +70,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
         $position = $context->currentPositionState;
 
-        return $position !== null;
+        return $position !== null && !$position->isPositionInLoss($context->ticker->markPrice);
     }
 
     public function check(CheckOrderDto|MarketBuyCheckDto $orderDto, TradingCheckContext $context): AbstractTradingCheckResult
