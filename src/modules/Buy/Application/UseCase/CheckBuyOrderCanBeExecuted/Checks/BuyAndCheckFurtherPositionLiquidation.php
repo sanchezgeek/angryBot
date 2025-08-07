@@ -36,7 +36,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    public const string ALIAS = 'BUY/LIQUIDATION';
+    public const string ALIAS = 'BUY/LIQUIDATION_check';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,

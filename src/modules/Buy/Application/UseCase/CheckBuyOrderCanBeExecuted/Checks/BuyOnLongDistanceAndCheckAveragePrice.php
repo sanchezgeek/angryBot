@@ -35,7 +35,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
 
     public const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
 
-    public const string ALIAS = 'BUY/AVG-PRICE';
+    public const string ALIAS = 'BUY/AVG-PRICE_check';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
