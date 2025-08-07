@@ -38,6 +38,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 700;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
     public const float WHOLE_LOSS_MULTIPLIER = 0.7;
+    public const PredefinedStopLengthSelector FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER = PredefinedStopLengthSelector::Short;
 
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
@@ -196,7 +197,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, PredefinedStopLengthSelector::ModerateShort);
+            $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, self::FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
 
