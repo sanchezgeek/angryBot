@@ -69,10 +69,10 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
 
         // position and order mismatch? => logic
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
-        $position = $context->currentPositionState;
 
         return
-            $position->isMainPositionOrWithoutHedge()
+            ($position = $context->currentPositionState)
+            && $position->isMainPositionOrWithoutHedge()
             // @todo | buy/check | situation when position became main after buy
 //            || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
         ;
