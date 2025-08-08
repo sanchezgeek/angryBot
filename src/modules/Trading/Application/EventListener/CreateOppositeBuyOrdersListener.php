@@ -20,6 +20,7 @@ final readonly class CreateOppositeBuyOrdersListener
         if (!(
             $stop->isWithOppositeOrder()
             || $stop->isStopAfterOtherSymbolLoss()
+            || $stop->isStopAfterFixHedgeOppositePosition()
         )) {
             return;
         }

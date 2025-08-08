@@ -40,10 +40,9 @@ final class CreateBuyOrderAfterStopCommandHandler
     public function __invoke(CreateBuyOrderAfterStop $command): array
     {
         $stop = $this->stopRepository->find($command->stopId);
-        if (!(
-            $stop->isWithOppositeOrder())
-            || $stop->isStopAfterOtherSymbolLoss()
-        ) {
+        $isAdditionalFixationsStop = $stop->isStopAfterOtherSymbolLoss() || $stop->isStopAfterFixHedgeOppositePosition();
+
+        if (!$stop->isWithOppositeOrder() && !$isAdditionalFixationsStop) {
             return [];
         }
 
@@ -58,7 +57,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         $isBigStop = FloatHelper::round($stopVolume / $command->prevPositionSize) >= 0.1;
 
         $refPrice = $stopPrice;
-        if ($stop->isStopAfterOtherSymbolLoss()) {
+        if ($isAdditionalFixationsStop) {
             $position = $this->positionService->getPosition($symbol, $side);
             $refPrice = $position->entryPrice();
         }
@@ -75,7 +74,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         } else {
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
-            if ($stop->isStopAfterOtherSymbolLoss()) {
+            if ($isAdditionalFixationsStop) {
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::Short);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PredefinedStopLengthSelector::VeryShort, $withForceBuy);
