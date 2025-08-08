@@ -17,7 +17,10 @@ final readonly class CreateOppositeBuyOrdersListener
         $stop = $event->stop;
         $prevPositionState = $event->prevPositionState;
 
-        if (!$stop->isWithOppositeOrder()) {
+        if (!(
+            $stop->isWithOppositeOrder()
+            || $stop->isStopAfterOtherSymbolLoss()
+        )) {
             return;
         }
 
