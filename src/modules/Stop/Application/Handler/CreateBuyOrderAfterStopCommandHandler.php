@@ -76,9 +76,10 @@ final class CreateBuyOrderAfterStopCommandHandler
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
             if ($stop->isStopAfterOtherSymbolLoss()) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PredefinedStopLengthSelector::VeryShort, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::Short);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PredefinedStopLengthSelector::VeryShort, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::VeryShort);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort, $withForceBuy);
