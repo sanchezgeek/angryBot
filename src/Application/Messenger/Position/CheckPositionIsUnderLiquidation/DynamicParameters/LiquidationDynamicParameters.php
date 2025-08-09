@@ -385,16 +385,18 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
 //            if (self::isDebug()) var_dump($modifierMin, $modifierMax, $position->liquidationDistance(), $modifier, $additionalStopPrice);die;
 
-            $markPrice = $this->ticker->markPrice;
+            $markPrice = $this->ticker->markPrice->value();
+            $liquidationPrice = $position->liquidationPrice();
             $criticalDistance = $this->criticalDistance();
-            if ($position->side->isShort()) {
+
+            if ($position->isShort()) {
                 $tickerSideBound = $additionalStopPrice->sub($modifier);
-                $liquidationBound = min($additionalStopPrice->add($modifier)->value(), $position->liquidationPrice()->sub($criticalDistance)->value());
-                $liquidationBound = max($liquidationBound, $markPrice->value() + $variableError);
+                $liquidationBound = min($additionalStopPrice->add($modifier)->value(), $liquidationPrice->sub($criticalDistance)->value());
+                $liquidationBound = max($liquidationBound, $markPrice + $variableError);
             } else {
                 $tickerSideBound = $additionalStopPrice->add($modifier);
-                $liquidationBound = max($additionalStopPrice->sub($modifier)->value(), $position->liquidationPrice()->add($criticalDistance)->value());
-                $liquidationBound = min($liquidationBound, $markPrice->value() - $variableError);
+                $liquidationBound = max($additionalStopPrice->sub($modifier)->value(), $liquidationPrice->add($criticalDistance)->value());
+                $liquidationBound = min($liquidationBound, $markPrice - $variableError);
             }
 
             return $this->actualStopsPriceRange = PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);

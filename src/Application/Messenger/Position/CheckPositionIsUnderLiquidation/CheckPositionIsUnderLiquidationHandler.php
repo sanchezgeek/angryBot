@@ -15,6 +15,7 @@ use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Domain\Coin\CoinAmount;
@@ -29,6 +30,7 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
@@ -341,43 +343,36 @@ final class CheckPositionIsUnderLiquidationHandler
     private function getStaleStops(Position $position): StopsCollection
     {
         # if opposite position previously was main
-        $oppositePositionStops = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side->getOpposite());
-        $oppositePositionStops = array_filter($oppositePositionStops, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+        $oppositePositionStops = $this->stopRepository->findActive(
+            symbol: $position->symbol,
+            side: $position->side->getOpposite(),
+            qbModifier: static fn (QueryBuilder $qb, string $alias) => StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias)
+        );
 
         // @todo | liquidation | или сначала надо получить цену нового стопа и потом принять решение об удалении?
         // @todo | liquidation |нужна ли какая-то проверка warningRange?
-        $actualStopsRange = $this->dynamicParameters->actualStopsRange();
+        $actualRange = $this->dynamicParameters->actualStopsRange();
         $criticalRange = $this->dynamicParameters->criticalRange();
 
-        $stopsFromOutsideTheRange = $this->stopRepository->findActive(symbol: $position->symbol, side: $position->side, qbModifier: function (QueryBuilder $qb) use ($position, $actualStopsRange) {
-            $priceField = $qb->getRootAliases()[0] . '.price';
-
-            if ($position->isShort()) {
-                $qb->andWhere(sprintf('%s < :lowerPrice', $priceField));
-                $qb->setParameter(':lowerPrice', $actualStopsRange->from()->value());
-            } else {
-                $qb->andWhere(sprintf('%s > :upperPrice', $priceField));
-                $qb->setParameter(':upperPrice', $actualStopsRange->to()->value());
+        $stopsFromOutsideTheRange = $this->stopRepository->findActive(
+            symbol: $position->symbol,
+            side: $position->side,
+            qbModifier: function (QueryBuilder $qb, string $alias) use ($position, $actualRange) {
+                $qb = StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
+                $qb->andWhere(sprintf('%s %s :outsideRangePrice', QueryHelper::priceField($qb), $position->isShort() ? '<' : '>'));
+                $qb->setParameter(':outsideRangePrice', $position->isShort() ? $actualRange->from()->value() : $actualRange->to()->value());
             }
-        });
-        $stopsFromOutsideTheRange = array_filter($stopsFromOutsideTheRange, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
+        );
 
         $stopsToPositionSide = $this->stopRepository->findActive(
             symbol: $position->symbol,
             side: $position->side,
-            qbModifier: function (QueryBuilder $qb) use ($position, $actualStopsRange) {
-                $priceField = $qb->getRootAliases()[0] . '.price';
-
-                if ($position->isShort()) {
-                    $qb->andWhere(sprintf('%s > :boundUpperPrice', $priceField));
-                    $qb->setParameter(':boundUpperPrice', $actualStopsRange->to()->value());
-                } else {
-                    $qb->andWhere(sprintf('%s < :boundLowerPrice', $priceField));
-                    $qb->setParameter(':boundLowerPrice', $actualStopsRange->from()->value());
-                }
+            qbModifier: function (QueryBuilder $qb, string $alias) use ($position, $actualRange) {
+                $qb = StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
+                $qb->andWhere(sprintf('%s %s :innerRangePrice', QueryHelper::priceField($qb), $position->isShort() ? '>' : '<'));
+                $qb->setParameter(':innerRangePrice', $position->isShort() ? $actualRange->to()->value() : $actualRange->from()->value());
             }
         );
-        $stopsToPositionSide = array_filter($stopsToPositionSide, static fn (Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler());
 
         $result = [...$oppositePositionStops, ...$stopsFromOutsideTheRange];
 

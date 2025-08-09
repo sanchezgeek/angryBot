@@ -22,7 +22,7 @@ class CheckMessagesCommand extends Command
 
         $result = $connection->executeQuery('SELECT * from messenger_messages')->fetchAllAssociative();
         foreach ($result as $item) {
-            var_dump($item['queue_name']);
+            var_dump($item['queue_name'], $item['body']);
         }
 
         $result = $connection->executeQuery('SELECT count(*) from messenger_messages')->fetchAssociative();

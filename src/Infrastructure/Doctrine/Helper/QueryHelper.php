@@ -23,4 +23,14 @@ final class QueryHelper
 
         return $qb->addOrderBy(sprintf('%s.%s', $table, $field), $order);
     }
+
+    public static function priceField(QueryBuilder $qb): string
+    {
+        return $qb->getRootAliases()[0] . '.price';
+    }
+
+    public static function rootAlias(QueryBuilder $qb): string
+    {
+        return $qb->getRootAliases()[0];
+    }
 }

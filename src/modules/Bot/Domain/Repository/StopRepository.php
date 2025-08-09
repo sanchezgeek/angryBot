@@ -7,6 +7,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -27,8 +28,9 @@ use RuntimeException;
  */
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
+    private const string isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
+
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
-    private string $isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -94,7 +96,9 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): QueryBuilder {
-        $qb = $this->createQueryBuilder('s')
+        $alias = 's';
+
+        $qb = $this->createQueryBuilder($alias)
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
         ;
 
@@ -121,7 +125,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($qbModifier) {
-            $qbModifier($qb);
+            $qbModifier($qb, $alias);
         }
 
         return $qb;
@@ -246,12 +250,18 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     public function findActiveCreatedByLiquidationHandler(): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->isAdditionalStopFromLiquidationHandler', 'true') = true")
-        ;
+        $qb = $this->createQueryBuilder($alias = 's')->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false");
+        $qb = self::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
 
         return $qb->getQuery()->getResult();
+    }
+
+    public static function isAdditionalStopFromLiqHandlerCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    {
+        $alias = $alias ?? QueryHelper::rootAlias($qb);
+        $flagName = self::isAdditionalStopFromLiquidationHandler;
+
+        return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
     }
 
     public function findStopsWithFakeExchangeOrderId(): array
