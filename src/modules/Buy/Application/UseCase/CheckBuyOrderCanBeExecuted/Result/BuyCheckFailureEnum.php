@@ -8,4 +8,5 @@ enum BuyCheckFailureEnum implements TradingCheckFailedReason
 {
     case FurtherLiquidationIsTooClose;
     case BuyOrderPlacedTooFarFromPositionEntry;
+    case ActiveFixationStopsBeforePositionEntryExists;
 }

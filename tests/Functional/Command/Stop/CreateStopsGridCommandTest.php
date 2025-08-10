@@ -285,7 +285,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         \Throwable $expectedException
     ): void {
         $this->havePosition($symbol, $position);
-        $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
+        $cmd = new CommandTester(new Application(self::$kernel)->find(self::COMMAND_NAME));
 
         $this->expectException(get_class($expectedException));
 //        $this->expectExceptionMessage($expectedException->getMessage());

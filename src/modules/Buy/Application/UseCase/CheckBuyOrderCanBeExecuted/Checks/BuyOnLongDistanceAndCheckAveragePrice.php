@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
-use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Buy\Application\Helper\BuyOrderInfoHelper;
@@ -23,14 +22,12 @@ use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use App\Trading\SDK\Check\Mixin\CheckBasedOnCurrentPositionState;
-use App\Trading\SDK\Check\Mixin\CheckBasedOnExecutionInSandbox;
 
 /**
  * @see \App\Tests\Unit\Modules\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePriceTest
  */
 final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingCheckInterface
 {
-    use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
     public const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
@@ -41,7 +38,6 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
     public function __construct(
         private AppSettingsProviderInterface $settings,
         private TradingParametersProviderInterface $parameters,
-        private UnexpectedSandboxExecutionExceptionHandler $unexpectedSandboxExceptionHandler,
         PositionServiceInterface $positionService,
     ) {
         $this->initPositionService($positionService);

@@ -378,8 +378,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         if (in_array($symbol->name(), $this->symbolsToWatch, true)) {
             $extraSymbolCell = sprintf(
                 '%s%s',
-                CTH::colorizeText(substr($extraSymbolText, 0, 2), 'yellow-text'),
-                CTH::colorizeText(substr($extraSymbolText, 2, strlen($extraSymbolText)), $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'))
+                CTH::colorizeText(substr($extraSymbolText, 0, 1), 'yellow-text'),
+                CTH::colorizeText(substr($extraSymbolText, 1, strlen($extraSymbolText)), $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'))
             );
         } else {
             $extraSymbolCell = CTH::colorizeText($extraSymbolText, $isEquivalentHedge ? 'none' : ($main->isShort() ? 'bright-red-text' : 'green-text'));

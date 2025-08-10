@@ -17,23 +17,24 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckInterface
 {
-    private const DEFAULT_CACHE_TTL = 45;
-    private const MAX_ITEMS = 100;
+    private const int DEFAULT_CACHE_TTL = 45;
+    private const int MAX_ITEMS = 100;
 
     private static array $pnlStepCache = [];
 
     private readonly CacheServiceInterface $cache;
 
-    public function __construct(private readonly TradingCheckInterface $decorated)
-    {
-        $this->cache = new SymfonyCacheWrapper(new ArrayAdapter(self::DEFAULT_CACHE_TTL, true, 0, self::MAX_ITEMS));
+    public function __construct(
+        private readonly TradingCheckInterface $decorated,
+        int $ttl = self::DEFAULT_CACHE_TTL
+    ) {
+        $this->cache = new SymfonyCacheWrapper(new ArrayAdapter($ttl, true, 0, self::MAX_ITEMS));
     }
 
     public function alias(): string
     {
         return $this->decorated->alias();
     }
-
 
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {

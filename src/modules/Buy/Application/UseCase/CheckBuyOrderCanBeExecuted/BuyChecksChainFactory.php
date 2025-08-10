@@ -7,6 +7,7 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted;
 use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyAndCheckFurtherPositionLiquidation;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Trading\SDK\Check\Decorator\UseNegativeCachedResultWhileCheckDecorator;
 use App\Trading\SDK\Check\Decorator\UseThrottlingWhileCheckDecorator;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -16,6 +17,7 @@ final readonly class BuyChecksChainFactory
     public function __construct(
         private BuyAndCheckFurtherPositionLiquidation $furtherPositionLiquidationCheck,
         private BuyOnLongDistanceAndCheckAveragePrice $buyOnLongDistanceAveragePriceCheck,
+        private DenyBuyIfFixationsExists $denyBuyIfFixationsExists,
         private RateLimiterFactory $checkFurtherPositionLiquidationAfterBuyLimiter,
         private AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
     ) {
@@ -25,6 +27,10 @@ final readonly class BuyChecksChainFactory
     {
         return new BuyChecksChain(
             $this->attemptLimitCheckerProvider,
+            new UseThrottlingWhileCheckDecorator(
+                new UseNegativeCachedResultWhileCheckDecorator($this->denyBuyIfFixationsExists, 600),
+                $this->checkFurtherPositionLiquidationAfterBuyLimiter
+            ),
             new UseThrottlingWhileCheckDecorator(
                 new UseNegativeCachedResultWhileCheckDecorator($this->buyOnLongDistanceAveragePriceCheck),
                 $this->checkFurtherPositionLiquidationAfterBuyLimiter

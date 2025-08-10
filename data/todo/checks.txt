@@ -5,3 +5,6 @@
     @todo | stop/check
     Some command to see checks failures?
     veryHardPriceAv
+
+
+@todo Если стоп будет pushedToExchange, то проверка будет пройдена

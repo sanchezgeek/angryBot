@@ -29,6 +29,8 @@ use RuntimeException;
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
     private const string isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
+    private const string createdAfterOtherSymbolLoss = Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS;
+    private const string createdAfterFixHedgeOppositePosition = Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION;
 
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 
@@ -251,17 +253,31 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     public function findActiveCreatedByLiquidationHandler(): array
     {
         $qb = $this->createQueryBuilder($alias = 's')->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false");
-        $qb = self::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
+        $qb = self::addIsAdditionalStopFromLiqHandlerCondition($qb, $alias);
 
         return $qb->getQuery()->getResult();
     }
 
-    public static function isAdditionalStopFromLiqHandlerCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    public static function addIsAdditionalStopFromLiqHandlerCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
     {
         $alias = $alias ?? QueryHelper::rootAlias($qb);
         $flagName = self::isAdditionalStopFromLiquidationHandler;
 
         return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
+    }
+
+    public static function addIsCreatedAfterOtherSymbolLossCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    {
+        $alias = $alias ?? QueryHelper::rootAlias($qb);
+        $flagAfterOtherSymbolLoss = self::createdAfterOtherSymbolLoss;
+        $flagAfterFixHedge = self::createdAfterFixHedgeOppositePosition;
+
+        return $qb
+            ->andWhere(
+                "JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true"
+                . " OR JSON_ELEMENT_EQUALS($alias.context, '$flagAfterFixHedge', 'true') = true"
+            )
+        ;
     }
 
     public function findStopsWithFakeExchangeOrderId(): array

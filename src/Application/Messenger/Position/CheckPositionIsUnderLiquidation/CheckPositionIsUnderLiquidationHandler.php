@@ -346,7 +346,7 @@ final class CheckPositionIsUnderLiquidationHandler
         $oppositePositionStops = $this->stopRepository->findActive(
             symbol: $position->symbol,
             side: $position->side->getOpposite(),
-            qbModifier: static fn (QueryBuilder $qb, string $alias) => StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias)
+            qbModifier: static fn (QueryBuilder $qb, string $alias) => StopRepository::addIsAdditionalStopFromLiqHandlerCondition($qb, $alias)
         );
 
         // @todo | liquidation | или сначала надо получить цену нового стопа и потом принять решение об удалении?
@@ -358,7 +358,7 @@ final class CheckPositionIsUnderLiquidationHandler
             symbol: $position->symbol,
             side: $position->side,
             qbModifier: function (QueryBuilder $qb, string $alias) use ($position, $actualRange) {
-                $qb = StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
+                $qb = StopRepository::addIsAdditionalStopFromLiqHandlerCondition($qb, $alias);
                 $qb->andWhere(sprintf('%s %s :outsideRangePrice', QueryHelper::priceField($qb), $position->isShort() ? '<' : '>'));
                 $qb->setParameter(':outsideRangePrice', $position->isShort() ? $actualRange->from()->value() : $actualRange->to()->value());
             }
@@ -368,7 +368,7 @@ final class CheckPositionIsUnderLiquidationHandler
             symbol: $position->symbol,
             side: $position->side,
             qbModifier: function (QueryBuilder $qb, string $alias) use ($position, $actualRange) {
-                $qb = StopRepository::isAdditionalStopFromLiqHandlerCondition($qb, $alias);
+                $qb = StopRepository::addIsAdditionalStopFromLiqHandlerCondition($qb, $alias);
                 $qb->andWhere(sprintf('%s %s :innerRangePrice', QueryHelper::priceField($qb), $position->isShort() ? '>' : '<'));
                 $qb->setParameter(':innerRangePrice', $position->isShort() ? $actualRange->to()->value() : $actualRange->from()->value());
             }
