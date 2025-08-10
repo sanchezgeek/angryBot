@@ -8,3 +8,4 @@
 
 
 @todo Если стоп будет pushedToExchange, то проверка будет пройдена
+@todo | checks | cache?

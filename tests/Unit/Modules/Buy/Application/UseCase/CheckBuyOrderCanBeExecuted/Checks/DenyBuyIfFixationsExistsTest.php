@@ -10,6 +10,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
@@ -81,44 +82,71 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         // allowed
         $stops = [];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::SUCCESS();
+        $result = self::SUCCESS($position, $order, $ticker->markPrice);
         yield $result->info() . 'not stops' => [$position, $ticker, $stops, $order, $result];
 
         $stops = [StopBuilder::short(1, 105000, 0.001, $symbol)->build()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::SUCCESS();
+        $result = self::SUCCESS($position, $order, $ticker->markPrice);
         yield $result->info() . 'simple stop' => [$position, $ticker, $stops, $order, $result];
 
         $stops = [StopBuilder::short(1, 115000, 0.001, $symbol)->build()->setIsStopAfterOtherSymbolLoss()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::SUCCESS();
+        $result = self::SUCCESS($position, $order, $ticker->markPrice);
         yield $result->info() . 'no stops between position and ticker 1' => [$position, $ticker, $stops, $order, $result];
 
         $stops = [StopBuilder::short(1, 99999, 0.001, $symbol)->build()->setIsStopAfterOtherSymbolLoss()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::SUCCESS();
+        $result = self::SUCCESS($position, $order, $ticker->markPrice);
         yield $result->info() . 'no stops between position and ticker 2' => [$position, $ticker, $stops, $order, $result];
 
         // denied
         $stops = [StopBuilder::short(1, 105000, 0.001, $symbol)->build()->setIsStopAfterOtherSymbolLoss()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::FAILED($stops);
+        $result = self::FAILED($position, $order, $ticker->markPrice, $stops);
         yield $result->info() . 'stop after other symbols loss' => [$position, $ticker, $stops, $order, $result];
 
         $stops = [StopBuilder::short(1, 105000, 0.001, $symbol)->build()->setStopAfterFixHedgeOppositePositionContest()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::FAILED($stops);
+        $result = self::FAILED($position, $order, $ticker->markPrice, $stops);
         yield $result->info() . 'stop after hedge fix' => [$position, $ticker, $stops, $order, $result];
     }
 
-    private static function SUCCESS(): TradingCheckResult
-    {
-        return TradingCheckResult::succeed(self::CHECK_ALIAS, 'fixation stops not found');
+    private static function SUCCESS(
+        Position $position,
+        MarketBuyEntryDto $order,
+        SymbolPrice $orderPrice
+    ): TradingCheckResult {
+        return TradingCheckResult::succeed(self::CHECK_ALIAS, self::info($position, $order, $orderPrice, 'fixation stops not found'));
     }
 
-    private static function FAILED(array $stops): TradingCheckResult
-    {
-        return TradingCheckResult::failed(self::CHECK_ALIAS, BuyCheckFailureEnum::ActiveFixationStopsBeforePositionEntryExists, sprintf('found %d fixation stops before position entry', count($stops)));
+    private static function FAILED(
+        Position $position,
+        MarketBuyEntryDto $order,
+        SymbolPrice $orderPrice,
+        array $stops,
+    ): TradingCheckResult {
+        return TradingCheckResult::failed(
+            self::CHECK_ALIAS,
+            BuyCheckFailureEnum::ActiveFixationStopsBeforePositionEntryExists,
+            self::info($position, $order, $orderPrice, sprintf('found %d fixation stops', count($stops)))
+        );
+    }
+
+    private static function info(
+        Position $position,
+        MarketBuyEntryDto $order,
+        SymbolPrice $orderPrice,
+        string $reason,
+    ): string {
+        return sprintf(
+            '%s | %s (%s) | entry=%s | %s',
+            $position,
+            BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
+            BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
+            $position->entryPrice,
+            $reason
+        );
     }
 
     private static function simpleBuyDto(SymbolInterface $symbol, Side $side, SymbolPrice $price): MarketBuyEntryDto

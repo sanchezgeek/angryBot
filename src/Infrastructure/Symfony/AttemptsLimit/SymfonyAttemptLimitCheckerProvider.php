@@ -32,18 +32,32 @@ final class SymfonyAttemptLimitCheckerProvider implements AttemptLimitCheckerPro
 
         $factoryKey = sprintf('%d_attempts_on_%d_period', $attemptsCount, str_replace(' ', '', $period));
         if (!isset($this->factories[$factoryKey])) {
-            $config = [
-                'id' => $factoryKey . '_limiterFactory',
-                'policy' => 'fixed_window',
-                'limit' => $attemptsCount,
-                'interval' => $period,
-            ];
-
-            $this->factories[$factoryKey] = new RateLimiterFactory($config, new CacheStorage($this->cachePool), $this->lockFactory);
+            $this->factories[$factoryKey] = $this->getLimiterFactory($period, $attemptsCount);
         }
 
         return new SymfonyAttemptLimitChecker(
             $this->factories[$factoryKey]->create($key)
         );
+    }
+
+    public function getLimiterFactory(
+        int|string $period,
+        int $attemptsCount = 1,
+        ?string $serviceId = null,
+    ): RateLimiterFactory {
+        if (!is_string($period)) {
+            $period = sprintf('%d seconds', $period);
+        }
+
+        $id = $serviceId ?? uniqid('limiterFactory', true);
+
+        $config = [
+            'id' => $id . '_limiterFactory',
+            'policy' => 'fixed_window',
+            'limit' => $attemptsCount,
+            'interval' => $period,
+        ];
+
+        return new RateLimiterFactory($config, new CacheStorage($this->cachePool), $this->lockFactory);
     }
 }

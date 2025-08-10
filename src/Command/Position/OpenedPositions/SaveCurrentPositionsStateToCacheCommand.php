@@ -4,10 +4,11 @@ namespace App\Command\Position\OpenedPositions;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
-use App\Command\Mixin\PositionAwareCommand;
+use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\Position\OpenedPositions\Cache\PositionProxy;
-use App\Command\PositionDependentCommand;
+use App\Command\SymbolDependentCommand;
+use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -17,9 +18,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(name: 'p:opened:cache:replace-with-current')]
-class SaveCurrentPositionsStateToCacheCommand extends AbstractCommand implements PositionDependentCommand
+class SaveCurrentPositionsStateToCacheCommand extends AbstractCommand implements SymbolDependentCommand
 {
-    use PositionAwareCommand;
+    use SymbolAwareCommand;
     use ConsoleInputAwareCommand;
 
     private const string SELECTED_CACHE = 'cache-item-name';
@@ -80,6 +81,7 @@ class SaveCurrentPositionsStateToCacheCommand extends AbstractCommand implements
 
     public function __construct(
         private readonly OpenedPositionsCache $cache,
+        private readonly ByBitLinearPositionService $positionService,
         ?string $name = null,
     ) {
         parent::__construct($name);

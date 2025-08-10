@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Trading\SDK\Check\Decorator;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Trading\SDK\Check\Decorator\UseNegativeCachedResultWhileCheckDecorator;
 use PHPUnit\Framework\TestCase;
 
 final class UseNegativeCachedResultWhileCheckDecoratorTest extends TestCase
@@ -17,8 +15,8 @@ final class UseNegativeCachedResultWhileCheckDecoratorTest extends TestCase
     {
         self::markTestSkipped();
         // @for now doesn't matter
-        $symbol = SymbolEnum::BTCUSDT;
-        self::assertEquals($expectedResult, UseNegativeCachedResultWhileCheckDecorator::pnlPercentStep($symbol, $currentPrice));
+//        $symbol = SymbolEnum::BTCUSDT;
+//        self::assertEquals($expectedResult, UseNegativeCachedResultWhileCheckDecorator::pnlPercentStep($symbol, $currentPrice));
     }
 
     public function pnlPercentStepTestCases(): array
