@@ -4,7 +4,7 @@ namespace App\Command\Position\OpenedPositions\Watch;
 
 use App\Command\AbstractCommand;
 use App\Command\Mixin\ConsoleInputAwareCommand;
-use App\Command\Mixin\SymbolAwareCommand;
+use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'p:opened:watch:remove')]
 class RemoveSymbolsFromWatchCommand extends AbstractCommand implements PositionDependentCommand
 {
-    use SymbolAwareCommand;
+    use PositionAwareCommand;
     use ConsoleInputAwareCommand;
 
     private const string ALL_OPTION = 'all';

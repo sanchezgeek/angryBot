@@ -115,7 +115,7 @@ class StopsDumpCommand extends AbstractCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
         private readonly ByBitLinearPositionService $positionService,
-        private ClockInterface $clock,
+        private readonly ClockInterface $clock,
         ?string $name = null,
     ) {
         parent::__construct($name);

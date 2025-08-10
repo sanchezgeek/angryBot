@@ -2,7 +2,6 @@
 
 namespace App\Command\Stop\Dump;
 
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\RestoreOrder\StopRestoreFactory;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Clock\ClockInterface;
@@ -66,11 +65,8 @@ class StopsDumpRestoreCommand extends AbstractCommand implements PositionDepende
         private readonly StopRepository $stopRepository,
         private readonly ClockInterface $clock,
         private readonly StopRestoreFactory $stopRestoreFactory,
-        PositionServiceInterface $positionService,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

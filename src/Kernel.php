@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Infrastructure\DependencyInjection\CompilerPass\AddPositionServiceToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\AddSymbolEntityProviderToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\AddTradingParametersToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\RegisterAppDynamicParametersCompilerPass;
@@ -20,6 +21,7 @@ class Kernel extends BaseKernel
 
         $container->addCompilerPass(new AddTradingParametersToCommandsCompilerPass());
         $container->addCompilerPass(new AddSymbolEntityProviderToCommandsCompilerPass());
+        $container->addCompilerPass(new AddPositionServiceToCommandsCompilerPass());
         $container->addCompilerPass(new RegisterAppDynamicParametersCompilerPass());
         $container->addCompilerPass(new ReplaceCacheCompilerPass());
     }

@@ -4,7 +4,6 @@ namespace App\Command\Stop;
 
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
@@ -120,11 +119,8 @@ class CreatePosStopCommand extends AbstractCommand implements PositionDependentC
         private readonly StopService $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         private readonly ExchangeServiceInterface $exchangeService,
-        PositionServiceInterface $positionService,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

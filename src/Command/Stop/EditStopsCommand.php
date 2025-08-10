@@ -3,7 +3,6 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
@@ -13,7 +12,7 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
-use App\Command\SymbolDependentCommand;
+use App\Command\PositionDependentCommand;
 use App\Command\TradingParametersDependentCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
@@ -38,7 +37,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'sl:edit')]
-class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand, TradingParametersDependentCommand
+class EditStopsCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -329,13 +328,10 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
-        PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly LoggerInterface $appErrorLogger,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

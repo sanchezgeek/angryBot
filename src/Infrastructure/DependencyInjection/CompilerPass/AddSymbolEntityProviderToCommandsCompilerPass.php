@@ -11,7 +11,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 final readonly class AddSymbolEntityProviderToCommandsCompilerPass implements CompilerPassInterface
 {
     private const string SYMBOL_ENTITY_PROVIDER_SERVICE_ID = SymbolProvider::class;
-//    private const string INITIALIZE_SYMBOL_HANDLER_SERVICE_ID = InitializeSymbolsHandler::class;
 
     const string COMMAND_SYMBOL_DEPENDENT_TAG = 'command.symbol_dependent';
 

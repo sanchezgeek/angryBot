@@ -4,7 +4,6 @@ namespace App\Command\Stop;
 
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
@@ -253,12 +252,9 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
-        PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }
