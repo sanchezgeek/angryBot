@@ -55,10 +55,12 @@ framework:
             App\Buy\Application\Command\CreateStopsAfterBuy: 'async_critical'
             App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: 'async_high'
 
-            App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async
+            App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async_high
 
             # liquidation
             App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage: async
+
+            App\Watch\Application\Job\CheckDistance\CheckPassedLiquidationDistance: async_high
 
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async

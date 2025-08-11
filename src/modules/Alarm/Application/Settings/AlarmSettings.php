@@ -30,6 +30,9 @@ enum AlarmSettings: string implements AppSettingInterface, AppSettingsGroupInter
     #[SettingParametersAttribute]
     case AlarmOnTotalBalanceLessThan = 'alarm.balance.total.less';
 
+    #[SettingParametersAttribute(type: SettingType::Float)]
+    case PassedPart_Of_LiquidationDistance = 'alarm.liquidationDistance.passedPart.allowed';
+
     public function getSettingKey(): string
     {
         return $this->value;

@@ -440,9 +440,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         if ($distanceBetweenLiquidationAndTickerPercentOfEntry->value() < $initialLiquidationDistancePercentOfEntry->value()) {
             $passedLiquidationDistancePercent = Percent::fromPart(($initialLiquidationDistancePercentOfEntry->value() - $distanceBetweenLiquidationAndTickerPercentOfEntry->value()) / $initialLiquidationDistancePercentOfEntry->value());
             $passedLiquidationDistancePercent = match (true) {
-                $passedLiquidationDistancePercent->value() > 5 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'yellow-text'),
-                $passedLiquidationDistancePercent->value() > 15 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'bright-red-text'),
                 $passedLiquidationDistancePercent->value() > 30 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'red-text'),
+                $passedLiquidationDistancePercent->value() > 15 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'bright-red-text'),
+                $passedLiquidationDistancePercent->value() > 5 => CTH::colorizeText((string)$passedLiquidationDistancePercent, 'yellow-text'),
                 default => $passedLiquidationDistancePercent,
             };
         }

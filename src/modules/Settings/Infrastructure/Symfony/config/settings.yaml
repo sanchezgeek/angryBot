@@ -9,6 +9,7 @@ services:
                 alarm.profit.enabled: false
                 alarm.balance.greater: 'false'
                 alarm.balance.less: 'false'
+                alarm.liquidationDistance.passedPart.allowed: 50
 
                 # connection
                 connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'

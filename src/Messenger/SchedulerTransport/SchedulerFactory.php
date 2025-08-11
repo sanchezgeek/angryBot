@@ -33,6 +33,7 @@ use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositi
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Trading\Application\Symbol\SymbolProvider;
+use App\Watch\Application\Job\CheckDistance\CheckPassedLiquidationDistance;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Worker\AppContext;
@@ -65,7 +66,6 @@ final class SchedulerFactory
 //    private const TICKERS_CACHE = ['interval' => 'PT10S', 'delay' => 3300];
 
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly SymbolProvider $symbolProvider,
     ) {
@@ -145,6 +145,11 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 3))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 4))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 5))),
+            //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 6))),
+            //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 7))),
+            //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 8))),
+            //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 9))),
+            //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 10))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
@@ -185,6 +190,7 @@ final class SchedulerFactory
 
             // -- liquidation
             PeriodicalJob::create('2025-07-01T01:01:08Z', 'P1D', AsyncMessage::for(new RemoveStaleStopsMessage())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
         ];
     }
 
