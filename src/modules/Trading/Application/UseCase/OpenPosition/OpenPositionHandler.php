@@ -6,6 +6,8 @@ namespace App\Trading\Application\UseCase\OpenPosition;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
@@ -22,7 +24,6 @@ use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
-use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Helper\FloatHelper;
@@ -31,6 +32,7 @@ use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use RuntimeException;
@@ -57,6 +59,7 @@ final class OpenPositionHandler
         private readonly ExchangeAccountServiceInterface $accountService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly OrderServiceInterface $tradeService,
+        private readonly MarketBuyHandler $marketBuyHandler,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
@@ -110,15 +113,14 @@ final class OpenPositionHandler
         }
 
 # do market buy
-        $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
-        $marketBuyVolume = ExchangeOrder::roundedToMin($symbol, $marketBuyVolume, $this->ticker->indexPrice->value())->getVolume();
-        $marketBuyVolume = $symbol->roundVolumeUp($marketBuyVolume);
+        $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum);
 
         if ($entryDto->stopsGridsDefinition) {
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
         }
 
-        $this->tradeService->marketBuy($symbol, $positionSide, $marketBuyVolume);
+        $checksContext = TradingCheckContext::withCurrentPositionState($this->ticker, $this->currentlyOpenedPosition);
+        $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $positionSide, $marketBuyVolume), $checksContext, true);
 
         $this->entityManager->flush();
         $this->entityManager->commit();

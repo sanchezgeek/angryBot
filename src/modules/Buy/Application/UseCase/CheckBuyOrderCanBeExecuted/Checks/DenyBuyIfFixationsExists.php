@@ -46,6 +46,11 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
     {
         $orderDto = self::extractMarketBuyEntryDto($orderDto);
 
+//        $checkMustBeSkipped = $orderDto->force;
+//        if ($checkMustBeSkipped) {
+//            return false;
+//        }
+
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
         $position = $context->currentPositionState;
 
@@ -82,10 +87,12 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
         SymbolPrice $positionEntryPrice,
         string $reason,
     ): string {
+        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ' ') : '';
+
         return sprintf(
-            '%s | %s (%s) | entry=%s | %s',
+            '%s | %s(%s) | entry=%s | %s',
             $position,
-            BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
+            $identifierInfo,
             BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
             $positionEntryPrice,
             $reason

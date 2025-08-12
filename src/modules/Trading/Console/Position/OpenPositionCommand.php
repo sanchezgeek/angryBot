@@ -41,7 +41,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
     public const string PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 'depositPercentToRisk';
 
     public const string REMOVE_EXISTED_STOPS_OPTION = 'remove-existed-stops';
-    public const string WITHOUT_STOPS_OPTION = 'without-stops';
+    public const string WITHOUT_STOPS_OPTION = 'wS';
     public const string STOPS_GRID_DEFINITION = 'stops-grid';
     public const string REMEMBER_STOPS_GRID_DEFINITION = 'remember-stops-grid';
     public const string STOPS_GRID_DEFINITION_DEFAULT = 'default';
