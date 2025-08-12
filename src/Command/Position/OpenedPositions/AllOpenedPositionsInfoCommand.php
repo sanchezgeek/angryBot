@@ -52,6 +52,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Throwable;
+
 use function array_merge;
 use function sprintf;
 
@@ -66,7 +69,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
 
+    private const array CONNECTION_ERR_MESSAGES = [
+        'timestamp or recv_window param',
+        'Server Timeout',
+        'Idle timeout reached',
+    ];
     private const string DEFAULT_UPDATE_INTERVAL = '15';
+
     private const string DEFAULT_SAVE_CACHE_INTERVAL = '150';
 
     private const string SortCacheKey = 'opened_positions_sort';
@@ -209,41 +218,62 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $updateEnabled = $this->paramFetcher->getBoolOption(self::UPDATE_OPTION);
         $iteration = 0;
         do {
-            echo '...';
+            try {
+                echo '...';
+                $iteration++;
+                $this->cacheCollector = [];
+                $this->selectedCacheToShowDiffWith = $cache = $this->getCacheRecordToShowDiffWith();
+                $this->previousIterationCache = $prevCache = $previousIterationCache;
+                $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
+                $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
+                $saveCacheComment = $cacheComment && $iteration === 1;
+                $this->currentStateGonnaBeSaved =
+                    !$updateEnabled
+                    || $saveCacheComment
+                    || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
 
-            $iteration++;
-            $this->cacheCollector = [];
+                $this->doOut($cache, $prevCache);
 
-            $this->selectedCacheToShowDiffWith = $cache = $this->getCacheRecordToShowDiffWith();
-            $this->previousIterationCache = $prevCache = $previousIterationCache;
+                if ($this->currentStateGonnaBeSaved) {
+                    $cachedDataCacheKey = sprintf('opened_positions_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
+                    if ($saveCacheComment) {
+                        $cachedDataCacheKey .= '_' . $cacheComment;
+                    }
 
-            $this->symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
-
-            $cacheComment = $this->paramFetcher->getStringOption(self::FIRST_ITERATION_SAVE_CACHE_COMMENT, false);
-            $saveCacheComment = $cacheComment && $iteration === 1;
-            $this->currentStateGonnaBeSaved =
-                !$updateEnabled
-                || $saveCacheComment
-                || $iteration % $this->paramFetcher->getIntOption(self::SAVE_EVERY_N_ITERATION_OPTION) === 0;
-
-            $this->doOut($cache, $prevCache);
-
-            if ($this->currentStateGonnaBeSaved) {
-                $cachedDataCacheKey = sprintf('opened_positions_%s', $this->clock->now()->format('Y-m-d_H-i-s'));
-                if ($saveCacheComment) {
-                    $cachedDataCacheKey .= '_' . $cacheComment;
+                    $this->saveToCache($cachedDataCacheKey, $this->cacheCollector);
+                    $this->addSavedDataCacheKey($cachedDataCacheKey);
+                    if ($saveCacheComment) {
+                        $this->addManuallySavedDataCacheKey($cachedDataCacheKey);
+                    }
+                    OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
+                }
+                $previousIterationCache = $this->cacheCollector;
+                $updateEnabled && sleep($this->paramFetcher->getIntOption(self::UPDATE_INTERVAL_OPTION));
+            } catch (Throwable $error) {
+                $exception = $error;
+                while (($previous = $exception->getPrevious()) && ($previous instanceof TransportExceptionInterface)) {
+                    $exception = $previous;
                 }
 
-                $this->saveToCache($cachedDataCacheKey, $this->cacheCollector);
-                $this->addSavedDataCacheKey($cachedDataCacheKey);
-                if ($saveCacheComment) {
-                    $this->addManuallySavedDataCacheKey($cachedDataCacheKey);
+                $isConnectionException = false;
+
+                if ($exception instanceof TransportExceptionInterface) {
+                    $isConnectionException = true;
                 }
-                OutputHelper::print(sprintf('Cache saved as "%s"', $cachedDataCacheKey));
+
+                foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
+                    if (str_contains($error->getMessage(), $expectedMessage)) {
+                        $isConnectionException = true;
+                    }
+                }
+
+                if ($isConnectionException) {
+                    echo 'reconnecting ... ' . PHP_EOL;
+                    sleep(1);
+                } else {
+                    throw $exception;
+                }
             }
-            $previousIterationCache = $this->cacheCollector;
-
-            $updateEnabled && sleep($this->paramFetcher->getIntOption(self::UPDATE_INTERVAL_OPTION));
         } while ($updateEnabled);
 
         return Command::SUCCESS;
