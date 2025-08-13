@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Trading;
 
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice;
 use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
@@ -47,6 +48,19 @@ trait TradingParametersMocker
             symbol: $symbol,
             sourceStopLength: PredefinedStopLengthSelector::Long,
             period: 7
+        );
+    }
+
+    public static function mockTradingParametersForBuyOnLongDistanceTests(SymbolInterface $symbol, ?string $allowedPercentChange = null): void
+    {
+        $percent = $allowedPercentChange ?? '10%';
+
+        self::$tradingParametersProviderStub->addRegularOppositeBuyOrderLengthResult(
+            $symbol,
+            BuyOnLongDistanceAndCheckAveragePrice::DEFAULT_MAX_ALLOWED_PRICE_CHANGE,
+            TradingParametersProviderInterface::LONG_ATR_TIMEFRAME,
+            TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS,
+            Percent::string($percent)
         );
     }
 }
