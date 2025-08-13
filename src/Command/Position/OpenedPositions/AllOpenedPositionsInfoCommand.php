@@ -269,7 +269,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
                 if ($isConnectionException) {
                     echo 'reconnecting ... ' . PHP_EOL;
-                    sleep(1);
+                    sleep(5);
                 } else {
                     throw $exception;
                 }
