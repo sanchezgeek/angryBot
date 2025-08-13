@@ -14,7 +14,7 @@ use Throwable;
 
 final readonly class UnexpectedSandboxExecutionExceptionHandler
 {
-    public const int SECONDS_INTERVAL_BETWEEN_SYMBOL_AND_POSITION_SIDE_LOG = 600;
+    public const int INTERVAL_BETWEEN_ERROR_LOGS = 600;
 
     public function __construct(
         private AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
@@ -38,11 +38,9 @@ final readonly class UnexpectedSandboxExecutionExceptionHandler
         );
 
         $identifier = sprintf('sandboxError_appError_logging_%s_%s_%s', OutputHelper::shortClassName($order), $order->symbol->name(), $order->positionSide->value);
-//        if ($order->sourceOrder) {
-//            $identifier .= sprintf('_id_%d', $order->sourceOrder->getId());
-//        }
+        // if ($order->sourceOrder) $identifier .= sprintf('_id_%d', $order->sourceOrder->getId());
 
-        if ($this->attemptLimitCheckerProvider->get($identifier, self::SECONDS_INTERVAL_BETWEEN_SYMBOL_AND_POSITION_SIDE_LOG)->attemptIsAvailable()) {
+        if ($this->attemptLimitCheckerProvider->get($identifier, self::INTERVAL_BETWEEN_ERROR_LOGS)->attemptIsAvailable()) {
             $this->appErrorLogger->exception($e);
         }
 
