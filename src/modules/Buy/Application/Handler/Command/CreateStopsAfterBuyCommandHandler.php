@@ -56,7 +56,10 @@ final class CreateStopsAfterBuyCommandHandler
         $side = $buyOrder->getPositionSide();
         $volume = $buyOrder->getVolume();
 
-        $position = $this->positionService->getPosition($symbol, $side);
+        if (!$position = $this->positionService->getPosition($symbol, $side)) {
+            return [];
+        }
+
         $ticker = $this->exchangeService->ticker($symbol);
 
         $context = [];
@@ -74,7 +77,7 @@ final class CreateStopsAfterBuyCommandHandler
             $triggerPrice = $side->isShort() ? $buyOrderPrice + $specifiedStopDistance : $buyOrderPrice - $specifiedStopDistance;
             $stop = $this->dispatchCommand(
                 new CreateStop(
-                    symbol: $position->symbol,
+                    symbol: $symbol,
                     positionSide: $side,
                     volume: $volume,
                     price: $triggerPrice,
