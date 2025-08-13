@@ -26,7 +26,11 @@ final readonly class CreateOppositeBuyOrdersListener
         }
 
         $this->messageBus->dispatch(
-            new CreateBuyOrderAfterStop($stop->getId(), $prevPositionState->size)
+            new CreateBuyOrderAfterStop(
+                $stop->getId(),
+                $prevPositionState->size,
+                $prevPositionState->entryPrice,
+            )
         );
     }
 

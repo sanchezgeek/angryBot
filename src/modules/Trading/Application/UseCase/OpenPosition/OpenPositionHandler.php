@@ -119,7 +119,7 @@ final class OpenPositionHandler
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
         }
 
-        $checksContext = TradingCheckContext::withCurrentPositionState($this->ticker, $this->currentlyOpenedPosition);
+        $checksContext = TradingCheckContext::withTicker($this->ticker);
         $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $positionSide, $marketBuyVolume), $checksContext, true);
 
         $this->entityManager->flush();

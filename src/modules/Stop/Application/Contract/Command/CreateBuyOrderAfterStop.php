@@ -8,7 +8,8 @@ final class CreateBuyOrderAfterStop
 {
     public function __construct(
         public int $stopId,
-        public float $prevPositionSize
+        public float $prevPositionSize,
+        public float $prevPositionEntryPrice,
     ) {
     }
 }

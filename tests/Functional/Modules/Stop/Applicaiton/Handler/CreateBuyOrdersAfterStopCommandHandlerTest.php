@@ -79,7 +79,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $this->haveTicker($ticker);
         $this->applyDbFixtures(new StopFixture($stop));
 
-        $this->runMessageConsume(new CreateBuyOrderAfterStop($stop->getId(), $wholePositionSize));
+        $this->runMessageConsume(new CreateBuyOrderAfterStop($stop->getId(), $wholePositionSize, $ticker->markPrice->value()));
 
         $this->seeBuyOrdersInDb(...$expectedBuyOrders);
     }

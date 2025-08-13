@@ -6,7 +6,6 @@ namespace App\Stop\Application\Handler;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
@@ -58,8 +57,7 @@ final class CreateBuyOrderAfterStopCommandHandler
 
         $refPrice = $stopPrice;
         if ($isAdditionalFixationsStop) {
-            $position = $this->positionService->getPosition($symbol, $side);
-            $refPrice = $position->entryPrice();
+            $refPrice = $symbol->makePrice($command->prevPositionEntryPrice);
         }
 
         $orders = [];
@@ -134,7 +132,6 @@ final class CreateBuyOrderAfterStopCommandHandler
     }
 
     public function __construct(
-        private readonly PositionServiceInterface $positionService,
         private readonly StopRepository $stopRepository,
         private readonly TradingParametersProviderInterface $tradingParametersProvider,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
