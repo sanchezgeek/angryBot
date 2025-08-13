@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Mixin\Trading;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -46,7 +46,7 @@ trait TradingParametersMocker
         self::$tradingParametersProviderStub->addRegularPredefinedStopLengthResult(
             percentResult: Percent::string($percent),
             symbol: $symbol,
-            sourceStopLength: PredefinedStopLengthSelector::Long,
+            sourceStopLength: LiquidationDynamicParameters::STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE,
             period: 7
         );
     }

@@ -15,10 +15,5 @@ liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BNBUSDT]: 2
 
 # @todo Must be (somehow) calculated automatically based on symbol volatility statistics (+ based on some `aggressive` / `conservative` [selected automatically in some situation and by config in common cases])
 liquidationHandlerSettings.criticalDistancePnl: 200
-liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT]: 60
-liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT][side=sell]: 60 # as example of default for symbol and side
+liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT]: 50
 liquidationHandlerSettings.criticalDistancePnl[symbol=ETHUSDT]: 80
-liquidationHandlerSettings.criticalDistancePnl[symbol=ARCUSDT]: 200
-liquidationHandlerSettings.criticalDistancePnl[symbol=FARTCOINUSDT]: 200
-
-

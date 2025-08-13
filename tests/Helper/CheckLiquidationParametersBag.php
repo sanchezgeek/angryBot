@@ -26,19 +26,18 @@ class CheckLiquidationParametersBag
     /**
      * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
      */
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
 
     /**
      * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]
      */
-    private const CRITICAL_DISTANCE_PNLS = [
-        SymbolEnum::BTCUSDT->value => 60,
+    private const array CRITICAL_DISTANCE_PNLS = [
+        SymbolEnum::BTCUSDT->value => 50,
         SymbolEnum::ETHUSDT->value => 80,
-        SymbolEnum::ARCUSDT->value => 200,
         'other' => 200
     ];
 
-    public const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
+    public const int TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
 
     private function __construct(
         private readonly AppSettingsProviderInterface $settingsProvider,

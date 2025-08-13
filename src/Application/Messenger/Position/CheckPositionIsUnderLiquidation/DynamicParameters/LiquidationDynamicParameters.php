@@ -32,6 +32,7 @@ use RuntimeException;
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
     public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const PredefinedStopLengthSelector STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE = PredefinedStopLengthSelector::ModerateLong;
 
     private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
@@ -189,7 +190,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         $regular = PnlHelper::transformPriceChangeToPnlPercent(
             $this->tradingParametersProvider->regularPredefinedStopLength(
                 symbol: $this->symbol,
-                predefinedStopLength: PredefinedStopLengthSelector::Long,
+                predefinedStopLength: self::STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE,
                 period: $period
             )
         )->value();
