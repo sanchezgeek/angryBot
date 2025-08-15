@@ -14,6 +14,8 @@ use App\Tests\Factory\TickerFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * @group checks
+ *
  * @covers \App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion
  */
 final class PositionLiquidationIsSafeAssertionTest extends TestCase
@@ -25,7 +27,7 @@ final class PositionLiquidationIsSafeAssertionTest extends TestCase
     {
         self::assertEquals(
             $expectedResult,
-            PositionLiquidationIsSafeAssertion::assert($position, $ticker, $safeDistance, $strategy)
+            PositionLiquidationIsSafeAssertion::assert($position, $ticker, $safeDistance, $strategy)->success
         );
     }
 

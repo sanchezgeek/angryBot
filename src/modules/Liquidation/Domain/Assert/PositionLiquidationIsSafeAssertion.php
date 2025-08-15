@@ -6,6 +6,7 @@ namespace App\Liquidation\Domain\Assert;
 
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Liquidation\Domain\Assert\Result\PositionLiquidationIsSafeAssertionResult;
 
 /**
  * @see \App\Tests\Unit\Modules\Liquidation\Domain\PositionLiquidationIsSafeAssertionTest
@@ -17,15 +18,16 @@ final class PositionLiquidationIsSafeAssertion
         Ticker $ticker,
         float $safeDistance,
         ?SafePriceAssertionStrategyEnum $strategy = SafePriceAssertionStrategyEnum::Conservative
-    ): bool {
+    ): PositionLiquidationIsSafeAssertionResult {
         $liquidationPrice = $position->liquidationPrice();
+
+        $markPrice = $ticker->markPrice;
 
         // @todo | liquidation | null
         if ($liquidationPrice->eq(0)) {
-            return true;
+            return new PositionLiquidationIsSafeAssertionResult(true, $markPrice->value());
         }
 
-        $markPrice = $ticker->markPrice;
         if ($position->isLiquidationPlacedBeforeEntry()) {
             $withPrice = $markPrice;
         } elseif ($position->isPositionInLoss($markPrice)) {
@@ -39,9 +41,11 @@ final class PositionLiquidationIsSafeAssertion
         }
 
         if ($position->isShort()) {
-            return $liquidationPrice->value() - $withPrice->value() >= $safeDistance;
+            $result = $liquidationPrice->value() - $withPrice->value() >= $safeDistance;
+        } else {
+            $result = $withPrice->value() - $liquidationPrice->value() >= $safeDistance;
         }
 
-        return $withPrice->value() - $liquidationPrice->value() >= $safeDistance;
+        return new PositionLiquidationIsSafeAssertionResult($result, $withPrice->value());
     }
 }

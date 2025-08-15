@@ -137,7 +137,9 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
         $safePriceAssertionStrategy = $this->settings->required(
             SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side)
         );
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
+        $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;
 
         $info = sprintf(
             '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
@@ -146,7 +148,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
             $stop->getVolume(),
             $executionPrice,
             $mainPositionLiquidation,
-            $mainPositionLiquidation->deltaWith($withPrice),
+            $mainPositionLiquidation->deltaWith($usedPrice),
             $symbol->makePrice($safeDistance),
         );
 

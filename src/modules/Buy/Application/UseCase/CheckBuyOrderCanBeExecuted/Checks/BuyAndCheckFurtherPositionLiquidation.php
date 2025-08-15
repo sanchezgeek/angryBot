@@ -133,7 +133,9 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($symbol, $positionSide, $withPrice->value());
 // @todo | settings | it also can be setting for whole class to define hot to retrieve setting (with alternatives / exact)
         $safePriceAssertionStrategy = $this->settings->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide));
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
+        $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;
 
         $info = sprintf(
             '%s | %s(%s) | liq=%s | Δ=%s, safeΔ=%s',
@@ -141,7 +143,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
             $identifierInfo,
             BuyOrderInfoHelper::shortInlineInfo($order->volume, $executionPrice),
             $liquidationPrice,
-            $liquidationPrice->deltaWith($withPrice),
+            $liquidationPrice->deltaWith($usedPrice),
             $symbol->makePrice($safeDistance)
         );
 
