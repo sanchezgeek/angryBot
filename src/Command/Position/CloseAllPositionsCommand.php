@@ -113,7 +113,15 @@ class CloseAllPositionsCommand extends AbstractCommand
 
         if ($this->dry) {
             $map = array_map(
-                static fn (Position $position) => sprintf('%s => %s, %s', $position->getCaption(), $position->unrealizedPnl, $position->initialMargin),
+                static fn(
+                    Position $position
+                ) => sprintf(
+                    '%s (leverage=%f) => unrealized=%s, im=%s',
+                    $position->getCaption(),
+                    $position->leverage->value(),
+                    $position->unrealizedPnl,
+                    $position->initialMargin->value()
+                ),
                 $candidates
             );
 
