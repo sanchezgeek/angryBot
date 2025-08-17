@@ -18,6 +18,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class CheckPassedLiquidationDistanceHandler
 {
+    public const int THRESHOLD_FROM_ALLOWED = 10;
+
     public function __construct(
         private ByBitLinearPositionService $positionService,
         private AppNotificationsService $appNotificationsService,
@@ -40,17 +42,17 @@ final readonly class CheckPassedLiquidationDistanceHandler
             $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $position->entryPrice, false);
             $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $position->entryPrice, false);
             if ($distanceBetweenLiquidationAndTickerPercentOfEntry->value() < $initialLiquidationDistancePercentOfEntry->value()) {
-                $allowedPercent = $this->getAllowedPassedLiquidationDistance($position, $markPrice);
+                $alarmPercent = $this->getAlarmPassedDistance($position, $markPrice);
                 $passedLiquidationDistancePercent = Percent::fromPart(($initialLiquidationDistancePercentOfEntry->value() - $distanceBetweenLiquidationAndTickerPercentOfEntry->value()) / $initialLiquidationDistancePercentOfEntry->value());
 
-                if ($passedLiquidationDistancePercent->value() > $allowedPercent) {
-                    $this->appNotificationsService->notify(sprintf('%s: passed distance > %s', $symbol->name(), $allowedPercent));
+                if ($passedLiquidationDistancePercent->value() > $alarmPercent) {
+                    $this->appNotificationsService->notify(sprintf('%s: passed distance > %s', $symbol->name(), $alarmPercent));
                 }
             }
         }
     }
 
-    private function getAllowedPassedLiquidationDistance(Position $position, SymbolPrice $currentPrice): float
+    private function getAlarmPassedDistance(Position $position, SymbolPrice $currentPrice): float
     {
         $symbol = $position->symbol;
         $side = $position->side;
@@ -60,7 +62,10 @@ final readonly class CheckPassedLiquidationDistanceHandler
         }
 
         $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, Ticker::fakeForPrice($symbol, $currentPrice));
+        $percentOfLiquidationDistanceToAddStop = $liquidationParameters->percentOfLiquidationDistanceToAddStop()->value();
 
-        return $liquidationParameters->percentOfLiquidationDistanceToAddStop()->value();
+        $allowed = 100 - $percentOfLiquidationDistanceToAddStop;
+
+        return $allowed - self::THRESHOLD_FROM_ALLOWED;
     }
 }
