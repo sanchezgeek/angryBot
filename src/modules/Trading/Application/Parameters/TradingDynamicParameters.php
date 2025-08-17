@@ -17,6 +17,7 @@ use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProvide
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
+use App\TechnicalAnalysis\Application\Helper\TA;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -76,11 +77,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         if ($oneDaySignificantChangePercentOverride = $this->settingsProvider->optional(SettingAccessor::exact(PriceChangeSettings::SignificantChange_OneDay_PricePercent, $symbol))) {
             return Percent::notStrict($oneDaySignificantChangePercentOverride * $passedPartOfDay);
         } else {
-            $timeFrame = self::LONG_ATR_TIMEFRAME;
-            $atrPeriod = self::LONG_ATR_PERIOD;
-
-            $ta = $this->taProvider->create($symbol, $timeFrame);
-            $baseATR = $ta->atr($atrPeriod)->atr;
+            $baseATR = TA::atr($symbol, self::LONG_ATR_TIMEFRAME, self::LONG_ATR_PERIOD)->atr;
 
             $multiplier = $this->settingsProvider->required(
                 SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantChange_OneDay_AtrBaseMultiplier, $symbol)

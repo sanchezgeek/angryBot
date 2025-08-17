@@ -123,7 +123,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     /** @var array<Position[]> */
     private array $positions;
     /** @var float[] */
-    private array $ims;
+    private array $ims = [];
 
     /** @var array<string, SymbolPrice> */
     private array $lastMarkPrices;

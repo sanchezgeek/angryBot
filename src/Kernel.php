@@ -6,6 +6,7 @@ use App\Infrastructure\DependencyInjection\CompilerPass\AddPositionServiceToComm
 use App\Infrastructure\DependencyInjection\CompilerPass\AddSymbolEntityProviderToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\AddTradingParametersToCommandsCompilerPass;
 use App\Infrastructure\DependencyInjection\CompilerPass\RegisterAppDynamicParametersCompilerPass;
+use App\Infrastructure\DependencyInjection\GetServiceHelper;
 use App\TechnicalAnalysis\Infrastructure\DependencyInjection\ReplaceCacheCompilerPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -24,5 +25,12 @@ class Kernel extends BaseKernel
         $container->addCompilerPass(new AddPositionServiceToCommandsCompilerPass());
         $container->addCompilerPass(new RegisterAppDynamicParametersCompilerPass());
         $container->addCompilerPass(new ReplaceCacheCompilerPass());
+    }
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        GetServiceHelper::setContainer($this->getContainer());
     }
 }

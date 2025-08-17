@@ -138,7 +138,7 @@ class OutputHelper
     public static function printTimeDiff(string $desc, float $start): void
     {
         self::print(
-            sprintf('~~~ %s time diff: %.10f ~~~', $desc, self::timeDiff($start))
+            sprintf('   ~~~ %s time diff: %.3f ~~~', $desc, self::timeDiff($start))
         );
     }
 

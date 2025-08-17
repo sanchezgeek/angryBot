@@ -103,7 +103,7 @@ final readonly class PushAllMainPositionsStopsHandler
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
-        self::timeDiffInfo('from begin to end', $start); // $profilingContext->registerNewPoint($spendTimeMsg);
+        self::timeDiffInfo($start); // $profilingContext->registerNewPoint($spendTimeMsg);
     }
 
     private function warmupTickers(): void
@@ -147,9 +147,9 @@ final readonly class PushAllMainPositionsStopsHandler
         return array_pop($args);
     }
 
-    private static function timeDiffInfo(string $desc, float $startPoint): void
+    private static function timeDiffInfo(float $startPoint, ?string $desc = null): void
     {
-        OutputHelper::printTimeDiff(sprintf('PushMainStops: %s', $desc), $startPoint);
+        OutputHelper::printTimeDiff(sprintf('PushMainStops%s', $desc ? sprintf(': %s', $desc) : ''), $startPoint);
     }
 
     public function __construct(
