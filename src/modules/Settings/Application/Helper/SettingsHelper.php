@@ -13,6 +13,16 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class SettingsHelper
 {
+    public static function exactlyRoot(AppSettingInterface $setting, bool $required = false): mixed
+    {
+        $settings = self::getSettingsService();
+
+        return $required
+            ? $settings->required(SettingAccessor::exact($setting))
+            : $settings->optional(SettingAccessor::exact($setting))
+        ;
+    }
+
     public static function getForSideOrSymbol(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed
     {
         $settings = self::getSettingsService();

@@ -24,7 +24,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage;
 use App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage;
-use App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange;
+use App\Screener\Application\Job\CheckSignificantPriceChangeJob;
 use App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages;
 use App\Service\Infrastructure\Job\Ping\PingMessages;
 use App\Service\Infrastructure\Job\RestartWorker\RestartWorkerMessage;
@@ -32,8 +32,8 @@ use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositi
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
+use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
 use App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Worker\AppContext;
 use App\Worker\RunningWorker;
@@ -138,12 +138,12 @@ final class SchedulerFactory
         return [
             # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
 
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 1))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 2))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 3))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 4))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 5))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 1))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 2))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 3))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 4))),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 5))),
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 6))),
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 7))),
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 8))),

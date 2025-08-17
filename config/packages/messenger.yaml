@@ -26,7 +26,7 @@ framework:
             App\Bot\Application\Messenger\Job\Cache\UpdateTicker: tickers_updater_async
 
             # market
-            App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange: async
+            App\Screener\Application\Job\CheckSignificantPriceChangeJob: async
             App\Application\Messenger\Market\TransferFundingFees: async
 
             # orders
