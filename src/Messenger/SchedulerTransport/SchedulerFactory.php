@@ -15,7 +15,6 @@ use App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBu
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushBuyOrders;
 use App\Bot\Application\Messenger\Job\Utils\MoveStops;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Clock\ClockInterface;
@@ -33,7 +32,7 @@ use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositi
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Trading\Application\Symbol\SymbolProvider;
-use App\Watch\Application\Job\CheckDistance\CheckPassedLiquidationDistance;
+use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit;
 use App\Worker\AppContext;

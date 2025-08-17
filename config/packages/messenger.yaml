@@ -60,7 +60,8 @@ framework:
             # liquidation
             App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage: async
 
-            App\Watch\Application\Job\CheckDistance\CheckPassedLiquidationDistance: async_high
+            # watch
+            App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance: async_high
 
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async

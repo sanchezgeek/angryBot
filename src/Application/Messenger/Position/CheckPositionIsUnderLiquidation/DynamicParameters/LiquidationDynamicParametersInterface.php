@@ -6,6 +6,7 @@ namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\Dyn
 
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Value\Percent\Percent;
 
 interface LiquidationDynamicParametersInterface
 {
@@ -21,4 +22,6 @@ interface LiquidationDynamicParametersInterface
 
     public function addOppositeBuyOrdersAfterStop(): bool;
     public function warningDistancePnlPercent(): float;
+
+    public function percentOfLiquidationDistanceToAddStop(): Percent;
 }
