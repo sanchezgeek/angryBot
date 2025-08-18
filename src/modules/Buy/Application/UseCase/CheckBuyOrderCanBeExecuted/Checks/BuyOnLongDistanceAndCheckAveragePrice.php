@@ -31,7 +31,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
     use CheckBasedOnCurrentPositionState;
 
     public const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
-    public const int MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE = 10;
+    public const float MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE = 12.5;
 
     public const string ALIAS = 'BUY/AVG-PRICE_check';
 
