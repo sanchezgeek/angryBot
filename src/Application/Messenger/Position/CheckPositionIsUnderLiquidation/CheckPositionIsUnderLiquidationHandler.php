@@ -84,6 +84,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
     public function __invoke(CheckPositionIsUnderLiquidation $message): void
     {
+//        $start = OutputHelper::currentTimePoint();
         $this->activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
         $this->positions = [];
 
@@ -138,6 +139,8 @@ final class CheckPositionIsUnderLiquidationHandler
                 $this->appErrorLogger->exception($e, sprintf('[CheckPositionIsUnderLiquidationHandler] Got error when try to handle %s', $message->symbol->name()));
             }
         }
+
+//        self::timeDiffInfo($start);
     }
 
     public function handleMessage(CheckPositionIsUnderLiquidation $message): void
@@ -216,6 +219,7 @@ final class CheckPositionIsUnderLiquidationHandler
 
                 $closeByMarketIfDistanceLessThan = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice());
                 if ($distanceWithLiquidation <= $closeByMarketIfDistanceLessThan) {
+                    // @todo | liquidation | liquidation-handler | mb strict add condStop in any case? or actualize (ta)
                     $this->orderService->closeByMarket($position, $stopQty);
                 } else {
 //                    if ($decreaseStopDistance) $stopPriceDistance = $stopPriceDistance * 0.5;
@@ -455,6 +459,11 @@ final class CheckPositionIsUnderLiquidationHandler
     public function setOnlyRemoveStale(bool $value): void
     {
         $this->onlyRemoveStale = $value;
+    }
+
+    private static function timeDiffInfo(float $startPoint, ?string $desc = null): void
+    {
+        OutputHelper::printTimeDiff(sprintf('           LiqHandler%s', $desc ? sprintf(': %s', $desc) : ''), $startPoint);
     }
 
 //    public const ADDITIONAL_STOP_TRIGGER_DEFAULT_DELTA = 150;
