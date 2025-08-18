@@ -52,9 +52,9 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
         foreach ($this->exchangeService->getAllTickers($message->settleCoin) as $ticker) {
             $symbol = $ticker->symbol;
 
-//            if (in_array($symbol->name(), $openedPositionsSymbols, true)) {
-//                continue;
-//            }
+            if (in_array($symbol->name(), $openedPositionsSymbols, true)) {
+                continue;
+            }
 
             if ($this->disabledFor($symbol)) {
                 continue;
