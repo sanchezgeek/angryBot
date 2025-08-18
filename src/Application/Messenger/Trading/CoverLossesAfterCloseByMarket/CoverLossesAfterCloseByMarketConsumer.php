@@ -32,12 +32,12 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 readonly class CoverLossesAfterCloseByMarketConsumer
 {
-    public const int THRESHOLD = 4;
+    public const float THRESHOLD = 1;
 
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
-    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 700;
+    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 800;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
-    public const float WHOLE_LOSS_MULTIPLIER = 0.7;
+    public const float WHOLE_LOSS_MULTIPLIER = 0.88;
     public const PredefinedStopLengthSelector FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER = PredefinedStopLengthSelector::Short;
 
     public function __construct(
@@ -128,23 +128,18 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         // @todo | cover-losses | найти самые профитные, не закрывать раньше времени (или не надо?) (максимальный-минимальный профит...)
         foreach ($positions as $symbolRaw => $symbolPositions) {
-            if ($symbolRaw === $symbol->name()) {
-                continue;
-            }
+            if ($symbolRaw === $symbol->name()) continue;
 
+            // @todo | helpers | some helper for get main position
             $first = $symbolPositions[array_key_first($symbolPositions)];
             $hedge = $first->getHedge();
-
-            if ($hedge?->isEquivalentHedge()) {
-                continue;
-            }
-
+            if ($hedge?->isEquivalentHedge()) continue;
             $main = $hedge?->mainPosition ?? $first;
 
             $last = $lastPrices[$symbolRaw];
             $mainPositionPnlPercent = $last->getPnlPercentFor($main);
             // @todo | cover-losses | use ta
-            if ($mainPositionPnlPercent > self::PNL_PERCENT_TO_CLOSE_POSITIONS) {
+            if ($mainPositionPnlPercent >= self::PNL_PERCENT_TO_CLOSE_POSITIONS) {
                 $candidates[$symbolRaw] = $main;
             }
         }
