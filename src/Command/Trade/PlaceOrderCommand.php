@@ -275,7 +275,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                         $try = false;
                     } catch (PositionIdxNotMatch $e) {
                         if ($this->io->confirm(
-                            sprintf('Got "%s" error while do marketBuy. Need to change positionIdx to "both" sides mode. Continue?', $e->getMessage())
+                            sprintf('!!! Got "%s" error while do marketBuy. Need to change positionIdx to "both" sides mode. Continue?', $e->getMessage())
                         )) {
                             $this->positionService->switchPositionMode($symbol, PositionMode::BOTH_SIDES_MODE);
                             $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
@@ -286,9 +286,15 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                         $cost = $this->orderCostCalculator->totalBuyCost($order, new Leverage(100), $this->getPositionSide());
 
                         $diff = $cost->sub($currentContract->available);
-                        $this->exchangeAccountService->interTransferFromSpotToContract($symbol->associatedCoin(), $diff->value());
+                        try {
+                            $this->exchangeAccountService->interTransferFromSpotToContract($symbol->associatedCoin(), $diff->value());
+                        } catch (Throwable $e) {
+                            OutputHelper::print(sprintf('!!! Got "%s" error while trying to interTransferFromSpotToContract %s', $e->getMessage(), $diff->value()));
+                            $try = false;
+                        }
                     } catch (Throwable $e) {
-                        OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $symbol->name(), $positionSide->title()));
+                        OutputHelper::print(sprintf('!!! Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $symbol->name(), $positionSide->title()));
+                        $try = false;
                     }
                 }
 
