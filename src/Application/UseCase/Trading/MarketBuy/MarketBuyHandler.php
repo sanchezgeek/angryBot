@@ -42,12 +42,18 @@ readonly class MarketBuyHandler
      * @throws UnknownByBitApiErrorException
      * @throws OrderDoesNotMeetMinimumOrderValue
      */
-    public function handle(MarketBuyEntryDto $dto, TradingCheckContext $checksContext): string
+    public function handle(MarketBuyEntryDto $dto, ?TradingCheckContext $checksContext = null): string
     {
         $symbol = $dto->symbol;
+
         $ticker = $this->exchangeService->ticker($symbol);
 
-        $checksContext->ticker = $ticker;
+        if (!$checksContext) {
+            $checksContext = TradingCheckContext::withTicker($ticker);
+        } else {
+            $checksContext->ticker = $ticker;
+        }
+
         $checksResult = $this->checks->check($dto, $checksContext);
 
         if (!$checksResult->success) {

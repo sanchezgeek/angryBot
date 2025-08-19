@@ -3,6 +3,8 @@
 namespace App\Command\Trade;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
@@ -267,7 +269,9 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                     $symbol = $order->getSymbol();
 
                     try {
-                        $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
+                        $this->marketBuyHandler->handle(
+                            new MarketBuyEntryDto($symbol, $positionSide, $order->getVolume())
+                        );
                         $try = false;
                     } catch (PositionIdxNotMatch $e) {
                         if ($this->io->confirm(
@@ -329,6 +333,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
 
     public function __construct(
         private readonly OrderServiceInterface $tradeService,
+        private readonly MarketBuyHandler $marketBuyHandler,
         private readonly StopServiceInterface $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         ByBitLinearPositionService $positionService,
