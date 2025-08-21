@@ -5,4 +5,4 @@ liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 100
 
 liquidationHandlerSettings.warningDistancePnlPercent.max: 1500
 liquidationHandlerSettings.warningDistancePnlPercent.atr.period: 7
-liquidationHandlerSettings.warningDistancePnlPercent.atr.multiplier: 0.5
+liquidationHandlerSettings.warningDistancePnlPercent.atr.multiplier: 0.75

@@ -32,7 +32,7 @@ use RuntimeException;
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
     public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
-    public const PredefinedStopLengthSelector STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE = PredefinedStopLengthSelector::ModerateLong;
+    public const PredefinedStopLengthSelector STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE = PredefinedStopLengthSelector::Long;
 
     private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
