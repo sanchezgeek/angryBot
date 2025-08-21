@@ -73,6 +73,8 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
 
     public const WITHOUT_CONFIRMATION_OPTION = 'y';
 
+    public const string FORCE_BUY_OPTION = 'force';
+
     protected function configure(): void
     {
         $this
@@ -82,6 +84,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
             ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%. Use [`from` + `to` + `step`], if you need place orders in price range (actual for `limitTP` and `delayedTP` modes)')
             ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `from` + `to`)')
             ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
+            ->addOption(self::FORCE_BUY_OPTION, null, InputOption::VALUE_NEGATABLE, 'Force buy?')
             ->configurePriceRangeArgs()
         ;
     }
@@ -206,6 +209,8 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
      */
     private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, ?string $mode = null): void
     {
+        $force = $this->paramFetcher->getBoolOption(self::FORCE_BUY_OPTION);
+
         if ($mode === 'ofPosition' && !$volume instanceof Percent) {
             throw new InvalidArgumentException(
                 sprintf('Invalid usage: when selected `%s` mode, $volume argument must be of type Percent', $mode),
@@ -270,8 +275,9 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
 
                     try {
                         $this->marketBuyHandler->handle(
-                            new MarketBuyEntryDto($symbol, $positionSide, $order->getVolume())
+                            new MarketBuyEntryDto($symbol, $positionSide, $order->getVolume(), $force)
                         );
+
                         $try = false;
                     } catch (PositionIdxNotMatch $e) {
                         if ($this->io->confirm(
