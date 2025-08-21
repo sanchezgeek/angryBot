@@ -7,6 +7,8 @@ namespace App\Screener\Application\EventListener;
 use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
+use App\Screener\Application\Settings\ScreenerNotificationsSettings;
+use App\Settings\Application\Helper\SettingsHelper;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
@@ -17,6 +19,10 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
+        if (SettingsHelper::exactlyRoot(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled) !== true) {
+            return;
+        }
+
         $info = $event->info;
         $searchOnDaysDelta = $event->foundWhileSearchOnDaysDelta;
         $symbol = $info->info->symbol;
