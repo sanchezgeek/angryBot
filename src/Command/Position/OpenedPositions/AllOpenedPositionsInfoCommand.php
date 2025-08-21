@@ -359,7 +359,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         if ($this->bestWorstNote) {
-            $bottomCells = array_merge($bottomCells, [Cell::colspan(4, $this->bestWorstNote), '', '']);
+            $bottomCells = array_merge($bottomCells, [Cell::colspan(6, $this->bestWorstNote)]);
         } else {
             $bottomCells = array_merge($bottomCells, ['', '', '', '']);
         }
@@ -735,6 +735,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         $sortBy = $this->sortBy;
+        $maxChangeMode = 'as-is'; // $maxChangeMode = 'highlight';
 
         $symbolsToWatch = $this->symbolsToWatch;
         if (
@@ -754,10 +755,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 if ($maxChangeMapWithPrevCache) {
                     asort($maxChangeMapWithPrevCache);
 
-                    $maxChangeSymbolsWithPrevCache = array_keys($maxChangeMapWithPrevCache);
-                    if ($last = end($maxChangeSymbolsWithPrevCache)) {
-                        $maxChangeMap = array_diff($maxChangeMap, [$last]);
-                        $maxChangeMap[] = $last;
+                    $lastSymbol = array_key_last($maxChangeMapWithPrevCache);
+
+                    if ($maxChangeMode === 'highlight' && $lastSymbol) {
+                        $maxChangeMap = array_diff($maxChangeMap, [$lastSymbol]);
+                        $maxChangeMap[] = $lastSymbol;
                     }
 
                     if ($byMaxPositiveChange ?? null) {
@@ -773,33 +775,20 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
                         $firstSymbol = array_key_first($maxChangeMapWithPrevCacheByTrueIm);
                     }
+                    $bestWorstNotes = [];
 
                     if ($firstSymbol) {
                         $sign = $byMaxNegativeChange ? -1 : 1;
-                        $pnl = $sign * $maxChangeMapWithPrevCache[$firstSymbol];
+                        $bestWorstNotes[] = $this->bestWorstSymbolInfo($firstSymbol, $byMaxNegativeChange, $maxChangeMapWithPrevCache, $totalUnrealized, $maxChangeMap, $sign);
+                    }
 
-                        $symbol = $this->symbolProvider->getOrInitialize($firstSymbol);
-                        $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
+                    if ($maxChangeMode === 'as-is' && $lastSymbol) {
+                        $sign = $byMaxNegativeChange ? 1 : -1;
+                        $bestWorstNotes[] = $this->bestWorstSymbolInfo($lastSymbol, !$byMaxNegativeChange, $maxChangeMapWithPrevCache, $totalUnrealized, $maxChangeMap, $sign);
+                    }
 
-                        if ($byMaxNegativeChange) {
-                            $b = 0; $a = abs($pnl);
-                        } else {
-                            $a = 0; $b = abs($pnl);
-                        }
-
-                        $totalSymbolPnl = $totalUnrealized[$symbol->name()];
-                        $pnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $totalSymbolPnl));
-                        $pnlContent = $totalSymbolPnl < 0 ? CTH::colorizeText($pnlContent, 'red-text') : $pnlContent;
-
-                        $index = array_search($firstSymbol, $maxChangeMap);
-
-                        $this->bestWorstNote = sprintf(
-                            '[%d] %s:   %s (%s)',
-                            $index,
-                            $this->extraSymbolText($firstSymbol),
-                            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange),
-                            $pnlContent
-                        );
+                    if ($bestWorstNotes) {
+                        $this->bestWorstNote = implode(' | ', $bestWorstNotes);
                     }
                 }
 
@@ -833,6 +822,34 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         }
 
         return $this->rawSymbolsToValueObjects(...$symbolsRaw);
+    }
+
+    private function bestWorstSymbolInfo(string $symbolRaw, bool $byMaxNegativeChange, array $maxChangeMapWithPrevCache, array $totalUnrealized, array $maxChangeMap, int $sign)
+    {
+        $pnl = $sign * $maxChangeMapWithPrevCache[$symbolRaw];
+
+        $symbol = $this->symbolProvider->getOrInitialize($symbolRaw);
+        $pnlFormatter = static fn(float $pnl) => (string) self::formatPnl((new CoinAmount($symbol->associatedCoin(), $pnl)))->setSigned(true);
+
+        if ($byMaxNegativeChange) {
+            $b = 0; $a = abs($pnl);
+        } else {
+            $a = 0; $b = abs($pnl);
+        }
+
+        $totalSymbolPnl = $totalUnrealized[$symbol->name()];
+        $pnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $totalSymbolPnl));
+        $pnlContent = $totalSymbolPnl < 0 ? CTH::colorizeText($pnlContent, 'red-text') : $pnlContent;
+
+        $index = array_search($symbolRaw, $maxChangeMap);
+
+        return sprintf(
+            '[%d] %s:   %s (%s)',
+            $index,
+            $this->extraSymbolText($symbolRaw),
+            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange),
+            $pnlContent
+        );
     }
 
     /**
