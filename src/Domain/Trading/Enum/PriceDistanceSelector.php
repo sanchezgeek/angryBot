@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Trading\Enum;
 
-enum PredefinedStopLengthSelector: string
+enum PriceDistanceSelector: string
 {
+    case VeryVeryShort = 'very-very-short';
     case VeryShort = 'very-short';
     case Short = 'short';
     case ModerateShort = 'moderate-short';
@@ -13,4 +14,6 @@ enum PredefinedStopLengthSelector: string
     case ModerateLong = 'moderate-long';
     case Long = 'long';
     case VeryLong = 'very-long';
+    case VeryVeryLong = 'very-very-long';
+    case DoubleLong = 'double-long';
 }

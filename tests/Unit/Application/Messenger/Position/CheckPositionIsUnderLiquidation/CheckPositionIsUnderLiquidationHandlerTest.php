@@ -20,7 +20,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;

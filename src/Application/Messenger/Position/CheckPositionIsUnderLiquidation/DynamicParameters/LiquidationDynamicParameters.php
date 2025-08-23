@@ -12,7 +12,7 @@ use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
@@ -32,7 +32,7 @@ use RuntimeException;
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
     public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
-    public const PredefinedStopLengthSelector STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE = PredefinedStopLengthSelector::Long;
+    public const PriceDistanceSelector DISTANCE_FOR_CALCULATE_WARNING_RANGE = PriceDistanceSelector::Long;
 
     private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
@@ -188,9 +188,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         );
 
         $regular = PnlHelper::transformPriceChangeToPnlPercent(
-            $this->tradingParametersProvider->regularPredefinedStopLength(
+            $this->tradingParametersProvider->stopLength(
                 symbol: $this->symbol,
-                predefinedStopLength: self::STOP_LENGTH_SELECTOR_FOR_CALCULATE_WARNING_RANGE,
+                distanceSelector: self::DISTANCE_FOR_CALCULATE_WARNING_RANGE,
                 period: $period
             )
         )->value();

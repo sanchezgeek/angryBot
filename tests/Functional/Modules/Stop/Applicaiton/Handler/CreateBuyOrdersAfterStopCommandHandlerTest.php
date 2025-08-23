@@ -15,7 +15,7 @@ use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
@@ -222,16 +222,16 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
                 $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
             }
 
-            $distance = $distanceOverride ?? self::getOppositeOrderDistance($stop, PredefinedStopLengthSelector::Standard);
+            $distance = $distanceOverride ?? self::getOppositeOrderDistance($stop, PriceDistanceSelector::Standard);
 
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::VeryShort);
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort, $withForceBuy);
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PredefinedStopLengthSelector::Standard);
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PredefinedStopLengthSelector::Long, $withForceBuy);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, $withForceBuy);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Standard);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::Long, $withForceBuy);
         }
 
         $orders = new OrdersLimitedWithMaxVolume(
@@ -248,7 +248,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         return $buyOrders;
     }
 
-    private static function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PredefinedStopLengthSelector|float $length, array $additionalContext = []): Order
+    private static function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = []): Order
     {
         $commonContext = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -258,7 +258,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $side = $stop->getPositionSide();
 
-        $distance = $length instanceof PredefinedStopLengthSelector ? self::getOppositeOrderDistance($stop, $length) : $length;
+        $distance = $length instanceof PriceDistanceSelector ? self::getOppositeOrderDistance($stop, $length) : $length;
 
         $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
         $volume = $stop->getSymbol()->roundVolume($volume);
@@ -267,13 +267,13 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         return new Order($price, $volume, $context);
     }
 
-    private static function getOppositeOrderDistance(Stop $stop, PredefinedStopLengthSelector $lengthSelector): float
+    private static function getOppositeOrderDistance(Stop $stop, PriceDistanceSelector $lengthSelector): float
     {
         $stopPrice = $stop->getPrice();
 
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                self::getTradingParametersStub($stop->getSymbol())->regularOppositeBuyOrderLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+                self::getTradingParametersStub($stop->getSymbol())->oppositeBuyLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
             ),
             $stopPrice
         );
@@ -308,11 +308,11 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return
             new TradingParametersProviderStub()
-                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
-                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
-                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::Standard, $timeframe, $period, Percent::string('1%'))
-                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
-                ->addRegularOppositeBuyOrderLengthResult($symbol, PredefinedStopLengthSelector::Long, $timeframe, $period, Percent::string('2%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Standard, $timeframe, $period, Percent::string('1%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Long, $timeframe, $period, Percent::string('2%'))
             ;
     }
 }

@@ -7,7 +7,7 @@ namespace App\Command\Mixin;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
 use RuntimeException;
@@ -70,8 +70,8 @@ trait PriceRangeAwareCommand
                     $providedValue = substr($providedValue, 1);
                 }
 
-                if ($length = PredefinedStopLengthSelector::tryFrom($providedValue)) {
-                    $priceChangePercent = $this->tradingParametersProvider->regularPredefinedStopLength($symbol, $length)->value();
+                if ($length = PriceDistanceSelector::tryFrom($providedValue)) {
+                    $priceChangePercent = $this->tradingParametersProvider->stopLength($symbol, $length)->value();
                     $pnlValue = PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent) * $sign;
 
                     return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);

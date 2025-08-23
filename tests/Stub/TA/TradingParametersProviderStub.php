@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Stub\TA;
 
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
@@ -15,53 +15,53 @@ use RuntimeException;
 
 class TradingParametersProviderStub implements TradingParametersProviderInterface
 {
-    public array $regularPredefinedStopLengthResults = [];
-    private array $regularOppositeBuyOrderLengthResults = [];
+    public array $stopLengthResults = [];
+    private array $oppositeBuyLengthResults = [];
 
-    public function addRegularOppositeBuyOrderLengthResult(
+    public function addOppositeBuyLengthResult(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $sourceStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe,
         int $period,
         Percent $percentResult,
     ): self {
-        $key = self::regularOppositeBuyOrderLengthResultsKey($symbol, $sourceStopLength, $timeframe, $period);
+        $key = self::_oppositeBuyLengthResultsKey($symbol, $distanceSelector, $timeframe, $period);
 
-        $this->regularOppositeBuyOrderLengthResults[$key] = $percentResult;
+        $this->oppositeBuyLengthResults[$key] = $percentResult;
 
         return $this;
     }
 
-    private function regularOppositeBuyOrderLengthResultsKey(
+    private function _oppositeBuyLengthResultsKey(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $sourceStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe,
         int $period
     ): string {
-        return sprintf('regularOppositeBuyOrderLengthResult_%s_%s_%s_%s', $symbol->name(), $sourceStopLength->value, $timeframe->value, $period);
+        return sprintf('regularOppositeBuyOrderLengthResult_%s_%s_%s_%s', $symbol->name(), $distanceSelector->value, $timeframe->value, $period);
     }
 
-    public function addRegularPredefinedStopLengthResult(
+    public function addStopLengthResult(
         Percent $percentResult,
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $sourceStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe = TradingParametersProviderInterface::LONG_ATR_TIMEFRAME,
         int $period = TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS,
     ): self {
-        $key = self::regularPredefinedStopLengthResultKey($symbol, $sourceStopLength, $timeframe, $period);
+        $key = self::_stopLengthResultKey($symbol, $distanceSelector, $timeframe, $period);
 
-        $this->regularPredefinedStopLengthResults[$key] = $percentResult;
+        $this->stopLengthResults[$key] = $percentResult;
 
         return $this;
     }
 
-    private function regularPredefinedStopLengthResultKey(
+    private function _stopLengthResultKey(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $predefinedStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe,
         int $period
     ): string {
-        return sprintf('regularPredefinedStopLengthResultKey_%s_%s_%s_%s', $symbol->name(), $predefinedStopLength->value, $timeframe->value, $period);
+        return sprintf('stopLengthResultKey_%s_%s_%s_%s', $symbol->name(), $distanceSelector->value, $timeframe->value, $period);
     }
 
     public function safeLiquidationPriceDelta(
@@ -79,32 +79,32 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         throw new RuntimeException('Not implemented yet');
     }
 
-    public function regularPredefinedStopLength(
+    public function stopLength(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $predefinedStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
-        $key = self::regularPredefinedStopLengthResultKey($symbol, $predefinedStopLength, $timeframe, $period);
-        if (!isset($this->regularPredefinedStopLengthResults[$key])) {
-            throw new RuntimeException(sprintf('Cannot find mocked regularPredefinedStopLengthResults result for %s', $key));
+        $key = self::_stopLengthResultKey($symbol, $distanceSelector, $timeframe, $period);
+        if (!isset($this->stopLengthResults[$key])) {
+            throw new RuntimeException(sprintf('Cannot find mocked stopLengthResults result for %s', $key));
         }
 
-        return $this->regularPredefinedStopLengthResults[$key];
+        return $this->stopLengthResults[$key];
     }
 
-    public function regularOppositeBuyOrderLength(
+    public function oppositeBuyLength(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $sourceStopLength,
+        PriceDistanceSelector $distanceSelector,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
-        $key = self::regularOppositeBuyOrderLengthResultsKey($symbol, $sourceStopLength, $timeframe, $period);
-        if (!isset($this->regularOppositeBuyOrderLengthResults[$key])) {
-            throw new RuntimeException(sprintf('Cannot find mocked regularOppositeBuyOrderLengthResults result for %s', $key));
+        $key = self::_oppositeBuyLengthResultsKey($symbol, $distanceSelector, $timeframe, $period);
+        if (!isset($this->oppositeBuyLengthResults[$key])) {
+            throw new RuntimeException(sprintf('Cannot find mocked oppositeBuyLengthResults result for %s', $key));
         }
 
-        return $this->regularOppositeBuyOrderLengthResults[$key];
+        return $this->oppositeBuyLengthResults[$key];
     }
 
     public function standardAtrForOrdersLength(

@@ -13,9 +13,8 @@ use App\Bot\Domain\Position;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
-use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateStop;
@@ -38,7 +37,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 600;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
     public const float LOSS_PART_TO_COVER_BY_OTHER_SYMBOLS = 1.2;
-    public const PredefinedStopLengthSelector FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER = PredefinedStopLengthSelector::Short;
+    public const PriceDistanceSelector FIXATION_STOP_DISTANCE_FROM_TICKER = PriceDistanceSelector::Short;
 
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
@@ -46,7 +45,6 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         private PositionServiceInterface $positionService,
         private ByBitLinearPositionService $positionServiceWithoutCache,
         private AppSettingsProviderInterface $settings,
-        private AppNotificationsServiceInterface $appNotifications,
         private CreateStopHandlerInterface $createStopHandler,
         private TradingParametersProviderInterface $tradingParameters
     ) {
@@ -196,7 +194,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopLength = $this->tradingParameters->regularPredefinedStopLength($candidateSymbol, self::FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER);
+            $stopLength = $this->tradingParameters->stopLength($candidateSymbol, self::FIXATION_STOP_DISTANCE_FROM_TICKER);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
 

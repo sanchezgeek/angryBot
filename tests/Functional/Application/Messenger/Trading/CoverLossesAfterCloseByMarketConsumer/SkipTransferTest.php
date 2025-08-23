@@ -13,7 +13,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
-use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -94,7 +93,6 @@ class SkipTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstract
             self::getContainer()->get(PositionServiceInterface::class),
             self::getContainer()->get(ByBitLinearPositionService::class),
             $this->settingsProvider,
-            self::createMock(AppNotificationsServiceInterface::class),
             self::createMock(CreateStopHandlerInterface::class),
             self::createMock(TradingParametersProviderInterface::class),
         );

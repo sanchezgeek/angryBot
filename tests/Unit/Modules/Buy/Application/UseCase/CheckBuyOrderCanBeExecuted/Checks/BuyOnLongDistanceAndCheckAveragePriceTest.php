@@ -15,7 +15,7 @@ use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Helper\Trading\PositionPreset;
@@ -48,7 +48,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
 
     private const float MAX_ALLOWED_PERCENT_PRICE_CHANGE_BETWEEN_POSITION_AND_TICKER = 2;
 
-    private const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = BuyOnLongDistanceAndCheckAveragePrice::DEFAULT_MAX_ALLOWED_PRICE_CHANGE;
+    private const PriceDistanceSelector DEFAULT_MAX_ALLOWED_PRICE_DISTANCE = BuyOnLongDistanceAndCheckAveragePrice::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE;
 
     const string CHECK_ALIAS = BuyOnLongDistanceAndCheckAveragePrice::ALIAS;
 
@@ -83,7 +83,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
 
         return
             new TradingParametersProviderStub()
-                ->addRegularOppositeBuyOrderLengthResult($symbol, self::DEFAULT_MAX_ALLOWED_PRICE_CHANGE, $timeframe, $period, new Percent($percentChange))
+                ->addOppositeBuyLengthResult($symbol, self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE, $timeframe, $period, new Percent($percentChange))
             ;
     }
 

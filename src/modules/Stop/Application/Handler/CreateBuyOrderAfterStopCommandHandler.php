@@ -16,7 +16,7 @@ use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
@@ -66,22 +66,22 @@ final class CreateBuyOrderAfterStopCommandHandler
                 $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
             }
 
-            $distance = $distanceOverride ?? $this->getOppositeOrderDistance($symbol, $refPrice, PredefinedStopLengthSelector::Standard);
+            $distance = $distanceOverride ?? $this->getOppositeOrderDistance($symbol, $refPrice, PriceDistanceSelector::Standard);
 
             $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::Short);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PredefinedStopLengthSelector::VeryShort, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::Short);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::VeryShort);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::ModerateShort, $withForceBuy);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PredefinedStopLengthSelector::Standard);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PredefinedStopLengthSelector::Long, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::Standard);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::Long, $withForceBuy);
             }
         }
 
@@ -99,7 +99,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         return $buyOrders;
     }
 
-    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PredefinedStopLengthSelector|float $length, array $additionalContext = []): Order
+    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = []): Order
     {
         $commonContext = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -109,7 +109,7 @@ final class CreateBuyOrderAfterStopCommandHandler
 
         $side = $stop->getPositionSide();
 
-        $distance = $length instanceof PredefinedStopLengthSelector ? $this->getOppositeOrderDistance($stop->getSymbol(), $refPrice, $length) : $length;
+        $distance = $length instanceof PriceDistanceSelector ? $this->getOppositeOrderDistance($stop->getSymbol(), $refPrice, $length) : $length;
 
         $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
         $volume = $stop->getSymbol()->roundVolume($volume);
@@ -119,13 +119,13 @@ final class CreateBuyOrderAfterStopCommandHandler
     }
 
     /**
-     * @param PredefinedStopLengthSelector $lengthSelector // @todo | oppositeBuyOrder | use param from stop?
+     * @param PriceDistanceSelector $lengthSelector // @todo | oppositeBuyOrder | use param from stop?
      */
-    private function getOppositeOrderDistance(SymbolInterface $symbol, SymbolPrice $refPrice, PredefinedStopLengthSelector $lengthSelector): float
+    private function getOppositeOrderDistance(SymbolInterface $symbol, SymbolPrice $refPrice, PriceDistanceSelector $lengthSelector): float
     {
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                $this->tradingParametersProvider->regularOppositeBuyOrderLength($symbol, $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
+                $this->tradingParametersProvider->oppositeBuyLength($symbol, $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
             ),
             $refPrice
         );

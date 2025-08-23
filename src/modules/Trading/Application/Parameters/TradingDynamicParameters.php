@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\Parameters;
 
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
@@ -102,22 +102,25 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
     // @todo | PredefinedStopLengthParser parameters
     #[AppDynamicParameter(group: 'trading')]
-    public function regularPredefinedStopLength(
+    public function stopLength(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $predefinedStopLength = PredefinedStopLengthSelector::Standard,
+        PriceDistanceSelector $distanceSelector = PriceDistanceSelector::Standard,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
-        $result = match ($predefinedStopLength) {
-            PredefinedStopLengthSelector::VeryShort => $atrChangePercent / 5,
-            PredefinedStopLengthSelector::Short => $atrChangePercent / 4,
-            PredefinedStopLengthSelector::ModerateShort => $atrChangePercent / 3.5,
-            PredefinedStopLengthSelector::Standard => $atrChangePercent / 3,
-            PredefinedStopLengthSelector::ModerateLong => $atrChangePercent / 2.5,
-            PredefinedStopLengthSelector::Long => $atrChangePercent / 2,
-            PredefinedStopLengthSelector::VeryLong => $atrChangePercent,
+        $result = match ($distanceSelector) {
+            PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 6,
+            PriceDistanceSelector::VeryShort => $atrChangePercent / 5,
+            PriceDistanceSelector::Short => $atrChangePercent / 4,
+            PriceDistanceSelector::ModerateShort => $atrChangePercent / 3.5,
+            PriceDistanceSelector::Standard => $atrChangePercent / 3,
+            PriceDistanceSelector::ModerateLong => $atrChangePercent / 2.5,
+            PriceDistanceSelector::Long => $atrChangePercent / 2,
+            PriceDistanceSelector::VeryLong => $atrChangePercent,
+            PriceDistanceSelector::VeryVeryLong => $atrChangePercent * 1.5,
+            PriceDistanceSelector::DoubleLong => $atrChangePercent * 2,
         };
 
         return Percent::notStrict($result);
@@ -125,16 +128,16 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
     // @todo | PredefinedStopLengthParser parameters
     #[AppDynamicParameter(group: 'trading')]
-    public function regularOppositeBuyOrderLength(
+    public function oppositeBuyLength(
         SymbolInterface $symbol,
-        PredefinedStopLengthSelector $sourceStopLength = PredefinedStopLengthSelector::Standard,
+        PriceDistanceSelector $distanceSelector = PriceDistanceSelector::Standard,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         // @todo | settings
         $multiplier = 1.2;
 
-        $percent = $this->regularPredefinedStopLength($symbol, $sourceStopLength, $timeframe, $period);
+        $percent = $this->stopLength($symbol, $distanceSelector, $timeframe, $period);
 
         return Percent::notStrict($percent->value() * $multiplier);
     }

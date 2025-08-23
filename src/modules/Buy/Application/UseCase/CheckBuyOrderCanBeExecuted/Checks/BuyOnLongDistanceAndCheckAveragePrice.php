@@ -11,7 +11,7 @@ use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -30,7 +30,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
 {
     use CheckBasedOnCurrentPositionState;
 
-    public const PredefinedStopLengthSelector DEFAULT_MAX_ALLOWED_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
+    public const PriceDistanceSelector DEFAULT_MAX_ALLOWED_PRICE_DISTANCE = PriceDistanceSelector::Long;
     public const float MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE = 12.5;
 
     public const string ALIAS = 'BUY/AVG-PRICE_check';
@@ -101,9 +101,9 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
 
     private function getMaxAllowedPercentPriceChangeFromPositionEntryPrice(SymbolInterface $symbol): Percent
     {
-        $length = self::DEFAULT_MAX_ALLOWED_PRICE_CHANGE;
+        $distance = self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE;
 
-        return $this->parameters->regularOppositeBuyOrderLength($symbol, $length);
+        return $this->parameters->oppositeBuyLength($symbol, $distance);
     }
 
     private static function extractMarketBuyEntryDto(CheckOrderDto|MarketBuyCheckDto $entryDto): MarketBuyEntryDto

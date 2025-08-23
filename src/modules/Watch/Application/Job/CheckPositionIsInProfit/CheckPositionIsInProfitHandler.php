@@ -9,7 +9,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Position;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -26,7 +26,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 #[AsMessageHandler]
 final class CheckPositionIsInProfitHandler
 {
-    private const PredefinedStopLengthSelector DEFAULT_ALARM_PRICE_CHANGE = PredefinedStopLengthSelector::Long;
+    private const PriceDistanceSelector DEFAULT_ALARM_PRICE_CHANGE = PriceDistanceSelector::Long;
 
     private const int ALERT_RETRY_COUNT = 2;
 
@@ -128,13 +128,16 @@ final class CheckPositionIsInProfitHandler
         $length = self::DEFAULT_ALARM_PRICE_CHANGE;
 
         $result = match ($length) {
-            PredefinedStopLengthSelector::VeryShort => $standardAtr / 5,
-            PredefinedStopLengthSelector::Short => $standardAtr / 4,
-            PredefinedStopLengthSelector::ModerateShort => $standardAtr / 3.5,
-            PredefinedStopLengthSelector::Standard => $standardAtr / 3,
-            PredefinedStopLengthSelector::ModerateLong => $standardAtr / 2.5,
-            PredefinedStopLengthSelector::Long => $standardAtr / 2,
-            PredefinedStopLengthSelector::VeryLong => $standardAtr,
+            PriceDistanceSelector::VeryVeryShort => $standardAtr / 6,
+            PriceDistanceSelector::VeryShort => $standardAtr / 5,
+            PriceDistanceSelector::Short => $standardAtr / 4,
+            PriceDistanceSelector::ModerateShort => $standardAtr / 3.5,
+            PriceDistanceSelector::Standard => $standardAtr / 3,
+            PriceDistanceSelector::ModerateLong => $standardAtr / 2.5,
+            PriceDistanceSelector::Long => $standardAtr / 2,
+            PriceDistanceSelector::VeryLong => $standardAtr,
+            PriceDistanceSelector::VeryVeryLong => $standardAtr * 1.5,
+            PriceDistanceSelector::DoubleLong => $standardAtr * 2,
         };
 
         return Percent::notStrict($result);

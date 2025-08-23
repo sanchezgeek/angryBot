@@ -6,12 +6,12 @@ namespace App\Buy\Domain\ValueObject\StopStrategy\Strategy;
 
 use App\Buy\Domain\Enum\StopPriceDefinitionType;
 use App\Buy\Domain\ValueObject\StopStrategy\AbstractStopStrategyDefinition;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 
 final class PredefinedStopLength extends AbstractStopStrategyDefinition
 {
     public function __construct(
-        public PredefinedStopLengthSelector $length
+        public PriceDistanceSelector $length
     ) {
     }
 
@@ -30,7 +30,7 @@ final class PredefinedStopLength extends AbstractStopStrategyDefinition
     public static function fromArray(array $data): self
     {
         return new self(
-            PredefinedStopLengthSelector::from($data['length'])
+            PriceDistanceSelector::from($data['length'])
         );
     }
 }

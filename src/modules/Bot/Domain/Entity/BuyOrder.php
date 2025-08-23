@@ -20,7 +20,7 @@ use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Trading\Enum\PredefinedStopLengthSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use App\Trading\Domain\Symbol\Entity\Symbol;
@@ -113,7 +113,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
             $value = StopCreationStrategyDefinitionStaticFactory::fromData($data);
         } else {
             $value = new PredefinedStopLength(
-                PredefinedStopLengthSelector::Standard
+                PriceDistanceSelector::Standard
             );
         }
 
