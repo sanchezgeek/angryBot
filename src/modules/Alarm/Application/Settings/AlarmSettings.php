@@ -33,6 +33,9 @@ enum AlarmSettings: string implements AppSettingInterface, AppSettingsGroupInter
     #[SettingParametersAttribute(type: SettingType::Float)]
     case PassedPart_Of_LiquidationDistance = 'alarm.liquidationDistance.passedPart.allowed';
 
+    #[SettingParametersAttribute(type: SettingType::Float)]
+    case PassedPart_Of_LiquidationDistance_Threshold_From_Allowed = 'alarm.liquidationDistance.passedPart.thresholdFromAllowed';
+
     public function getSettingKey(): string
     {
         return $this->value;

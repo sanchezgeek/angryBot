@@ -16,19 +16,7 @@ final readonly class CheckAlarmHandler
 {
     private const array ALARMS = [
 //        Symbol::BTCUSDT->value => [98200, 100200],
-//        Symbol::ADAUSDT->value => [0.97, 1.2],
-//        Symbol::TONUSDT->value => [5.87, 6.55],
-//        Symbol::SOLUSDT->value => [210, 235],
-//        Symbol::XRPUSDT->value => [2, 2.65],
-//        Symbol::ETHUSDT->value => [3700, 3950],
-//        Symbol::LINKUSDT->value => [21.7, 29.1],
-//        Symbol::WIFUSDT->value => [2.77, 3.8],
-//        Symbol::OPUSDT->value => [2.156, 2.65],
-//        Symbol::DOGEUSDT->value => [0.38, 0.45],
-//        Symbol::SUIUSDT->value => [4.28, 5.35],
-//        Symbol::LTCUSDT->value => [null, 128],
-//        Symbol::AVAXUSDT->value => [null, 51.2],
-//        Symbol::AAVEUSDT->value => [null, 357],
+//        'SOMEUSDT' => [null, 0.102],
     ];
 
     public function __invoke(CheckAlarm $dto): void
