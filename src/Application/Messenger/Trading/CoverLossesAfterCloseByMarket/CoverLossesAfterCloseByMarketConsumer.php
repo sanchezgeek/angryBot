@@ -35,9 +35,9 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const float THRESHOLD = 1;
 
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
-    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 800;
+    public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 600;
     public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
-    public const float WHOLE_LOSS_MULTIPLIER = 0.88;
+    public const float LOSS_PART_TO_COVER_BY_OTHER_SYMBOLS = 1.2;
     public const PredefinedStopLengthSelector FIXATION_STOP_LENGTH_LENGTH_FROM_TICKER = PredefinedStopLengthSelector::Short;
 
     public function __construct(
@@ -77,6 +77,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $covered = $this->processOtherPositions($symbol, $loss, $closedPosition);
 
         $loss = $loss - $covered;
+
+        if ($loss <= 0) {
+            return;
+        }
 
         if (!AppContext::hasPermissionsToFundBalance()) {
             return;
@@ -174,7 +178,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $candidates = array_replace($arr, $candidates);
 
-        $lossToCoverByOtherSymbols = $loss * self::WHOLE_LOSS_MULTIPLIER;
+        $lossToCoverByOtherSymbols = $loss * self::LOSS_PART_TO_COVER_BY_OTHER_SYMBOLS;
         $count = count($candidates);
         $pct = 100 / $count;
 
