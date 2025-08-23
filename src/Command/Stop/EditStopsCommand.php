@@ -17,6 +17,7 @@ use App\Command\TradingParametersDependentCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Stop\Infrastructure\Cache\StopsCache;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
@@ -84,6 +85,8 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->stopsCache->clear();
+
         $symbol = $this->getSymbol();
         $all = $this->paramFetcher->getBoolOption('all');
         $priceRange = $this->getRange();
@@ -332,6 +335,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
         private readonly StopService $stopService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly LoggerInterface $appErrorLogger,
+        private readonly StopsCache $stopsCache,
         ?string $name = null,
     ) {
         parent::__construct($name);

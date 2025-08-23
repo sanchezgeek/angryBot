@@ -23,5 +23,5 @@ framework:
             settings.cache:
 #                tags: 'settings'
             technicalAnalysis.cache:
-
+            stops.cache:
 #            openedPositions.cache:

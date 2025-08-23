@@ -7,12 +7,12 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Buy\Application\Helper\BuyOrderInfoHelper;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Cache\CachedFixationStopsProvider;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
 use App\Domain\Price\SymbolPrice;
+use App\Stop\Contract\Query\StopsQueryServiceInterface;
+use App\Stop\Infrastructure\Cache\StopsCache;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
@@ -30,9 +30,9 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
     public const string ALIAS = 'BUY/FIXATIONS_check';
 
     public function __construct(
-        private StopRepositoryInterface $stopRepository,
         PositionServiceInterface $positionService,
-        private CachedFixationStopsProvider $cache,
+        private StopsQueryServiceInterface $stopsQueryService,
+        private StopsCache $stopsCache,
     ) {
         $this->initPositionService($positionService);
     }
@@ -68,7 +68,7 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
         $positionEntryPrice = $position->entryPrice();
         $orderPrice = $context->ticker->markPrice;
 
-        $fixationStopsBeforePositionEntryCount = $this->cache->getFixationStopsCountBeforePositionEntry($context);
+        $fixationStopsBeforePositionEntryCount = $this->getFixationStopsCountBeforePositionEntry($context);
         if ($fixationStopsBeforePositionEntryCount > 0) {
             return TradingCheckResult::failed(
                 $this,
@@ -78,6 +78,17 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
         }
 
         return TradingCheckResult::succeed($this, self::info($position, $order, $orderPrice, $positionEntryPrice, 'fixation stops not found'));
+    }
+
+    private function getFixationStopsCountBeforePositionEntry(TradingCheckContext $context): int
+    {
+        $position = $context->currentPositionState;
+
+        return $this->stopsCache->get(
+            sprintf('fixations_%s_%s', $position->symbol->name(), $position->side->value),
+            fn() => $this->stopsQueryService->getFixationStopsCountBeforePositionEntry($position, $context->ticker->markPrice),
+            300
+        );
     }
 
     private function info(
