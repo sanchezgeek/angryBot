@@ -20,8 +20,6 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 #[AsMessageHandler]
 final readonly class CheckPassedLiquidationDistanceHandler
 {
-    public const int DEFAULT_THRESHOLD_FROM_ALLOWED = 5;
-
     private RateLimiterFactory $limiterFactory;
 
     public function __construct(
@@ -70,7 +68,8 @@ final readonly class CheckPassedLiquidationDistanceHandler
                             $passedLiquidationDistancePercent->setOutputFloatPrecision(2),
                             $alarmPercent->setOutputFloatPrecision(2),
                             $allowed->setOutputFloatPrecision(2)
-                        )
+                        ),
+                        type: 'warning'
                     );
                 }
             }
@@ -93,7 +92,11 @@ final readonly class CheckPassedLiquidationDistanceHandler
         $percentOfLiquidationDistanceToAddStop = $liquidationParameters->percentOfLiquidationDistanceToAddStop()->value();
 
         $allowed = 100 - $percentOfLiquidationDistanceToAddStop;
-        $threshold = SettingsHelper::getForSideOrSymbol(AlarmSettings::PassedPart_Of_LiquidationDistance_Threshold_From_Allowed, $symbol, $side) ?? self::DEFAULT_THRESHOLD_FROM_ALLOWED;
+        $threshold = SettingsHelper::getForSideOrSymbol(AlarmSettings::PassedPart_Of_LiquidationDistance_Threshold_From_Allowed, $symbol, $side);
+
+        if ($threshold === null) {
+            $threshold = $allowed / 10;
+        }
 
         $alarm = $allowed - $threshold;
 

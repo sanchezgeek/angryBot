@@ -41,4 +41,16 @@ for path in "${instances[@]}"
 	done
   done
 
-tail -f ${LOG_PATH} | while read line ; do afplay -t 0.8 ${BIN_DIR}/data/notify.mp3 -d1 2>&1 1>/dev/null ; echo $line ; done
+#tail -f ${LOG_PATH} | grep --line-buffered INFO | while read line ; do afplay -t 0.8 ${BIN_DIR}/data/notify.mp3 -d1 2>&1 1>/dev/null ; echo $line ; done
+#tail -f ${LOG_PATH} | grep --line-buffered WARNING | while read line ; do afplay -t 0.8 ${BIN_DIR}/data/warning.wav -d1 ; echo $line ; done
+
+tail -f "${LOG_PATH}" | while IFS= read -r line; do
+ if echo "${line}" | grep -q "INFO"; then
+   afplay -t 0.8 "${BIN_DIR}/data/notify.mp3" -d1 2>&1 1>/dev/null
+   echo "${line}"
+ fi
+ if echo "${line}" | grep -q "WARNING"; then
+   afplay -t 0.8 "${BIN_DIR}/data/warning.wav" -d1 2>&1 1>/dev/null
+   echo "${line}"
+ fi
+done

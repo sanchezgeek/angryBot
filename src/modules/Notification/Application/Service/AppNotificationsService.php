@@ -9,6 +9,7 @@ use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use DateInterval;
 use DatePeriod;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
 final readonly class AppNotificationsService implements AppNotificationsServiceInterface
@@ -48,12 +49,17 @@ final readonly class AppNotificationsService implements AppNotificationsServiceI
         return $now >= $sleepPeriod->getStartDate() && $now <= $sleepPeriod->getEndDate();
     }
 
-    public function notify(string $message, array $data = []): void
+    public function notify(string $message, array $data = [], string $type = 'info'): void
     {
         if ($this->isNowTimeToSleep()) {
             return;
         }
 
-        $this->logger->info($message, $data);
+
+        if (!in_array($type, ['info', 'warning', 'error'], true)) {
+            throw new InvalidArgumentException(sprintf('Invalid `type` option provided (%s)', $type));
+        }
+
+        $this->logger->$type($message, $data);
     }
 }
