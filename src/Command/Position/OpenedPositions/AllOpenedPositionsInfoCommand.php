@@ -28,6 +28,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\API\ConnectionHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\Cache\PositionsCache;
@@ -51,8 +52,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Cache\CacheInterface;
-
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Throwable;
 
 use function array_merge;
@@ -69,11 +68,6 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
 
-    private const array CONNECTION_ERR_MESSAGES = [
-        'timestamp or recv_window param',
-        'Server Timeout',
-        'Idle timeout reached',
-    ];
     private const string DEFAULT_UPDATE_INTERVAL = '15';
 
     private const string DEFAULT_SAVE_CACHE_INTERVAL = '150';
@@ -249,27 +243,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 }
                 $previousIterationCache = $this->cacheCollector;
                 $updateEnabled && sleep($this->paramFetcher->getIntOption(self::UPDATE_INTERVAL_OPTION));
-            } catch (Throwable $error) {
-                $exception = $error;
-                while (($previous = $exception->getPrevious()) && ($previous instanceof TransportExceptionInterface)) {
-                    $exception = $previous;
-                }
-
-                $isConnectionException = false;
-
-                if ($exception instanceof TransportExceptionInterface) {
-                    $isConnectionException = true;
-                }
-
-                foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
-                    if (str_contains($error->getMessage(), $expectedMessage)) {
-                        $isConnectionException = true;
-                    }
-                }
-
-                if ($isConnectionException) {
-                    echo 'reconnecting ... ' . PHP_EOL;
-                    sleep(5);
+            } catch (Throwable $exception) {
+                if (ConnectionHelper::isConnectionError($exception)) {
+                    echo 'reconnecting ... ' . PHP_EOL; sleep(5);
                 } else {
                     throw $exception;
                 }
