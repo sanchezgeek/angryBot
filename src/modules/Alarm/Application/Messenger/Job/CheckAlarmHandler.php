@@ -32,11 +32,11 @@ final readonly class CheckAlarmHandler
             $markPrice = $ticker->markPrice;
 
             if ($up !== null && $markPrice->greaterThan($up)) {
-                $this->appErrorLogger->error(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up));
+                $this->appNotificationsService->notify(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up), type: 'warning');
             }
 
             if ($down !== null && $markPrice->lessThan($down)) {
-                $this->appErrorLogger->error(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down));
+                $this->appNotificationsService->notify(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down), type: 'warning');
             }
         }
     }
@@ -45,7 +45,6 @@ final readonly class CheckAlarmHandler
         private AppNotificationsServiceInterface $appNotificationsService,
         private ExchangeServiceInterface $exchangeService,
         private SymbolProvider $symbolProvider,
-        private LoggerInterface $appErrorLogger
     ) {
     }
 }
