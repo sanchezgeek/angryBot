@@ -18,3 +18,6 @@ stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[s
 stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=BTCUSDT]: '120%'
 
 stop.movePositionStops.moveToBreakeven.after.positionPnlPercent: 900
+
+### \App\Stop\Application\Settings\CreateOppositeBuySettings
+stop.createOpposite.martingale.enabled: true

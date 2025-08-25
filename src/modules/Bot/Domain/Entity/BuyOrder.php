@@ -124,12 +124,19 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     {
         $this->stopCreationStrategyDefinition = $definition;
 
-        $this->context[self::STOP_LENGTH_DEFINITION_TYPE] = [
-            StopCreationStrategyDefinition::TYPE_STORED_KEY => $definition::getType(),
-            StopCreationStrategyDefinition::PARAMS_STORED_KEY => $definition->toArray(),
-        ];
+        $this->context = self::addStopCreationStrategyToContext($this->context, $definition);
 
         return $this;
+    }
+
+    public static function addStopCreationStrategyToContext(array $context, StopCreationStrategyDefinition $definition): array
+    {
+        return array_merge($context, [
+            self::STOP_LENGTH_DEFINITION_TYPE => [
+                StopCreationStrategyDefinition::TYPE_STORED_KEY => $definition::getType()->value,
+                StopCreationStrategyDefinition::PARAMS_STORED_KEY => $definition->toArray(),
+            ]
+        ]);
     }
 
     /**

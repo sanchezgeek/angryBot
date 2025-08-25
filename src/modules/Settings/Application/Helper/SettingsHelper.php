@@ -27,15 +27,24 @@ final class SettingsHelper
     {
         $settings = self::getSettingsService();
 
-        if ($valueForSymbolAndSide = $settings->optional(SettingAccessor::exact($setting, $symbol, $side))) {
+        $valueForSymbolAndSide = $settings->optional(SettingAccessor::exact($setting, $symbol, $side));
+        if ($valueForSymbolAndSide !== null) {
             return $valueForSymbolAndSide;
         }
 
-        if ($valueForSymbol = $settings->optional(SettingAccessor::exact($setting, $symbol))) {
+        $valueForSymbol = $settings->optional(SettingAccessor::exact($setting, $symbol));
+        if ($valueForSymbol !== null) {
             return $valueForSymbol;
         }
 
         return null;
+    }
+
+    public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
+    {
+        return self::getSettingsService()->optional(
+            SettingAccessor::withAlternativesAllowed($setting, $symbol, $side)
+        );
     }
 
     private static function getSettingsService(): AppSettingsProviderInterface

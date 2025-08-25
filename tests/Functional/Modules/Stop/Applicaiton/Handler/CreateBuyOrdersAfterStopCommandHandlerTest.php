@@ -9,6 +9,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
+use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -19,13 +20,17 @@ use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Stop\Application\Handler\CreateBuyOrderAfterStopCommandHandler;
+use App\Stop\Application\Settings\CreateOppositeBuySettings;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
@@ -51,6 +56,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     use SymbolsDependentTester;
     use TaToolsProviderMocker;
     use TradingParametersMocker;
+    use SettingsAwareTest;
 
     private const int DEFAULT_ATR_PERIOD = CreateBuyOrderAfterStopCommandHandler::DEFAULT_ATR_PERIOD;
     private const TimeFrame DEFAULT_TIMEFRAME_FOR_ATR = PredefinedStopLengthProcessor::DEFAULT_TIMEFRAME_FOR_ATR;
@@ -70,11 +76,16 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         Ticker $ticker,
         Stop $stop,
         float $wholePositionSize,
-        array $expectedBuyOrders
+        array $expectedBuyOrders,
+        bool $martingaleEnabled = false,
     ): void {
         $symbol = $ticker->symbol;
         // @todo get from stop
         self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol));
+
+        if (!$martingaleEnabled) {
+            $this->overrideSetting(SettingAccessor::exact(CreateOppositeBuySettings::Martingale_Enabled, $stop->getSymbol(), $stop->getPositionSide()), false);
+        }
 
         $this->haveTicker($ticker);
         $this->applyDbFixtures(new StopFixture($stop));
@@ -122,12 +133,13 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $stop = StopBuilder::short(10, 100000, 0.002)->build()->setExchangeOrderId('123456');
         $wholePositionSize = 0.01;
-        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize);
+        $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize, martingaleEnabled: true);
         yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
             $ticker,
             $stop,
             $wholePositionSize,
             $expectedBuyOrders,
+            true
         ];
 
         $stop = StopBuilder::short(10, 100000, 0.004)->build()->setExchangeOrderId('123456');
@@ -201,6 +213,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         Stop $stop,
         float $wholePositionSize,
         int $fromId = 1,
+        $martingaleEnabled = false,
     ): array {
         if (!$stop->getExchangeOrderId()) {
             throw new RuntimeException('exchangeOrderId must be set');
@@ -216,6 +229,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $isMinVolume = $stopVolume <= $symbol->minOrderQty();
         $isBigStop = FloatHelper::round($stopVolume / $wholePositionSize) >= 0.1;
 
+        $martingaleOrders = [];
         $orders = [];
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
             if ($distanceOverride instanceof Percent) {
@@ -227,6 +241,15 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
+
+            if ($martingaleEnabled) {
+                OutputHelper::print(sprintf('martingale enabled for %s %s', $symbol->name(), $side->value));
+                $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength(PriceDistanceSelector::Short));
+
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::ModerateShort, $forcedWithShortStop, sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, $forcedWithShortStop, sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, $forcedWithShortStop, sign: -1);
+            }
 
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort);
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, $withForceBuy);
@@ -240,7 +263,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         );
 
         $buyOrders = [];
-        foreach ($orders as $order) {
+        foreach (array_merge($orders->getOrders(), $martingaleOrders) as $order) {
             $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
             $fromId++;
         }
@@ -248,7 +271,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         return $buyOrders;
     }
 
-    private static function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = []): Order
+    private static function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = [], int $sign = 1): Order
     {
         $commonContext = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -259,6 +282,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         $side = $stop->getPositionSide();
 
         $distance = $length instanceof PriceDistanceSelector ? self::getOppositeOrderDistance($stop, $length) : $length;
+        $distance*= $sign;
 
         $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
         $volume = $stop->getSymbol()->roundVolume($volume);
@@ -309,6 +333,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         return
             new TradingParametersProviderStub()
                 ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
+                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Short, $timeframe, $period, Percent::string('0.6%'))
                 ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
                 ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Standard, $timeframe, $period, Percent::string('1%'))
                 ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))

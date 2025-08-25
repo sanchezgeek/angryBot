@@ -10,6 +10,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
+use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -20,7 +21,10 @@ use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\OutputHelper;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
+use App\Stop\Application\Settings\CreateOppositeBuySettings;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -60,6 +64,7 @@ final class CreateBuyOrderAfterStopCommandHandler
             $refPrice = $symbol->makePrice($command->prevPositionEntryPrice);
         }
 
+        $martingaleOrders = [];
         $orders = [];
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
             if ($distanceOverride instanceof Percent) {
@@ -78,6 +83,18 @@ final class CreateBuyOrderAfterStopCommandHandler
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
+                if (SettingsHelper::withAlternativesAllowed(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true) {
+                    OutputHelper::print(sprintf('martingale enabled for %s %s', $symbol->name(), $side->value));
+                    $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength(PriceDistanceSelector::Short));
+
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::ModerateShort, $forcedWithShortStop, sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::Short, $forcedWithShortStop, sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, $forcedWithShortStop, sign: -1);
+                } else {
+                    OutputHelper::print(sprintf('martingale disabled for %s %s', $symbol->name(), $side->value));
+                }
+
+                // double up to averaging with short stop
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::Standard);
@@ -91,7 +108,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         );
 
         $buyOrders = [];
-        foreach ($orders as $order) {
+        foreach (array_merge($orders->getOrders(), $martingaleOrders) as $order) {
             $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context());
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
@@ -99,7 +116,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         return $buyOrders;
     }
 
-    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = []): Order
+    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = [], int $sign = 1): Order
     {
         $commonContext = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -110,6 +127,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         $side = $stop->getPositionSide();
 
         $distance = $length instanceof PriceDistanceSelector ? $this->getOppositeOrderDistance($stop->getSymbol(), $refPrice, $length) : $length;
+        $distance*= $sign;
 
         $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
         $volume = $stop->getSymbol()->roundVolume($volume);
