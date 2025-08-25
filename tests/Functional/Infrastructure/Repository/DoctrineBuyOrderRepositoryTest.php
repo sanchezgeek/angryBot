@@ -157,4 +157,21 @@ final class DoctrineBuyOrderRepositoryTest extends KernelTestCase
             self::getBuyOrderRepository()->findOppositeToStopByExchangeOrderId($side, $exchangeOrderId)
         );
     }
+
+    public function testGetByDoublesHash(): void
+    {
+        $this->applyDbFixtures(
+            new BuyOrderFixture(new BuyOrder(1, 100500, 123.123, SymbolEnum::ADAUSDT, Side::Sell)->setDoubleHash('123456')),
+            new BuyOrderFixture(new BuyOrder(2, 100500, 123.123, SymbolEnum::ADAUSDT, Side::Sell, [BuyOrder::DOUBLE_HASH_FLAG => '123456'])),
+            new BuyOrderFixture(new BuyOrder(3, 100500, 123.123, SymbolEnum::ADAUSDT, Side::Sell)),
+        );
+
+        CustomAssertions::assertObjectsWithInnerSymbolsEquals(
+            [
+                new BuyOrder(1, 100500, 123.123, SymbolEnum::ADAUSDT, Side::Sell, [BuyOrder::DOUBLE_HASH_FLAG => '123456']),
+                new BuyOrder(2, 100500, 123.123, SymbolEnum::ADAUSDT, Side::Sell)->setDoubleHash('123456'),
+            ],
+            self::getBuyOrderRepository()->getByDoublesHash('123456')
+        );
+    }
 }

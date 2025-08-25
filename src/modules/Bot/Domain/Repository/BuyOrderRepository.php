@@ -26,6 +26,8 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
     private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
 
+    private const string doublesFlag = BuyOrder::DOUBLE_HASH_FLAG;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, BuyOrder::class);
@@ -130,9 +132,9 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      */
     public function findOppositeToStopByExchangeOrderId(Side $side, string $exchangeOrderId): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere('b.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere("JSON_ELEMENT_EQUALS(b.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
         ;
 
         return $qb->getQuery()->getResult();
@@ -208,6 +210,21 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getByDoublesHash(string $hash): array
+    {
+        $flag = self::doublesFlag;
+
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere("HAS_ELEMENT(b.context, '$flag') = true")
+            ->andWhere("JSON_ELEMENT_EQUALS(b.context, '$flag', '$hash') = true")
+        ;
 
         return $qb->getQuery()->getResult();
     }

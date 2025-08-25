@@ -10,6 +10,10 @@ final class CreateBuyOrderAfterStop
         public int $stopId,
         public float $prevPositionSize,
         public float $prevPositionEntryPrice,
+        /**
+         * @note only for tests
+         */
+        public ?array $ordersDoublesHashes = null,
     ) {
     }
 }

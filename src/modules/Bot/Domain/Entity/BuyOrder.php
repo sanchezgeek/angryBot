@@ -64,6 +64,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public const string SKIP_AVERAGE_PRICE_CHECK_KEY = 'skipAveragePriceCheck';
     public const string SKIP_FURTHER_LIQUIDATION_CHECK_KEY = 'skipFurtherLiquidationCheck';
 
+    public const string DOUBLE_HASH_FLAG = 'doubleOrderHash';
+
     #[ORM\Id]
     #[ORM\Column]
     private int $id;
@@ -401,5 +403,22 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function isAveragePriceCheckDisabled(): bool
     {
         return $this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY] ?? null === true;
+    }
+
+    public function setDoubleHash(string $hash): static
+    {
+        $this->context[self::DOUBLE_HASH_FLAG] = $hash;
+
+        return $this;
+    }
+
+    public function getDoubleHash(): ?string
+    {
+        return $this->context[self::DOUBLE_HASH_FLAG] ?? null;
+    }
+
+    public function hasDoubleOrder(): bool
+    {
+        return isset($this->context[self::DOUBLE_HASH_FLAG]);
     }
 }
