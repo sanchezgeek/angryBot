@@ -2,9 +2,11 @@
 
 namespace App\Alarm\Application\Messenger\Job;
 
+use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -12,18 +14,22 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use function sprintf;
 
 #[AsMessageHandler]
-final readonly class CheckAlarmHandler
+final class CheckAlarmHandler
 {
     private const array ALARMS = [
 //        Symbol::BTCUSDT->value => [98200, 100200],
 //        'SOMEUSDT' => [null, 0.102],
     ];
 
+    private int $soundsCount;
+
     public function __invoke(CheckAlarm $dto): void
     {
         if ($this->appNotificationsService->isNowTimeToSleep()) {
             return;
         }
+
+        $this->soundsCount = SettingsHelper::exactlyRoot(AlarmSettings::PriceAlarm_SoundsCount, true);
 
         foreach (self::ALARMS as $symbol => [$down, $up]) {
             $ticker = $this->exchangeService->ticker(
@@ -32,19 +38,26 @@ final readonly class CheckAlarmHandler
             $markPrice = $ticker->markPrice;
 
             if ($up !== null && $markPrice->greaterThan($up)) {
-                $this->appNotificationsService->notify(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up), type: 'warning');
+                $this->notify(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up));
             }
 
             if ($down !== null && $markPrice->lessThan($down)) {
-                $this->appNotificationsService->notify(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down), type: 'warning');
+                $this->notify(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down));
             }
         }
     }
 
+    private function notify(string $message): void
+    {
+        for ($i = 0; $i <= $this->soundsCount; $i++) {
+            $this->appNotificationsService->notify($message, type: 'warning');
+        }
+    }
+
     public function __construct(
-        private AppNotificationsServiceInterface $appNotificationsService,
-        private ExchangeServiceInterface $exchangeService,
-        private SymbolProvider $symbolProvider,
+        private readonly AppNotificationsServiceInterface $appNotificationsService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly SymbolProvider $symbolProvider,
     ) {
     }
 }
