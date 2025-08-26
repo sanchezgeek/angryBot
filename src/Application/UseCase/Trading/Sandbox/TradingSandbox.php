@@ -26,6 +26,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FixationsFound;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
@@ -228,6 +229,9 @@ class TradingSandbox implements TradingSandboxInterface
                     ),
                     $checksResult instanceof BuyOrderPlacedTooFarFromPositionEntry => throw new ChecksNotPassedException(
                         sprintf('too.far.from.pos.entry[Δ=%s,allowed=%s]', $checksResult->orderPricePercentChangeFromPositonEntry, $checksResult->maxAllowedPercentChange)
+                    ),
+                    $checksResult instanceof FixationsFound => throw new ChecksNotPassedException(
+                        sprintf('fixations (%d) found', $checksResult->count)
                     ),
                     default => throw new ChecksNotPassedException($checksResult->info()),
                 };

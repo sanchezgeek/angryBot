@@ -10,6 +10,7 @@ use App\Bot\Domain\Position;
 use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FixationsFound;
 use App\Domain\Price\SymbolPrice;
 use App\Stop\Contract\Query\StopsQueryServiceInterface;
 use App\Stop\Infrastructure\Cache\StopsCache;
@@ -70,9 +71,9 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
 
         $fixationStopsBeforePositionEntryCount = $this->getFixationStopsCountBeforePositionEntry($context);
         if ($fixationStopsBeforePositionEntryCount > 0) {
-            return TradingCheckResult::failed(
+            return FixationsFound::create(
                 $this,
-                BuyCheckFailureEnum::ActiveFixationStopsBeforePositionEntryExists,
+                $fixationStopsBeforePositionEntryCount,
                 self::info($position, $order, $orderPrice, $positionEntryPrice, sprintf('found %d fixation stops', $fixationStopsBeforePositionEntryCount))
             );
         }
