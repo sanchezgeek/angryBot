@@ -67,8 +67,8 @@ final readonly class OpenPositionStopsGridsDefinitions
         $longBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($longBoundPriceChangePercent);
 
         $defs = [
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $shortBoundPnl - $fromPnlPercent, $shortBoundPnl + $diff - $fromPnlPercent),
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $longBoundPnl - $fromPnlPercent, $longBoundPnl + $diff - $fromPnlPercent),
+            sprintf('%.2f%%..-%.2f%%|50%%|5', -$shortBoundPnl + $fromPnlPercent, $shortBoundPnl + $diff - $fromPnlPercent),
+            sprintf('%.2f%%..-%.2f%%|50%%|5', -$longBoundPnl + $fromPnlPercent, $longBoundPnl + $diff - $fromPnlPercent),
         ];
 
         return self::makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
@@ -86,8 +86,8 @@ final readonly class OpenPositionStopsGridsDefinitions
         $veryLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($veryLongBoundPriceChangePercent);
 
         $defs = [
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $standardBoundPnl - $fromPnlPercent, $moderateLongBoundPnl - $fromPnlPercent),
-            sprintf('-%.2f%%..-%.2f%%|50%%|5', $standardBoundPnl - $fromPnlPercent, $veryLongBoundPnl - $fromPnlPercent),
+            sprintf('%.2f%%..-%.2f%%|50%%|5', -$standardBoundPnl + $fromPnlPercent, $moderateLongBoundPnl - $fromPnlPercent),
+            sprintf('%.2f%%..-%.2f%%|50%%|5', -$standardBoundPnl + $fromPnlPercent, $veryLongBoundPnl - $fromPnlPercent),
         ];
 
         return self::makeDefinition($defs, $priceToRelate, $symbol, $positionSide);

@@ -59,8 +59,15 @@ final readonly class ApplyStopsToPositionHandler
                     break;
                 }
 
-                // @todo | open-position | add triggerDelta?
-                $stops[] = $this->stopService->create($symbol, $positionSide, $order->price()->value(), $order->volume(), null, $stopsContext);
+                $stops[] = $this->stopService->create(
+                    $symbol,
+                    $positionSide,
+                    $order->price()->value(),
+                    $order->volume(),
+                    null,
+                    array_merge($stopsContext, $entryDto->additionalContext)
+                );
+
                 $resultTotalVolume += $order->volume();
             }
         }

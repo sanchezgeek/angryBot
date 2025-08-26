@@ -14,7 +14,8 @@ final readonly class ApplyStopsToPositionEntryDto
         public SymbolInterface $symbol,
         public Side $positionSide,
         public float $totalSize,
-        public OrdersGridDefinitionCollection $stopsGridsDefinition
+        public OrdersGridDefinitionCollection $stopsGridsDefinition,
+        public array $additionalContext = []
     ) {
     }
 }

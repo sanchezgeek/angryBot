@@ -2,12 +2,18 @@
 
 namespace App\Stop\Console;
 
+use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Domain\Entity\Stop;
 use App\Command\AbstractCommand;
+use App\Command\Helper\UndoHelper;
 use App\Command\Mixin\ConsoleInputAwareCommand;
+use App\Command\Mixin\OppositeOrdersDistanceAwareCommand;
+use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
@@ -27,6 +33,8 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     use ConsoleInputAwareCommand;
     use SymbolAwareCommand;
     use PositionAwareCommand;
+    use AdditionalStopContextAwareCommand;
+    use OppositeOrdersDistanceAwareCommand;
 
     public const string TRADING_STYLE = 'style';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
@@ -40,6 +48,8 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
             ->addOption(self::FROM_PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL, 'Apply from specified PNL%')
         ;
+
+        CreateStopsGridCommand::configureStopsGridArguments($this);
     }
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
@@ -81,14 +91,26 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             return Command::FAILURE;
         }
 
+        $context = ['uniqid' => $uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid')];
+        if ($additionalContext = $this->getAdditionalStopContext()) {
+            $context = array_merge($context, $additionalContext);
+        }
+
+        if ($oppositeBuyOrdersDistance = $this->getOppositeOrdersDistanceOption()) {
+            $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
+        }
+
         $this->handler->handle(
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $side,
                 $position->size,
-                $stopsGridsDef
+                $stopsGridsDef,
+                $context
             )
         );
+
+        $this->io->writeln(UndoHelper::stopsUndoOutput($symbol, $side, $uniqueId));
 
         return Command::SUCCESS;
     }
@@ -97,6 +119,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         PositionServiceInterface $positionService,
         private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private readonly ApplyStopsToPositionHandler $handler,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);
