@@ -114,7 +114,7 @@ class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentC
             $this->io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
-        if ($totalCount === count($orders) && !$withoutConfirm && !$this->io->confirm('All orders matched provided conditions. Continue?')) {
+        if ($totalCount === count($orders) && !$withoutConfirm && !$this->io->confirm(sprintf('All orders (%d) matched provided conditions. Continue?', $totalCount))) {
             return Command::FAILURE;
         }
 

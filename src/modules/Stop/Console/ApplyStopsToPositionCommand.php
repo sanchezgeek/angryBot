@@ -16,6 +16,7 @@ use App\Command\PositionDependentCommand;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Value\Percent\Percent;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
@@ -38,6 +39,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     public const string TRADING_STYLE = 'style';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
+    public const string POSITION_PART = 'part';
 
     private TradingStyle $tradingStyle;
 
@@ -47,6 +49,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             ->configurePositionArgs()
             ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
             ->addOption(self::FROM_PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL, 'Apply from specified PNL%')
+            ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL, '', '100')
         ;
 
         CreateStopsGridCommand::configureStopsGridArguments($this);
@@ -65,6 +68,8 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $symbol = $position->symbol;
         $side = $position->side;
         $priceToRelate = $position->entryPrice();
+
+        $part = $this->paramFetcher->floatOption(self::POSITION_PART);
 
         try {
             $fromPnlPercent = $this->paramFetcher->percentOption(self::FROM_PNL_PERCENT_OPTION);
@@ -104,9 +109,9 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $side,
-                $position->size,
+                new Percent($part)->of($position->size),
                 $stopsGridsDef,
-                $context
+                $context,
             )
         );
 
