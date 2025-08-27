@@ -9,6 +9,7 @@ use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
+use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
@@ -29,6 +30,7 @@ final readonly class CheckPassedLiquidationDistanceHandler
         private AppNotificationsService $appNotificationsService,
         private LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
+        private OpenedPositionsCache $openedPositionsCache,
     ) {
         $this->limiterFactory = $attemptLimitCheckerProvider->getLimiterFactory(180);
     }
@@ -38,8 +40,15 @@ final readonly class CheckPassedLiquidationDistanceHandler
         $positions = $this->positionService->getPositionsWithLiquidation();
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
 
+        $symbolsToWatch = $this->openedPositionsCache->getSymbolsToWatch();
+
         foreach ($positions as $position) {
             $symbol = $position->symbol;
+
+            if (!in_array($symbol->name(), $symbolsToWatch, true)) {
+                continue;
+            }
+
             if (!$this->limiterFactory->create($symbol->name())->consume()->isAccepted()) {
                 continue;
             }
@@ -97,7 +106,8 @@ final readonly class CheckPassedLiquidationDistanceHandler
         $threshold = SettingsHelper::getForSideOrSymbol(AlarmSettings::PassedPart_Of_LiquidationDistance_Threshold_From_Allowed, $symbol, $side);
 
         if ($threshold === null) {
-            $threshold = max($allowed / 10, self::MIN_THRESHOLD_WITH_ALLOWED);
+            $threshold = $allowed / 10;
+            $threshold = max($threshold, self::MIN_THRESHOLD_WITH_ALLOWED);
         }
 
         $alarm = $allowed - $threshold;
