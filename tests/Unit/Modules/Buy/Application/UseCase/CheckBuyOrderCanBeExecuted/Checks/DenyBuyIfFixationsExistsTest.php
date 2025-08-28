@@ -14,6 +14,7 @@ use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FixationsFound;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -103,12 +104,12 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         // denied
         $stops = [StopBuilder::short(1, 105000, 0.001, $symbol)->build()->setIsStopAfterOtherSymbolLoss()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::FAILED($position, $order, $ticker->markPrice, $stops);
+        $result = self::FAILED(1, $position, $order, $ticker->markPrice, $stops);
         yield $result->info() . 'stop after other symbols loss' => [$position, $ticker, $stops, $order, $result];
 
         $stops = [StopBuilder::short(1, 105000, 0.001, $symbol)->build()->setStopAfterFixHedgeOppositePositionContest()];
         $order = self::simpleBuyDto($symbol, $side, $ticker->markPrice);
-        $result = self::FAILED($position, $order, $ticker->markPrice, $stops);
+        $result = self::FAILED(1, $position, $order, $ticker->markPrice, $stops);
         yield $result->info() . 'stop after hedge fix' => [$position, $ticker, $stops, $order, $result];
     }
 
@@ -121,14 +122,15 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
     }
 
     private static function FAILED(
+        int $count,
         Position $position,
         MarketBuyEntryDto $order,
         SymbolPrice $orderPrice,
         array $stops,
-    ): TradingCheckResult {
-        return TradingCheckResult::failed(
+    ): FixationsFound {
+        return FixationsFound::create(
             self::CHECK_ALIAS,
-            BuyCheckFailureEnum::ActiveFixationStopsBeforePositionEntryExists,
+            $count,
             self::info($position, $order, $orderPrice, sprintf('found %d fixation stops', count($stops)))
         );
     }
