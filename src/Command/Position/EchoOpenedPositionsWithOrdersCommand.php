@@ -29,7 +29,7 @@ class EchoOpenedPositionsWithOrdersCommand extends AbstractCommand
                 $pushedStops = $this->exchangeService->activeConditionalOrders($symbol);
 
                 $stops = array_filter(
-                    $this->stopRepository->findAllByPositionSide($symbol, $positionSide),
+                    $this->stopRepository->findAllByParams($symbol, $positionSide),
                     static fn(Stop $stop):bool => !$stop->isOrderPushedToExchange() || isset($pushedStops[$stop->getExchangeOrderId()])
                 );
                 $buyOrders = $this->buyOrderRepository->findActive($symbol, $positionSide);

@@ -48,7 +48,7 @@ final class CreateStopsAfterBuyCommandHandler
     public function __invoke(CreateStopsAfterBuy $command): array
     {
         $buyOrder = $this->buyOrderRepository->find($command->buyOrderId);
-        if (!$buyOrder->isWithOppositeOrder()) {
+        if (!$buyOrder || !$buyOrder->isWithOppositeOrder()) {
             return [];
         }
 

@@ -75,6 +75,10 @@ final class ConsoleTableBuilder
         $currentFilledColumns = 0;
         foreach ($row as $inputCell) {
             $content = $inputCell instanceof Cell ? $inputCell->content : $inputCell;
+            if (is_array($content)) {
+                $content = json_encode($content, JSON_PRETTY_PRINT);
+            }
+
             $cellStyle = $inputCell instanceof Cell ? $inputCell->style : CellStyle::default();
             $inputCell = $inputCell instanceof Cell ? $inputCell :  null;
 

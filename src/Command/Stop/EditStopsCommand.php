@@ -26,6 +26,7 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -69,7 +70,8 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
     protected function configure(): void
     {
         $this
-            ->configurePositionArgs()
+            ->configureSymbolArgs(defaultValue: null)
+            ->configurePositionArgs(InputArgument::OPTIONAL)
             ->configurePriceRangeArgs()
             ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
             ->addOption(self::MOVE_TO_PRICE_OPTION, null, InputOption::VALUE_REQUIRED, 'Move orders to price | pricePnl%')
@@ -87,7 +89,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
     {
         $this->stopsCache->clear();
 
-        $symbol = $this->getSymbol();
+        $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
         $all = $this->paramFetcher->getBoolOption('all');
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
@@ -101,7 +103,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
         }
 
         $action = $this->getAction();
-        $positionSide = $this->getPositionSide();
+        $positionSide = $this->getPositionSide(false);
         try {
             $position = $this->getPosition();
         } catch (Exception $e) {
@@ -110,7 +112,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
         }
 
         if ($action === self::ACTION_REMOVE) {
-            $stops = $this->stopRepository->findAllByPositionSide($symbol, $positionSide);
+            $stops = $this->stopRepository->findAllByParams($symbol, $positionSide);
         } else {
             $stops = $this->stopRepository->findActive(
                 symbol: $symbol,

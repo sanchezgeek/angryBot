@@ -38,12 +38,6 @@ final readonly class PushAllMainPositionsStopsHandler
         if (!$positions = $this->positionService->getPositionsWithLiquidation()) {
             return;
         }
-
-        /** @var Position[] $positions */
-        $positions = array_combine(
-            array_map(static fn(Position $position) => $position->symbol->name(), $positions),
-            $positions
-        );
         $lastMarkPrices = $this->positionService->getLastMarkPrices();
 
         $positionsCache = [];

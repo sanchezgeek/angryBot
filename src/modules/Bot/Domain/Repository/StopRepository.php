@@ -64,12 +64,17 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(SymbolInterface $symbol, Side $side, ?callable $qbModifier = null): array
+    public function findAllByParams(?SymbolInterface $symbol = null, ?Side $side = null, ?callable $qbModifier = null): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
-        ;
+        $qb = $this->createQueryBuilder('s');
+
+        if ($side) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         if ($qbModifier) {
             $qbModifier($qb);

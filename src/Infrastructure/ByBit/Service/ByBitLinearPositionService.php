@@ -148,7 +148,7 @@ final class ByBitLinearPositionService implements PositionServiceInterface
 //                if ($position->isMainPosition() || $position->isPositionWithoutHedge()) {
                 // @todo | liquidation | null
                 if ($position->liquidationPrice !== 0.00) {
-                    $result[] = $position;
+                    $result[$position->symbol->name()] = $position;
                 }
             }
         }

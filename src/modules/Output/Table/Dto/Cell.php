@@ -20,7 +20,7 @@ final class Cell
         $this->style = $style ?? new CellStyle();
     }
 
-    public static function default(string $content = ''): self
+    public static function default(mixed $content = ''): self
     {
         return new self($content);
     }

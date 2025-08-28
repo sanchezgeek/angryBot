@@ -126,6 +126,20 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         return Percent::notStrict($result);
     }
 
+    #[AppDynamicParameter(group: 'trading')]
+    public function allPredefinedStopDistances(
+        SymbolInterface $symbol,
+        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
+        int $period = self::ATR_PERIOD_FOR_ORDERS,
+    ): array {
+        $result = [];
+        foreach (PriceDistanceSelector::cases() as $case) {
+            $result[$case->value] = $this->stopLength($symbol, $case, $timeframe, $period);
+        }
+
+        return $result;
+    }
+
     // @todo | PredefinedStopLengthParser parameters
     #[AppDynamicParameter(group: 'trading')]
     public function oppositeBuyLength(

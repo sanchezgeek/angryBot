@@ -124,19 +124,19 @@ final class DoctrineStopRepositoryTest extends KernelTestCase
 
         CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new Stop(4, 1050, 123.125, 0.3, SymbolEnum::TONUSDT, $side, ['someContext' => 'some value', 'someArrayContext' => ['value']]),
-        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::TONUSDT, $side));
+        ], $this->stopRepository->findAllByParams(SymbolEnum::TONUSDT, $side));
 
         CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new Stop(3, 1050, 123.125, 0.3, SymbolEnum::SOLUSDT, $side),
-        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::SOLUSDT, $side));
+        ], $this->stopRepository->findAllByParams(SymbolEnum::SOLUSDT, $side));
 
         CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new Stop(2, 1050, 123.124, 0.2, SymbolEnum::ADAUSDT, $side),
-        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::ADAUSDT, $side));
+        ], $this->stopRepository->findAllByParams(SymbolEnum::ADAUSDT, $side));
 
         CustomAssertions::assertObjectsWithInnerSymbolsEquals([
             new Stop(1, 1050, 123.123, 0.1, SymbolEnum::ETHUSDT, $side)->setExchangeOrderId('123456')
-        ], $this->stopRepository->findAllByPositionSide(SymbolEnum::ETHUSDT, $side));
+        ], $this->stopRepository->findAllByParams(SymbolEnum::ETHUSDT, $side));
     }
 
     /**

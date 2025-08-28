@@ -64,7 +64,7 @@ class StopsDumpCommand extends AbstractCommand
         foreach ($positions as $symbolRaw => $symbolPositions) {
             foreach ($symbolPositions as $position) {
                 $stops = $mode === self::MODE_ALL
-                    ? $this->stopRepository->findAllByPositionSide($position->symbol, $position->side)
+                    ? $this->stopRepository->findAllByParams($position->symbol, $position->side)
                     : $this->stopRepository->findActive(
                         symbol: $position->symbol,
                         side: $position->side,
