@@ -11,7 +11,6 @@ use App\Application\UseCase\Trading\Sandbox\Factory\SandboxStateFactoryInterface
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterface;
 use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
@@ -36,7 +35,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    public const string ALIAS = 'BUY/LIQUIDATION_check';
+    public const string ALIAS = 'LIQUIDATION';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
@@ -119,12 +118,8 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $liquidationPrice = $positionAfterBuy->liquidationPrice();
 
         // @todo | liquidation | null
-        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ' ') : '';
         if ($liquidationPrice->eq(0)) {
-            return TradingCheckResult::succeed(
-                $this,
-                sprintf('%s | %s(%s) | liq=0', $positionAfterBuy, $identifierInfo, BuyOrderInfoHelper::shortInlineInfo($order->volume, $executionPrice))
-            );
+            return TradingCheckResult::succeed($this, 'liq=0');
         }
 
 // @todo | buy/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
@@ -138,10 +133,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;
 
         $info = sprintf(
-            '%s | %s(%s) | liq=%s | Δ=%s, safeΔ=%s',
-            $positionAfterBuy,
-            $identifierInfo,
-            BuyOrderInfoHelper::shortInlineInfo($order->volume, $executionPrice),
+            'liq=%s | Δ=%s, safeΔ=%s',
             $liquidationPrice,
             $liquidationPrice->deltaWith($usedPrice),
             $symbol->makePrice($safeDistance)

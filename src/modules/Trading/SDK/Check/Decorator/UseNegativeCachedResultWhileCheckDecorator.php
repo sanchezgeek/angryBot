@@ -32,6 +32,7 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
         private readonly TradingCheckInterface $decorated,
         int $ttl = self::DEFAULT_CACHE_TTL,
         private readonly ?Closure $cacheKeyFactory = null,
+        private bool $quiet = true,
     ) {
         $this->cache = new SymfonyCacheWrapper(new ArrayAdapter($ttl, true, 0, self::MAX_ITEMS));
     }
@@ -54,7 +55,7 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
         /** @var AbstractTradingCheckResult $cachedResult */
         if ($cachedResult = $this->cache->get($cacheKey)) {
 //            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->name(), $context->ticker->markPrice->value(), $orderDto->orderQty()));
-            return $cachedResult->quietClone();
+            return $this->quiet ? $cachedResult->quietClone() : $cachedResult;
         }
 
         $actualResult = $this->decorated->check($orderDto, $context);

@@ -6,12 +6,8 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Position;
-use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FixationsFound;
-use App\Domain\Price\SymbolPrice;
 use App\Stop\Contract\Query\StopsQueryServiceInterface;
 use App\Stop\Infrastructure\Cache\StopsCache;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
@@ -28,7 +24,7 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
 {
     use CheckBasedOnCurrentPositionState;
 
-    public const string ALIAS = 'BUY/FIXATIONS_check';
+    public const string ALIAS = 'FIXATIONS';
 
     public function __construct(
         PositionServiceInterface $positionService,
@@ -63,22 +59,16 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
 
     public function check(CheckOrderDto|MarketBuyCheckDto $orderDto, TradingCheckContext $context): AbstractTradingCheckResult
     {
-        $order = self::extractMarketBuyEntryDto($orderDto);
-
-        $position = $context->currentPositionState;
-        $positionEntryPrice = $position->entryPrice();
-        $orderPrice = $context->ticker->markPrice;
-
         $fixationStopsBeforePositionEntryCount = $this->getFixationStopsCountBeforePositionEntry($context);
         if ($fixationStopsBeforePositionEntryCount > 0) {
             return FixationsFound::create(
                 $this,
                 $fixationStopsBeforePositionEntryCount,
-                self::info($position, $order, $orderPrice, $positionEntryPrice, sprintf('found %d fixation stops', $fixationStopsBeforePositionEntryCount))
+                sprintf('found %d stops', $fixationStopsBeforePositionEntryCount)
             );
         }
 
-        return TradingCheckResult::succeed($this, self::info($position, $order, $orderPrice, $positionEntryPrice, 'fixation stops not found'));
+        return TradingCheckResult::succeed($this, '');
     }
 
     private function getFixationStopsCountBeforePositionEntry(TradingCheckContext $context): int
@@ -89,25 +79,6 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
             sprintf('fixations_%s_%s', $position->symbol->name(), $position->side->value),
             fn() => $this->stopsQueryService->getFixationStopsCountBeforePositionEntry($position, $context->ticker->markPrice),
             300
-        );
-    }
-
-    private function info(
-        Position $position,
-        MarketBuyEntryDto $order,
-        SymbolPrice $orderPrice,
-        SymbolPrice $positionEntryPrice,
-        string $reason,
-    ): string {
-        $identifierInfo = $order->sourceBuyOrder ? BuyOrderInfoHelper::identifier($order->sourceBuyOrder, ' ') : '';
-
-        return sprintf(
-            '%s | %s(%s) | entry=%s | %s',
-            $position,
-            $identifierInfo,
-            BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
-            $positionEntryPrice,
-            $reason
         );
     }
 

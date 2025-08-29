@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted;
 
 use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyAndCheckFurtherPositionLiquidation;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
@@ -32,9 +33,10 @@ final readonly class BuyChecksChainFactory
             new UseNegativeCachedResultWhileCheckDecorator(
                 decorated: $this->balanceCheck,
                 ttl: 3,
-                cacheKeyFactory: static fn(CheckOrderDto $orderDto) => 'check_blance'
+                cacheKeyFactory: static fn(CheckOrderDto $orderDto) => 'check_balance',
+                quiet: false,
             ),
-            $this->attemptLimitCheckerProvider->getLimiterFactory(2, 1),
+            $this->attemptLimitCheckerProvider->getLimiterFactory(5),
         );
 
         $denyBuyIfFixationsExists = new UseThrottlingWhileCheckDecorator(
@@ -42,18 +44,19 @@ final readonly class BuyChecksChainFactory
                 decorated: $this->denyBuyIfFixationsExists,
                 ttl: 300,
                 cacheKeyFactory: static fn(CheckOrderDto $orderDto)
-                    => sprintf('%s_%s', $orderDto->symbol()->name(), $orderDto->positionSide()->value)
+                    => sprintf('%s_%s', $orderDto->symbol()->name(), $orderDto->positionSide()->value),
+                quiet: false,
             ),
             $this->attemptLimitCheckerProvider->getLimiterFactory(300)
         );
 
         $checkPriceAveragingOnLongDistance = new UseThrottlingWhileCheckDecorator(
-            new UseNegativeCachedResultWhileCheckDecorator($this->buyOnLongDistanceAveragePriceCheck),
+            new UseNegativeCachedResultWhileCheckDecorator(decorated: $this->buyOnLongDistanceAveragePriceCheck, quiet: false),
             $this->checkFurtherPositionLiquidationAfterBuyLimiter
         );
 
         $furtherPositionLiquidationCheck = new UseThrottlingWhileCheckDecorator(
-            new UseNegativeCachedResultWhileCheckDecorator($this->furtherPositionLiquidationCheck),
+            new UseNegativeCachedResultWhileCheckDecorator(decorated: $this->furtherPositionLiquidationCheck, quiet: false),
             $this->checkFurtherPositionLiquidationAfterBuyLimiter
         );
 

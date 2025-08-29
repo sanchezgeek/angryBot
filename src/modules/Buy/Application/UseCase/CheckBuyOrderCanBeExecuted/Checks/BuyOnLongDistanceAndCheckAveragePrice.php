@@ -6,8 +6,6 @@ namespace App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Domain\Position;
-use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
 use App\Domain\Price\SymbolPrice;
@@ -33,7 +31,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
     public const PriceDistanceSelector DEFAULT_MAX_ALLOWED_PRICE_DISTANCE = PriceDistanceSelector::Long;
     public const float MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE = 12.5;
 
-    public const string ALIAS = 'BUY/AVG-PRICE_check';
+    public const string ALIAS = 'AVG-PRICE';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
@@ -76,9 +74,9 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
 
         $position = $context->currentPositionState;
         $positionEntryPrice = $position->entryPrice();
-        $orderPrice = $context->ticker->markPrice;
+        $tickerPrice = $context->ticker->markPrice;
 
-        $percentChange = $orderPrice->differenceWith($positionEntryPrice)->getPercentChange($order->positionSide)->abs();
+        $percentChange = $tickerPrice->differenceWith($positionEntryPrice)->getPercentChange($order->positionSide)->abs();
         $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($order->symbol);
 
         $maxAllowedPercentChange = new Percent(
@@ -86,14 +84,14 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
             false
         );
 
-        $info = $this->info($position, $order, $orderPrice, $positionEntryPrice, $percentChange, $maxAllowedPercentChange);
+        $info = $this->info($tickerPrice, $positionEntryPrice, $percentChange, $maxAllowedPercentChange);
 
         if ($order->sourceBuyOrder->isAveragePriceCheckDisabled()) {
             return TradingCheckResult::succeed($this, sprintf('[disabled] %s', $info));
         }
 
         if ($percentChange->value() > $maxAllowedPercentChange->value()) {
-            return BuyOrderPlacedTooFarFromPositionEntry::create($this, $positionEntryPrice, $orderPrice, $maxAllowedPercentChange, $percentChange, $info);
+            return BuyOrderPlacedTooFarFromPositionEntry::create($this, $positionEntryPrice, $tickerPrice, $maxAllowedPercentChange, $percentChange, $info);
         }
 
         return TradingCheckResult::succeed($this, $info);
@@ -112,18 +110,14 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
     }
 
     private function info(
-        Position $position,
-        MarketBuyEntryDto $order,
         SymbolPrice $orderPrice,
         SymbolPrice $positionEntryPrice,
         Percent $percentChange,
         Percent $maxAllowedPercentChange
     ): string {
         return sprintf(
-            '%s | %s (%s) | entry=%s | %%Δ=%s, allowed%%Δ=%s',
-            $position,
-            BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
-            BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
+            'markPrice = %s, entry=%s | %%Δ=%s, allowed%%Δ=%s',
+            $orderPrice,
             $positionEntryPrice,
             $percentChange,
             $maxAllowedPercentChange,
