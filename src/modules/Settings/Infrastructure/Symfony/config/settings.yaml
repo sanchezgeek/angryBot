@@ -28,5 +28,6 @@ services:
                 push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
 
 # other
+                trading.global.tradingStyle: conservative
                 trading.takeProfitWhenBalanceIsInsufficient.enabled: false
                 trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170

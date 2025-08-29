@@ -189,7 +189,7 @@ final class SchedulerFactory
 
             // -- liquidation
             PeriodicalJob::create('2025-07-01T01:01:08Z', 'P1D', AsyncMessage::for(new RemoveStaleStopsMessage())),
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT25S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
         ];
     }
 

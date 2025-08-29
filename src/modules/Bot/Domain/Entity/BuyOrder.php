@@ -93,7 +93,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private array $context = [];
 
     private bool $isOppositeStopExecuted = false;
-    private ?StopCreationStrategyDefinition $stopCreationStrategyDefinition = null;
+    private false|null|StopCreationStrategyDefinition $stopCreationStrategyDefinition = false;
 
     public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
@@ -105,19 +105,15 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->symbol = $symbol;
     }
 
-    public function getStopCreationDefinition(): StopCreationStrategyDefinition
+    public function getStopCreationDefinition(): ?StopCreationStrategyDefinition
     {
-        if ($this->stopCreationStrategyDefinition !== null) {
+        if ($this->stopCreationStrategyDefinition !== false) {
             return $this->stopCreationStrategyDefinition;
         }
 
-        if ($data = $this->context[self::STOP_LENGTH_DEFINITION_TYPE] ?? null) {
-            $value = StopCreationStrategyDefinitionStaticFactory::fromData($data);
-        } else {
-            $value = new PredefinedStopLength(
-                PriceDistanceSelector::Standard
-            );
-        }
+        $value = ($data = $this->context[self::STOP_LENGTH_DEFINITION_TYPE] ?? null)
+            ? StopCreationStrategyDefinitionStaticFactory::fromData($data)
+            : null;
 
         return $this->stopCreationStrategyDefinition = $value;
     }

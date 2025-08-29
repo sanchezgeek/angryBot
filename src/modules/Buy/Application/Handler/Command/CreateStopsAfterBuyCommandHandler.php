@@ -13,6 +13,7 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
+use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
 use App\Buy\Application\Service\StopPlacement\DefaultStopPlacementStrategyProcessor;
 use App\Buy\Application\Service\StopPlacement\Exception\OtherStrategySuggestionException;
 use App\Buy\Application\Service\StopPlacement\StopPlacementStrategyContext;
@@ -177,9 +178,7 @@ final class CreateStopsAfterBuyCommandHandler
             }
         }
 
-        throw new RuntimeException(
-            sprintf('Cannot find appropriate BaseStopLengthProvider for BuyOrder.id = %d. Definition was: "%s"', $buyOrder->getId(), $buyOrder->getStopCreationDefinition())
-        );
+        return $this->defaultStopLengthProcessor;
     }
 
     /**
@@ -251,6 +250,7 @@ final class CreateStopsAfterBuyCommandHandler
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly TAToolsProviderInterface $taProvider,
         private readonly DefaultStopPlacementStrategyProcessor $defaultStopPlacementStrategyProcessor,
+        private readonly PredefinedStopLengthProcessor $defaultStopLengthProcessor,
 
         #[AutowireIterator('buy.createStopsAfterBuy.baseStopLength.processor')]
         private readonly iterable $baseStopLengthProviders,

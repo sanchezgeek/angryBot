@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Buy\Application\Service\BaseStopLength\Processor;
 
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Buy\Application\Service\BaseStopLength\AbstractBaseStopLengthProcessor;
 use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface
@@ -32,8 +36,20 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
 
     protected function doProcess(BuyOrder $buyOrder): float
     {
-        /** @var PredefinedStopLength $definition */
+        /** @var PredefinedStopLength|null $definition */
         $definition = $buyOrder->getStopCreationDefinition();
+
+        if ($definition === null) {
+            $globalTradingStyle = SettingsHelper::withAlternativesAllowed(TradingSettings::Global_Trading_Style, $buyOrder->getSymbol(), $buyOrder->getPositionSide());
+
+            $length = match ($globalTradingStyle) {
+                TradingStyle::Cautious => PriceDistanceSelector::VeryShort,
+                TradingStyle::Conservative => PriceDistanceSelector::Standard,
+                TradingStyle::Aggressive => PriceDistanceSelector::Long,
+            };
+
+            $definition = new PredefinedStopLength($length);
+        }
 
         $stopDistancePricePct = $this->getStopPercent($definition, $buyOrder);
 
