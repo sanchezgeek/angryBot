@@ -57,6 +57,8 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL, '', '100')
         ;
 
+        // fixations context
+        // + fixations def
         CreateStopsGridCommand::configureStopsGridArguments($this);
     }
 
@@ -93,18 +95,28 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        /** @var ByBitLinearPositionService $positionService */
+        $positionService = $this->positionService;
+
         $mode = $this->paramFetcher->getStringOption(self::MODE_OPTION, false);
 
         $symbols = $this->getSymbols();
 
-        $symbolsRaw = SymbolHelper::symbolsToRawValues(...$symbols);
+        if (count($symbols) > 1) {
+            $positions = array_intersect_key(
+                $positionService->getPositionsWithLiquidation(),
+                array_flip(SymbolHelper::symbolsToRawValues(...$symbols))
+            );
+        } else {
+            $positions = array_intersect_key(
+                $positionService->getAllPositions(),
+                array_flip(SymbolHelper::symbolsToRawValues(...$symbols))
+            );
 
-        /** @var ByBitLinearPositionService $positionService */
-        $positionService = $this->positionService;
-        $positions = array_intersect_key(
-            $positionService->getPositionsWithLiquidation(),
-            array_flip($symbolsRaw)
-        );
+            $side = $this->getPositionSide();
+
+            $positions = [$positions[$symbols[0]->name()][$side->value]];
+        }
         $markPrices = $this->positionService->getLastMarkPrices();
 
         $context = ['uniqid' => $this->uniqueId];
