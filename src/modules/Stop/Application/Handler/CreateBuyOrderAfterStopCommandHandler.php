@@ -89,9 +89,21 @@ final class CreateBuyOrderAfterStopCommandHandler
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, Distance::ModerateShort);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, Distance::Short);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::VeryShort, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, match ($tradingStyle) {
+                    TradingStyle::Aggressive => Distance::ModerateLong,
+                    TradingStyle::Conservative => Distance::Standard,
+                    TradingStyle::Cautious => Distance::ModerateShort,
+                });
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, match ($tradingStyle) {
+                    TradingStyle::Aggressive => Distance::Standard,
+                    TradingStyle::Conservative => Distance::Short,
+                    TradingStyle::Cautious => Distance::VeryShort,
+                });
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, match ($tradingStyle) {
+                    TradingStyle::Aggressive => Distance::Short,
+                    TradingStyle::Conservative => Distance::VeryShort,
+                    TradingStyle::Cautious => Distance::VeryVeryShort,
+                }, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
