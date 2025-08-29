@@ -14,6 +14,9 @@ enum CreateOppositeBuySettings: string implements AppSettingInterface, AppSettin
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Martingale_Enabled = 'stop.createOpposite.martingale.enabled';
 
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case Add_Force_Flag_Enabled = 'stop.createOpposite.addForceFlag.enabled';
+
     public function getSettingKey(): string
     {
         return $this->value;

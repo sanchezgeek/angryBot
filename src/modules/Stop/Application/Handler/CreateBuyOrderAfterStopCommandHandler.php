@@ -41,6 +41,9 @@ final class CreateBuyOrderAfterStopCommandHandler
     public const int DEFAULT_ATR_PERIOD = PredefinedStopLengthProcessor::DEFAULT_PERIOD_FOR_ATR;
     public const TimeFrame DEFAULT_ATR_TIMEFRAME = PredefinedStopLengthProcessor::DEFAULT_TIMEFRAME_FOR_ATR;
 
+    public const CreateOppositeBuySettings MARTINGALE_SETTING = CreateOppositeBuySettings::Martingale_Enabled;
+    public const CreateOppositeBuySettings FORCE_BUY_ENABLED_SETTING = CreateOppositeBuySettings::Add_Force_Flag_Enabled;
+
     public function __invoke(CreateBuyOrderAfterStop $command): array
     {
         $stop = $this->stopRepository->find($command->stopId);
@@ -66,6 +69,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         }
 
         $tradingStyle = $this->tradingParametersProvider->tradingStyle($symbol, $side);
+        $forceBuyEnabled = $this->isForceBuyEnabled($symbol, $side);
 
         $martingaleOrders = [];
         $orders = [];
@@ -80,9 +84,9 @@ final class CreateBuyOrderAfterStopCommandHandler
                 TradingStyle::Cautious => Distance::Short,
             });
 
-            $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => $forceBuyEnabled && !$isBigStop]);
         } else {
-            $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
+            $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, Distance::ModerateShort);
@@ -249,16 +253,9 @@ final class CreateBuyOrderAfterStopCommandHandler
         );
     }
 
-    public function __construct(
-        private readonly StopRepository $stopRepository,
-        private readonly TradingParametersProviderInterface $tradingParametersProvider,
-        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
-    ) {
-    }
-
     private function isMartingaleEnabled(SymbolInterface $symbol, Side $side, TradingStyle $tradingStyle): bool
     {
-        if (SettingsHelper::getForSideOrSymbol(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true) {
+        if (SettingsHelper::getForSideOrSymbol(self::MARTINGALE_SETTING, $symbol, $side) === true) {
             // override
             return true;
         }
@@ -267,6 +264,18 @@ final class CreateBuyOrderAfterStopCommandHandler
             return false;
         }
 
-        return SettingsHelper::withAlternativesAllowed(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true;
+        return SettingsHelper::withAlternativesAllowed(self::MARTINGALE_SETTING, $symbol, $side) === true;
+    }
+
+    private function isForceBuyEnabled(SymbolInterface $symbol, Side $side): bool
+    {
+        return SettingsHelper::withAlternativesAllowed(self::FORCE_BUY_ENABLED_SETTING, $symbol, $side) === true;
+    }
+
+    public function __construct(
+        private readonly StopRepository $stopRepository,
+        private readonly TradingParametersProviderInterface $tradingParametersProvider,
+        private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+    ) {
     }
 }

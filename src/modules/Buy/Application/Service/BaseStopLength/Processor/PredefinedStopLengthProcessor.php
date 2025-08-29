@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Buy\Application\Service\BaseStopLength\Processor;
 
-use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Buy\Application\Service\BaseStopLength\AbstractBaseStopLengthProcessor;
 use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
@@ -13,7 +12,6 @@ use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
-use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
 final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcessor implements BaseStopLengthProcessorInterface

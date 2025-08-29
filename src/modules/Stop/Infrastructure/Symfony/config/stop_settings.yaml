@@ -21,3 +21,4 @@ stop.movePositionStops.moveToBreakeven.after.positionPnlPercent: 900
 
 ### \App\Stop\Application\Settings\CreateOppositeBuySettings
 stop.createOpposite.martingale.enabled: true
+stop.createOpposite.addForceFlag.enabled: true
