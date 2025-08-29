@@ -7,6 +7,7 @@ namespace App\Tests\Stub\TA;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -17,6 +18,11 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
 {
     public array $stopLengthResults = [];
     private array $oppositeBuyLengthResults = [];
+
+    public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    {
+        return TradingStyle::Conservative;
+    }
 
     public function addOppositeBuyLengthResult(
         SymbolInterface $symbol,

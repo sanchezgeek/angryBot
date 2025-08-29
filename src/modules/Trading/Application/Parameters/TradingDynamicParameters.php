@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
+use App\Bot\Application\Settings\TradingSettings;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\Screener\Application\Settings\PriceChangeSettings;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
@@ -14,6 +16,7 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
@@ -36,6 +39,11 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         #[AppDynamicParameterAutowiredArgument]
         private TAToolsProviderInterface $taProvider,
     ) {
+    }
+
+    public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    {
+        return SettingsHelper::withAlternativesAllowed(TradingSettings::Global_Trading_Style, $symbol, $side);
     }
 
     #[AppDynamicParameter(group: 'trading')]

@@ -15,10 +15,12 @@ use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector as Distance;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Settings\Application\Helper\SettingsHelper;
@@ -63,6 +65,8 @@ final class CreateBuyOrderAfterStopCommandHandler
             $refPrice = $symbol->makePrice($command->prevPositionEntryPrice);
         }
 
+        $tradingStyle = $this->tradingParametersProvider->tradingStyle($symbol, $side);
+
         $martingaleOrders = [];
         $orders = [];
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
@@ -70,22 +74,33 @@ final class CreateBuyOrderAfterStopCommandHandler
                 $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
             }
 
-            $distance = $distanceOverride ?? $this->getOppositeOrderDistance($symbol, $refPrice, PriceDistanceSelector::Standard);
+            $distance = $distanceOverride ?? $this->getOppositeOrderDistance($symbol, $refPrice, match ($tradingStyle) {
+                TradingStyle::Aggressive => Distance::Long,
+                TradingStyle::Conservative => Distance::Standard,
+                TradingStyle::Cautious => Distance::Short,
+            });
 
             $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => !$isBigStop]);
         } else {
             $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => true];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::Short);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, Distance::ModerateShort);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, Distance::Short);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::VeryShort, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
+
                 // @todo | martingale | only for shorts?
-                if (SettingsHelper::withAlternativesAllowed(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true) {
-                    $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength(PriceDistanceSelector::Short));
+                if ($this->isMartingaleEnabled($symbol, $side, $tradingStyle)) {
+                    $martingaleOrdersStopLength = match ($tradingStyle) {
+                        TradingStyle::Aggressive => Distance::Standard,
+                        TradingStyle::Conservative => Distance::ModerateShort,
+                        TradingStyle::Cautious => Distance::Short,
+                    };
+
+                    $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
 
                     if (!$doubleHashes) {
                         $doubleHashes[] = md5(uniqid('BO_double', true));
@@ -103,21 +118,84 @@ final class CreateBuyOrderAfterStopCommandHandler
 //                        $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, $orderLengthImmediatelyAfterStop, array_merge($forcedWithVeryVeryShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
 //                    }
 
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::ModerateLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, PriceDistanceSelector::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::ModerateLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, Distance::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
 
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, PriceDistanceSelector::Short, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::VeryVeryShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2,
+                        match ($tradingStyle) {
+                            TradingStyle::Aggressive => Distance::Short,
+                            TradingStyle::Conservative => Distance::ModerateShort,
+                            TradingStyle::Cautious => Distance::Standard,
+                        },
+                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]),
+                        sign: -1
+                    );
+
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3,
+                        match ($tradingStyle) {
+                            TradingStyle::Aggressive => Distance::VeryShort,
+                            TradingStyle::Conservative => Distance::Short,
+                            TradingStyle::Cautious => Distance::ModerateShort,
+                        },
+                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]),
+                        sign: -1
+                    );
+
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3,
+                        match ($tradingStyle) {
+                            TradingStyle::Aggressive => Distance::VeryVeryShort,
+                            TradingStyle::Conservative => Distance::VeryShort,
+                            TradingStyle::Cautious => Distance::Short,
+                        },
+                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]),
+                        sign: -1
+                    );
                 }
 
-                // double up to averaging with short stop
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::VeryVeryShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : []));
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::Short, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : []);
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, PriceDistanceSelector::ModerateShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : []));
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort);
+                $stopLengthContext = [];
+                if ($tradingStyle === TradingStyle::Cautious) {
+                    $stopLengthContext = BuyOrder::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::Short));
+                } elseif ($tradingStyle === TradingStyle::Aggressive) {
+                    $stopLengthContext = BuyOrder::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::ModerateLong));
+                }
+
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
+                    match ($tradingStyle) {
+                        TradingStyle::Aggressive => Distance::VeryVeryShort,
+                        TradingStyle::Conservative => Distance::VeryShort,
+                        TradingStyle::Cautious => Distance::Short,
+                    },
+                    array_merge($stopLengthContext, $withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : [])
+                );
+
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3,
+                    match ($tradingStyle) {
+                        TradingStyle::Aggressive => Distance::VeryShort,
+                        TradingStyle::Conservative => Distance::Short,
+                        TradingStyle::Cautious => Distance::ModerateShort,
+                    },
+                    array_merge($stopLengthContext, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : [])
+                );
+
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
+                    match ($tradingStyle) {
+                        TradingStyle::Aggressive => Distance::Short,
+                        TradingStyle::Conservative => Distance::ModerateShort,
+                        TradingStyle::Cautious => Distance::Standard,
+                    },
+                    array_merge($stopLengthContext, $withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : [])
+                );
+
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
+                    match ($tradingStyle) {
+                        TradingStyle::Aggressive => Distance::ModerateShort,
+                        TradingStyle::Conservative => Distance::Standard,
+                        TradingStyle::Cautious => Distance::ModerateLong,
+                    },
+                    $stopLengthContext
+                );
             }
         }
 
@@ -127,7 +205,10 @@ final class CreateBuyOrderAfterStopCommandHandler
         );
 
         $buyOrders = [];
-        foreach (array_merge($orders->getOrders(), $martingaleOrders) as $order) {
+        foreach (array_merge(
+            $orders->getOrders(),
+            $martingaleOrders
+                 ) as $order) {
             $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context());
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
@@ -135,7 +216,7 @@ final class CreateBuyOrderAfterStopCommandHandler
         return $buyOrders;
     }
 
-    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, PriceDistanceSelector|float $length, array $additionalContext = [], int $sign = 1): Order
+    private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, Distance|float $length, array $additionalContext = [], int $sign = 1): Order
     {
         $commonContext = [
             BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -145,7 +226,7 @@ final class CreateBuyOrderAfterStopCommandHandler
 
         $side = $stop->getPositionSide();
 
-        $distance = $length instanceof PriceDistanceSelector ? $this->getOppositeOrderDistance($stop->getSymbol(), $refPrice, $length) : $length;
+        $distance = $length instanceof Distance ? $this->getOppositeOrderDistance($stop->getSymbol(), $refPrice, $length) : $length;
         $distance*= $sign;
 
         $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
@@ -156,9 +237,9 @@ final class CreateBuyOrderAfterStopCommandHandler
     }
 
     /**
-     * @param PriceDistanceSelector $lengthSelector // @todo | oppositeBuyOrder | use param from stop?
+     * @param Distance $lengthSelector // @todo | oppositeBuyOrder | use param from stop?
      */
-    private function getOppositeOrderDistance(SymbolInterface $symbol, SymbolPrice $refPrice, PriceDistanceSelector $lengthSelector): float
+    private function getOppositeOrderDistance(SymbolInterface $symbol, SymbolPrice $refPrice, Distance $lengthSelector): float
     {
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
@@ -173,5 +254,19 @@ final class CreateBuyOrderAfterStopCommandHandler
         private readonly TradingParametersProviderInterface $tradingParametersProvider,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
     ) {
+    }
+
+    private function isMartingaleEnabled(SymbolInterface $symbol, Side $side, TradingStyle $tradingStyle): bool
+    {
+        if (SettingsHelper::getForSideOrSymbol(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true) {
+            // override
+            return true;
+        }
+
+        if ($tradingStyle === TradingStyle::Cautious) {
+            return false;
+        }
+
+        return SettingsHelper::withAlternativesAllowed(CreateOppositeBuySettings::Martingale_Enabled, $symbol, $side) === true;
     }
 }

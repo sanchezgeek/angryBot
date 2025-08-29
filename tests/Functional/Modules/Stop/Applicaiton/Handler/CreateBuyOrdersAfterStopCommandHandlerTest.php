@@ -17,7 +17,9 @@ use App\Domain\Order\Order;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector as Distance;
 use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
@@ -84,9 +86,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         // @todo get from stop
         self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol));
 
-        if (!$martingaleEnabled) {
-            $this->overrideSetting(SettingAccessor::exact(CreateOppositeBuySettings::Martingale_Enabled, $stop->getSymbol(), $stop->getPositionSide()), false);
-        }
+        $this->overrideSetting(SettingAccessor::exact(CreateOppositeBuySettings::Martingale_Enabled, $stop->getSymbol(), $stop->getPositionSide()), $martingaleEnabled);
 
         $this->haveTicker($ticker);
         $this->applyDbFixtures(new StopFixture($stop));
@@ -132,8 +132,8 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             $expectedBuyOrders,
         ];
 
-        $stop = StopBuilder::short(10, 100000, 0.002)->build()->setExchangeOrderId('123456');
-        $wholePositionSize = 0.01;
+        $stop = StopBuilder::short(10, 100000, 0.02)->build()->setExchangeOrderId('123456');
+        $wholePositionSize = 0.1;
         $doublesHashes = ['123456', '1234567', '1234568'];
         $expectedBuyOrders = self::expectedBuyOrders($stop, $wholePositionSize, martingaleEnabled: true, doublesHashes: $doublesHashes);
         yield self::caseDescription($stop, $wholePositionSize, $expectedBuyOrders) => [
@@ -249,7 +249,15 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             $doubleHashes = $doublesHashes ?? [];
             if ($martingaleEnabled) {
                 OutputHelper::print(sprintf('martingale enabled for %s %s', $symbol->name(), $side->value));
-                $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength(PriceDistanceSelector::Short));
+
+                $tradingStyle = TradingStyle::Conservative;
+
+                $martingaleOrdersStopLength = match ($tradingStyle) {
+                    TradingStyle::Aggressive => Distance::Standard,
+                    TradingStyle::Conservative => Distance::ModerateShort,
+                    TradingStyle::Cautious => Distance::Short,
+                };
+                $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
 
                 if (!$doubleHashes) {
                     $doubleHashes[] = md5(uniqid('BO_double', true));
@@ -262,15 +270,15 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
 
-                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::ModerateShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
-                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::VeryVeryShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
             }
 
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::VeryVeryShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : []));
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::Short, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : []);
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::ModerateShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : []));
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : []));
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : []);
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : []));
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::Standard);
         }
 
         $orders = new OrdersLimitedWithMaxVolume(
@@ -279,7 +287,9 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         );
 
         $buyOrders = [];
-        foreach (array_merge($orders->getOrders(), $martingaleOrders) as $order) {
+        foreach (array_merge($orders->getOrders()
+            , $martingaleOrders
+                 ) as $order) {
             $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
             $fromId++;
         }

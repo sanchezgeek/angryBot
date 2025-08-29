@@ -40,9 +40,9 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
         $definition = $buyOrder->getStopCreationDefinition();
 
         if ($definition === null) {
-            $globalTradingStyle = SettingsHelper::withAlternativesAllowed(TradingSettings::Global_Trading_Style, $buyOrder->getSymbol(), $buyOrder->getPositionSide());
+            $tradingStyle = $this->tradingParametersProvider->tradingStyle($buyOrder->getSymbol(), $buyOrder->getPositionSide());
 
-            $length = match ($globalTradingStyle) {
+            $length = match ($tradingStyle) {
                 TradingStyle::Cautious => PriceDistanceSelector::VeryShort,
                 TradingStyle::Conservative => PriceDistanceSelector::Standard,
                 TradingStyle::Aggressive => PriceDistanceSelector::Long,
