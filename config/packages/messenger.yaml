@@ -48,7 +48,7 @@ framework:
             App\Connection\Application\Messenger\Job\CheckConnection: async
 
             # BuyOrder
-            App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
+#            App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
             App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBuyOrdersActiveState: async_high
 
             # Stop

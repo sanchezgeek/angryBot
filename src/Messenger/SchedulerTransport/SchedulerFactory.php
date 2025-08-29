@@ -181,7 +181,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckPositionIsInProfit())),
 
             // -- active BuyOrders
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT5S', AsyncMessage::for(new CheckOrdersNowIsActive())),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT7S', new CheckOrdersNowIsActive()),
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10M', AsyncMessage::for(new ResetBuyOrdersActiveState())),
 
             // -- active Conditional orders
