@@ -131,7 +131,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         if ($mode === self::DANGER_MODE) {
             $this->tradingStyle = TradingStyle::Cautious;
             if ($this->fromPnlPercent === null) {
-                $this->fromPnlPercent = sprintf('-%s', PriceDistanceSelector::VeryShort->value);
+                $this->fromPnlPercent = sprintf('-%s', PriceDistanceSelector::VeryVeryShort->value);
             }
         }
 
@@ -161,7 +161,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
         if (
             $stopsGridsDef->isFoundAutomaticallyFromTa()
-            && !$this->io->confirm(sprintf('Stops grid definition for %s: `%s`. Confirm?', $symbol->name(), $stopsGridsDef))
+            && !$this->io->confirm(sprintf('Stops grid definition for %s: `%s`. $priceToRelate = %s. Confirm?', $symbol->name(), $stopsGridsDef, $priceToRelate))
         ) {
             return;
         }
