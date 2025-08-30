@@ -8,6 +8,7 @@ use App\Domain\Trading\Enum\TimeFrame;
 use App\Helper\Json;
 use App\Helper\OutputHelper;
 use App\Infrastructure\DependencyInjection\GetServiceHelper;
+use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -36,5 +37,13 @@ final class TA
         $taProvider = GetServiceHelper::getService(TAToolsProviderInterface::class);
 
         return $taProvider->create($symbol, $timeFrame)->atr($period);
+    }
+
+    public static function allTimeHighLow(SymbolInterface $symbol): FindHighLowPricesResult
+    {
+        /** @var TAToolsProviderInterface $taProvider */
+        $taProvider = GetServiceHelper::getService(TAToolsProviderInterface::class);
+
+        return $taProvider->create($symbol)->highLowPrices();
     }
 }

@@ -6,6 +6,7 @@ namespace App\Tests\Stub\TA;
 
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
+use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
@@ -76,5 +77,10 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
         }
 
         return $result;
+    }
+
+    public function highLowPrices(): FindHighLowPricesResult
+    {
+        throw new RuntimeException('Not implemented yet');
     }
 }
