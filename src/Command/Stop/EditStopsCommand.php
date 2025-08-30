@@ -90,17 +90,8 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
         $this->stopsCache->clear();
 
         $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
-        $all = $this->paramFetcher->getBoolOption('all');
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
-
-        if (!$priceRange && !$filterCallbacksOption && !$all) {
-            throw new InvalidArgumentException(sprintf('One of `priceRange`| `%s` | `all` options must be specified.', self::FILTER_CALLBACKS_OPTION));
-        }
-
-        if ($all && $priceRange) {
-            throw new InvalidArgumentException('`all` and `priceRange` cannot be both selected.');
-        }
 
         $action = $this->getAction();
         $positionSide = $this->getPositionSide(false);
