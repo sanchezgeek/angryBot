@@ -36,6 +36,7 @@ use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use RuntimeException;
+use Throwable;
 
 /**
  * @todo | open-position | positions lifetime
@@ -72,9 +73,27 @@ final class OpenPositionHandler
     /**
      * @throws CannotAffordOrderCostException
      * @throws AutoReopenPositionDenied
-     * @throws Exception
+     * @throws Throwable
      */
     public function handle(OpenPositionEntryDto $entryDto): void
+    {
+        try {
+            $this->doHandle($entryDto);
+        } catch (Throwable $e) {
+            if ($this->entityManager->getConnection()->isTransactionActive()) {
+                $this->entityManager->rollback();
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @throws CannotAffordOrderCostException
+     * @throws AutoReopenPositionDenied
+     * @throws Exception
+     */
+    public function doHandle(OpenPositionEntryDto $entryDto): void
     {
         $this->entryDto = $entryDto;
         $symbol = $this->entryDto->symbol;

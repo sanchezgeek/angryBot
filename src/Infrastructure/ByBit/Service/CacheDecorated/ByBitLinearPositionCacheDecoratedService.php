@@ -95,4 +95,9 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     {
         return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->name());
     }
+
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
+    {
+        $this->positionService->setLeverage($symbol, $forBuy, $forSell);
+    }
 }

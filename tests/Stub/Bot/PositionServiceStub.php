@@ -12,6 +12,8 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use LogicException;
 
+use RuntimeException;
+
 use function array_shift;
 use function sprintf;
 use function uuid_create;
@@ -103,5 +105,10 @@ final class PositionServiceStub implements PositionServiceInterface
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         throw new Exception(sprintf('%s::getOpenedPositionsSymbols not supported', PositionServiceInterface::class));
+    }
+
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
+    {
+        throw new RuntimeException('not implemented');
     }
 }

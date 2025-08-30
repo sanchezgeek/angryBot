@@ -3,6 +3,7 @@
 namespace App\Trading\Console\Position;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
@@ -10,6 +11,7 @@ use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Helper\OutputHelper;
+use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Settings\OpenPositionSettings;
@@ -21,6 +23,7 @@ use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGrid
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -132,6 +135,15 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
                 sprintf("%s\nClose position manually first:\n   `./bin/console order:place --symbol=%s` -kclose %s 100%%", $e->getMessage(), $symbol->name(), $positionSide->value)
             );
             return Command::FAILURE;
+        } catch (CannotAffordOrderCostException $e) {
+            OutputHelper::print('trying to increase leverage');
+            $maxLeverage = $this->marketService->getInstrumentInfo($this->symbol->name())->maxLeverage;
+
+            try {
+                $this->positionService->setLeverage($this->symbol, $maxLeverage, $maxLeverage);
+            } catch (Throwable) {}
+
+            $this->openPositionHandler->handle($inputDto);
         } catch (Throwable $e) {
             OutputHelper::print($e->getMessage());
             return Command::FAILURE;
@@ -221,6 +233,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
         private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
         private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private readonly ExchangeServiceInterface $exchangeService,
+        private readonly ByBitLinearMarketService $marketService,
         ?string $name = null,
     ) {
         parent::__construct($name);
