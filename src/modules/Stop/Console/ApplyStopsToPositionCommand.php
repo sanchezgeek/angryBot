@@ -5,6 +5,7 @@ namespace App\Stop\Console;
 use App\Application\UniqueIdGeneratorInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Command\AbstractCommand;
 use App\Command\Helper\UndoHelper;
 use App\Command\Mixin\ConsoleInputAwareCommand;
@@ -15,6 +16,7 @@ use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\PositionDependentCommand;
 use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Price\SymbolPrice;
+use App\Domain\Stop\StopsCollection;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
@@ -54,7 +56,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
             ->addOption(self::FROM_PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL, 'Apply from specified PNL%')
             ->addOption(self::MODE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Mode')
-            ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL, '', '100')
+            ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL)
         ;
 
         // fixations context
@@ -90,7 +92,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     private TradingStyle $tradingStyle;
     private null|float|string $fromPnlPercent;
-    private float $part;
+    private ?float $part;
     private string $uniqueId;
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -166,11 +168,21 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             return;
         }
 
+        $part = $this->part ?? 100;
+
+        $applyInRange = $stopsGridsDef->factAbsoluteRange();
+        if ($existedStopsInRange = $this->stopRepository->findActiveInRange($symbol, $side, $applyInRange)) {
+            $existedStopsInRange = new StopsCollection(...$existedStopsInRange);
+            $coveredPart = $existedStopsInRange->volumePart($position->size);
+
+            $part -= $coveredPart;
+        }
+
         $this->handler->handle(
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $side,
-                new Percent($this->part)->of($position->size),
+                new Percent($part)->of($position->size),
                 $stopsGridsDef,
                 $context,
             )
@@ -182,6 +194,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private readonly ApplyStopsToPositionHandler $handler,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
+        private readonly StopRepositoryInterface $stopRepository,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);

@@ -7,6 +7,7 @@ namespace App\Bot\Domain\Repository;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface StopRepositoryInterface
@@ -18,6 +19,8 @@ interface StopRepositoryInterface
      * @return Stop[]
      */
     public function findActive(?SymbolInterface $symbol = null, ?Side $side = null, ?Ticker $nearTicker = null, bool $exceptOppositeOrders = false, ?callable $qbModifier = null): array;
+
+    public function findActiveInRange(SymbolInterface $symbol, Side $side, PriceRange $priceRange, bool $exceptOppositeOrders = false, ?callable $qbModifier = null): array;
 
     /**
      * @return Stop[]

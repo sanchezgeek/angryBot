@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Domain\Grid\Definition;
 
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use IteratorAggregate;
@@ -23,7 +24,8 @@ final class OrdersGridDefinitionCollection implements IteratorAggregate, Stringa
     private bool $foundAutomaticallyFromTa = false;
 
     public function __construct(
-        private string $definition,
+        private readonly SymbolInterface $symbol,
+        private readonly string $definition,
         OrdersGridDefinition ...$items
     ) {
         $this->items = $items;
@@ -36,7 +38,7 @@ final class OrdersGridDefinitionCollection implements IteratorAggregate, Stringa
             $items[] = OrdersGridDefinition::create($child, $refPrice, $positionSide, $symbol);
         }
 
-        return new self($collectionDefinition, ...$items);
+        return new self($symbol, $collectionDefinition, ...$items);
     }
 
     public function getIterator(): Traversable
@@ -61,5 +63,17 @@ final class OrdersGridDefinitionCollection implements IteratorAggregate, Stringa
     public function __toString()
     {
         return $this->definition;
+    }
+
+    public function factAbsoluteRange(): PriceRange
+    {
+        $from = [];
+        $to = [];
+        foreach ($this->items as $item) {
+            $from[] = $item->priceRange->from();
+            $to[] = $item->priceRange->to();
+        }
+
+        return PriceRange::create(min($from), max($to), $this->symbol);
     }
 }

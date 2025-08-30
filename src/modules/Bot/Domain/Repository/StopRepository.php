@@ -7,6 +7,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
@@ -81,6 +82,24 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         return $qb->getQuery()->getResult();
+    }
+
+    public function findActiveInRange(
+        SymbolInterface $symbol,
+        Side $side,
+        PriceRange $priceRange,
+        bool $exceptOppositeOrders = false,
+        ?callable $qbModifier = null
+    ): array {
+        return $this->findActiveQB($symbol, $side, null, $exceptOppositeOrders, function (QueryBuilder $qb) use ($priceRange, $qbModifier) {
+            $qbModifier && $qbModifier($qb);
+
+            $priceField = $qb->getRootAliases()[0] . '.price';
+            $from = $priceRange->from()->value();
+            $to = $priceRange->to()->value();
+
+            $qb->andWhere($priceField . ' BETWEEN :priceFrom AND :priceTo')->setParameter(':priceFrom', $from)->setParameter(':priceTo', $to);
+        })->getQuery()->getResult();
     }
 
     /**
