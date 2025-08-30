@@ -13,4 +13,5 @@ interface AppNotificationsServiceInterface
     public function muted(string $message, array $data = []): void;
     public function notify(string $message, array $data = [], string $type = 'info'): void;
     public function warning(string $message, array $data = []): void;
+    public function error(string $message, array $data = []): void;
 }

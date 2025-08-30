@@ -52,4 +52,7 @@ tail -f "${LOG_PATH}" | while IFS= read -r line; do
  if echo "${line}" | grep -q "WARNING"; then
    afplay -t 0.8 "${BIN_DIR}/data/warning.wav" -d1 2>&1 1>/dev/null
  fi
+ if echo "${line}" | grep -q "ERROR"; then
+   afplay -t 0.8 "${BIN_DIR}/data/notification_error.wav" -d1 2>&1 1>/dev/null
+ fi
 done

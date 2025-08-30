@@ -54,6 +54,11 @@ final readonly class AppNotificationsService implements AppNotificationsServiceI
         $this->notify($message, $data, 'debug');
     }
 
+    public function error(string $message, array $data = []): void
+    {
+        $this->notify($message, $data, 'error');
+    }
+
     public function warning(string $message, array $data = [], string $type = 'info'): void
     {
         $this->notify($message, $data, 'warning');
