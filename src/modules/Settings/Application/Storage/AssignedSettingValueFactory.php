@@ -59,11 +59,11 @@ final class AssignedSettingValueFactory
     public static function buildFullKey(AppSettingInterface $setting, SymbolInterface|string|null $symbol, ?Side $positionSide): string
     {
         $symbol = $symbol instanceof SymbolInterface ? $symbol->name() : $symbol;
-
         $baseKey = $setting->getSettingKey();
 
         return match (true) {
             $positionSide !== null && $symbol !== null => sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol, $positionSide->value),
+            $positionSide !== null => sprintf('%s[side=%s]', $baseKey, $positionSide->value),
             $symbol !== null => sprintf('%s[symbol=%s]', $baseKey, $symbol),
             default => $baseKey,
         };

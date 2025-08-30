@@ -7,7 +7,6 @@ use App\Settings\Domain\Repository\SettingValueRepository;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\Mapping as ORM;
-use InvalidArgumentException;
 
 #[ORM\Entity(repositoryClass: SettingValueRepository::class)]
 #[ORM\UniqueConstraint(columns: ['key', 'symbol', 'position_side'])]
@@ -42,10 +41,6 @@ class SettingValue
         ?SymbolInterface $symbol = null,
         ?Side $positionSide = null,
     ) {
-        if ($this->positionSide && !$this->symbol) {
-            throw new InvalidArgumentException('Symbol must be specified too when side specified');
-        }
-
         $this->key = $key;
         $this->symbol = $symbol;
         $this->positionSide = $positionSide;

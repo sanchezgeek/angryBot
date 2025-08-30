@@ -24,6 +24,8 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 /**
  * @group settings
+ *
+ * @covers AppSettingsService
  */
 final class AppSettingsServiceTest extends TestCase
 {

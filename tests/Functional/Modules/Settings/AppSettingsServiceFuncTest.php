@@ -6,14 +6,18 @@ namespace App\Tests\Functional\Modules\Settings;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Trading\Application\Settings\CoverLossSettings;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * @group settings
+ *
+ * @covers AppSettingsService
  */
 final class AppSettingsServiceFuncTest extends KernelTestCase
 {
@@ -34,6 +38,9 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, SymbolEnum::BTCUSDT, Side::Sell), 300);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, SymbolEnum::BTCUSDT), 200);
         $this->overrideSetting(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100);
+
+        $this->overrideSetting(SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, null, Side::Sell), PriceDistanceSelector::VeryVeryLong);
+
         self::assertEquals($expectedValue, $this->settingsService->optional($providedAccessor));
     }
 
@@ -45,6 +52,16 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
         yield [SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent, SymbolEnum::BTCUSDT), 200];
         yield [SettingAccessor::exact(                  SafePriceDistanceSettings::SafePriceDistance_Percent), 100];
         yield [SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Percent), 100];
+
+        yield [SettingAccessor::exact(                  CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, null, Side::Sell), PriceDistanceSelector::VeryVeryLong];
+
+
+        // default from yaml
+        yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, null, Side::Buy), PriceDistanceSelector::Standard];
+        yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, null, Side::Buy), true];
+        yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
+        yield [SettingAccessor::exact(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
+        yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Buy), true];
     }
 
     /**

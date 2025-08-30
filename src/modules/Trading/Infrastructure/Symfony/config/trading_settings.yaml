@@ -15,3 +15,13 @@ safePriceDistance.applyStrategy: 'conservative'
 trading.coverLoss.enabled: true
 trading.coverLoss.bySpotBalance.enabled: false
 trading.coverLoss.otherSymbols.additionalStop.distance: very-very-short
+
+
+
+
+
+
+# for tests
+trading.coverLoss.enabled[symbol=A8USDT][side=sell]: false
+trading.coverLoss.enabled[symbol=A8USDT][side=buy]: true
+trading.coverLoss.otherSymbols.additionalStop.distance[side=buy]: standard
