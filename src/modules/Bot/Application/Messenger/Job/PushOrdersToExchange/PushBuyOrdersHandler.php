@@ -19,7 +19,6 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Application\Settings\PushBuyOrderSettings;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Factory\PositionFactory;
@@ -27,6 +26,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
+use App\Buy\Application\Settings\PushBuyOrderSettings;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -47,6 +47,7 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrde
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Worker\AppContext;
@@ -104,6 +105,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canUseSpot(Ticker $ticker, Position $position, SpotBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
+        if (!SettingsHelper::withAlternativesAllowed(PushBuyOrderSettings::UseSpot_Enabled, $position->symbol, $position->side) !== true) {
+            return false;
+        }
+
         // @todo | check | other | reserved balance
 //        if ($spotBalance->available() < self::RESERVED_BALANCE) {
 //            return false;

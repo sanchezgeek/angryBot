@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Bot\Application\Settings;
+namespace App\Buy\Application\Settings;
 
 use App\Settings\Application\Attribute\SettingParametersAttribute;
 use App\Settings\Application\Contract\AppSettingInterface;
@@ -11,6 +11,9 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum PushBuyOrderSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case UseSpot_Enabled = 'push.BuyOrder.useSpot.enabled';
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Checks_lastPriceOverIndexPriceCheckEnabled = 'push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled';
 

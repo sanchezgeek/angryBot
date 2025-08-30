@@ -14,7 +14,7 @@ use Throwable;
 
 final readonly class UnexpectedSandboxExecutionExceptionHandler
 {
-    public const int INTERVAL_BETWEEN_ERROR_LOGS = 600;
+    public const int INTERVAL_BETWEEN_ERROR_LOGS = 1200;
 
     public function __construct(
         private AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,

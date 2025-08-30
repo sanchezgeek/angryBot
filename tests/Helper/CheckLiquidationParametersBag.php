@@ -23,10 +23,7 @@ use RuntimeException;
 
 class CheckLiquidationParametersBag
 {
-    /**
-     * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
-     */
-    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER;
 
     /**
      * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]

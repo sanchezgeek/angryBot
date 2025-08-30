@@ -1,0 +1,5 @@
+### \App\Bot\Application\Settings\PushBuyOrderSettings
+push.BuyOrder.useSpot.enabled: true
+
+push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
+push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false

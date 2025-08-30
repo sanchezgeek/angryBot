@@ -29,6 +29,9 @@ use App\Worker\AppContext;
 use LogicException;
 use RuntimeException;
 
+/**
+ * @see \App\Tests\Unit\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationDynamicParametersTest
+ */
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
     public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;

@@ -23,10 +23,6 @@ services:
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition: '200%'
                 trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition: '200%'
 
-                # push BuyOrder
-                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
-                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
-
 # other
                 trading.global.tradingStyle: conservative
                 trading.takeProfitWhenBalanceIsInsufficient.enabled: false
