@@ -108,7 +108,6 @@ final class CreateBuyOrderAfterStopCommandHandler
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
 
-                // @todo | martingale | only for shorts?
                 if ($this->isMartingaleEnabled($symbol, $side, $tradingStyle)) {
                     $martingaleOrdersStopLength = match ($tradingStyle) {
                         TradingStyle::Aggressive => Distance::Standard,
@@ -267,12 +266,16 @@ final class CreateBuyOrderAfterStopCommandHandler
 
     private function isMartingaleEnabled(SymbolInterface $symbol, Side $side, TradingStyle $tradingStyle): bool
     {
-        if (SettingsHelper::getForSideOrSymbol(self::MARTINGALE_SETTING, $symbol, $side) === true) {
-            // override
-            return true;
+        $override = SettingsHelper::getForSymbolOrSymbolAndSide(self::MARTINGALE_SETTING, $symbol, $side);
+        if ($override !== null) {
+            return $override;
         }
 
         if ($tradingStyle === TradingStyle::Cautious) {
+            return false;
+        }
+
+        if (SettingsHelper::exact(self::MARTINGALE_SETTING, null, $side) === false) {
             return false;
         }
 

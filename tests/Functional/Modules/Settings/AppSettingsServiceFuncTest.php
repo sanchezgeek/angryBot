@@ -10,6 +10,7 @@ use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Tests\Unit\Modules\Settings\TestSetting;
 use App\Trading\Application\Settings\CoverLossSettings;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -62,6 +63,16 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
         yield [SettingAccessor::exact(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Buy), true];
+
+        # no values at all
+        yield [SettingAccessor::withAlternativesAllowed(TestSetting::Test, SymbolEnum::A8USDT, Side::Buy), null];
+        yield [SettingAccessor::exact(                  TestSetting::Test, SymbolEnum::A8USDT, Side::Buy), null];
+        yield [SettingAccessor::withAlternativesAllowed(TestSetting::Test, SymbolEnum::A8USDT), null];
+        yield [SettingAccessor::exact(                  TestSetting::Test, SymbolEnum::A8USDT), null];
+        yield [SettingAccessor::withAlternativesAllowed(TestSetting::Test, null, Side::Buy), null];
+        yield [SettingAccessor::exact(                  TestSetting::Test, null, Side::Buy), null];
+        yield [SettingAccessor::withAlternativesAllowed(TestSetting::Test), null];
+        yield [SettingAccessor::exact(                  TestSetting::Test), null];
     }
 
     /**

@@ -95,7 +95,7 @@ final readonly class CheckPassedLiquidationDistanceHandler
         $symbol = $position->symbol;
         $side = $position->side;
 
-        if ($override = SettingsHelper::getForSideOrSymbol(AlarmSettings::PassedPart_Of_LiquidationDistance, $symbol, $side)) {
+        if ($override = SettingsHelper::getForSymbolOrSymbolAndSide(AlarmSettings::PassedPart_Of_LiquidationDistance, $symbol, $side)) {
             return $override;
         }
 
@@ -103,7 +103,7 @@ final readonly class CheckPassedLiquidationDistanceHandler
         $percentOfLiquidationDistanceToAddStop = $liquidationParameters->percentOfLiquidationDistanceToAddStop()->value();
 
         $allowed = 100 - $percentOfLiquidationDistanceToAddStop;
-        $threshold = SettingsHelper::getForSideOrSymbol(AlarmSettings::PassedPart_Of_LiquidationDistance_Threshold_From_Allowed, $symbol, $side);
+        $threshold = SettingsHelper::getForSymbolOrSymbolAndSide(AlarmSettings::PassedPart_Of_LiquidationDistance_Threshold_From_Allowed, $symbol, $side);
 
         if ($threshold === null) {
             $threshold = $allowed / 10;

@@ -23,7 +23,7 @@ final class SettingsHelper
         ;
     }
 
-    public static function getForSideOrSymbol(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed
+    public static function getForSymbolOrSymbolAndSide(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed
     {
         $settings = self::getSettingsService();
 
@@ -38,6 +38,13 @@ final class SettingsHelper
         }
 
         return null;
+    }
+
+    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
+    {
+        return self::getSettingsService()->optional(
+            SettingAccessor::exact($setting, $symbol, $side)
+        );
     }
 
     public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
