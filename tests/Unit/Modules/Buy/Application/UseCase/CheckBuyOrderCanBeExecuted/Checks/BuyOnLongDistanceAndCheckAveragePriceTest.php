@@ -163,10 +163,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
         $percentChange = $orderPrice->differenceWith($positionEntryPrice)->getPercentChange($position->side)->abs();
 
         return sprintf(
-            '%s | %s (q=%s p=%s) | entry=%s | %%Δ=%s, allowed%%Δ=%s',
-            $position,
-            BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
-            $order->volume,
+            'markPrice = %s, entry=%s | %%Δ=%s, allowed%%Δ=%s',
             $orderPrice,
             $positionEntryPrice,
             $percentChange,

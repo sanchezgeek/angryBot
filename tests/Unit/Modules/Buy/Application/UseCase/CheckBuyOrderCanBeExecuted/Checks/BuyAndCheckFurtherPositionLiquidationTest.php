@@ -138,17 +138,17 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         // safe
         $positionAfterSandbox = PositionPreset::safeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // also safe (without liquidation)
         $positionAfterSandbox = PositionPreset::withoutLiquidation($side);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // not safe
         $positionAfterSandbox = PositionPreset::NOTSafeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $positionAfterSandbox, $order, $safeDistance, $liq)];
+        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $safeDistance, $liq)];
 
         // forced
         $order = self::forceBuyDto($symbol, $side);
@@ -163,17 +163,17 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         // safe
         $positionAfterSandbox = PositionPreset::safeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // also safe (without liquidation)
         $positionAfterSandbox = PositionPreset::withoutLiquidation($side);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // not safe
         $positionAfterSandbox = PositionPreset::NOTSafeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $positionAfterSandbox, $order, $safeDistance, $liq)];
+        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $safeDistance, $liq)];
 
         // forced
         $order = self::forceBuyDto($symbol, $side);
@@ -187,28 +187,25 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         return TradingCheckResult::succeed(self::CHECK_ALIAS, $info);
     }
 
-    private static function liquidationTooCloseResult(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose
+    private static function liquidationTooCloseResult(Ticker $ticker, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose
     {
-        $info = self::info($ticker, $position, $orderDto, $safePriceDistance, $liquidationPrice);
+        $info = self::info($ticker, $safePriceDistance, $liquidationPrice);
 
         return FurtherPositionLiquidationAfterBuyIsTooClose::create(self::CHECK_ALIAS, $ticker->markPrice, $ticker->symbol->makePrice($liquidationPrice), $safePriceDistance, $info);
     }
 
-    private static function info(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): string
+    private static function info(Ticker $ticker, float $safePriceDistance, float $liquidationPrice): string
     {
         // @todo | liquidation | null
         if ($liquidationPrice === 0.00) {
-            return sprintf(
-                '%s | b.id=%d (q=%s p=%s) | liq=0',
-                $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice
-            );
+            return 'liq=0';
         }
 
         $liquidationPrice = $ticker->symbol->makePrice($liquidationPrice);
 
         return sprintf(
-            '%s | b.id=%d (q=%s p=%s) | liq=%s | Δ=%s, safeΔ=%s',
-            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $ticker->symbol->makePrice($safePriceDistance)
+            'liq=%s | Δ=%s, safeΔ=%s',
+            $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $ticker->symbol->makePrice($safePriceDistance)
         );
     }
 

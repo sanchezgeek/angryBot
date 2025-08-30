@@ -118,7 +118,7 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         MarketBuyEntryDto $order,
         SymbolPrice $orderPrice
     ): TradingCheckResult {
-        return TradingCheckResult::succeed(self::CHECK_ALIAS, self::info($position, $order, $orderPrice, 'fixation stops not found'));
+        return TradingCheckResult::succeed(self::CHECK_ALIAS, self::info($position, $order, $orderPrice, ''));
     }
 
     private static function FAILED(
@@ -131,7 +131,7 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         return FixationsFound::create(
             self::CHECK_ALIAS,
             $count,
-            self::info($position, $order, $orderPrice, sprintf('found %d fixation stops', count($stops)))
+            self::info($position, $order, $orderPrice, sprintf('found %d stops', count($stops)))
         );
     }
 
@@ -141,14 +141,7 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         SymbolPrice $orderPrice,
         string $reason,
     ): string {
-        return sprintf(
-            '%s | %s (%s) | entry=%s | %s',
-            $position,
-            BuyOrderInfoHelper::identifier($order->sourceBuyOrder),
-            BuyOrderInfoHelper::shortInlineInfo($order->volume, $orderPrice),
-            $position->entryPrice,
-            $reason
-        );
+        return sprintf('%s', $reason);
     }
 
     private static function simpleBuyDto(SymbolInterface $symbol, Side $side, SymbolPrice $price): MarketBuyEntryDto
