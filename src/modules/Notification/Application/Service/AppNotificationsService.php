@@ -54,6 +54,11 @@ final readonly class AppNotificationsService implements AppNotificationsServiceI
         $this->notify($message, $data, 'debug');
     }
 
+    public function warning(string $message, array $data = [], string $type = 'info'): void
+    {
+        $this->notify($message, $data, 'warning');
+    }
+
     public function notify(string $message, array $data = [], string $type = 'info'): void
     {
         if ($this->isNowTimeToSleep()) {
