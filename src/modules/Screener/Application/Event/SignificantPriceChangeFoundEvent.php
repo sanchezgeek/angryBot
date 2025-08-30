@@ -12,6 +12,7 @@ final class SignificantPriceChangeFoundEvent implements Event
     public function __construct(
         public FindSignificantPriceChangeResponse $info,
         public int $foundWhileSearchOnDaysDelta,
+        public bool $tryOpenPosition = false
     ) {
     }
 }

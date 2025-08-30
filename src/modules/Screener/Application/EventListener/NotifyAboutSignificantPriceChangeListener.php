@@ -40,7 +40,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $info->info->fromDate->format('m-d'),
             $info->info->fromPrice,
             $info->info->toPrice,
-            $info->info->absPriceDelta(),
+            $info->info->priceDelta(),
             $priceChangePercent,
             $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
             $symbol->name(),

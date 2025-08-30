@@ -11,7 +11,8 @@ final class CheckSignificantPriceChangeJob
 {
     public function __construct(
         public Coin $settleCoin,
-        public int $daysDelta = 0
+        public int $daysDelta,
+        public bool $autoOpen = false
     ) {
         if ($this->daysDelta < 0) {
             throw new LogicException(sprintf('Days delta cannot be less than 0 (%s provided)', $this->daysDelta));

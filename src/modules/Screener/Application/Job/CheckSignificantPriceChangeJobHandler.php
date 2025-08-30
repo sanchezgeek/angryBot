@@ -22,10 +22,12 @@ final readonly class CheckSignificantPriceChangeJobHandler
             return;
         }
 
+        $tryOpenPosition = $job->autoOpen;
+
         $foundItems = $this->finder->handle(new FindSignificantPriceChange($job->settleCoin, $job->daysDelta));
         foreach ($foundItems as $item) {
             $this->events->dispatch(
-                new SignificantPriceChangeFoundEvent($item, $job->daysDelta)
+                new SignificantPriceChangeFoundEvent($item, $job->daysDelta, $tryOpenPosition)
             );
         }
     }
