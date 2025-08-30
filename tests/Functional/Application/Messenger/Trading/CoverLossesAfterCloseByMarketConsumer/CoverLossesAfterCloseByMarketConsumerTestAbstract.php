@@ -9,6 +9,7 @@ use App\Bot\Application\Settings\PushStopSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
+use App\Trading\Application\Settings\CoverLossSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class CoverLossesAfterCloseByMarketConsumerTestAbstract extends KernelTestCase
@@ -25,6 +26,8 @@ abstract class CoverLossesAfterCloseByMarketConsumerTestAbstract extends KernelT
 
         # enable
         $this->settingsProvider = self::getContainerSettingsProvider();
-        $this->overrideSetting(PushStopSettings::Cover_Loss_After_Close_By_Market, true);
+
+        $this->overrideSetting(CoverLossSettings::Cover_Loss_Enabled, true);
+        $this->overrideSetting(CoverLossSettings::Cover_Loss_By_SpotBalance, true);
     }
 }

@@ -7,19 +7,19 @@ namespace App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
-use App\Bot\Application\Settings\PushStopSettings;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateStop;
 use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Application\Settings\CoverLossSettings;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -35,9 +35,8 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 600;
-    public const PushStopSettings SETTING = PushStopSettings::Cover_Loss_After_Close_By_Market;
+    public const CoverLossSettings SETTING = CoverLossSettings::Cover_Loss_Enabled;
     public const float LOSS_PART_TO_COVER_BY_OTHER_SYMBOLS = 1.2;
-    public const PriceDistanceSelector FIXATION_STOP_DISTANCE_FROM_TICKER = PriceDistanceSelector::Short;
 
     public function __construct(
         private ExchangeServiceInterface $exchangeService,
@@ -75,6 +74,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $covered = $this->processOtherPositions($symbol, $loss, $closedPosition);
 
         $loss = $loss - $covered;
+
+        if (SettingsHelper::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_SpotBalance, $symbol, $side) !== true) {
+            return;
+        }
 
         if ($loss <= 0) {
             return;
@@ -186,6 +189,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS => true,
         ];
 
+        /** @var Position $candidate */
         while ($candidate = array_shift($candidates)) {
             $leftToCover = $lossToCoverByOtherSymbols - $covered;
             $candidatesLeft = count($candidates) + 1;
@@ -194,7 +198,9 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopLength = $this->tradingParameters->stopLength($candidateSymbol, self::FIXATION_STOP_DISTANCE_FROM_TICKER);
+            $stopDistanceFromTicker = SettingsHelper::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, $candidateSymbol, $candidate->side);
+
+            $stopLength = $this->tradingParameters->stopLength($candidateSymbol, $stopDistanceFromTicker);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
 

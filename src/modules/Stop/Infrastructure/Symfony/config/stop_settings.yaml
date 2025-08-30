@@ -1,5 +1,4 @@
 ### \App\Bot\Application\Settings\PushStopSettings
-push.stop.cover_loss_after_close_by_market.enabled: true
 push.stop.whichRangeToUse.while.chooseMarkPrice.asTriggerPrice: 'warning'
 
 ### Stop\Application\Settings\FixOppositePositionSettings
