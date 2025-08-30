@@ -137,16 +137,20 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             }
         }
 
+        $addedStopsCount = 0;
         foreach ($positions as $position) {
             $priceToRelate = match ($mode) {
                 self::DANGER_MODE => $markPrices[$position->symbol->name()],
                 default => $position->entryPrice()
             };
 
-            $this->doApply($position, $priceToRelate, $context);
+            $stopsCollection = $this->doApply($position, $priceToRelate, $context);
+            $addedStopsCount += $stopsCollection?->totalCount() ?? 0;
         }
 
-        $this->io->writeln(UndoHelper::stopsUndoOutput($this->uniqueId));
+        if ($addedStopsCount) {
+            $this->io->writeln(UndoHelper::stopsUndoOutput($this->uniqueId));
+        }
 
         return Command::SUCCESS;
     }
@@ -155,7 +159,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         Position $position,
         SymbolPrice $priceToRelate,
         array $context
-    ): void {
+    ): ?StopsCollection {
         $symbol = $position->symbol;
         $side = $position->side;
 
@@ -165,7 +169,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             $stopsGridsDef->isFoundAutomaticallyFromTa()
             && !$this->io->confirm(sprintf('Stops grid definition for %s: `%s`. $priceToRelate = %s. Confirm?', $symbol->name(), $stopsGridsDef, $priceToRelate))
         ) {
-            return;
+            return null;
         }
 
         $part = $this->part ?? 100;
@@ -178,7 +182,12 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             $part -= $coveredPart;
         }
 
-        $this->handler->handle(
+        if ($part <= 0.00) {
+            $this->io->info('All volume already covered');
+            return null;
+        }
+
+        return $this->handler->handle(
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $side,
