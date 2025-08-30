@@ -11,4 +11,5 @@ interface AppNotificationsServiceInterface
     public function getTodaySleepPeriod(): DatePeriod;
     public function isNowTimeToSleep(): bool;
     public function notify(string $message, array $data = [], string $type = 'info'): void;
+    public function muted(string $message, array $data = []): void;
 }

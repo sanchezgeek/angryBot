@@ -19,10 +19,6 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
-        if (SettingsHelper::exactlyRoot(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled) !== true) {
-            return;
-        }
-
         $info = $event->info;
         $searchOnDaysDelta = $event->foundWhileSearchOnDaysDelta;
         $symbol = $info->info->symbol;
@@ -35,22 +31,25 @@ final readonly class NotifyAboutSignificantPriceChangeListener
         }
 
         $priceChangePercent = $info->info->getPriceChangePercent()->setOutputFloatPrecision(2);
-        $this->notifications->notify(
-            sprintf(
-                'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) %s',
-                $info->info->partOfDayPassed,
-                $priceChangePercent,
-                $symbol->name(),
-                $info->info->partOfDayPassed,
-                $info->info->fromDate->format('m-d'),
-                $info->info->fromPrice,
-                $info->info->toPrice,
-                $info->info->absPriceDelta(),
-                $priceChangePercent,
-                $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
-                $symbol->name(),
-            )
+        $message = sprintf(
+            'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) %s',
+            $info->info->partOfDayPassed,
+            $priceChangePercent,
+            $symbol->name(),
+            $info->info->partOfDayPassed,
+            $info->info->fromDate->format('m-d'),
+            $info->info->fromPrice,
+            $info->info->toPrice,
+            $info->info->absPriceDelta(),
+            $priceChangePercent,
+            $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
+            $symbol->name(),
         );
+
+        match (SettingsHelper::exactlyRoot(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled)) {
+            true => $this->notifications->notify($message),
+            default => $this->notifications->muted($message),
+        };
     }
 
     public function __construct(
