@@ -271,11 +271,15 @@ final class CreateBuyOrderAfterStopCommandHandler
             return $override;
         }
 
-        if ($tradingStyle === TradingStyle::Cautious) {
+        $overrideForSide = SettingsHelper::exactOptional(self::MARTINGALE_SETTING, null, $side);
+
+        if ($overrideForSide === false) {
             return false;
+        } elseif ($overrideForSide === true) {
+            return true;
         }
 
-        if (SettingsHelper::exactOptional(self::MARTINGALE_SETTING, null, $side, false) === false) {
+        if ($tradingStyle === TradingStyle::Cautious) {
             return false;
         }
 

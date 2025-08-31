@@ -59,9 +59,12 @@ final class AppSettingsServiceFuncTest extends KernelTestCase
 
         // default from yaml
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, null, Side::Buy), PriceDistanceSelector::Standard];
+        yield [SettingAccessor::exact(                  CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, null, Side::Buy), PriceDistanceSelector::Standard];
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, null, Side::Buy), true];
+        yield [SettingAccessor::exact(                  CoverLossSettings::Cover_Loss_Enabled, null, Side::Buy), null];
+        yield [SettingAccessor::exact(                  CoverLossSettings::Cover_Loss_Enabled, null, Side::Sell), null];
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
-        yield [SettingAccessor::exact(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
+        yield [SettingAccessor::exact(                  CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Sell), false];
         yield [SettingAccessor::withAlternativesAllowed(CoverLossSettings::Cover_Loss_Enabled, SymbolEnum::A8USDT, Side::Buy), true];
 
         # no values at all

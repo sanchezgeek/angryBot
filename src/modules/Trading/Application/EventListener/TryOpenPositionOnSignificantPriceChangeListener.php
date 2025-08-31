@@ -9,6 +9,8 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
@@ -90,7 +92,9 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         $priceToRelate = $ticker->markPrice;
         $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
-        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $tradingStyle);
+        $fromPnlPercent = $tradingStyle === TradingStyle::Cautious ? PriceDistanceSelector::VeryVeryShort->withNegativeSign() : null;
+
+        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $tradingStyle, $fromPnlPercent);
 
         // @todo | autoOpen | mb without stops in case of very small amount?
         $openPositionEntry = new OpenPositionEntryDto(

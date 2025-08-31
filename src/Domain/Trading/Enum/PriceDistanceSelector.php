@@ -20,4 +20,9 @@ enum PriceDistanceSelector: string
     case VeryLong = 'very-long';
     case VeryVeryLong = 'very-very-long';
     case DoubleLong = 'double-long';
+
+    public function withNegativeSign(): string
+    {
+        return sprintf('-%s', $this->value);
+    }
 }
