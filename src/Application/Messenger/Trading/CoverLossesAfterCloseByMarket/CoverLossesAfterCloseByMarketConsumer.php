@@ -135,6 +135,10 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             if ($hedge?->isEquivalentHedge()) continue;
             $main = $hedge?->mainPosition ?? $first;
 
+            if (SettingsHelper::exactForSymbolAndSideOrSymbol(self::SETTING, $main->symbol, $main->side) === false) {
+                continue;
+            }
+
             $last = $lastPrices[$symbolRaw];
             $mainPositionPnlPercent = $last->getPnlPercentFor($main);
             // @todo | cover-losses | use ta
@@ -149,10 +153,6 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $map = [];
         foreach ($candidates as $candidate) {
-            if (SettingsHelper::exactForSymbolAndSideOrSymbol(self::SETTING, $candidate->symbol, $candidate->side) === false) {
-                continue;
-            }
-
             $symbolRaw = $candidate->symbol->name();
             $last = $lastPrices[$symbolRaw];
             $pnlPercent = $last->getPnlPercentFor($candidate);
