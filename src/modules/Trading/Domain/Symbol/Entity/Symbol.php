@@ -12,6 +12,7 @@ use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\Mapping as ORM;
+use JsonSerializable;
 use Stringable;
 
 /**
@@ -19,7 +20,7 @@ use Stringable;
  */
 #[ORM\Entity(repositoryClass: SymbolRepository::class)]
 #[ORM\Cache(region: 'append_only')]
-class Symbol implements SymbolInterface, Stringable
+class Symbol implements SymbolInterface, Stringable, JsonSerializable
 {
     #[ORM\Id]
     #[ORM\Column(length: 50)]
@@ -147,5 +148,12 @@ class Symbol implements SymbolInterface, Stringable
     public function __toString(): string
     {
         return $this->name;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'name' => $this->name()
+        ];
     }
 }

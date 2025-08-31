@@ -15,6 +15,7 @@ use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionEntryDto;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
@@ -81,7 +82,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             $this->setMaxLeverage($symbol);
             $this->openPositionHandler->handle($openPositionEntry);
             $this->notifyAboutSuccess($event, $openPositionEntry);
-        } catch (CannotAffordOrderCostException $e) {
+        } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException $e) {
             $this->notifyAboutFail($openPositionEntry, $e, true);
         } catch (Throwable $e) {
             $this->notifyAboutFail($openPositionEntry, $e);

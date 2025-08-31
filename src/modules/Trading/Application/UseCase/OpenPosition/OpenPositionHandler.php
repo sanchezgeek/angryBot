@@ -31,6 +31,7 @@ use App\Helper\OutputHelper;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
+use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\EntityManagerInterface;
@@ -270,7 +271,7 @@ final class OpenPositionHandler
     {
         $contractBalance = $this->accountService->getContractWalletBalance($this->entryDto->symbol->associatedCoin());
         if ($contractBalance->available() <= 0) {
-            throw new Exception('Insufficient available contract balance');
+            throw new InsufficientAvailableBalanceException('Insufficient available contract balance');
         }
 
         // @todo use leverage
