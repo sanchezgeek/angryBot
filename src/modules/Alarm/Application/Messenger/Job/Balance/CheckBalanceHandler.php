@@ -3,13 +3,14 @@
 namespace App\Alarm\Application\Messenger\Job\Balance;
 
 use App\Alarm\Application\Settings\AlarmSettings;
+use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Domain\Coin\Coin;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Notification\Application\Contract\Enum\SoundLength;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\RateLimiter\LimiterInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 #[AsMessageHandler]
 final readonly class CheckBalanceHandler
@@ -40,20 +41,32 @@ final readonly class CheckBalanceHandler
             $total = $contractBalance->totalWithUnrealized();
 
             if ($contractAvailableGreaterThan && $available > $contractAvailableGreaterThan) {
-                $this->appErrorLogger->critical(sprintf('contractBalance.available > %s', $contractAvailableGreaterThan));
+                $this->notify(sprintf('contractBalance.available > %s', $contractAvailableGreaterThan), true);
             }
 
             if ($contractAvailableLessThan && $available < $contractAvailableLessThan) {
-                $this->appErrorLogger->critical(sprintf('contractBalance.available < %s', $contractAvailableLessThan));
+                $this->notify(sprintf('contractBalance.available < %s', $contractAvailableLessThan), false);
             }
 
             if ($contractTotalGreaterThan && $total > $contractTotalGreaterThan) {
-                $this->appErrorLogger->critical(sprintf('contractBalance.TOTAL > %s', $contractTotalGreaterThan));
+                $this->notify(sprintf('contractBalance.TOTAL > %s', $contractTotalGreaterThan), true);
             }
 
             if ($contractTotalLessThan && $total < $contractTotalLessThan) {
-                $this->appErrorLogger->critical(sprintf('contractBalance.TOTAL < %s', $contractTotalLessThan));
+                $this->notify(sprintf('contractBalance.TOTAL < %s', $contractTotalLessThan), false);
             }
+        }
+    }
+
+    private function notify(string $message, bool $positive): void
+    {
+        if ($positive) {
+            $this->appNotificationsService->notify($message, type: 'warning', length: SoundLength::Short);
+            $this->appNotificationsService->notify($message, type: 'warning', length: SoundLength::Short);
+        } else {
+            $this->appNotificationsService->notify($message, type: 'warning');
+            $this->appNotificationsService->notify($message, type: 'warning');
+            $this->appNotificationsService->notify($message, type: 'warning');
         }
     }
 
@@ -67,11 +80,11 @@ final readonly class CheckBalanceHandler
     }
 
     public function __construct(
+        private AppNotificationsServiceInterface $appNotificationsService,
         private ExchangeAccountServiceInterface $exchangeAccountService,
-        private LoggerInterface $appErrorLogger,
         private AppSettingsProviderInterface $settings,
-        RateLimiterFactory $checkBalanceThrottlingLimiter,
+        AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
     ) {
-        $this->limiter = $checkBalanceThrottlingLimiter->create();
+        $this->limiter = $attemptLimitCheckerProvider->getLimiterFactory(30)->create('balance_check');
     }
 }

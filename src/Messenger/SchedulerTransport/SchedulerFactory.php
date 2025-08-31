@@ -139,6 +139,13 @@ final class SchedulerFactory
         return [
             # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
 
+            # alarm
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', new CheckAlarm()),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', new CheckBalance()),
+
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
+            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
+
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 0, true))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 1, true))),
             PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckInterval, AsyncMessage::for(new CheckSignificantPriceChangeJob(Coin::USDT, 2, true))),
@@ -151,9 +158,6 @@ final class SchedulerFactory
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 9))),
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 10))),
 
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT30S', new CheckMessengerMessages()),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
-
             // $cleanupPeriod = '45S';
             // PeriodicalJob::create('2023-02-24T23:49:05Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(Symbol::BTCUSDT, OrderType::Stop, Side::Sell, 30, 6, true))),
             // PeriodicalJob::create('2023-02-24T23:49:06Z', sprintf('PT%s', $cleanupPeriod), AsyncMessage::for(new FixupOrdersDoubling(OrderType::Add, Side::Sell, 15, 3, false))),
@@ -162,10 +166,6 @@ final class SchedulerFactory
 
             # market
             PeriodicalJob::create('2023-12-01T00:00:00.67Z', 'PT8H', AsyncMessage::for(new TransferFundingFees(SymbolEnum::BTCUSDT))),
-
-            # alarm
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new CheckAlarm())),
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new CheckBalance())),
 
             # connection
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckConnection())),

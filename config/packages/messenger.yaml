@@ -41,9 +41,6 @@ framework:
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async_critical
 
-            # alarm
-            App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
-
             # connection
             App\Connection\Application\Messenger\Job\CheckConnection: async
 
@@ -52,8 +49,8 @@ framework:
             App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBuyOrdersActiveState: async_high
 
             # Stop
-            App\Buy\Application\Command\CreateStopsAfterBuy: 'async_critical'
-            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: 'async_critical'
+            App\Buy\Application\Command\CreateStopsAfterBuy: async_critical
+            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: async_critical
 
             App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async_high
 
