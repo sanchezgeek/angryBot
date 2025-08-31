@@ -21,11 +21,13 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
@@ -127,7 +129,7 @@ final class OpenPositionHandler
         }
 
         $buyGridOrdersVolumeSum = 0;
-        $buyOrders = $entryDto->buyGridsDefinition === null ? [] : $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
+        $buyOrders = $entryDto->asBuyOrder || $entryDto->buyGridsDefinition === null ? [] : $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
         foreach ($buyOrders as $buyOrder) {
             $buyGridOrdersVolumeSum += $buyOrder->getVolume();
         }
@@ -135,15 +137,37 @@ final class OpenPositionHandler
 # do market buy
         $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum);
 
-        if ($entryDto->stopsGridsDefinition) {
+        if (!$entryDto->asBuyOrder && $entryDto->stopsGridsDefinition) {
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
         }
 
-        $checksContext = TradingCheckContext::withTicker($this->ticker);
-        $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $positionSide, $marketBuyVolume), $checksContext, true);
+        if ($entryDto->asBuyOrder) {
+            if (!$this->currentlyOpenedPosition) {
+                throw new RuntimeException('Wrong usage: $asBuyOrder applicable only if there is opened position');
+            }
+
+            // must be pushed as usual
+            $price = $positionSide->isShort()
+                ? PriceHelper::max($this->currentlyOpenedPosition->entryPrice(), $this->ticker->markPrice)
+                : PriceHelper::min($this->currentlyOpenedPosition->entryPrice(), $this->ticker->markPrice);
+
+            $context = [
+                BuyOrder::FORCE_BUY_CONTEXT => true,
+                'asBuyOrder' => true,
+            ];
+
+            $buyOrder = $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($symbol, $positionSide, $marketBuyVolume, $price->value(), $context, BuyOrderState::Active))->buyOrder;
+        } else {
+            $checksContext = TradingCheckContext::withTicker($this->ticker);
+            $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $positionSide, $marketBuyVolume), $checksContext);
+        }
 
         $this->entityManager->flush();
         $this->entityManager->commit();
+
+        if ($entryDto->asBuyOrder) {
+            OutputHelper::print(sprintf('%s: additional BO.id = %d', OutputHelper::shortClassName($this), $buyOrder->getId()));
+        }
 
         // @todo | check on prod that position opened with desired size (vs testnet)
         $resultPosition = $this->positionService->getPosition($symbol, $positionSide);

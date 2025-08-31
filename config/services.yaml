@@ -71,7 +71,7 @@ services:
 
 ### cache
     cache.wrapper.default:
-        class: \App\Infrastructure\Cache\SymfonyCacheWrapper
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
         arguments:
             $cache: '@cache.app'
 

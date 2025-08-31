@@ -32,7 +32,8 @@ final readonly class CreateBuyOrderHandler
             $dto->volume,
             $this->symbolProvider->replaceWithActualEntity($dto->symbol),
             $dto->side,
-            $dto->context
+            $dto->context,
+            $dto->state,
         );
 
         $this->repository->save($buyOrder);

@@ -1,19 +1,6 @@
 imports:
     - { resource: doctrine.yaml }
 
-services:
-    _defaults:
-        autowire: true
-        autoconfigure: true
-
-    App\Trading\:
-        resource: '../../../'
-        exclude: '../../../SDK'
-
-    App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor:
-        arguments:
-            $processors: !tagged_iterator trading.order.contextShortcutProcessor
-
 # @todo move to sandbox module
 framework:
     rate_limiter:
@@ -27,3 +14,21 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '10 minutes'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Trading\:
+        resource: '../../../'
+        exclude: '../../../SDK'
+
+    App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor:
+        arguments:
+            $processors: !tagged_iterator trading.order.contextShortcutProcessor
+
+    App\Trading\Contract\ContractBalanceProviderInterface:
+        class: App\Trading\Infrastructure\Cache\CachedContractBalanceProvider
+        arguments:
+            $innerProvider: '@App\Trading\Application\Provider\ContractBalanceProvider'

@@ -105,7 +105,7 @@ final class PushStopsCommonCasesTest extends KernelTestCase
 
         self::seeStopsInDb(...$stopsExpectedAfterHandle);
 
-        self::assertMessagesWasDispatched(self::ASYNC_HIGH_QUEUE, $expectedMessengerMessages);
+        self::assertMessagesWasDispatched(self::ASYNC_CRITICAL_QUEUE, $expectedMessengerMessages);
     }
 
     public static function getDistanceAfterWhichMarkPriceUsedForTrigger(Ticker $ticker): float

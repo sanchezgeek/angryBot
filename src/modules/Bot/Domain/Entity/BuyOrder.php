@@ -84,7 +84,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private Side $positionSide;
 
     #[ORM\Column(type: 'string', enumType: BuyOrderState::class, options: ['default' => 'idle'])]
-    private BuyOrderState $state = BuyOrderState::Idle;
+    private BuyOrderState $state;
 
     /**
      * @var array<string, mixed>
@@ -95,7 +95,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private bool $isOppositeStopExecuted = false;
     private false|null|StopCreationStrategyDefinition $stopCreationStrategyDefinition = false;
 
-    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [], BuyOrderState $state = BuyOrderState::Idle)
     {
         $this->id = $id;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
@@ -103,6 +103,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+        $this->state = $state;
     }
 
     public function getStopCreationDefinition(): ?StopCreationStrategyDefinition
@@ -310,6 +311,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return [
             'symbol' => $this->getSymbol(),
             'side' => $this->positionSide,
+            'state' => $this->state->value,
             'price' => $this->price,
             'volume' => $this->volume,
             'context' => $this->context,

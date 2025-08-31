@@ -21,6 +21,7 @@ use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
 use App\Domain\Coin\CoinAmount;
+use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
@@ -946,8 +947,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         foreach ($this->positions as $symbolRaw => $positions) {
             $symbolIm = 0;
             foreach ($positions as $position) {
-                $k = $position->leverage->value() / 100;
-                $symbolIm += $position->initialMargin->value() * $k;
+                $symbolIm += InitialMarginHelper::realInitialMargin($position);
             }
             $this->ims[$symbolRaw] = $symbolIm;
         }

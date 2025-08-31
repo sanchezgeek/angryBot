@@ -6,18 +6,16 @@ namespace App\Screener\Application\Handler;
 
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Screener\Application\Contract\Dto\PriceChangeInfo;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChange;
-use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChangeHandlerInterface;
+use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
 use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
-use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use DateTimeImmutable;
@@ -44,17 +42,11 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
             return []; // ??? to do
         }
 
-        // move up
-        $openedPositionsSymbols = SymbolHelper::symbolsToRawValues(...$this->positionService->getOpenedPositionsSymbols());
+        // возможно $daysDelta надо уменьшать, если позиция открыта и цена ушла в сторону прибыли
 
         $res = [];
-
         foreach ($this->exchangeService->getAllTickers($message->settleCoin) as $ticker) {
             $symbol = $ticker->symbol;
-
-            if (in_array($symbol->name(), $openedPositionsSymbols, true)) {
-                continue;
-            }
 
             if ($this->disabledFor($symbol)) {
                 continue;
@@ -115,7 +107,6 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
         private TradingParametersProviderInterface $parameters,
         private ByBitLinearExchangeService $exchangeService,
         private PreviousSymbolPriceProvider $previousSymbolPriceManager,
-        private ByBitLinearPositionService $positionService,
     ) {
     }
 }

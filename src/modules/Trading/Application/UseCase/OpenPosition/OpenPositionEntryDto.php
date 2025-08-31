@@ -23,6 +23,7 @@ final readonly class OpenPositionEntryDto implements Stringable
         public bool $outputEnabled = false,
         public ?OrdersGridDefinitionCollection $buyGridsDefinition = null,
         public ?OrdersGridDefinitionCollection $stopsGridsDefinition = null,
+        public bool $asBuyOrder = false,
     ) {
     }
 

@@ -51,7 +51,7 @@ final class ByBitLinearMarketService
             (float)$data['list'][0]['lotSizeFilter']['minOrderQty'],
             (float)$data['list'][0]['lotSizeFilter']['minNotionalValue'],
             (float)$data['list'][0]['leverageFilter']['minLeverage'],
-            (float)$data['list'][0]['leverageFilter']['maxLeverage'],
+            (int)$data['list'][0]['leverageFilter']['maxLeverage'],
             (float)$data['list'][0]['priceFilter']['tickSize'],
             (int)$data['list'][0]['priceScale'],
             $data['list'][0]['quoteCoin'],
