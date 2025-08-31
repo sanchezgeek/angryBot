@@ -5,17 +5,23 @@ declare(strict_types=1);
 namespace App\Screener\Application\EventListener;
 
 use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Domain\Position\ValueObject\Side;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 use App\Screener\Application\Settings\ScreenerNotificationsSettings;
 use App\Settings\Application\Helper\SettingsHelper;
+use App\TechnicalAnalysis\Application\Helper\TA;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 #[AsEventListener]
 final readonly class NotifyAboutSignificantPriceChangeListener
 {
+    private const int THRESHOLD = 20;
+
     private RateLimiterFactory $limiter;
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
@@ -26,6 +32,15 @@ final readonly class NotifyAboutSignificantPriceChangeListener
         $symbol = $priceChangeInfo->symbol;
 
         $positionSide = $event->positionSideToPositionLoss();
+
+        if ($positionSide === Side::Sell) {
+            $ticker = $this->exchangeService->ticker($symbol);
+            $currentPricePartOfAth = TA::currentPricePartOfAth($ticker);
+            if ($currentPricePartOfAth->value() < self::THRESHOLD) {
+                self::output(sprintf('skip notify about %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, self::THRESHOLD));
+                return;
+            }
+        }
 
         // либо это должно быть в поисковике
         // @todo | priceChange | save prev percent and notify again if new percent >= prev
@@ -60,7 +75,15 @@ final readonly class NotifyAboutSignificantPriceChangeListener
         };
     }
 
+    private static function output(string $message): void
+    {
+        OutputHelper::warning(
+            sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message)
+        );
+    }
+
     public function __construct(
+        private ExchangeServiceInterface $exchangeService,
         private ByBitLinearPositionService $positionService,
         private AppNotificationsServiceInterface $notifications,
         private AttemptLimitCheckerProviderInterface $attemptLimitCheckerProvider,
