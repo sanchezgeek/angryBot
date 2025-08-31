@@ -72,15 +72,14 @@ final readonly class CheckPassedLiquidationDistanceHandler
                 );
 
                 if ($passedLiquidationDistancePercent->value() > $alarmPercent->value()) {
-                    $this->appNotificationsService->notify(
+                    $this->appNotificationsService->warning(
                         sprintf(
                             '%s: passed distance %s > %s (%s allowed)',
                             $symbol->name(),
                             $passedLiquidationDistancePercent->setOutputFloatPrecision(2),
                             $alarmPercent->setOutputFloatPrecision(2),
                             $allowed->setOutputFloatPrecision(2)
-                        ),
-                        type: 'warning'
+                        )
                     );
                 }
             }

@@ -65,6 +65,11 @@ final readonly class AppNotificationsService implements AppNotificationsServiceI
         $this->notify($message, $data, 'warning', $length);
     }
 
+    public function info(string $message, array $data = [], SoundLength $length = SoundLength::DEFAULT): void
+    {
+        $this->notify($message, $data, 'info', $length);
+    }
+
     public function notify(string $message, array $data = [], string $type = 'info', SoundLength $length = SoundLength::DEFAULT): void
     {
         if ($this->isNowTimeToSleep()) {

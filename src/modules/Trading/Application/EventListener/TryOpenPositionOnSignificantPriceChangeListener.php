@@ -168,7 +168,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         $muted = !self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide);
 
-        $muted ? $this->notifications->muted($message) : $this->notifications->notify($message, [], 'warning');
+        $muted ? $this->notifications->muted($message) : $this->notifications->warning($message);
         self::output($message);
     }
 

@@ -52,7 +52,7 @@ final readonly class InitializeSymbolsHandler
         );
 
         $this->symbolRepository->save($symbol);
-        $this->notifications->notify(sprintf('"%s" symbol initialized', $symbol->name()));
+        $this->notifications->info(sprintf('"%s" symbol initialized', $symbol->name()));
 
         return $symbol;
     }

@@ -50,7 +50,7 @@ final class CheckAlarmHandler
     private function notify(string $message): void
     {
         for ($i = 0; $i <= $this->soundsCount; $i++) {
-            $this->appNotificationsService->notify($message, type: 'warning');
+            $this->appNotificationsService->warning($message);
         }
     }
 

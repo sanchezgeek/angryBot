@@ -61,12 +61,12 @@ final readonly class CheckBalanceHandler
     private function notify(string $message, bool $positive): void
     {
         if ($positive) {
-            $this->appNotificationsService->notify($message, type: 'warning', length: SoundLength::Short);
-            $this->appNotificationsService->notify($message, type: 'warning', length: SoundLength::Short);
+            $this->appNotificationsService->warning($message, length: SoundLength::Short);
+            $this->appNotificationsService->warning($message, length: SoundLength::Short);
         } else {
-            $this->appNotificationsService->notify($message, type: 'warning');
-            $this->appNotificationsService->notify($message, type: 'warning');
-            $this->appNotificationsService->notify($message, type: 'warning');
+            $this->appNotificationsService->warning($message);
+            $this->appNotificationsService->warning($message);
+            $this->appNotificationsService->warning($message);
         }
     }
 
