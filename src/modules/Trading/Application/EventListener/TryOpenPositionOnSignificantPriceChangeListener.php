@@ -14,8 +14,10 @@ use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Application\Settings\AutoOpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionEntryDto;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
@@ -129,6 +131,10 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
     {
         $message = sprintf('%s: got "%s (%s)" error. Entry was: %s', OutputHelper::shortClassName($this), get_class($e), $e->getMessage(), $openHandlerEntry);
 
+        if (!self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide)) {
+            $muted = true;
+        }
+
         $muted ? $this->notifications->muted($message) : $this->notifications->error($message);
         self::output($message);
     }
@@ -160,7 +166,15 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             $symbol->name(),
         );
 
-        $this->notifications->notify($message, [], 'warning');
+        $muted = !self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide);
+
+        $muted ? $this->notifications->muted($message) : $this->notifications->notify($message, [], 'warning');
+        self::output($message);
+    }
+
+    private static function isNotificationsEnabled(SymbolInterface $symbol, Side $positionSide): bool
+    {
+        return SettingsHelper::withAlternatives(AutoOpenPositionSettings::Notifications_Enabled, $symbol, $positionSide) === true;
     }
 
     private static function output(string $message): void
