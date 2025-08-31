@@ -6,6 +6,7 @@ namespace App\Trading\Application\EventListener;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
@@ -80,8 +81,10 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             $this->setMaxLeverage($symbol);
             $this->openPositionHandler->handle($openPositionEntry);
             $this->notifyAboutSuccess($event, $openPositionEntry);
+        } catch (CannotAffordOrderCostException $e) {
+            $this->notifyAboutFail($openPositionEntry, $e, true);
         } catch (Throwable $e) {
-            $this->notifyAboutFail($event, $openPositionEntry, $e);
+            $this->notifyAboutFail($openPositionEntry, $e);
         }
     }
 
@@ -94,11 +97,11 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         } catch (Throwable) {}
     }
 
-    private function notifyAboutFail(SignificantPriceChangeFoundEvent $event, OpenPositionEntryDto $openHandlerEntry, Throwable $e): void
+    private function notifyAboutFail(OpenPositionEntryDto $openHandlerEntry, Throwable $e, bool $muted = false): void
     {
         $message = sprintf('%s: got "%s (%s)" error. Entry was: %s', OutputHelper::shortClassName($this), get_class($e), $e->getMessage(), $openHandlerEntry);
 
-        $this->notifications->error($message);
+        $muted ? $this->notifications->muted($message) : $this->notifications->error($message);
         self::output($message);
     }
 
