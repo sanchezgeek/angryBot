@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Trading\Application\EventListener;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
-use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
@@ -18,6 +17,7 @@ use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionEntryDto;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 
@@ -76,33 +76,22 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             stopsGridsDefinition: $stopsGridsDefinition,
         );
 
-        $leverageAlreadyChanged = false;
-        $try = true;
-        while ($try) {
-            try {
-                $this->openPositionHandler->handle($openPositionEntry);
-                $this->notifyAboutSuccess($event, $openPositionEntry);
-            } catch (CannotAffordOrderCostException $e) {
-                if ($leverageAlreadyChanged) {
-                    $this->notifyAboutFail($event, $openPositionEntry, $e);
-                    $try = false;
-                } else {
-                    self::output(sprintf('Got "%s" => trying to increase leverage', $e->getMessage()));
-
-                    $maxLeverage = $this->marketService->getInstrumentInfo($symbol->name())->maxLeverage;
-
-                    try {
-                        $this->positionService->setLeverage($symbol, $maxLeverage, $maxLeverage);
-                    } catch (Throwable) {}
-
-                    $leverageAlreadyChanged = true;
-                }
-            } catch (Throwable $e) {
-                $this->notifyAboutFail($event, $openPositionEntry, $e);
-
-                $try = false;
-            }
+        try {
+            $this->setMaxLeverage($symbol);
+            $this->openPositionHandler->handle($openPositionEntry);
+            $this->notifyAboutSuccess($event, $openPositionEntry);
+        } catch (Throwable $e) {
+            $this->notifyAboutFail($event, $openPositionEntry, $e);
         }
+    }
+
+    private function setMaxLeverage(SymbolInterface $symbol): void
+    {
+        $maxLeverage = $this->marketService->getInstrumentInfo($symbol->name())->maxLeverage;
+
+        try {
+            $this->positionService->setLeverage($symbol, $maxLeverage, $maxLeverage);
+        } catch (Throwable) {}
     }
 
     private function notifyAboutFail(SignificantPriceChangeFoundEvent $event, OpenPositionEntryDto $openHandlerEntry, Throwable $e): void
@@ -150,7 +139,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
     }
 
     public function __construct(
-        private ByBitLinearPositionService $positionService,
+        private PositionServiceInterface $positionService,
         private TradingParametersProviderInterface $parameters,
         private ExchangeServiceInterface $exchangeService,
         private OpenPositionHandler $openPositionHandler,
