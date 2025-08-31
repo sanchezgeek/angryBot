@@ -53,7 +53,7 @@ framework:
 
             # Stop
             App\Buy\Application\Command\CreateStopsAfterBuy: 'async_critical'
-            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: 'async_high'
+            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: 'async_critical'
 
             App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async_high
 
