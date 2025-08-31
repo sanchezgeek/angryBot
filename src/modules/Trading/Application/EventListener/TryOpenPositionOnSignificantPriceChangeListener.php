@@ -47,7 +47,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 //        if ($openedPosition) self::output(sprintf('position on %s already opened', $openedPosition->getCaption())); return;
 
         $ticker = $this->exchangeService->ticker($symbol);
-        $currentPricePartOfAth = TA::currentPricePartOfAth($ticker);
+        $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
 
         // other logic for LONGs
         if ($currentPricePartOfAth->value() < self::THRESHOLD) {

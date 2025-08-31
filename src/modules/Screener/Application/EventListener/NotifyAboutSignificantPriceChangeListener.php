@@ -35,7 +35,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
         if ($positionSide === Side::Sell) {
             $ticker = $this->exchangeService->ticker($symbol);
-            $currentPricePartOfAth = TA::currentPricePartOfAth($ticker);
+            $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
             if ($currentPricePartOfAth->value() < self::THRESHOLD) {
                 self::output(sprintf('skip notify about %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, self::THRESHOLD));
                 return;

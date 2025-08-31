@@ -43,6 +43,7 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\QueryBuilder as QB;
@@ -492,10 +493,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $cells = array_merge($cells, [
             sprintf(
-                '%s: %9s    %9s     %6s',
+                '%s: %9s %5s  %7s %3s   %6s',
                 CTH::colorizeText(sprintf('%5s', $main->side->title()), $main->isShort() ? 'red-text' : 'green-text'),
                 $main->entryPrice(),
+                self::athInfo($main, $main->entryPrice()),
                 $liquidationContent,
+//                '(100%)',
+                self::athInfo($main, $main->liquidationPrice(), 4),
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
             sprintf('%.1f', $this->ims[$main->symbol->name()]),
@@ -566,10 +570,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $cells = [
                 '',
                 sprintf(
-                    ' sup.: %9s    %s     %6s',
+                    ' sup.: %9s        %s          %6s',
 //                    ' sup.: %9s                  %6s',
                     $support->entryPrice(),
-                    CTH::colorizeText(sprintf('%9s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
+//                    self::athInfo($support, $support->entryPrice()),
+                    CTH::colorizeText(sprintf('%7s', $support->getHedge()->getSupportRate()->setOutputFloatPrecision(1)), 'light-yellow-text'),
                     self::formatChangedValue(value: $support->size, specifiedCacheValue: (($specifiedCache[$supportPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
                 ),
                 '',
@@ -622,6 +627,30 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $result[] = new SeparatorRow();
 
         return $result;
+    }
+
+    private static function athInfo(Position $position, SymbolPrice $price, int $decimals = 3): string
+    {
+        $percent = TA::currentPricePartOfAth($position->symbol, $price)->setOutputFloatPrecision(0)->setOutputDecimalsPrecision($decimals);
+        $percentValue = $percent->value();
+
+        if ($position->isShort()) {
+            $text = match (true) {
+                $percentValue <= 30 => CTH::colorizeText($percent, 'red-text'),
+                $percentValue <= 50 => CTH::colorizeText($percent, 'light-yellow-text'),
+                $percentValue <= 75 => CTH::colorizeText($percent, 'yellow-text'),
+                default => CTH::colorizeText($percent, 'green-text'),
+            };
+        } else {
+            $text = match (true) {
+                $percentValue >= 75 => CTH::colorizeText($percent, 'red-text'),
+                $percentValue >= 50 => CTH::colorizeText($percent, 'light-yellow-text'),
+                $percentValue >= 20 => CTH::colorizeText($percent, 'yellow-text'),
+                default => CTH::colorizeText($percent, 'green-text'),
+            };
+        }
+
+        return $text;
     }
 
     private static function formatPnlDiffCell(

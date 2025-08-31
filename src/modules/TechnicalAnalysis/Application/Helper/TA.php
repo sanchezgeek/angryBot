@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TechnicalAnalysis\Application\Helper;
 
 use App\Bot\Domain\Ticker;
+use App\Domain\Price\SymbolPrice;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\Json;
@@ -49,11 +50,11 @@ final class TA
         return $taProvider->create($symbol)->highLowPrices();
     }
 
-    public static function currentPricePartOfAth(Ticker $ticker): Percent
+    public static function currentPricePartOfAth(SymbolInterface $symbol, SymbolPrice $price): Percent
     {
-        $allTimeHighLow = TA::allTimeHighLow($ticker->symbol);
-        $currentPriceDeltaFromLow = $ticker->markPrice->deltaWith($allTimeHighLow->low);
+        $allTimeHighLow = TA::allTimeHighLow($symbol);
+        $currentPriceDeltaFromLow = $price->deltaWith($allTimeHighLow->low);
 
-        return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta());
+        return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta(), false);
     }
 }
