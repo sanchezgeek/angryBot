@@ -31,7 +31,7 @@ use Throwable;
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
     private const float MIN_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 1.5;
-    private const float MAX_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 10;
+    private const float MAX_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 7;
     private const int THRESHOLD = 30;
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void

@@ -12,6 +12,7 @@ framework:
             service: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=service'
             async_critical: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_critical'
             async_high: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_high'
+            async_low: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_low'
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
             cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
             tickers_updater_async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=tickers_updater_async'
@@ -26,7 +27,7 @@ framework:
             App\Bot\Application\Messenger\Job\Cache\UpdateTicker: tickers_updater_async
 
             # market
-            App\Screener\Application\Job\CheckSignificantPriceChangeJob: async
+            App\Screener\Application\Job\CheckSignificantPriceChangeJob: async_low
             App\Application\Messenger\Market\TransferFundingFees: async
 
             # orders

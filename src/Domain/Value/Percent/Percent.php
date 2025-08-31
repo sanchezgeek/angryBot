@@ -123,6 +123,6 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
 
         $complement = max(0, 100 - $value);
 
-        return new self($complement);
+        return new self($complement, false);
     }
 }

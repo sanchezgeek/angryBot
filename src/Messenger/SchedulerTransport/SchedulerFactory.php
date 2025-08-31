@@ -133,8 +133,8 @@ final class SchedulerFactory
 
     private function service(): array
     {
-        $priceCheckInterval = 'PT10M';
-        $priceCheckIntervalLong = 'PT20M';
+        $priceCheckInterval = 'PT5M';
+        $priceCheckIntervalLong = 'PT10M';
 
         return [
             # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
