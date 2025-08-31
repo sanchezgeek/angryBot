@@ -13,20 +13,32 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class SettingsHelper
 {
-    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null, bool $required = true): mixed
+    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
     {
-        $settings = self::getSettingsService();
-        $accessor = SettingAccessor::exact($setting, $symbol, $side);
-
-        return $required ? $settings->required($accessor) : $settings->optional($accessor);
+        return self::getSettingsService()->required(
+            SettingAccessor::exact($setting, $symbol, $side)
+        );
     }
 
-    public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null, bool $required = true): mixed
+    public static function exactOptional(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
     {
-        $settings = self::getSettingsService();
-        $accessor = SettingAccessor::withAlternativesAllowed($setting, $symbol, $side);
+        return self::getSettingsService()->optional(
+            SettingAccessor::exact($setting, $symbol, $side)
+        );
+    }
 
-        return $required ? $settings->required($accessor) : $settings->optional($accessor);
+    public static function withAlternatives(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
+    {
+        return self::getSettingsService()->required(
+            SettingAccessor::withAlternativesAllowed($setting, $symbol, $side)
+        );
+    }
+
+    public static function withAlternativesOptional(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
+    {
+        return self::getSettingsService()->optional(
+            SettingAccessor::withAlternativesAllowed($setting, $symbol, $side)
+        );
     }
 
     public static function exactForSymbolAndSideOrSymbol(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed

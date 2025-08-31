@@ -275,16 +275,16 @@ final class CreateBuyOrderAfterStopCommandHandler
             return false;
         }
 
-        if (SettingsHelper::exact(self::MARTINGALE_SETTING, null, $side) === false) {
+        if (SettingsHelper::exactOptional(self::MARTINGALE_SETTING, null, $side, false) === false) {
             return false;
         }
 
-        return SettingsHelper::withAlternativesAllowed(self::MARTINGALE_SETTING, $symbol, $side) === true;
+        return SettingsHelper::withAlternatives(self::MARTINGALE_SETTING, $symbol, $side) === true;
     }
 
     private function isForceBuyEnabled(SymbolInterface $symbol, Side $side): bool
     {
-        return SettingsHelper::withAlternativesAllowed(self::FORCE_BUY_ENABLED_SETTING, $symbol, $side) === true;
+        return SettingsHelper::withAlternatives(self::FORCE_BUY_ENABLED_SETTING, $symbol, $side) === true;
     }
 
     public function __construct(

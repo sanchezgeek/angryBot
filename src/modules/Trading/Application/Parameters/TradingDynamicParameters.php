@@ -43,7 +43,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
     public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
     {
-        return SettingsHelper::withAlternativesAllowed(TradingSettings::Global_Trading_Style, $symbol, $side);
+        return SettingsHelper::withAlternatives(TradingSettings::Global_Trading_Style, $symbol, $side);
     }
 
     #[AppDynamicParameter(group: 'trading')]

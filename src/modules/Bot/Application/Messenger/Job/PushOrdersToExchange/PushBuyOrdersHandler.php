@@ -105,7 +105,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canUseSpot(Ticker $ticker, Position $position, SpotBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
-        if (!SettingsHelper::withAlternativesAllowed(PushBuyOrderSettings::UseSpot_Enabled, $position->symbol, $position->side) !== true) {
+        if (!SettingsHelper::withAlternatives(PushBuyOrderSettings::UseSpot_Enabled, $position->symbol, $position->side) !== true) {
             return false;
         }
 

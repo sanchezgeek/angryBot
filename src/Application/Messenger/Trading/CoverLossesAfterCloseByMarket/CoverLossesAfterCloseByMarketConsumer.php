@@ -69,7 +69,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $loss = $loss - $covered;
 
-        if (SettingsHelper::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_SpotBalance, $symbol, $side) !== true) {
+        if (SettingsHelper::withAlternatives(CoverLossSettings::Cover_Loss_By_SpotBalance, $symbol, $side) !== true) {
             return;
         }
 
@@ -189,7 +189,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             $lastPrice = $lastPrices[$candidateSymbol->name()];
             $candidateTicker = $this->exchangeService->ticker($candidateSymbol);
 
-            $stopDistanceFromTicker = SettingsHelper::withAlternativesAllowed(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, $candidateSymbol, $candidate->side);
+            $stopDistanceFromTicker = SettingsHelper::withAlternatives(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, $candidateSymbol, $candidate->side);
 
             $stopLength = $this->tradingParameters->stopLength($candidateSymbol, $stopDistanceFromTicker);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
