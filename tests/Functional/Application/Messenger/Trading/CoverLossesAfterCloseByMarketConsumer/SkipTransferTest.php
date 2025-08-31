@@ -92,7 +92,6 @@ class SkipTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstract
             $exchangeAccountServiceMock,
             self::getContainer()->get(PositionServiceInterface::class),
             self::getContainer()->get(ByBitLinearPositionService::class),
-            $this->settingsProvider,
             self::createMock(CreateStopHandlerInterface::class),
             self::createMock(TradingParametersProviderInterface::class),
         );

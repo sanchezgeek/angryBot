@@ -266,7 +266,7 @@ final class CreateBuyOrderAfterStopCommandHandler
 
     private function isMartingaleEnabled(SymbolInterface $symbol, Side $side, TradingStyle $tradingStyle): bool
     {
-        $override = SettingsHelper::getForSymbolOrSymbolAndSide(self::MARTINGALE_SETTING, $symbol, $side);
+        $override = SettingsHelper::exactForSymbolAndSideOrSymbol(self::MARTINGALE_SETTING, $symbol, $side);
         if ($override !== null) {
             return $override;
         }

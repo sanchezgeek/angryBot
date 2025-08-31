@@ -46,7 +46,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $symbol->name(),
         );
 
-        match (SettingsHelper::exactlyRoot(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled)) {
+        match (SettingsHelper::exact(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled)) {
             true => $this->notifications->notify($message),
             default => $this->notifications->muted($message),
         };

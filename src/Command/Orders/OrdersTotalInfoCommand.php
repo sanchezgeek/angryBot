@@ -143,6 +143,7 @@ class OrdersTotalInfoCommand extends AbstractCommand implements PositionDependen
             public function getPositions(SymbolInterface $symbol): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function addConditionalStop(Position $position, float $price, float $qty, TriggerBy $triggerBy): string { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
             public function getOpenedPositionsSymbols(SymbolInterface ...$except): array {throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__));}
+            public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void { throw new RuntimeException(sprintf('Stub method %s must not be called', __METHOD__)); }
         };
 
         $tradingSandbox->setChecks($this->buyChecksChainFactory->full());

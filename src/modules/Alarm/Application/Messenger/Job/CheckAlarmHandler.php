@@ -29,7 +29,7 @@ final class CheckAlarmHandler
             return;
         }
 
-        $this->soundsCount = SettingsHelper::exactlyRoot(AlarmSettings::PriceAlarm_SoundsCount, true);
+        $this->soundsCount = SettingsHelper::exact(AlarmSettings::PriceAlarm_SoundsCount);
 
         foreach (self::ALARMS as $symbol => [$down, $up]) {
             $ticker = $this->exchangeService->ticker(

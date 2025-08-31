@@ -18,7 +18,7 @@ final readonly class CheckSignificantPriceChangeJobHandler
     public function __invoke(CheckSignificantPriceChangeJob $job): void
     {
         // move to some interface
-        if (SettingsHelper::exactlyRoot(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled) !== true) {
+        if (SettingsHelper::exact(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled) !== true) {
             return;
         }
 

@@ -13,17 +13,23 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class SettingsHelper
 {
-    public static function exactlyRoot(AppSettingInterface $setting, bool $required = false): mixed
+    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null, bool $required = true): mixed
     {
         $settings = self::getSettingsService();
+        $accessor = SettingAccessor::exact($setting, $symbol, $side);
 
-        return $required
-            ? $settings->required(SettingAccessor::exact($setting))
-            : $settings->optional(SettingAccessor::exact($setting))
-        ;
+        return $required ? $settings->required($accessor) : $settings->optional($accessor);
     }
 
-    public static function getForSymbolOrSymbolAndSide(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed
+    public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null, bool $required = true): mixed
+    {
+        $settings = self::getSettingsService();
+        $accessor = SettingAccessor::withAlternativesAllowed($setting, $symbol, $side);
+
+        return $required ? $settings->required($accessor) : $settings->optional($accessor);
+    }
+
+    public static function exactForSymbolAndSideOrSymbol(AppSettingInterface $setting, SymbolInterface $symbol, Side $side): mixed
     {
         $settings = self::getSettingsService();
 
@@ -38,20 +44,6 @@ final class SettingsHelper
         }
 
         return null;
-    }
-
-    public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
-    {
-        return self::getSettingsService()->optional(
-            SettingAccessor::exact($setting, $symbol, $side)
-        );
-    }
-
-    public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
-    {
-        return self::getSettingsService()->optional(
-            SettingAccessor::withAlternativesAllowed($setting, $symbol, $side)
-        );
     }
 
     private static function getSettingsService(): AppSettingsProviderInterface

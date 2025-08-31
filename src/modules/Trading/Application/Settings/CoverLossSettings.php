@@ -13,13 +13,13 @@ use App\Settings\Domain\Enum\SettingType;
 enum CoverLossSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
     #[SettingParametersAttribute(type: SettingType::Boolean)]
-    case Cover_Loss_Enabled = 'trading.coverLoss.enabled';
+    case Cover_Loss_Enabled = 'trading.coverLosses.enabled';
 
     #[SettingParametersAttribute(type: SettingType::Boolean)]
-    case Cover_Loss_By_SpotBalance = 'trading.coverLoss.bySpotBalance.enabled';
+    case Cover_Loss_By_SpotBalance = 'trading.coverLosses.bySpotBalance.enabled';
 
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: PriceDistanceSelector::class)]
-    case Cover_Loss_By_OtherSymbols_AdditionalStop_Distance = 'trading.coverLoss.otherSymbols.additionalStop.distance';
+    case Cover_Loss_By_OtherSymbols_AdditionalStop_Distance = 'trading.coverLosses.otherSymbols.additionalStop.distance';
 
     public function getSettingKey(): string
     {

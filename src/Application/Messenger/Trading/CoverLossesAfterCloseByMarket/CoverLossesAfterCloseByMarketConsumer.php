@@ -14,8 +14,6 @@ use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Helper\SettingsHelper;
-use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateStop;
 use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -43,7 +41,6 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         private ExchangeAccountServiceInterface $exchangeAccountService,
         private PositionServiceInterface $positionService,
         private ByBitLinearPositionService $positionServiceWithoutCache,
-        private AppSettingsProviderInterface $settings,
         private CreateStopHandlerInterface $createStopHandler,
         private TradingParametersProviderInterface $tradingParameters
     ) {
@@ -51,7 +48,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
     public function __invoke(CoverLossesAfterCloseByMarketConsumerDto $dto): void
     {
-        if ($this->settings->required(self::SETTING) !== true) {
+        if (SettingsHelper::exact(self::SETTING) !== true) {
             return;
         }
 
@@ -64,10 +61,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
             return;
         }
 
-        if (
-            $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol)) === false
-            || $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol, $side)) === false
-        ) {
+        if (SettingsHelper::exactForSymbolAndSideOrSymbol(self::SETTING, $symbol, $side) === false) {
             return;
         }
 
@@ -155,10 +149,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
         $map = [];
         foreach ($candidates as $candidate) {
-            if (
-                $this->settings->optional(SettingAccessor::exact(self::SETTING, $candidate->symbol)) === false
-                || $this->settings->optional(SettingAccessor::exact(self::SETTING, $candidate->symbol, $candidate->side)) === false
-            ) {
+            if (SettingsHelper::exactForSymbolAndSideOrSymbol(self::SETTING, $candidate->symbol, $candidate->side) === false) {
                 continue;
             }
 

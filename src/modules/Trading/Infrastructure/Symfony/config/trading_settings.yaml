@@ -12,9 +12,9 @@ safePriceDistance.applyStrategy: 'conservative'
 #openPosition.stops.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..-120%%|50%%|2;-200%%..-220%%|30%%|6'
 
 ### \App\Trading\Application\Settings\CoverLossSettings
-trading.coverLoss.enabled: true
-trading.coverLoss.bySpotBalance.enabled: false
-trading.coverLoss.otherSymbols.additionalStop.distance: very-very-short
+trading.coverLosses.enabled: true
+trading.coverLosses.bySpotBalance.enabled: false
+trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
 
 
 
@@ -22,6 +22,6 @@ trading.coverLoss.otherSymbols.additionalStop.distance: very-very-short
 
 
 # for tests
-trading.coverLoss.enabled[symbol=A8USDT][side=sell]: false
-trading.coverLoss.enabled[symbol=A8USDT][side=buy]: true
-trading.coverLoss.otherSymbols.additionalStop.distance[side=buy]: standard
+trading.coverLosses.enabled[symbol=A8USDT][side=sell]: false
+trading.coverLosses.enabled[symbol=A8USDT][side=buy]: true
+trading.coverLosses.otherSymbols.additionalStop.distance[side=buy]: standard
