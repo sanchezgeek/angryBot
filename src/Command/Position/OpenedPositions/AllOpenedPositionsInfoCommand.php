@@ -488,7 +488,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             if ($funding < 0) {
                 $fundingContent = CTH::colorizeText($fundingContent, 'light-yellow-text');
             }
-            $cells = [sprintf('%10s: % 8s / %8s', $symbol->shortName(), $fundingContent, $markPrice)];
+            $cells = [sprintf('%10s: % 8s / %8s %5s', $symbol->shortName(), $fundingContent, $markPrice, self::athInfo($main, $markPrice))];
         }
 
         $cells = array_merge($cells, [
