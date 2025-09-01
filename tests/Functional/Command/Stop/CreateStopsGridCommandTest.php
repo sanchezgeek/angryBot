@@ -61,6 +61,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         $params = [
             'position_side' => $side->value,
             'forVolume' => $forVolume,
+            '--symbol' => $position->symbol->name(),
             '-f' => $from,
             '-t' => $to,
         ];
@@ -290,7 +291,9 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         $this->expectException(get_class($expectedException));
 //        $this->expectExceptionMessage($expectedException->getMessage());
 
-        $params = [];
+        $params = [
+            '--symbol' => $position->symbol->name(),
+        ];
 
         $side !== null && $params['position_side'] = $side->value;
         $forVolume !== null && $params['forVolume'] = $forVolume;

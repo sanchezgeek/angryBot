@@ -10,6 +10,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -287,9 +288,14 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
         );
 
         $buyOrders = [];
-        foreach (array_merge($orders->getOrders()
-            , $martingaleOrders
-                 ) as $order) {
+
+        // active
+        foreach ($orders->getOrders() as $order) {
+            $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context(), BuyOrderState::Active);
+            $fromId++;
+        }
+
+        foreach ($martingaleOrders as $order) {
             $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
             $fromId++;
         }

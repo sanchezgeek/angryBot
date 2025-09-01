@@ -17,7 +17,6 @@ use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\Query\Parameter;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
-use RuntimeException;
 
 /**
  * @extends ServiceEntityRepository<Stop>
@@ -32,6 +31,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     private const string isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
     private const string createdAfterOtherSymbolLoss = Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS;
     private const string createdAfterFixHedgeOppositePosition = Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION;
+    private const string lockInProfitStepAliasFlag = Stop::LOCK_IN_PROFIT_STEP_ALIAS;
 
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 
@@ -310,6 +310,23 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
         $qb = $this->createQueryBuilder('s')
             ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$fakeExchangeOrderId') = true");
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return Stop[]
+     */
+    public function getByLockInProfitStepAlias(SymbolInterface $symbol, Side $positionSide, string $stepAlias): array
+    {
+        $flag = self::lockInProfitStepAliasFlag;
+
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+            ->andWhere("HAS_ELEMENT(s.context, '$flag') = true")
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$flag', '$stepAlias') = true")
+        ;
 
         return $qb->getQuery()->getResult();
     }

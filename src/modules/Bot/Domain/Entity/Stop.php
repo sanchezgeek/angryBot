@@ -48,6 +48,8 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const string CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
     public const string CREATED_AFTER_OTHER_SYMBOL_LOSS = 'createdAfterOtherSymbolLoss';
 
+    public const string LOCK_IN_PROFIT_STEP_ALIAS = 'lockInProfit.stepsStrategy.stepAlias';
+
     /** @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols */
     public const int TP_TRIGGER_DELTA = 50;
 
@@ -396,5 +398,25 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->setExchangeOrderId(self::FAKE_EXCHANGE_ORDER_ID);
 
         return $this;
+    }
+
+    public function setStepAlias(string $stepAlias): static
+    {
+        $this->context[self::LOCK_IN_PROFIT_STEP_ALIAS] = $stepAlias;
+
+        return $this;
+    }
+
+    public function getStepAlias(): ?string
+    {
+        return $this->context[self::LOCK_IN_PROFIT_STEP_ALIAS] ?? null;
+    }
+
+    public function createdAsLockInProfit(): bool
+    {
+        return
+            isset($this->context[self::LOCK_IN_PROFIT_STEP_ALIAS])
+//            || ...
+        ;
     }
 }

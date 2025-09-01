@@ -126,6 +126,7 @@ abstract class AbstractExecStepResultTableRowBuilder
             $sourceOrder->getContext('fromExchangeWithoutExistedStop') && $info[] = 'fromExchange (without ExistedStop)';
 
             ($sourceOrder->isStopAfterOtherSymbolLoss() || $sourceOrder->isStopAfterFixHedgeOppositePosition()) && $info[] = 'fixation stop';
+            $sourceOrder->createdAsLockInProfit() && $info[] = $sourceOrder->getStepAlias();
         } else {
             $sourceOrder->isForceBuyOrder() && $info[] = '!force!';
 

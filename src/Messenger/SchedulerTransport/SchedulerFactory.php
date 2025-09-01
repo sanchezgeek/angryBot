@@ -31,6 +31,7 @@ use App\Service\Infrastructure\Job\RestartWorker\RestartWorkerMessage;
 use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
+use App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
@@ -182,7 +183,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT1M', AsyncMessage::for(new CheckPositionIsInProfit())),
 
             // -- active BuyOrders
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT7S', new CheckOrdersNowIsActive()),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT3S', new CheckOrdersNowIsActive()),
             PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT10M', AsyncMessage::for(new ResetBuyOrdersActiveState())),
 
             // -- active Conditional orders
@@ -191,6 +192,9 @@ final class SchedulerFactory
             // -- liquidation
             PeriodicalJob::create('2025-07-01T01:01:08Z', 'P1D', AsyncMessage::for(new RemoveStaleStopsMessage())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
+
+            // -- trading
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new ApplyLockInProfitJob())),
         ];
     }
 

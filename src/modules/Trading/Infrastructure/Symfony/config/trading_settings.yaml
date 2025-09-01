@@ -22,6 +22,8 @@ trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
 autoOpen.notifications.enabled: true
 autoOpen.enabled: true
 
+### \App\Trading\Application\Settings\LockInProfitSettings
+lockInProfit.enabled: true
 
 # for tests
 trading.coverLosses.enabled[symbol=A8USDT][side=sell]: false

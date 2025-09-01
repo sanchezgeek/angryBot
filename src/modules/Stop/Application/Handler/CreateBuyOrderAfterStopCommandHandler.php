@@ -48,7 +48,7 @@ final class CreateBuyOrderAfterStopCommandHandler
     public function __invoke(CreateBuyOrderAfterStop $command): array
     {
         $stop = $this->stopRepository->find($command->stopId);
-        $isAdditionalFixationsStop = $stop->isStopAfterOtherSymbolLoss() || $stop->isStopAfterFixHedgeOppositePosition();
+        $isAdditionalFixationsStop = $stop->isStopAfterOtherSymbolLoss() || $stop->isStopAfterFixHedgeOppositePosition() || $stop->createdAsLockInProfit();
 
         if (!$stop->isWithOppositeOrder() && !$isAdditionalFixationsStop) {
             return [];
@@ -105,6 +105,7 @@ final class CreateBuyOrderAfterStopCommandHandler
                     TradingStyle::Conservative => Distance::VeryShort,
                     TradingStyle::Cautious => Distance::VeryVeryShort,
                 }, $withForceBuy);
+
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];

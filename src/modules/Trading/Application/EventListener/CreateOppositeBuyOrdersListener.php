@@ -21,6 +21,7 @@ final readonly class CreateOppositeBuyOrdersListener
             $stop->isWithOppositeOrder()
             || $stop->isStopAfterOtherSymbolLoss()
             || $stop->isStopAfterFixHedgeOppositePosition()
+            || $stop->createdAsLockInProfit()
         )) {
             return;
         }

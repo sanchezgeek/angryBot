@@ -26,4 +26,6 @@ interface StopRepositoryInterface
      * @return Stop[]
      */
     public function findStopsWithFakeExchangeOrderId(): array;
+
+    public function getByLockInProfitStepAlias(SymbolInterface $symbol, Side $positionSide, string $stepAlias): array;
 }

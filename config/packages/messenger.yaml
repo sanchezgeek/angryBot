@@ -41,6 +41,7 @@ framework:
 
             # trading
             App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async_critical
+            App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob: async_high
 
             # connection
             App\Connection\Application\Messenger\Job\CheckConnection: async
