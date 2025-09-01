@@ -11,7 +11,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
@@ -134,37 +134,21 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
             [
                 // first part
                 new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-step1',
-                    PriceDistanceSelector::ModerateLong, // settings?
-                    // @todo | lockInProfit | ability to specify price from which make grid
-                    self::makeGridDefinition(
-                        PriceDistanceSelector::Short->toStringWithNegativeSign(),
-                        PriceDistanceSelector::ModerateLong->toStringWithNegativeSign(),
-                        15,
-                        10,
-                    ),
+                    'defaultThreeStepsLock-part1',
+                    Length::Standard, // settings?
+                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::ModerateLong->toStringWithNegativeSign(), 15, 10),
                 ),
                 // second part
                 new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-step2',
-                    PriceDistanceSelector::Long,
-                    self::makeGridDefinition(
-                        PriceDistanceSelector::Short->toStringWithNegativeSign(),
-                        PriceDistanceSelector::ModerateLong->toStringWithNegativeSign(),
-                        15,
-                        10,
-                    ),
+                    'defaultThreeStepsLock-part2',
+                    Length::Long,
+                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::ModerateLong->toStringWithNegativeSign(), 15, 10),
                 ),
                 // third part: back to position entry
                 new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-step3',
-                    PriceDistanceSelector::VeryVeryLong,
-                    self::makeGridDefinition(
-                        PriceDistanceSelector::Short->toStringWithNegativeSign(),
-                        PriceDistanceSelector::VeryVeryLong->toStringWithNegativeSign(),
-                        30,
-                        30, // @todo | lockInProfit | stops must be placed near position side
-                    ),
+                    'defaultThreeStepsLock-part3',
+                    Length::VeryVeryLong,
+                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryVeryLong->toStringWithNegativeSign(), 30, 30),
                 ),
             ]
         );
@@ -185,7 +169,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         return $fromPnlPercent;
     }
 
-    private function getBoundPnlPercent(SymbolInterface $symbol, PriceDistanceSelector $lengthSelector): float
+    private function getBoundPnlPercent(SymbolInterface $symbol, Length $lengthSelector): float
     {
         $priceChangePercent = $this->parameters->stopLength($symbol, $lengthSelector)->value();
 

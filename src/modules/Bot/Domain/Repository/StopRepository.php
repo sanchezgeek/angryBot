@@ -330,4 +330,23 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
         return $qb->getQuery()->getResult();
     }
+
+    public function getCreatedAsLockInProfit(?SymbolInterface $symbol = null, ?Side $positionSide = null): array
+    {
+        $flag = self::lockInProfitStepAliasFlag;
+
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("HAS_ELEMENT(s.context, '$flag') = true")
+        ;
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
+
+        if ($positionSide) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $positionSide);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }
