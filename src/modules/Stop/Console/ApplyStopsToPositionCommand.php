@@ -42,6 +42,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     use AdditionalStopContextAwareCommand;
     use OppositeOrdersDistanceAwareCommand;
 
+    public const string FORCE_OPTION = 'force';
     public const string MODE_OPTION = 'mode';
     public const string DANGER_MODE = 'danger';
 
@@ -57,6 +58,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             ->addOption(self::FROM_PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL, 'Apply from specified PNL%')
             ->addOption(self::MODE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Mode')
             ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL)
+            ->addOption(self::FORCE_OPTION, null, InputOption::VALUE_NEGATABLE)
         ;
 
         // fixations context
@@ -94,9 +96,12 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     private null|float|string $fromPnlPercent;
     private ?float $part;
     private string $uniqueId;
+    private bool $force;
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->force = $this->paramFetcher->getBoolOption(self::FORCE_OPTION);
+
         /** @var ByBitLinearPositionService $positionService */
         $positionService = $this->positionService;
 
@@ -175,16 +180,21 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $part = $this->part ?? 100;
 
         $applyInRange = $stopsGridsDef->factAbsoluteRange();
-        if ($existedStopsInRange = $this->stopRepository->findActiveInRange($symbol, $side, $applyInRange)) {
-            $existedStopsInRange = new StopsCollection(...$existedStopsInRange);
+
+        $existedStopsInRange = new StopsCollection(...$this->stopRepository->findActiveInRange($symbol, $side, $applyInRange));
+        $existedStopsInRange = $existedStopsInRange->filterWithCallback(static fn (Stop $stop) => !$stop->isAdditionalStopFromLiquidationHandler());
+
+        if ($existedStopsInRange->totalCount()) {
             $coveredPart = $existedStopsInRange->volumePart($position->size);
-
-            $part -= $coveredPart;
-        }
-
-        if ($part <= 0.00) {
-            $this->io->info('All volume already covered');
-            return null;
+            $newPart = $part - $coveredPart;
+            if ($newPart <= 0.00) {
+                $this->io->info('All volume already covered');
+                if (!$this->force) {
+                    return null;
+                }
+            } else {
+                $part = $newPart;
+            }
         }
 
         return $this->handler->handle(
