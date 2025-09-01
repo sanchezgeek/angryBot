@@ -11,6 +11,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -220,10 +221,14 @@ final class CreateBuyOrderAfterStopCommandHandler
         );
 
         $buyOrders = [];
-        foreach (array_merge(
-            $orders->getOrders(),
-            $martingaleOrders
-                 ) as $order) {
+
+        // active
+        foreach ($orders->getOrders() as $order) {
+            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context(), BuyOrderState::Active);
+            $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
+        }
+
+        foreach ($martingaleOrders as $order) {
             $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context());
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
