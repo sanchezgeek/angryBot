@@ -24,7 +24,7 @@ class RemoveSymbolsFromWatchCommand extends AbstractCommand implements PositionD
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addOption(self::ALL_OPTION, null, InputOption::VALUE_NEGATABLE)
         ;
     }

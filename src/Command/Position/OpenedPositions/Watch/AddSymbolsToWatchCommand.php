@@ -22,7 +22,7 @@ class AddSymbolsToWatchCommand extends AbstractCommand implements PositionDepend
 
     protected function configure(): void
     {
-        $this->configureSymbolArgs(defaultValue: null);
+        $this->configureSymbolArgs();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

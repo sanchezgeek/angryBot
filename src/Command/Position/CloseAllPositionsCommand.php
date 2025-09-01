@@ -43,7 +43,7 @@ class CloseAllPositionsCommand extends AbstractCommand
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addOption(self::FILTER_CALLBACKS_OPTION, null, InputOption::VALUE_REQUIRED, 'Filter callbacks')
             ->addOption(self::PERCENT_OPTION, null, InputOption::VALUE_REQUIRED, 'Percent', self::DEFAULT_PERCENT)
             ->addOption(self::PNL_GREATER_THAN, null, InputOption::VALUE_REQUIRED)
@@ -112,6 +112,8 @@ class CloseAllPositionsCommand extends AbstractCommand
         }
 
         if ($this->dry) {
+            usort($candidates, static fn (Position $a, Position $b) => $a->initialMargin->value() <=> $b->initialMargin->value());
+
             $map = array_map(
                 static fn(
                     Position $position

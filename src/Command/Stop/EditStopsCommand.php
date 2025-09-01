@@ -70,7 +70,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->configurePositionArgs(InputArgument::OPTIONAL)
             ->configurePriceRangeArgs()
             ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
@@ -89,7 +89,7 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
     {
         $this->stopsCache->clear();
 
-        $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
+        $symbol = $this->getSymbol(false);
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
 

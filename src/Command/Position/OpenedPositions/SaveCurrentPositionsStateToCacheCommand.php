@@ -28,7 +28,7 @@ class SaveCurrentPositionsStateToCacheCommand extends AbstractCommand implements
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addOption(self::SELECTED_CACHE, null, InputOption::VALUE_OPTIONAL)
         ;
 

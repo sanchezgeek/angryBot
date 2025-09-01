@@ -40,7 +40,7 @@ class EditSettingCommand extends AbstractCommand implements SymbolDependentComma
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addArgument(self::SETTING_KEY_ARG, InputArgument::OPTIONAL, 'Provide key for fast access')
             ->addOption(self::RESET_OPTION, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::SETTING_VALUE_OPTION, null, InputOption::VALUE_REQUIRED)

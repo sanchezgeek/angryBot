@@ -22,12 +22,12 @@ trait SymbolAwareCommand
     private const string DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
     private const string DEFAULT_EXCEPT_SYMBOL_OPTION_NAME = 'except';
 
-    private const string DEFAULT_SYMBOL_NAME = 'BTCUSDT';
-
     private ?string $symbolOptionName = null;
     private ?string $symbolExceptOptionName = null;
 
     private SymbolProvider $symbolProvider;
+
+    private ?SymbolInterface $providedSymbol = null;
 
     public function withSymbolProvider(SymbolProvider $symbolProvider): void
     {
@@ -36,7 +36,6 @@ trait SymbolAwareCommand
 
     protected function configureSymbolArgs(
         string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
-        ?string $defaultValue = self::DEFAULT_SYMBOL_NAME,
         string $symbolExceptOptionName = self::DEFAULT_EXCEPT_SYMBOL_OPTION_NAME,
     ): static {
         if (!$this->isCoinArgsConfigured()) {
@@ -47,7 +46,7 @@ trait SymbolAwareCommand
         $this->symbolExceptOptionName = $symbolExceptOptionName;
 
         return $this
-            ->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue)
+            ->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol')
             ->addOption($symbolExceptOptionName, null, InputOption::VALUE_OPTIONAL, 'Symbol except')
         ;
     }
@@ -94,11 +93,24 @@ trait SymbolAwareCommand
     /**
      * @throws UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException
      */
-    protected function getSymbol(): SymbolInterface
+    protected function getSymbol(bool $required = true): ?SymbolInterface
     {
-        return $this->tryGetSymbolByProvidedName(
-            $this->symbolOptionName ? $this->paramFetcher->getStringOption($this->symbolOptionName) : self::DEFAULT_SYMBOL_NAME
-        );
+        if ($this->providedSymbol !== null) {
+            return $this->providedSymbol;
+        }
+
+        $value = $this->paramFetcher->getStringOption($this->symbolOptionName, false);
+        if (!$value) {
+            $providedValue = $this->io->ask('symbol');
+
+            if (!$providedValue && $required) {
+                throw new InvalidArgumentException('symbol required');
+            }
+
+            $value = $providedValue;
+        }
+
+        return $this->providedSymbol = ($value ? $this->tryGetSymbolByProvidedName($value) : null);
     }
 
     /**
