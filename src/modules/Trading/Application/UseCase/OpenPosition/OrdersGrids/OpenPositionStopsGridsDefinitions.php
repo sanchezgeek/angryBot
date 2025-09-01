@@ -93,7 +93,7 @@ final readonly class OpenPositionStopsGridsDefinitions
     public function cautious(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, null|float|string $fromPnlPercent): OrdersGridDefinitionCollection
     {
         if ($fromPnlPercent === null) {
-            $fromPnlPercent = PriceDistanceSelector::VeryVeryShort->withNegativeSign();
+            $fromPnlPercent = PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign();
             $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
             $fromPnlPercent /= 2;
         } else {
@@ -132,7 +132,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         return $fromPnlPercent;
     }
 
-    private static function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection
+    public static function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection
     {
         $collectionDef = implode(OrdersGridDefinitionCollection::SEPARATOR, $defs);
         $resultDef = OrdersGridDefinitionCollection::create($collectionDef, $priceToRelate, $positionSide, $symbol);
@@ -140,7 +140,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         return $resultDef->setFoundAutomaticallyFromTa();
     }
 
-    private static function parseDistanceSelector(string $distance): array
+    public static function parseDistanceSelector(string $distance): array
     {
         $sign = 1;
         if (str_starts_with($distance, '-')) {
@@ -154,5 +154,4 @@ final readonly class OpenPositionStopsGridsDefinitions
 
         return [$parsed, $sign];
     }
-
 }

@@ -14,6 +14,9 @@ enum AutoOpenPositionSettings: string implements AppSettingInterface, AppSetting
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Notifications_Enabled = 'autoOpen.notifications.enabled';
 
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case AutoOpen_Enabled = 'autoOpen.enabled';
+
     public function getSettingKey(): string
     {
         return $this->value;

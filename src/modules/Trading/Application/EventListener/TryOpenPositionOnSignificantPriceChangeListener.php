@@ -45,6 +45,11 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $symbol = $priceChangeInfo->symbol;
         $positionSide = $event->positionSideToPositionLoss();
 
+        if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
+            self::output(sprintf('skip autoOpen (disabled for %s %s', $symbol->name(), $positionSide->title()));
+            return;
+        }
+
         if ($positionSide === Side::Buy) return; // skip (now only for SHORTs)
 //        if ($openedPosition) self::output(sprintf('position on %s already opened', $openedPosition->getCaption())); return;
 
@@ -92,7 +97,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         $priceToRelate = $ticker->markPrice;
         $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
-        $fromPnlPercent = $tradingStyle === TradingStyle::Cautious ? PriceDistanceSelector::VeryVeryShort->withNegativeSign() : null;
+        $fromPnlPercent = $tradingStyle === TradingStyle::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
 
         $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $tradingStyle, $fromPnlPercent);
 

@@ -20,6 +20,7 @@ trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
 
 ### \App\Trading\Application\Settings\AutoOpenPositionSettings
 autoOpen.notifications.enabled: true
+autoOpen.enabled: true
 
 
 # for tests
