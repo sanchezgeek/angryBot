@@ -35,7 +35,7 @@ class ShowSettingsCommand extends AbstractCommand implements SymbolDependentComm
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addOption(self::ONLY_OVERRIDES_OPTION, 'o', InputOption::VALUE_NEGATABLE, 'Show only overridden values')
         ;
     }

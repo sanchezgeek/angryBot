@@ -34,7 +34,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
     private const float MIN_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 1.5;
     private const float MAX_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 7;
-    private const int THRESHOLD = 30;
+    private const int THRESHOLD = 40;
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
@@ -44,6 +44,13 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $priceChangeInfo = $event->info->info;
         $symbol = $priceChangeInfo->symbol;
         $positionSide = $event->positionSideToPositionLoss();
+
+        $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
+
+        if ($tradingStyle === TradingStyle::Cautious) {
+            self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
+            return;
+        }
 
         if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
             self::output(sprintf('skip autoOpen (disabled for %s %s', $symbol->name(), $positionSide->title()));
@@ -96,7 +103,6 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         }
 
         $priceToRelate = $ticker->markPrice;
-        $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
         $fromPnlPercent = $tradingStyle === TradingStyle::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
 
         $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $tradingStyle, $fromPnlPercent);

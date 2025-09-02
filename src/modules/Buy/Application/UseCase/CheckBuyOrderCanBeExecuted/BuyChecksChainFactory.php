@@ -42,9 +42,8 @@ final readonly class BuyChecksChainFactory
         $denyBuyIfFixationsExists = new UseThrottlingWhileCheckDecorator(
             new UseNegativeCachedResultWhileCheckDecorator(
                 decorated: $this->denyBuyIfFixationsExists,
-                ttl: 300,
-                cacheKeyFactory: static fn(CheckOrderDto $orderDto)
-                    => sprintf('%s_%s', $orderDto->symbol()->name(), $orderDto->positionSide()->value),
+                ttl: 100,
+                cacheKeyFactory: static fn(CheckOrderDto $orderDto) => sprintf('%s_%s', $orderDto->symbol()->name(), $orderDto->positionSide()->value),
                 quiet: false,
             ),
             $this->attemptLimitCheckerProvider->getLimiterFactory(300)
