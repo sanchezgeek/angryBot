@@ -10,8 +10,10 @@ use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
@@ -65,7 +67,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
         $position = $context->currentPositionState;
 
-        return $position !== null && !$position->isPositionInLoss($context->ticker->markPrice);
+        return $position !== null && !$position->isDummyAndFake && !$position->isPositionInLoss($context->ticker->markPrice);
     }
 
     public function check(CheckOrderDto|MarketBuyCheckDto $orderDto, TradingCheckContext $context): AbstractTradingCheckResult
@@ -75,12 +77,21 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         $position = $context->currentPositionState;
         $positionEntryPrice = $position->entryPrice();
         $tickerPrice = $context->ticker->markPrice;
+        $symbol = $order->symbol;
+        $positionSide = $order->positionSide;
+        $tradingStyle = TradingDynamicParameters::tradingStyle($symbol, $positionSide);
 
         $percentChange = $tickerPrice->differenceWith($positionEntryPrice)->getPercentChange($order->positionSide)->abs();
-        $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($order->symbol);
+        $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($symbol, $tradingStyle);
+
+        $maxAllowedPercent = match($tradingStyle) {
+            TradingStyle::Cautious => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE / 2,
+            TradingStyle::Aggressive => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE * 1.5,
+            default => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE,
+        };
 
         $maxAllowedPercentChange = new Percent(
-            min($calculatedMaxAllowedPercentChange->value(), self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE),
+            min($calculatedMaxAllowedPercentChange->value(), $maxAllowedPercent),
             false
         );
 
@@ -97,9 +108,13 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         return TradingCheckResult::succeed($this, $info);
     }
 
-    private function getMaxAllowedPercentPriceChangeFromPositionEntryPrice(SymbolInterface $symbol): Percent
+    private function getMaxAllowedPercentPriceChangeFromPositionEntryPrice(SymbolInterface $symbol, TradingStyle $tradingStyle): Percent
     {
-        $distance = self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE;
+        $distance = match($tradingStyle) {
+            TradingStyle::Cautious => PriceDistanceSelector::Standard,
+            TradingStyle::Aggressive => PriceDistanceSelector::VeryLong,
+            default => self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE,
+        };
 
         return $this->parameters->oppositeBuyLength($symbol, $distance);
     }

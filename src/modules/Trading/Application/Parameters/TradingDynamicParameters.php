@@ -41,7 +41,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     ) {
     }
 
-    public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
     {
         return SettingsHelper::withAlternatives(TradingSettings::Global_Trading_Style, $symbol, $side);
     }

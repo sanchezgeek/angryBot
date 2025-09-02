@@ -18,7 +18,7 @@ interface TradingParametersProviderInterface
     public const int LONG_ATR_PERIOD = 10;
     public const int ATR_PERIOD_FOR_ORDERS = 4;
 
-    public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle;
+    public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle;
     public function safeLiquidationPriceDelta(SymbolInterface $symbol, Side $side, float $refPrice): float;
     public function significantPriceChange(SymbolInterface $symbol, float $passedPartOfDay): Percent;
     public function standardAtrForOrdersLength(SymbolInterface $symbol, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): AveragePriceChange;
