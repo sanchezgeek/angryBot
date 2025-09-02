@@ -321,7 +321,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     {
         $flag = self::lockInProfitStepAliasFlag;
 
-        $qb = $this->createQueryBuilder('s')
+        $qb = $this->findActiveQB($symbol, $positionSide)
             ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
             ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $positionSide)
             ->andWhere("HAS_ELEMENT(s.context, '$flag') = true")
