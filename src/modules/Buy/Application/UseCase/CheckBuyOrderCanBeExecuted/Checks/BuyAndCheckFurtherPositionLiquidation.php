@@ -102,6 +102,10 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         try {
             $sandbox->processOrders($sandboxOrder);
         } catch (Throwable $e) {
+            if (!$context->currentPositionState || $context->currentPositionState->isDummyAndFake) {
+                return TradingCheckResult::succeed($this, 'sandbox exception but position not opened');
+            }
+
             $this->unexpectedSandboxExceptionHandler->handle($this, $e, $sandboxOrder);
         }
 

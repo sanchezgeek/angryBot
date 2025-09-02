@@ -46,6 +46,7 @@ final class Position implements Stringable
         float $initialMargin,
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
+        public readonly bool $isDummyAndFake = false,
     ) {
         PositionSizeAssertion::assert($this->size);
 
