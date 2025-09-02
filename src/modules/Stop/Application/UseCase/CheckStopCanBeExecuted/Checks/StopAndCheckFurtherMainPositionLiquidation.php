@@ -10,11 +10,15 @@ use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterfa
 use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
+use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
@@ -134,9 +138,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
 // @todo | stop/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $mainPositionStateAfterExec->isPositionInLoss($ticker->markPrice) ? $ticker->markPrice : $mainPositionStateAfterExec->entryPrice();
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side, $withPrice->value());
-        $safePriceAssertionStrategy = $this->settings->required(
-            SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side)
-        );
+        $safePriceAssertionStrategy = TradingDynamicParameters::safePriceDistanceApplyStrategy($symbol, $mainPositionStateAfterExec->side);
         $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
         $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
         $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;

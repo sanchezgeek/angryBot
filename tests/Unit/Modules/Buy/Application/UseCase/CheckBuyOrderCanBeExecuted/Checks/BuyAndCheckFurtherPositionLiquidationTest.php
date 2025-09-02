@@ -20,6 +20,7 @@ use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Tests\Factory\Position\PositionBuilder;
+use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Trading\PositionPreset;
 use App\Tests\Mixin\Check\ChecksAwareTest;
@@ -73,9 +74,10 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $symbol = SymbolEnum::ETHUSDT;
         $side = Side::Buy;
         $ticker = TickerFactory::withEqualPrices($symbol, 1050);
+        $position = PositionFactory::long($symbol, 1000);
         $orderDto = self::simpleBuyDto($symbol, $side);
         $thrownException = new RuntimeException('some error');
-        $context = TradingCheckContext::withTicker($ticker);
+        $context = TradingCheckContext::withCurrentPositionState($ticker, $position);
 
         $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($orderDto, $ticker->lastPrice);
         $sandbox = $this->makeSandboxThatWillThrowException($sandboxOrder, $thrownException);

@@ -13,9 +13,13 @@ use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionEx
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
+use App\Domain\Trading\Enum\TradingStyle;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
+use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
@@ -131,7 +135,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
 
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($symbol, $positionSide, $withPrice->value());
 // @todo | settings | it also can be setting for whole class to define hot to retrieve setting (with alternatives / exact)
-        $safePriceAssertionStrategy = $this->settings->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide));
+        $safePriceAssertionStrategy = TradingDynamicParameters::safePriceDistanceApplyStrategy($symbol, $positionSide);
         $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
         $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
         $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;

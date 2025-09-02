@@ -83,7 +83,7 @@ final class TradingParametersProviderTest extends KernelTestCase
         $longAtrPercentChange = 2;
         $fastAtrPercentChange = 4;
 
-        $expectedSafeDistance = 6030;
+        $expectedSafeDistance = 8040;
         yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [
             $symbol,
             $side,
@@ -93,8 +93,8 @@ final class TradingParametersProviderTest extends KernelTestCase
             $expectedSafeDistance,
         ];
 
-        $k = 2;
-        $expectedSafeDistance = 8040;
+        $k = 3;
+        $expectedSafeDistance = 12060;
         yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance, $k) => [
             $symbol,
             $side,

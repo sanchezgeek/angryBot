@@ -7,6 +7,7 @@ namespace App\Tests\Mixin\Settings;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Position\ValueObject\Side;
 use App\Infrastructure\Cache\SymfonyCacheWrapper;
+use App\Infrastructure\DependencyInjection\GetServiceHelper;
 use App\Infrastructure\Logger\SymfonyAppErrorLogger;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -36,6 +37,7 @@ trait SettingsAwareTest
     {
         if ($this instanceof KernelTestCase) {
             self::truncateStoredSettings();
+//            GetServiceHelper::setContainer(self::getContainer());
         }
     }
 

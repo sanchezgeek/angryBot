@@ -9,6 +9,7 @@ use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Trading\Enum\TradingStyle;
 use App\Domain\Value\Percent\Percent;
+use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -19,7 +20,7 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
     public array $stopLengthResults = [];
     private array $oppositeBuyLengthResults = [];
 
-    public function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
     {
         return TradingStyle::Conservative;
     }
@@ -75,6 +76,11 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         Side $side,
         float $refPrice
     ): float {
+        throw new RuntimeException('Not implemented yet');
+    }
+
+    public static function safePriceDistanceApplyStrategy(SymbolInterface $symbol, Side $positionSide): SafePriceAssertionStrategyEnum
+    {
         throw new RuntimeException('Not implemented yet');
     }
 

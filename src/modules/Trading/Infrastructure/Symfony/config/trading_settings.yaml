@@ -1,6 +1,3 @@
-### \App\Trading\Application\Settings\SafePriceDistanceSettings
-safePriceDistance.baseMultiplier: 1    
-safePriceDistance.applyStrategy: 'conservative'
 
 # percent override
 # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
