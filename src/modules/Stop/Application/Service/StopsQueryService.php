@@ -19,13 +19,13 @@ final readonly class StopsQueryService implements StopsQueryServiceInterface
     ) {
     }
 
-    public function getFixationStopsCountBeforePositionEntry(Position $position, SymbolPrice $tickerPrice): int
+    public function getAnyKindOfFixationsCountBeforePositionEntry(Position $position, SymbolPrice $tickerPrice): int
     {
         $stops = $this->stopRepository->findActive(
             symbol: $position->symbol,
             side: $position->side,
             qbModifier: function (QueryBuilder $qb, string $alias) use ($position, $tickerPrice) {
-                StopRepository::addIsCreatedAfterOtherSymbolLossCondition($qb, $alias);
+                StopRepository::addIsAnyKindOfFixationCondition($qb, $alias);
 
                 $qb->andWhere(sprintf('%s %s :positionEntryPrice', QueryHelper::priceField($qb), $position->isShort() ? '<' : '>'));
                 $qb->setParameter(':positionEntryPrice', $position->entryPrice);

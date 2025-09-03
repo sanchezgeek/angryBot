@@ -290,16 +290,19 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
     }
 
-    public static function addIsCreatedAfterOtherSymbolLossCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    public static function addIsAnyKindOfFixationCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
     {
         $alias = $alias ?? QueryHelper::rootAlias($qb);
+
         $flagAfterOtherSymbolLoss = self::createdAfterOtherSymbolLoss;
         $flagAfterFixHedge = self::createdAfterFixHedgeOppositePosition;
+        $lockInProfitStepAliasFlag = self::lockInProfitStepAliasFlag;
 
         return $qb
             ->andWhere(
-                "JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true"
+                "(JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true"
                 . " OR JSON_ELEMENT_EQUALS($alias.context, '$flagAfterFixHedge', 'true') = true"
+                . " OR HAS_ELEMENT(s.context, '$lockInProfitStepAliasFlag') = true)"
             )
         ;
     }
