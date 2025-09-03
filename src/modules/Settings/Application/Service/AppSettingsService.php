@@ -13,6 +13,7 @@ use App\Settings\Application\Storage\AssignedSettingValueCollection;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
+use App\Worker\AppContext;
 use DateInterval;
 use Exception;
 
@@ -120,20 +121,22 @@ final class AppSettingsService implements AppSettingsProviderInterface
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
-        }
-
-        if ($side && !$symbol) {
+        } elseif ($side && !$symbol) {
             $keys[] = sprintf('%s[side=%s]', $baseKey, $side->value);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
         }
 
-        if ($symbol && !$break) {
+        if (!$break && $symbol) {
             $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
+        }
+
+        if (!$break && $side && $symbol) {
+            $keys[] = sprintf('%s[side=%s]', $baseKey, $side->value);
         }
 
         if (!$break) {
