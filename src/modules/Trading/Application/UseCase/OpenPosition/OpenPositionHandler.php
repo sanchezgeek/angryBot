@@ -322,7 +322,7 @@ final class OpenPositionHandler
 
     public static function balanceConsideredAsAvailableForTrade(ContractBalance $contractBalance): float
     {
-        $partOfUnrealizedToTotal = min(1, $contractBalance->partOfUnrealizedToTotal());
+        $partOfUnrealizedToTotal = max(1, $contractBalance->partOfUnrealizedToTotal());
 
         return $contractBalance->available() / $partOfUnrealizedToTotal;
     }
