@@ -38,7 +38,7 @@ final readonly class CheckBalanceHandler
             $contractBalance = $this->exchangeAccountService->getContractWalletBalance(Coin::USDT);
 
             $available = $contractBalance->available();
-            $total = $contractBalance->totalWithUnrealized();
+            $total = $contractBalance->totalWithUnrealized()->value();
 
             if ($contractAvailableGreaterThan && $available > $contractAvailableGreaterThan) {
                 $this->notify(sprintf('contractBalance.available > %s', $contractAvailableGreaterThan), true);

@@ -282,7 +282,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $this->initializeIms();
 
         $symbols = $this->getOpenedPositionsSymbols();
-        $totalUnrealizedPnl = $this->getTotalUnrealizedProfit();
+//        $totalUnrealizedPnl = $this->getTotalUnrealizedProfit();
 
         $singleCoin = null;
         foreach ($symbols as $symbol) {
@@ -294,7 +294,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
-            $total = $balance->total->add($totalUnrealizedPnl);
+            $total = $balance->totalWithUnrealized();
         }
 
         $unrealisedTotal = 0;

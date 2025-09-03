@@ -42,7 +42,7 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addArgument(self::PARAMETER_NAME_ARG, InputArgument::OPTIONAL)
             ->addOption(self::ALL_POSITIONS_OPTION, null, InputOption::VALUE_NEGATABLE, false)
         ;

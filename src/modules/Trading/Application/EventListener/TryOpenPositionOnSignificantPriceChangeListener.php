@@ -32,10 +32,6 @@ use Throwable;
 #[AsEventListener]
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
-    private const float MIN_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 1.5;
-    private const float MAX_PERCENT_OF_DEPOSIT_TO_RISK_OPTION = 7;
-    private const int THRESHOLD = 40;
-
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
         // @todo | autoOpen | check funding
@@ -46,11 +42,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $positionSide = $event->positionSideToPositionLoss();
 
         $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
-
-        if ($tradingStyle === TradingStyle::Cautious) {
-            self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
-            return;
-        }
+//        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
 
         if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
             self::output(sprintf('skip autoOpen (disabled for %s %s', $symbol->name(), $positionSide->title()));
@@ -58,32 +50,41 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         }
 
         if ($positionSide === Side::Buy) return; // skip (now only for SHORTs)
-//        if ($openedPosition) self::output(sprintf('position on %s already opened', $openedPosition->getCaption())); return;
 
         $ticker = $this->exchangeService->ticker($symbol);
         $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
 
+        [$threshold, $minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($tradingStyle) {
+            TradingStyle::Cautious => [70, 0.8, 5],
+            default => [60, 1.5, 10],
+            TradingStyle::Aggressive => [50, 2.5, 12],
+        };
+
         // other logic for LONGs
-        if ($currentPricePartOfAth->value() < self::THRESHOLD) {
-            self::output(sprintf('skip autoOpen on %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, self::THRESHOLD));
+        if ($currentPricePartOfAth->value() < $threshold) {
+            self::output(
+                sprintf('skip autoOpen on %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, $threshold)
+            );
             return;
         }
 
-        $percentOfDepositToRisk = $currentPricePartOfAth->of(self::MAX_PERCENT_OF_DEPOSIT_TO_RISK_OPTION);
-        $percentOfDepositToRisk = max($percentOfDepositToRisk, self::MIN_PERCENT_OF_DEPOSIT_TO_RISK_OPTION);
+        $percentOfDepositToRisk = $currentPricePartOfAth->of($maxPercentOfDepositToRisk);
+        $percentOfDepositToRisk = max($percentOfDepositToRisk, $minPercentOfDepositToRisk);
         $percentOfDepositToRisk = new Percent($percentOfDepositToRisk);
 
         $asBuyOrder = false;
         if ($openedPosition = $this->positionService->getPosition($symbol, $positionSide)) {
             $realInitialMargin = InitialMarginHelper::realInitialMargin($openedPosition);
-            $contractBalanceAvailable = $this->contractBalanceProvider->getContractWalletBalance($symbol->associatedCoin())->available();
+            $available = OpenPositionHandler::balanceConsideredAsAvailableForTrade(
+                $this->contractBalanceProvider->getContractWalletBalance($symbol->associatedCoin())
+            );
 
-            if ($contractBalanceAvailable <= 0) {
+            if ($available <= 0) {
                 return;
             }
 
             // @todo | autoOpen | check buyOrders volume
-            $balanceCanUseForOpen = $percentOfDepositToRisk->of($contractBalanceAvailable);
+            $balanceCanUseForOpen = $percentOfDepositToRisk->of($available);
             $positionImPercentOfAvailableForOpen = Percent::fromPart($realInitialMargin / $balanceCanUseForOpen, false);
 
             $commonInfo = sprintf('currentRealIm=%s | %s of %s available for open [%s]', $realInitialMargin, $positionImPercentOfAvailableForOpen->setOutputFloatPrecision(2), $percentOfDepositToRisk->setOutputFloatPrecision(2), $balanceCanUseForOpen);
@@ -98,7 +99,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             $asBuyOrder = true;
 
             self::output(
-                sprintf('add additional im (%s%% of availableBalance = %s) to %s (%s)', $percentOfDepositToRisk->setOutputFloatPrecision(2), $contractBalanceAvailable, $openedPosition->getCaption(), $commonInfo)
+                sprintf('add additional im (%s%% of availableBalance = %s) to %s (%s)', $percentOfDepositToRisk->setOutputFloatPrecision(2), $available, $openedPosition->getCaption(), $commonInfo)
             );
         }
 

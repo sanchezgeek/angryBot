@@ -50,9 +50,14 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
         return $this->free->value();
     }
 
-    public function totalWithUnrealized(): float
+    public function totalWithUnrealized(): CoinAmount
     {
-        return $this->total->add($this->unrealisedPnl)->value();
+        return $this->total->add($this->unrealisedPnl ?? 0);
+    }
+
+    public function partOfUnrealizedToTotal(): float
+    {
+        return ($this->unrealisedPnl ?? 0) / $this->totalWithUnrealized()->value();
     }
 
     public function __toString(): string

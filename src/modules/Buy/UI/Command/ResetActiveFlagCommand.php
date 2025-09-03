@@ -33,7 +33,7 @@ class ResetActiveFlagCommand extends AbstractCommand implements PositionDependen
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->configurePositionArgs(InputArgument::OPTIONAL)
             ->addOption(self::ALLOWED_PNL_DELTA_OPTION, null, InputOption::VALUE_OPTIONAL, 'PNL percent threshold to keep orders active even if order price laying before ticker', self::ALLOWED_PNL_DELTA_DEFAULT)
             ->addOption(self::ALL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reset for all orders')

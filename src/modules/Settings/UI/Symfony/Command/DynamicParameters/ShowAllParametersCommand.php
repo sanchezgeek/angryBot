@@ -42,7 +42,7 @@ class ShowAllParametersCommand extends AbstractCommand implements SymbolDependen
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
         ;
     }
 

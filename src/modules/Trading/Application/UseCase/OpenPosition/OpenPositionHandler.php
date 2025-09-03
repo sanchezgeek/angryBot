@@ -9,6 +9,7 @@ use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
@@ -294,14 +295,17 @@ final class OpenPositionHandler
     private function getTotalSize(): float
     {
         $contractBalance = $this->accountService->getContractWalletBalance($this->entryDto->symbol->associatedCoin());
-        if ($contractBalance->available() <= 0) {
+        $available = $contractBalance->available();
+        if ($available <= 0) {
             throw new InsufficientAvailableBalanceException('Insufficient available contract balance');
         }
 
         // @todo use leverage
         $contractCost = $this->ticker->indexPrice->value() / 100 * (1 + 0.1);
 
-        return $this->entryDto->percentOfDepositToRisk->of($contractBalance->available() / $contractCost);
+        $available = self::balanceConsideredAsAvailableForTrade($contractBalance);
+
+        return $this->entryDto->percentOfDepositToRisk->of($available / $contractCost);
     }
 
     private function isDryRun(): bool
@@ -314,5 +318,12 @@ final class OpenPositionHandler
         if ($this->entryDto->outputEnabled) {
             OutputHelper::print($message);
         }
+    }
+
+    public static function balanceConsideredAsAvailableForTrade(ContractBalance $contractBalance): float
+    {
+        $partOfUnrealizedToTotal = min(1, $contractBalance->partOfUnrealizedToTotal());
+
+        return $contractBalance->available() / $partOfUnrealizedToTotal;
     }
 }
