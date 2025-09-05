@@ -191,9 +191,9 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         );
 
         $regular = PnlHelper::transformPriceChangeToPnlPercent(
-            $this->tradingParametersProvider->stopLength(
+            $this->tradingParametersProvider->transformLengthToPricePercent(
                 symbol: $this->symbol,
-                distanceSelector: self::DISTANCE_FOR_CALCULATE_WARNING_RANGE,
+                length: self::DISTANCE_FOR_CALCULATE_WARNING_RANGE,
                 period: $period
             )
         )->value();

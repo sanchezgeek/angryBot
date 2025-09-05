@@ -52,13 +52,13 @@ final readonly class OpenPositionStopsGridsDefinitions
     {
         $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
 
-        $shortBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::Standard)->value();
+        $shortBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->value();
         $shortBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($shortBoundPriceChangePercent);
-        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::VeryLong)->value();
+        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::VeryLong)->value();
         $veryLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($veryLongBoundPriceChangePercent);
         $diff = $veryLongBoundPnl - $shortBoundPnl;
 
-        $longBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::Long)->value();
+        $longBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::Long)->value();
         $longBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($longBoundPriceChangePercent);
 
         $defs = [
@@ -73,13 +73,13 @@ final readonly class OpenPositionStopsGridsDefinitions
     {
         $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
 
-        $standardBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::Standard)->value();
+        $standardBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->value();
         $standardBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($standardBoundPriceChangePercent);
 
-        $moderateLongBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::Long)->value();
+        $moderateLongBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::Long)->value();
         $moderateLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($moderateLongBoundPriceChangePercent);
 
-        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->stopLength($symbol, PriceDistanceSelector::VeryLong)->value();
+        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::VeryLong)->value();
         $veryLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($veryLongBoundPriceChangePercent);
 
         $defs = [
@@ -115,7 +115,7 @@ final readonly class OpenPositionStopsGridsDefinitions
 
     private function getBoundPnlPercent(SymbolInterface $symbol, PriceDistanceSelector $lengthSelector): float
     {
-        $priceChangePercent = $this->tradingParametersProvider->stopLength($symbol, $lengthSelector)->value();
+        $priceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, $lengthSelector)->value();
 
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }

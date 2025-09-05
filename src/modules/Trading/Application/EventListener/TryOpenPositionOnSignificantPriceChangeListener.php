@@ -93,7 +93,6 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
                 return;
             }
 
-
             $balanceCanUseForOpen = $percentOfDepositToRisk->of($available);
             $positionImPercentOfAvailableForOpen = Percent::fromPart($realInitialMargin / $balanceCanUseForOpen, false);
 

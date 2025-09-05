@@ -133,15 +133,15 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
     // @todo | PredefinedStopLengthParser parameters
     #[AppDynamicParameter(group: 'trading')]
-    public function stopLength(
+    public function transformLengthToPricePercent(
         SymbolInterface $symbol,
-        PriceDistanceSelector $distanceSelector = PriceDistanceSelector::Standard,
+        PriceDistanceSelector $length = PriceDistanceSelector::Standard,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
-        $result = match ($distanceSelector) {
+        $result = match ($length) {
             PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 6,
             PriceDistanceSelector::VeryShort => $atrChangePercent / 5,
             PriceDistanceSelector::Short => $atrChangePercent / 4,
@@ -158,14 +158,14 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     }
 
     #[AppDynamicParameter(group: 'trading')]
-    public function allPredefinedStopDistances(
+    public function allPredefinedLengths(
         SymbolInterface $symbol,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): array {
         $result = [];
         foreach (PriceDistanceSelector::cases() as $case) {
-            $result[$case->value] = $this->stopLength($symbol, $case, $timeframe, $period);
+            $result[$case->value] = $this->transformLengthToPricePercent($symbol, $case, $timeframe, $period);
         }
 
         return $result;
@@ -182,7 +182,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         // @todo | settings
         $multiplier = 1.2;
 
-        $percent = $this->stopLength($symbol, $distanceSelector, $timeframe, $period);
+        $percent = $this->transformLengthToPricePercent($symbol, $distanceSelector, $timeframe, $period);
 
         return Percent::notStrict($percent->value() * $multiplier);
     }

@@ -60,7 +60,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         $symbol = $position->symbol;
         $positionSide = $position->side;
 
-        $stopDistancePricePct = $this->parameters->stopLength($symbol, $step->checkOnPriceLength);
+        $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->checkOnPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
 
         $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->sub($absoluteLength) : $position->entryPrice()->add($absoluteLength);
@@ -175,7 +175,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
 
     private function getBoundPnlPercent(SymbolInterface $symbol, Length $lengthSelector): float
     {
-        $priceChangePercent = $this->parameters->stopLength($symbol, $lengthSelector)->value();
+        $priceChangePercent = $this->parameters->transformLengthToPricePercent($symbol, $lengthSelector)->value();
 
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }

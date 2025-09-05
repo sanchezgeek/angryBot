@@ -116,7 +116,7 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
             default => self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE,
         };
 
-        return $this->parameters->oppositeBuyLength($symbol, $distance);
+        return $this->parameters->transformLengthToPricePercent($symbol, $distance);
     }
 
     private static function extractMarketBuyEntryDto(CheckOrderDto|MarketBuyCheckDto $entryDto): MarketBuyEntryDto

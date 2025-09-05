@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Trading\Enum;
 
 /**
- * @see \App\Trading\Application\Parameters\TradingDynamicParameters::stopLength
- * @see \App\Trading\Application\Parameters\TradingDynamicParameters::oppositeBuyLength
+ * @see \App\Trading\Application\Parameters\TradingDynamicParameters::transformLengthToPricePercent
  */
 enum PriceDistanceSelector: string
 {

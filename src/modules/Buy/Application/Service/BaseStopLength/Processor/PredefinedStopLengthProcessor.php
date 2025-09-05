@@ -56,7 +56,7 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
 
     private function getStopPercent(PredefinedStopLength $definition, BuyOrder $buyOrder): Percent
     {
-        return $this->tradingParametersProvider->stopLength(
+        return $this->tradingParametersProvider->transformLengthToPricePercent(
             $buyOrder->getSymbol(),
             $definition->length,
             $this->timeFrame,

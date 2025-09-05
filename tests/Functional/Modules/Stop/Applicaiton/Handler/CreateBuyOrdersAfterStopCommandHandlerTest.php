@@ -329,7 +329,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                self::getTradingParametersStub($stop->getSymbol())->oppositeBuyLength($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+                self::getTradingParametersStub($stop->getSymbol())->transformLengthToPricePercent($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
             ),
             $stopPrice
         );
@@ -364,14 +364,14 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return
             new TradingParametersProviderStub()
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::VeryVeryShort, $timeframe, $period, Percent::string('0.3%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::VeryShort, $timeframe, $period, Percent::string('0.5%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Short, $timeframe, $period, Percent::string('0.6%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateShort, $timeframe, $period, Percent::string('0.7%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Standard, $timeframe, $period, Percent::string('1%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::ModerateLong, $timeframe, $period, Percent::string('1.5%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::Long, $timeframe, $period, Percent::string('2%'))
-                ->addOppositeBuyLengthResult($symbol, PriceDistanceSelector::VeryLong, $timeframe, $period, Percent::string('10%'))
+                ->addTransformedLengthResult(Percent::string('0.3%'), $symbol, PriceDistanceSelector::VeryVeryShort, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('0.5%'), $symbol, PriceDistanceSelector::VeryShort, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('0.6%'), $symbol, PriceDistanceSelector::Short, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('0.7%'), $symbol, PriceDistanceSelector::ModerateShort, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('1%'), $symbol, PriceDistanceSelector::Standard, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('1.5%'), $symbol, PriceDistanceSelector::ModerateLong, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('2%'), $symbol, PriceDistanceSelector::Long, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('10%'), $symbol, PriceDistanceSelector::VeryLong, $timeframe, $period)
             ;
     }
 }

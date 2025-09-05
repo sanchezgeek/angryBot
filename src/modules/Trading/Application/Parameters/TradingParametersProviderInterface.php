@@ -26,6 +26,6 @@ interface TradingParametersProviderInterface
 
     public function significantPriceChange(SymbolInterface $symbol, float $passedPartOfDay): Percent;
     public function standardAtrForOrdersLength(SymbolInterface $symbol, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): AveragePriceChange;
-    public function stopLength(SymbolInterface $symbol, PriceDistanceSelector $distanceSelector, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
-    public function oppositeBuyLength(SymbolInterface $symbol, PriceDistanceSelector $distanceSelector, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
+
+    public function transformLengthToPricePercent(SymbolInterface $symbol, PriceDistanceSelector $length, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
 }

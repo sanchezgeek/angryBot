@@ -83,7 +83,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
 
         return
             new TradingParametersProviderStub()
-                ->addOppositeBuyLengthResult($symbol, self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE, $timeframe, $period, new Percent($percentChange))
+                ->addTransformedLengthResult(new Percent($percentChange), $symbol, self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE, $timeframe, $period)
             ;
     }
 

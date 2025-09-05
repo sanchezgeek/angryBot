@@ -191,7 +191,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
 
             $stopDistanceFromTicker = SettingsHelper::withAlternatives(CoverLossSettings::Cover_Loss_By_OtherSymbols_AdditionalStop_Distance, $candidateSymbol, $candidate->side);
 
-            $stopLength = $this->tradingParameters->stopLength($candidateSymbol, $stopDistanceFromTicker);
+            $stopLength = $this->tradingParameters->transformLengthToPricePercent($candidateSymbol, $stopDistanceFromTicker);
             $distance = $stopLength->of($candidateTicker->indexPrice->value());
             $supplyStopPrice = $candidateTicker->indexPrice->modifyByDirection($candidate->side, PriceMovementDirection::TO_LOSS, $distance);
 

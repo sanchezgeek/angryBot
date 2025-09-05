@@ -71,7 +71,7 @@ trait PriceRangeAwareCommand
                 }
 
                 if ($length = PriceDistanceSelector::tryFrom($providedValue)) {
-                    $priceChangePercent = $this->tradingParametersProvider->stopLength($symbol, $length)->value();
+                    $priceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, $length)->value();
                     $pnlValue = PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent) * $sign;
 
                     return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);

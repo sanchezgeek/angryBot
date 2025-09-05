@@ -18,37 +18,13 @@ use RuntimeException;
 class TradingParametersProviderStub implements TradingParametersProviderInterface
 {
     public array $stopLengthResults = [];
-    private array $oppositeBuyLengthResults = [];
 
     public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
     {
         return TradingStyle::Conservative;
     }
 
-    public function addOppositeBuyLengthResult(
-        SymbolInterface $symbol,
-        PriceDistanceSelector $distanceSelector,
-        TimeFrame $timeframe,
-        int $period,
-        Percent $percentResult,
-    ): self {
-        $key = self::_oppositeBuyLengthResultsKey($symbol, $distanceSelector, $timeframe, $period);
-
-        $this->oppositeBuyLengthResults[$key] = $percentResult;
-
-        return $this;
-    }
-
-    private function _oppositeBuyLengthResultsKey(
-        SymbolInterface $symbol,
-        PriceDistanceSelector $distanceSelector,
-        TimeFrame $timeframe,
-        int $period
-    ): string {
-        return sprintf('regularOppositeBuyOrderLengthResult_%s_%s_%s_%s', $symbol->name(), $distanceSelector->value, $timeframe->value, $period);
-    }
-
-    public function addStopLengthResult(
+    public function addTransformedLengthResult(
         Percent $percentResult,
         SymbolInterface $symbol,
         PriceDistanceSelector $distanceSelector,
@@ -91,32 +67,18 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         throw new RuntimeException('Not implemented yet');
     }
 
-    public function stopLength(
+    public function transformLengthToPricePercent(
         SymbolInterface $symbol,
-        PriceDistanceSelector $distanceSelector,
+        PriceDistanceSelector $length,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): Percent {
-        $key = self::_stopLengthResultKey($symbol, $distanceSelector, $timeframe, $period);
+        $key = self::_stopLengthResultKey($symbol, $length, $timeframe, $period);
         if (!isset($this->stopLengthResults[$key])) {
             throw new RuntimeException(sprintf('Cannot find mocked stopLengthResults result for %s', $key));
         }
 
         return $this->stopLengthResults[$key];
-    }
-
-    public function oppositeBuyLength(
-        SymbolInterface $symbol,
-        PriceDistanceSelector $distanceSelector,
-        TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
-        int $period = self::ATR_PERIOD_FOR_ORDERS,
-    ): Percent {
-        $key = self::_oppositeBuyLengthResultsKey($symbol, $distanceSelector, $timeframe, $period);
-        if (!isset($this->oppositeBuyLengthResults[$key])) {
-            throw new RuntimeException(sprintf('Cannot find mocked oppositeBuyLengthResults result for %s', $key));
-        }
-
-        return $this->oppositeBuyLengthResults[$key];
     }
 
     public function standardAtrForOrdersLength(

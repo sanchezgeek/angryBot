@@ -264,7 +264,7 @@ final class CreateBuyOrderAfterStopCommandHandler
     {
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                $this->tradingParametersProvider->oppositeBuyLength($symbol, $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
+                $this->tradingParametersProvider->transformLengthToPricePercent($symbol, $lengthSelector, self::DEFAULT_ATR_TIMEFRAME, self::DEFAULT_ATR_PERIOD)
             ),
             $refPrice
         );

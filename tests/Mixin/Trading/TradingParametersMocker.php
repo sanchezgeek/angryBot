@@ -43,7 +43,7 @@ trait TradingParametersMocker
     {
         $percent = $percentOverride ?? '0.8%';
 
-        self::$tradingParametersProviderStub->addStopLengthResult(
+        self::$tradingParametersProviderStub->addTransformedLengthResult(
             percentResult: Percent::string($percent),
             symbol: $symbol,
             distanceSelector: LiquidationDynamicParameters::DISTANCE_FOR_CALCULATE_WARNING_RANGE,
@@ -55,12 +55,12 @@ trait TradingParametersMocker
     {
         $percent = $allowedPercentChange ?? '10%';
 
-        self::$tradingParametersProviderStub->addOppositeBuyLengthResult(
+        self::$tradingParametersProviderStub->addTransformedLengthResult(
+            Percent::string($percent),
             $symbol,
             BuyOnLongDistanceAndCheckAveragePrice::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE,
             TradingParametersProviderInterface::LONG_ATR_TIMEFRAME,
             TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS,
-            Percent::string($percent)
         );
     }
 }
