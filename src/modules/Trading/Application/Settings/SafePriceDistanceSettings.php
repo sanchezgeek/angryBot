@@ -12,6 +12,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum SafePriceDistanceSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.safeDistance';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
     case SafePriceDistance_Percent = 'safePriceDistance.percent'; // optional
 

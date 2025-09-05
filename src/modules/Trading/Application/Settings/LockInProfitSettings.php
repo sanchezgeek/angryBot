@@ -12,6 +12,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum LockInProfitSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.lockInProfit';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Enabled = 'lockInProfit.enabled';
 

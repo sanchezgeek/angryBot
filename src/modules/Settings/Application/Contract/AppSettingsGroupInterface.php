@@ -10,4 +10,6 @@ interface AppSettingsGroupInterface
      * @return AppSettingInterface[]
      */
     public static function cases(): array;
+
+    public static function category(): string;
 }

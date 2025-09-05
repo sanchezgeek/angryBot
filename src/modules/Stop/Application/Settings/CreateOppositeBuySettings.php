@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum CreateOppositeBuySettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'stop.opposite';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Martingale_Enabled = 'stop.createOpposite.martingale.enabled';
 

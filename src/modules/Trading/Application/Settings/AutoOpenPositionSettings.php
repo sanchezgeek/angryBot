@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum AutoOpenPositionSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.autoOpen';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Notifications_Enabled = 'autoOpen.notifications.enabled';
 

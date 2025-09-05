@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum ConnectionSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'connection';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case CheckConnectionEnabled = 'connection.check.enabled';
 

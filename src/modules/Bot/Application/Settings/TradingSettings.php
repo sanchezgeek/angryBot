@@ -12,6 +12,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum TradingSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.general';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: TradingStyle::class)]
     case Global_Trading_Style = 'trading.global.tradingStyle';
 

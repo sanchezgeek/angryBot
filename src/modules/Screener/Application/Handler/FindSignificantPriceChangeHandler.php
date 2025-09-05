@@ -12,7 +12,7 @@ use App\Screener\Application\Contract\Query\FindSignificantPriceChangeHandlerInt
 use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
 use App\Screener\Application\Service\Exception\CandlesHistoryNotFound;
 use App\Screener\Application\Service\PreviousSymbolPriceProvider;
-use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
+use App\Screener\Application\Settings\ScreenerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -89,7 +89,7 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
     private function disabledFor(SymbolInterface $symbol): bool
     {
         return $this->settings->optional(
-            SettingAccessor::withAlternativesAllowed(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled, $symbol)
+            SettingAccessor::withAlternativesAllowed(ScreenerSettings::SignificantPriceChange_Screener_Enabled, $symbol)
         ) === false;
     }
 

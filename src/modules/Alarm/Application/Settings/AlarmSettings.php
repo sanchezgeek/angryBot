@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum AlarmSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'alarm';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Integer)]
     case PriceAlarm_SoundsCount = 'alarm.priceAlarm.soundsCount';
 

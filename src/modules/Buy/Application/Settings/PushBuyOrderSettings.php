@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum PushBuyOrderSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'buy.push';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case UseSpot_Enabled = 'push.BuyOrder.useSpot.enabled';
 

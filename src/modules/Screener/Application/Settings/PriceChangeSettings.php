@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum PriceChangeSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'screener.priceChange';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
     case SignificantChange_OneDay_PricePercent = 'priceChange.significantDelta.oneDay.pricePercent';
 

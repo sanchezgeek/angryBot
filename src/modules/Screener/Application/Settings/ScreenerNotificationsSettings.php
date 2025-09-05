@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum ScreenerNotificationsSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'screener.notifications';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case SignificantPriceChange_Notifications_Enabled = 'screener.significantPriceChange.notifications.enabled';
 

@@ -12,6 +12,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum PushStopSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'stop.push';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: PriceRangeLeadingToUseMarkPriceOptions::class)]
     case WhichRangeToUse_While_ChooseMarkPrice_AsTriggerPrice = 'push.stop.whichRangeToUse.while.chooseMarkPrice.asTriggerPrice';
 

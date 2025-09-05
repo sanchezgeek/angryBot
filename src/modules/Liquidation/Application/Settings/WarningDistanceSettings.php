@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum WarningDistanceSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'liquidation.warningDistance';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Float)]
     case WarningDistancePnl = 'liquidationHandlerSettings.warningDistancePnl';
 

@@ -8,7 +8,7 @@ use App\EventBus\EventBus;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChange;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChangeHandlerInterface;
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
-use App\Screener\Application\Settings\ScreenerEnabledHandlersSettings;
+use App\Screener\Application\Settings\ScreenerSettings;
 use App\Settings\Application\Helper\SettingsHelper;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -18,7 +18,7 @@ final readonly class CheckSignificantPriceChangeJobHandler
     public function __invoke(CheckSignificantPriceChangeJob $job): void
     {
         // move to some interface
-        if (SettingsHelper::exact(ScreenerEnabledHandlersSettings::SignificantPriceChange_Screener_Enabled) !== true) {
+        if (SettingsHelper::exact(ScreenerSettings::SignificantPriceChange_Screener_Enabled) !== true) {
             return;
         }
 

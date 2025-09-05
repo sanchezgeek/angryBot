@@ -9,8 +9,13 @@ use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use App\Settings\Domain\Enum\SettingType;
 
-enum ScreenerEnabledHandlersSettings: string implements AppSettingInterface, AppSettingsGroupInterface
+enum ScreenerSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'screener';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case SignificantPriceChange_Screener_Enabled = 'screener.significantPriceChange.enabled';
 

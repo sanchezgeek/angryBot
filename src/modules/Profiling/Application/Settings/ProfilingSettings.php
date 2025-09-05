@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum ProfilingSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'profiling';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean, nullable: true)]
     case ProfilingEnabled = 'profiling.enabled';
 

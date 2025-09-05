@@ -12,6 +12,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum CoverLossSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.coverLoss';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case Cover_Loss_Enabled = 'trading.coverLosses.enabled';
 

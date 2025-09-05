@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum MovePositionStopsSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'stop';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Float)]
     case MoveToBreakeven_After_PositionPnlPercent = 'stop.movePositionStops.moveToBreakeven.after.positionPnlPercent';
 
