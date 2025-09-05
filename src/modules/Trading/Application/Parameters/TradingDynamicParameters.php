@@ -24,8 +24,8 @@ use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use App\Worker\AppContext;
 use LogicException;
 
 /**
@@ -40,6 +40,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         #[AppDynamicParameterAutowiredArgument]
         private TAToolsProviderInterface $taProvider,
+
+        #[AppDynamicParameterAutowiredArgument]
+        private ContractBalanceProviderInterface $contractBalanceProvider,
     ) {
     }
 
@@ -74,9 +77,12 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         $k = SettingsHelper::withAlternativesOptional(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side) ?? match ($this->tradingStyle($symbol, $side)) {
             TradingStyle::Aggressive => 1,
-            TradingStyle::Cautious => 4,
+            TradingStyle::Cautious => 3,
             default => 2,
         };
+
+        $partOfUnrealizedToTotal = $this->contractBalanceProvider->getContractWalletBalance($symbol->associatedCoin())->unrealizedPartToTotal();
+        $k *= max(1, $partOfUnrealizedToTotal / 1.8);
 
         $longATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(self::LONG_ATR_PERIOD)->atr->absoluteChange;
         $fastATR = $this->taProvider->create($symbol, self::LONG_ATR_TIMEFRAME)->atr(2)->atr->absoluteChange;
