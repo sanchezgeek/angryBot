@@ -18,6 +18,10 @@ trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
 ### \App\Trading\Application\Settings\AutoOpenPositionSettings
 autoOpen.notifications.enabled: true
 autoOpen.enabled: true
+autoOpen.enabled[symbol=PAXGUSDT]: false
+autoOpen.enabled[symbol=USD1USDT]: false
+autoOpen.enabled[symbol=USDCUSDT]: false
+autoOpen.enabled[symbol=XAUTUSDT]: false
 
 ### \App\Trading\Application\Settings\LockInProfitSettings
 lockInProfit.enabled: true

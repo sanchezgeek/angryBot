@@ -57,7 +57,7 @@ readonly class MarketBuyHandler
         $checksResult = $this->checks->check($dto, $checksContext);
 
         if (!$checksResult->success) {
-            throw new ChecksNotPassedException(!$checksResult->quiet ? $checksResult->info() : '');
+            throw new ChecksNotPassedException($checksResult);
         }
 
         $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->markPrice);

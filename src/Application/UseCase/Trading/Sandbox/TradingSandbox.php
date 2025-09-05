@@ -7,6 +7,7 @@ namespace App\Application\UseCase\Trading\Sandbox;
 
 use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLiquidationPriceHandler;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
 use App\Application\UseCase\Trading\Sandbox\Assertion\PositionLiquidationIsAfterOrderPriceAssertion;
 use App\Application\UseCase\Trading\Sandbox\Dto\ClosedPosition;
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxBuyOrder;
@@ -15,7 +16,6 @@ use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionFailResultReason;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
 use App\Application\UseCase\Trading\Sandbox\Enum\SandboxErrorsHandlingType;
-use App\Application\UseCase\Trading\Sandbox\Exception\ChecksNotPassedSandboxException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
@@ -128,7 +128,7 @@ class TradingSandbox implements TradingSandboxInterface
             $pnl = $this->makeBuy($order);
             $orderExecuted = true;
             $stateAfter = $this->getCurrentState();
-        } catch (SandboxPositionLiquidatedBeforeOrderPriceException|ChecksNotPassedSandboxException|SandboxInsufficientAvailableBalanceException $e) {
+        } catch (SandboxPositionLiquidatedBeforeOrderPriceException|ChecksNotPassedException|SandboxInsufficientAvailableBalanceException $e) {
             $this->handleExceptionOnExecutionStep($e);
             $failReason = new OrderExecutionFailResultReason($e);
         }
@@ -171,7 +171,7 @@ class TradingSandbox implements TradingSandboxInterface
     /**
      * @throws SandboxInsufficientAvailableBalanceException
      * @throws SandboxPositionLiquidatedBeforeOrderPriceException
-     * @throws ChecksNotPassedSandboxException
+     * @throws ChecksNotPassedException
      */
     private function makeBuy(SandboxBuyOrder $order): ?float
     {
@@ -220,7 +220,7 @@ class TradingSandbox implements TradingSandboxInterface
             );
 
             if (!$checksResult->success) {
-                throw new ChecksNotPassedSandboxException($checksResult);
+                throw new ChecksNotPassedException($checksResult, true);
             }
         }
 

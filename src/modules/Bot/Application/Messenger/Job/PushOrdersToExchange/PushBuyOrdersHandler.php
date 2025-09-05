@@ -378,7 +378,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
             $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order), $this->checksContext);
             $order->wasPushedToExchange($exchangeOrderId);
         } catch (ChecksNotPassedException $e) {
-            ($message = $e->getMessage()) && OutputHelper::failed($message);
+            !$e->result->quiet && OutputHelper::failed($e->getMessage());
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
