@@ -8,7 +8,7 @@ use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\PositionDependentCommand;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -23,7 +23,7 @@ class RemoveLockInProfitStopsCommand extends AbstractCommand implements Position
 
     private ?SymbolInterface $symbol;
     private Ticker $ticker;
-    private TradingStyle $tradingStyle;
+    private RiskLevel $riskLevel;
 
     protected function configure(): void
     {

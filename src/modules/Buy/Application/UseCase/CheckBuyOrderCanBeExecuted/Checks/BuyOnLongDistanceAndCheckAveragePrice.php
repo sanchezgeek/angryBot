@@ -10,7 +10,7 @@ use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlacedTooFarFromPositionEntry;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
@@ -79,14 +79,14 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         $tickerPrice = $context->ticker->markPrice;
         $symbol = $order->symbol;
         $positionSide = $order->positionSide;
-        $tradingStyle = TradingDynamicParameters::tradingStyle($symbol, $positionSide);
+        $riskLevel = TradingDynamicParameters::riskLevel($symbol, $positionSide);
 
         $percentChange = $tickerPrice->differenceWith($positionEntryPrice)->getPercentChange($order->positionSide)->abs();
-        $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($symbol, $tradingStyle);
+        $calculatedMaxAllowedPercentChange = $this->getMaxAllowedPercentPriceChangeFromPositionEntryPrice($symbol, $riskLevel);
 
-        $maxAllowedPercent = match($tradingStyle) {
-            TradingStyle::Cautious => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE / 2,
-            TradingStyle::Aggressive => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE * 1.5,
+        $maxAllowedPercent = match($riskLevel) {
+            RiskLevel::Cautious => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE / 2,
+            RiskLevel::Aggressive => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE * 1.5,
             default => self::MAX_ALLOWED_PRICE_CHANGE_PERCENT_VALUE,
         };
 
@@ -108,11 +108,11 @@ final readonly class BuyOnLongDistanceAndCheckAveragePrice implements TradingChe
         return TradingCheckResult::succeed($this, $info);
     }
 
-    private function getMaxAllowedPercentPriceChangeFromPositionEntryPrice(SymbolInterface $symbol, TradingStyle $tradingStyle): Percent
+    private function getMaxAllowedPercentPriceChangeFromPositionEntryPrice(SymbolInterface $symbol, RiskLevel $riskLevel): Percent
     {
-        $distance = match($tradingStyle) {
-            TradingStyle::Cautious => PriceDistanceSelector::Standard,
-            TradingStyle::Aggressive => PriceDistanceSelector::VeryLong,
+        $distance = match($riskLevel) {
+            RiskLevel::Cautious => PriceDistanceSelector::Standard,
+            RiskLevel::Aggressive => PriceDistanceSelector::VeryLong,
             default => self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE,
         };
 

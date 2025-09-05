@@ -10,7 +10,7 @@ use App\Buy\Application\Service\BaseStopLength\BaseStopLengthProcessorInterface;
 use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 
@@ -38,12 +38,12 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
         $definition = $buyOrder->getStopCreationDefinition();
 
         if ($definition === null) {
-            $tradingStyle = $this->tradingParametersProvider->tradingStyle($buyOrder->getSymbol(), $buyOrder->getPositionSide());
+            $riskLevel = $this->tradingParametersProvider->riskLevel($buyOrder->getSymbol(), $buyOrder->getPositionSide());
 
-            $length = match ($tradingStyle) {
-                TradingStyle::Cautious => PriceDistanceSelector::VeryShort,
-                TradingStyle::Conservative => PriceDistanceSelector::Standard,
-                TradingStyle::Aggressive => PriceDistanceSelector::Long,
+            $length = match ($riskLevel) {
+                RiskLevel::Cautious => PriceDistanceSelector::VeryShort,
+                RiskLevel::Conservative => PriceDistanceSelector::Standard,
+                RiskLevel::Aggressive => PriceDistanceSelector::Long,
             };
 
             $definition = new PredefinedStopLength($length);

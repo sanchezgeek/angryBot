@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Liquidation\Domain\Assert;
 
-/**
- * @todo | settings | DRY with TradingStyle?
- */
 enum SafePriceAssertionStrategyEnum: string
 {
     case Aggressive = 'aggressive';

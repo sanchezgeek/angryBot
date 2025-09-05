@@ -8,7 +8,7 @@ use App\Bot\Application\Settings\TradingSettings;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
 use App\Screener\Application\Settings\PriceChangeSettings;
@@ -46,18 +46,18 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     ) {
     }
 
-    public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    public static function riskLevel(SymbolInterface $symbol, Side $side): RiskLevel
     {
-        return SettingsHelper::withAlternatives(TradingSettings::Global_Trading_Style, $symbol, $side);
+        return SettingsHelper::withAlternatives(TradingSettings::Global_RiskLevel, $symbol, $side);
     }
 
     public static function safePriceDistanceApplyStrategy(SymbolInterface $symbol, Side $positionSide): SafePriceAssertionStrategyEnum
     {
         $override = SettingsHelper::withAlternativesOptional(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide);
 
-        return $override ?? match (self::tradingStyle($symbol, $positionSide)) {
-            TradingStyle::Aggressive => SafePriceAssertionStrategyEnum::Aggressive,
-            TradingStyle::Cautious => SafePriceAssertionStrategyEnum::Conservative,
+        return $override ?? match (self::riskLevel($symbol, $positionSide)) {
+            RiskLevel::Aggressive => SafePriceAssertionStrategyEnum::Aggressive,
+            RiskLevel::Cautious => SafePriceAssertionStrategyEnum::Conservative,
             default => SafePriceAssertionStrategyEnum::Moderate,
         };
     }
@@ -75,9 +75,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
             return $refPrice * ($percentOverride / 100);
         }
 
-        $k = SettingsHelper::withAlternativesOptional(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side) ?? match ($this->tradingStyle($symbol, $side)) {
-            TradingStyle::Aggressive => 1,
-            TradingStyle::Cautious => 3,
+        $k = SettingsHelper::withAlternativesOptional(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $symbol, $side) ?? match ($this->riskLevel($symbol, $side)) {
+            RiskLevel::Aggressive => 1,
+            RiskLevel::Cautious => 3,
             default => 2,
         };
 
@@ -110,7 +110,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         } else {
             $baseATR = TA::atr($symbol, self::LONG_ATR_TIMEFRAME, self::LONG_ATR_PERIOD)->atr;
 
-            $multiplier = $this->settingsProvider->required(
+            $multiplier = $atrBaseMultiplierOverride ?? $this->settingsProvider->required(
                 SettingAccessor::withAlternativesAllowed(PriceChangeSettings::SignificantChange_OneDay_AtrBaseMultiplier, $symbol)
             );
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Settings;
 
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Settings\Application\Attribute\SettingParametersAttribute;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\AppSettingsGroupInterface;
@@ -17,8 +17,8 @@ enum TradingSettings: string implements AppSettingInterface, AppSettingsGroupInt
         return 'trading.general';
     }
 
-    #[SettingParametersAttribute(type: SettingType::Enum, enumClass: TradingStyle::class)]
-    case Global_Trading_Style = 'trading.global.tradingStyle';
+    #[SettingParametersAttribute(type: SettingType::Enum, enumClass: RiskLevel::class)]
+    case Global_RiskLevel = 'trading.global.riskLevel';
 
     # Other
     #[SettingParametersAttribute(type: SettingType::Boolean)]

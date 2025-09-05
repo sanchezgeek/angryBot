@@ -8,7 +8,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -31,7 +31,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         SymbolInterface $symbol,
         Side $positionSide,
         SymbolPrice $priceToRelate,
-        TradingStyle $tradingStyle,
+        RiskLevel $riskLevel,
         null|float|string $fromPnlPercent = null,
     ): OrdersGridDefinitionCollection {
         $symbolSideDef = $this->settings->optional(SettingAccessor::exact(self::SETTING, $symbol, $positionSide));
@@ -41,10 +41,10 @@ final readonly class OpenPositionStopsGridsDefinitions
             return OrdersGridDefinitionCollection::create($symbolSideDef ?? $symbolDef, $priceToRelate, $positionSide, $symbol);
         }
 
-        return match ($tradingStyle) {
-            TradingStyle::Aggressive => $this->aggressive($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
-            TradingStyle::Cautious => $this->cautious($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
-            TradingStyle::Conservative => $this->conservative($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
+        return match ($riskLevel) {
+            RiskLevel::Aggressive => $this->aggressive($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
+            RiskLevel::Cautious => $this->cautious($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
+            RiskLevel::Conservative => $this->conservative($symbol, $positionSide, $priceToRelate, $fromPnlPercent),
         };
     }
 

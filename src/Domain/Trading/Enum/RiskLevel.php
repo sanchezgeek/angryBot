@@ -7,7 +7,7 @@ namespace App\Domain\Trading\Enum;
 /**
  * @todo | settings | DRY with SafePriceAssertionStrategyEnum?
  */
-enum TradingStyle: string
+enum RiskLevel: string
 {
     case Aggressive = 'aggressive';
     case Conservative = 'conservative';

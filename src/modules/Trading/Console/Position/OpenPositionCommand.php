@@ -9,7 +9,7 @@ use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Command\PositionDependentCommand;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Settings\Application\Service\AppSettingsService;
@@ -58,7 +58,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
 
     private SymbolInterface $symbol;
     private Ticker $ticker;
-    private TradingStyle $tradingStyle;
+    private RiskLevel $riskLevel;
 
     protected function configure(): void
     {
@@ -78,7 +78,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             ->addOption(self::BUY_ORDERS_GRID_DEFINITION, null, InputOption::VALUE_REQUIRED, 'BuyOrders grid definition', self::BUY_ORDERS_GRID_DEFINITION_DEFAULT)
             ->addOption(self::REMEMBER_BUY_GRID_DEFINITION, null, InputOption::VALUE_OPTIONAL, 'BuyOrders grid definition (with remember)')
 
-            ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
+            ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', RiskLevel::Conservative->value)
 //            ->addOption(self::TRIGGER_DELTA_OPTION, 'd', InputOption::VALUE_OPTIONAL, 'Stops trigger delta')
         ;
     }
@@ -91,7 +91,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
 
         $this->symbol = $this->getSymbol();
         $this->ticker = $this->exchangeService->ticker($this->symbol);
-        $this->tradingStyle = TradingStyle::from($this->paramFetcher->getStringArgument(self::TRADING_STYLE));
+        $this->riskLevel = RiskLevel::from($this->paramFetcher->getStringArgument(self::TRADING_STYLE));
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -223,7 +223,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             return OrdersGridDefinitionCollection::create($definition, $priceToRelate, $positionSide, $symbol);
         }
 
-        return $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $this->tradingStyle);
+        return $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $this->riskLevel);
     }
 
     public function __construct(

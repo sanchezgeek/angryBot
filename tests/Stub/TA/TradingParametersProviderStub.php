@@ -7,7 +7,7 @@ namespace App\Tests\Stub\TA;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TimeFrame;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
@@ -19,9 +19,9 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
 {
     public array $stopLengthResults = [];
 
-    public static function tradingStyle(SymbolInterface $symbol, Side $side): TradingStyle
+    public static function riskLevel(SymbolInterface $symbol, Side $side): RiskLevel
     {
-        return TradingStyle::Conservative;
+        return RiskLevel::Conservative;
     }
 
     public function addTransformedLengthResult(

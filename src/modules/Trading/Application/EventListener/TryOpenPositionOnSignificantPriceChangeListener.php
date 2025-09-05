@@ -14,7 +14,7 @@ use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
@@ -45,7 +45,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $symbol = $priceChangeInfo->symbol;
         $positionSide = $event->positionSideToPositionLoss();
 
-        $tradingStyle = $this->parameters->tradingStyle($symbol, $positionSide);
+        $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
 //        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
 
         if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
@@ -58,10 +58,10 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $ticker = $this->exchangeService->ticker($symbol);
         $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
 
-        [$threshold, $minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($tradingStyle) {
-            TradingStyle::Cautious => [70, 0.8, 5],
+        [$threshold, $minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($riskLevel) {
+            RiskLevel::Cautious => [70, 0.8, 5],
             default => [60, 1.5, 10],
-            TradingStyle::Aggressive => [50, 2.5, 12],
+            RiskLevel::Aggressive => [50, 2.5, 12],
         };
 
         // other logic for LONGs
@@ -113,9 +113,9 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         }
 
         $priceToRelate = $ticker->markPrice;
-        $fromPnlPercent = $tradingStyle === TradingStyle::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
+        $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
 
-        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $tradingStyle, $fromPnlPercent);
+        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $riskLevel, $fromPnlPercent);
 
         // @todo | autoOpen | mb without stops in case of very small amount?
         $openPositionEntry = new OpenPositionEntryDto(

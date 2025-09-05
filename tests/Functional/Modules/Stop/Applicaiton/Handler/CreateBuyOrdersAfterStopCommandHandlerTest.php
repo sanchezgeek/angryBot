@@ -20,7 +20,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Distance;
 use App\Domain\Trading\Enum\TimeFrame;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
@@ -251,12 +251,12 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             if ($martingaleEnabled) {
                 OutputHelper::print(sprintf('martingale enabled for %s %s', $symbol->name(), $side->value));
 
-                $tradingStyle = TradingStyle::Conservative;
+                $riskLevel = RiskLevel::Conservative;
 
-                $martingaleOrdersStopLength = match ($tradingStyle) {
-                    TradingStyle::Aggressive => Distance::Standard,
-                    TradingStyle::Conservative => Distance::ModerateShort,
-                    TradingStyle::Cautious => Distance::Short,
+                $martingaleOrdersStopLength = match ($riskLevel) {
+                    RiskLevel::Aggressive => Distance::Standard,
+                    RiskLevel::Conservative => Distance::ModerateShort,
+                    RiskLevel::Cautious => Distance::Short,
                 };
                 $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
 

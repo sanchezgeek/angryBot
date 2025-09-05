@@ -10,17 +10,12 @@ use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactoryInterfa
 use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionExceptionHandler;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
-use App\Domain\Trading\Enum\TradingStyle;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
-use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
-use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
-use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;

@@ -12,7 +12,7 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
 use App\Trading\Application\LockInProfit\Strategy\LockInpProfitStrategyInterface;
@@ -128,7 +128,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         return sprintf('%s..%s|%d%%|%s', $from, $to, $positionSizePercent, $stopsCount);
     }
 
-    public static function defaultThreeStepsLock(?TradingStyle $tradingStyle = null): LockInProfitByStepsInnerDto
+    public static function defaultThreeStepsLock(?RiskLevel $riskLevel = null): LockInProfitByStepsInnerDto
     {
         // add trading style to alias (for further recreate after style changed)
         return new LockInProfitByStepsInnerDto(

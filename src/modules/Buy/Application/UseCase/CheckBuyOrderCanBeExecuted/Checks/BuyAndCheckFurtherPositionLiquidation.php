@@ -13,7 +13,7 @@ use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionEx
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
 use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
 use App\Settings\Application\Helper\SettingsHelper;

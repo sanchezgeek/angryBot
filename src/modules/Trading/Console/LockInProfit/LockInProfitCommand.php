@@ -6,7 +6,7 @@ use App\Bot\Domain\Ticker;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\PositionDependentCommand;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitBySteps\LockInProfitByStepsStrategy;
 use App\Trading\Contract\LockInProfit\Enum\LockInProfitStrategy;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
@@ -24,7 +24,7 @@ class LockInProfitCommand extends AbstractCommand implements PositionDependentCo
 
     private SymbolInterface $symbol;
     private Ticker $ticker;
-    private TradingStyle $tradingStyle;
+    private RiskLevel $riskLevel;
 
     protected function configure(): void
     {

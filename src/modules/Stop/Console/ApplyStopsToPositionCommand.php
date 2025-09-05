@@ -18,7 +18,7 @@ use App\Command\Stop\CreateStopsGridCommand;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
-use App\Domain\Trading\Enum\TradingStyle;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
@@ -46,7 +46,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     public const string MODE_OPTION = 'mode';
     public const string DANGER_MODE = 'danger';
 
-    public const string TRADING_STYLE = 'style';
+    public const string RISK_LEVEL = 'riskLevel';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
     public const string POSITION_PART = 'part';
 
@@ -54,7 +54,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     {
         $this
             ->configurePositionArgs()
-            ->addArgument(self::TRADING_STYLE, InputArgument::OPTIONAL, 'Trading style', TradingStyle::Conservative->value)
+            ->addArgument(self::RISK_LEVEL, InputArgument::OPTIONAL, 'Trading style', RiskLevel::Conservative->value)
             ->addOption(self::FROM_PNL_PERCENT_OPTION, null, InputOption::VALUE_OPTIONAL, 'Apply from specified PNL%')
             ->addOption(self::MODE_OPTION, null, InputOption::VALUE_OPTIONAL, 'Mode')
             ->addOption(self::POSITION_PART, null, InputOption::VALUE_OPTIONAL)
@@ -70,7 +70,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     {
         parent::initialize($input, $output);
 
-        $this->tradingStyle = TradingStyle::from($this->paramFetcher->getStringArgument(self::TRADING_STYLE));
+        $this->riskLevel = RiskLevel::from($this->paramFetcher->getStringArgument(self::RISK_LEVEL));
         $this->part = $this->paramFetcher->floatOption(self::POSITION_PART);
 
         try {
@@ -92,7 +92,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $this->uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid');
     }
 
-    private TradingStyle $tradingStyle;
+    private RiskLevel $riskLevel;
     private null|float|string $fromPnlPercent;
     private ?float $part;
     private string $uniqueId;
@@ -136,7 +136,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         }
 
         if ($mode === self::DANGER_MODE) {
-            $this->tradingStyle = TradingStyle::Cautious;
+            $this->riskLevel = RiskLevel::Cautious;
             if ($this->fromPnlPercent === null) {
                 $this->fromPnlPercent = sprintf('-%s', PriceDistanceSelector::VeryVeryShort->value);
             }
@@ -168,7 +168,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $symbol = $position->symbol;
         $side = $position->side;
 
-        $stopsGridsDef = $this->stopsGridDefinitionFinder->create($symbol, $side, $priceToRelate, $this->tradingStyle, $this->fromPnlPercent);
+        $stopsGridsDef = $this->stopsGridDefinitionFinder->create($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
 
         if (
             $stopsGridsDef->isFoundAutomaticallyFromTa()
