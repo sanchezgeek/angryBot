@@ -8,9 +8,9 @@ use App\Application\AttemptsLimit\AttemptLimitCheckerProviderInterface;
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Buy\Application\Helper\BuyOrderInfoHelper;
-use App\Helper\OutputHelper;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
+use App\Trading\SDK\Check\Dto\CompositeTradingCheckResult;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Trading\SDK\Check\Dto\TradingCheckResult;
 use App\Trading\SDK\Check\Exception\TooManyTriesForCheck;
@@ -28,7 +28,7 @@ final class BuyChecksChain
         $this->checks = $checks;
     }
 
-    public function check(MarketBuyEntryDto $marketBuyEntryDto, TradingCheckContext $context): AbstractTradingCheckResult
+    public function check(MarketBuyEntryDto $marketBuyEntryDto, TradingCheckContext $context): CompositeTradingCheckResult
     {
         $failed = false;
         $results = [];
@@ -58,10 +58,10 @@ final class BuyChecksChain
 
         if ($failed) {
             $results = array_filter($results, static fn (AbstractTradingCheckResult $result) => !$result->quiet);
-            return TradingCheckResult::failed($source, CheckFailures::ChecksChainFailed, self::info($marketBuyEntryDto, $context, ...$results), !$this->isNegativeMustBeShown($marketBuyEntryDto));
+            return CompositeTradingCheckResult::failed($source, CheckFailures::ChecksChainFailed, self::info($marketBuyEntryDto, $context, ...$results), $results, !$this->isNegativeMustBeShown($marketBuyEntryDto));
         }
 
-        return TradingCheckResult::succeed($source, self::info($marketBuyEntryDto, $context, ...$results), !$results);
+        return CompositeTradingCheckResult::succeed($source, self::info($marketBuyEntryDto, $context, ...$results), $results, !$results);
     }
 
     private static function info(MarketBuyEntryDto $marketBuyEntryDto, TradingCheckContext $context, AbstractTradingCheckResult ...$results): string

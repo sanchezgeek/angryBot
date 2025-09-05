@@ -8,6 +8,7 @@ use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException
 use App\Application\UseCase\Trading\Sandbox\Dto\In\SandboxStopOrder;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\ExecutionStepResult;
 use App\Application\UseCase\Trading\Sandbox\Dto\Out\OrderExecutionResult;
+use App\Application\UseCase\Trading\Sandbox\Exception\ChecksNotPassedSandboxException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxInsufficientAvailableBalanceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
@@ -251,7 +252,7 @@ final class ExecStepResultDefaultTableRowBuilder extends AbstractExecStepResultT
 
                     $exception = $orderExecutionResult->failReason?->exception;
 
-                    if ($exception instanceof ChecksNotPassedException) {
+                    if ($exception instanceof ChecksNotPassedException || $exception instanceof ChecksNotPassedSandboxException) {
                         $additionalInfo[] = sprintf('skip (%s)', $orderExecutionResult->failReason->exception->getMessage());
                     } elseif ($exception instanceof SandboxInsufficientAvailableBalanceException) {
                         $additionalInfo[] =  sprintf('cannot buy (%s)', $orderExecutionResult->failReason->exception->getMessage());
