@@ -32,6 +32,7 @@ use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositi
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob;
+use App\Trading\Application\Job\PeriodicalOrder\MakePeriodicalOrderJob;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
@@ -195,6 +196,7 @@ final class SchedulerFactory
 
             // -- trading
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new ApplyLockInProfitJob())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new MakePeriodicalOrderJob())),
         ];
     }
 

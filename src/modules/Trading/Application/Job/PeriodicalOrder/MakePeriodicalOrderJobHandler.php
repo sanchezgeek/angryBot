@@ -22,12 +22,7 @@ use Throwable;
 #[AsMessageHandler]
 final readonly class MakePeriodicalOrderJobHandler
 {
-    private const array TASKS = [
-        [
-            'task' => 'buy 1 SOMEUSDT buy every 1 hour',
-            'condition' => ':markPrice < <somePrice>', // and hedge->rate < 2
-        ],
-    ];
+    private const array TASKS = MakePeriodicalOrderJobHandlerTasks::TASKS;
 
     public function __construct(
         private PeriodicalOrderJobCache $cache,
@@ -71,18 +66,23 @@ final readonly class MakePeriodicalOrderJobHandler
 
             if ($haveToRun && $evaluateCondition) {
                 $success = false;
+                $msg = '';
                 if ($action === 'buy') {
-                    OutputHelper::print(sprintf('MakePeriodicalOrderJobHandler for %s ...', $rawTask));
+                    $msg .= sprintf('MakePeriodicalOrderJobHandler for %s: ', $rawTask);
                     try {
                         $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $side, $qty));
                         $success = true;
                     } catch (Throwable $e) {
-                        OutputHelper::print(get_class($e), $e->getMessage());
+                        $msg .= implode(', ', [OutputHelper::shortClassName($e), $e->getMessage()]);
                     }
                 }
 
                 if ($success) {
                     $this->cache->saveLastRun($rawTask, new DateTimeImmutable());
+                }
+
+                if ($msg) {
+                    OutputHelper::print($msg);
                 }
             }
         }
