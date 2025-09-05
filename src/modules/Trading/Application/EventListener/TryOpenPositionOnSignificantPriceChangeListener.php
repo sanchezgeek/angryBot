@@ -7,7 +7,11 @@ namespace App\Trading\Application\EventListener;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
+use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Domain\Order\ExchangeOrder;
+use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\Helper\InitialMarginHelper;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\TradingStyle;
@@ -75,6 +79,12 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $asBuyOrder = false;
         if ($openedPosition = $this->positionService->getPosition($symbol, $positionSide)) {
             $realInitialMargin = InitialMarginHelper::realInitialMargin($openedPosition);
+
+            $orders = $this->buyOrderRepository->getCreatedAsBuyOrdersOnOpenPosition($symbol, $positionSide);
+            foreach ($orders as $order) {
+                $realInitialMargin += $this->orderCostCalculator->orderMargin(new ExchangeOrder($symbol, $order->getVolume(), $order->getPrice()), new Leverage(100))->value();
+            }
+
             $available = OpenPositionHandler::balanceConsideredAsAvailableForTrade(
                 $this->contractBalanceProvider->getContractWalletBalance($symbol->associatedCoin())
             );
@@ -83,7 +93,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
                 return;
             }
 
-            // @todo | autoOpen | check buyOrders volume
+
             $balanceCanUseForOpen = $percentOfDepositToRisk->of($available);
             $positionImPercentOfAvailableForOpen = Percent::fromPart($realInitialMargin / $balanceCanUseForOpen, false);
 
@@ -209,6 +219,8 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         private OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private AppNotificationsServiceInterface $notifications,
         private ContractBalanceProviderInterface $contractBalanceProvider,
+        private BuyOrderRepository $buyOrderRepository,
+        private OrderCostCalculator $orderCostCalculator,
     ) {
     }
 }

@@ -74,10 +74,11 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
 
         $ordersGridDefinition = $this->parseGrid($positionSide, $symbol, $triggerOnPrice, $step->gridsDefinition);
 
+        // @todo | lockInProfit | not only active. executed too?
         if ($existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias)) {
             $collection = new StopsCollection(...$existedStops);
 
-            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->size), false);
+            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->size));
             if ($percent->value() <= 0) {
                 return;
             }
@@ -132,6 +133,8 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         // add trading style to alias (for further recreate after style changed)
         return new LockInProfitByStepsInnerDto(
             [
+                // @todo | lockInProfit | ability to specify price from which make grid
+
                 // first part
                 new LockInProfitByStepDto(
                     'defaultThreeStepsLock-part1',
@@ -148,6 +151,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
                 new LockInProfitByStepDto(
                     'defaultThreeStepsLock-part3',
                     Length::VeryVeryLong,
+                    // @todo | lockInProfit | stops must be placed near position side
                     self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryVeryLong->toStringWithNegativeSign(), 30, 30),
                 ),
             ]

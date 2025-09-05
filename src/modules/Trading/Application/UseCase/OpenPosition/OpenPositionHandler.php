@@ -154,7 +154,7 @@ final class OpenPositionHandler
 
             $context = [
                 BuyOrder::FORCE_BUY_CONTEXT => true,
-                'asBuyOrder' => true,
+                BuyOrder::AS_BUY_ON_OPEN_POSITION => true,
             ];
 
             $buyOrder = $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($symbol, $positionSide, $marketBuyVolume, $price->value(), $context, BuyOrderState::Active))->buyOrder;

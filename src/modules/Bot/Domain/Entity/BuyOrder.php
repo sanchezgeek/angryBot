@@ -66,6 +66,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public const string DOUBLE_HASH_FLAG = 'doubleOrderHash';
 
+    public const string AS_BUY_ON_OPEN_POSITION = 'asBuyOrder';
+
     #[ORM\Id]
     #[ORM\Column]
     private int $id;

@@ -27,10 +27,16 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
 
     private const string doublesFlag = BuyOrder::DOUBLE_HASH_FLAG;
+    private const string asBuy = BuyOrder::AS_BUY_ON_OPEN_POSITION;
 
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, BuyOrder::class);
+    }
+
+    public function getNextId(): int
+    {
+        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
     }
 
     public function save(BuyOrder $buyOrder): void
@@ -229,8 +235,19 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         return $qb->getQuery()->getResult();
     }
 
-    public function getNextId(): int
+    /**
+     * @return BuyOrder[]
+     */
+    public function getCreatedAsBuyOrdersOnOpenPosition(SymbolInterface $symbol, Side $positionSide): array
     {
-        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
+        $flag = self::asBuy;
+
+        $qb = $this->createQueryBuilder('bo')
+            ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
+            ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere("HAS_ELEMENT(bo.context, '$flag') = true");
+
+        return $qb->getQuery()->getResult();
     }
 }
