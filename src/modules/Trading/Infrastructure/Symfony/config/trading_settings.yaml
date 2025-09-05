@@ -1,3 +1,9 @@
+### \App\Bot\Application\Settings\TradingSettings
+trading.global.tradingStyle: conservative
+
+# @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
+trading.takeProfitWhenBalanceIsInsufficient.enabled: false
+trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
 # percent override
 # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
