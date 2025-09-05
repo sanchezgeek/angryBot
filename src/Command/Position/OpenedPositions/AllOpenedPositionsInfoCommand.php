@@ -311,8 +311,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             }
         }
 
-        // @todo | rid off?
-        $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
+        if (isset($total)) {
+            $this->cacheCollector['total'] = $total->value();
+        }
+//        $this->cacheCollector['unrealizedTotal'] = $unrealisedTotal;
 
         ### bottom START ###
         $bottomCells = [Cell::default($this->clock->now()->format('D d M H:i'))->setAlign(CellAlign::CENTER)];
@@ -327,13 +329,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $bottomCells[] = Cell::default($pnlFormatter($unrealisedTotal))->setAlign(CellAlign::RIGHT);
         $bottomCells[] = '';
         $pnlFormatter = $singleCoin ? static fn(float $pnl) => (new CoinAmount($singleCoin, $pnl))->value() : static fn($pnl) => (string)$pnl;
-        if ($selectedCache !== null) {
-            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($selectedCache, $symbols);
-            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $unrealisedPnlCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        if ($selectedCache !== null && isset($total)) {
+            $totalCached = $selectedCache['total'];
+//            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($selectedCache, $symbols);
+            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $total->value(), b: $totalCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
         }
-        if ($prevCache !== null) {
-            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($prevCache, $symbols);
-            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $unrealisedTotal, b: $unrealisedPnlCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
+        if ($prevCache !== null && isset($total)) {
+            $totalCached = $prevCache['total'];
+//            $unrealisedPnlCached = $this->getTotalUnrealizedProfitFromCache($prevCache, $symbols);
+            $bottomCells[] = Cell::default(self::getFormattedDiff(a: $total->value(), b: $totalCached, formatter: $pnlFormatter))->setAlign(CellAlign::RIGHT);
         }
 
         if ($this->bestWorstNote) {
