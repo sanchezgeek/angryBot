@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
@@ -15,6 +17,7 @@ use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -67,7 +70,7 @@ final class TradingParametersProviderTest extends KernelTestCase
             refPrice: $refPrice
         );
 
-        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub);
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub, $this->contractBalanceProviderMock());
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
@@ -102,8 +105,16 @@ final class TradingParametersProviderTest extends KernelTestCase
             $longAtrPercentChange,
             $fastAtrPercentChange,
             $expectedSafeDistance,
-            $k
+            $k,
         ];
+    }
+
+    private function contractBalanceProviderMock(): ContractBalanceProviderInterface
+    {
+        $contractBalanceProvider = $this->createMock(ContractBalanceProviderInterface::class);
+        $contractBalanceProvider->method('getContractWalletBalance')->willReturn(new ContractBalance(Coin::USDT, 100, 100, 100, 100));
+
+        return $contractBalanceProvider;
     }
 
     /**
@@ -113,7 +124,7 @@ final class TradingParametersProviderTest extends KernelTestCase
     {
         self::overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $overridePercent);
 
-        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub);
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub, $this->contractBalanceProviderMock());
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 

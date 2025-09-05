@@ -34,7 +34,7 @@ use RuntimeException;
  */
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
-    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3;
     public const PriceDistanceSelector DISTANCE_FOR_CALCULATE_WARNING_RANGE = PriceDistanceSelector::Long;
 
     private SymbolInterface $symbol;
@@ -332,7 +332,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
             $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $priceToCalcModifier)->value();
-            $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+            $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
             if ($modifier > 1) {
                 $modifier = 1;
             }
@@ -349,7 +349,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
             $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
-            $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+            $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
             if ($modifier > 1) {
                 $modifier = 1;
             }

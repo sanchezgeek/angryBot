@@ -156,10 +156,6 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
             ];
         }
 
-        $calculationsInitialModifier = 2.3;
-        $actualModifier = LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER;
-        $koefficientForInLossCases = $calculationsInitialModifier / $actualModifier;
-
 // manual
         #### corner cases
         $symbol = SymbolEnum::BTCUSDT;
@@ -231,7 +227,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(28500);
         $warningDistance = 1500.0;
         $criticalDistance = 145.0;
-        $acceptableStoppedPart = 7.434782608695653 * $koefficientForInLossCases;
+        $acceptableStoppedPart = 6.51429;
         yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker NOT in range to add stop') => [
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
@@ -241,7 +237,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(27500);
         $warningDistance = 1500;
         $criticalDistance = 137.5;
-        $acceptableStoppedPart = 16.73913043478261 * $koefficientForInLossCases;
+        $acceptableStoppedPart = 14.66667;
         yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker already in range to add stop') => [
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
@@ -251,7 +247,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(25200);
         $warningDistance = 1500.0;
         $criticalDistance = 126.0;
-        $acceptableStoppedPart = 41.73913043478261 * $koefficientForInLossCases;
+        $acceptableStoppedPart = 32;
         yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker IN warn.range') => [
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
@@ -262,7 +258,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(25125.5);
         $warningDistance = 1500.0;
         $criticalDistance = 125.5;
-        $acceptableStoppedPart = 27.85429; // !!!
+        $acceptableStoppedPart = 32.49667; // !!!
         yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, '!!!!!!!fix!!!!! manual | short liq distance / ticker right before liquidation (in critical range)') => [
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
@@ -273,7 +269,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(25125.5);
         $warningDistance = 1500.0;
         $criticalDistance = 125.5;
-        $acceptableStoppedPart = 27.85429;
+        $acceptableStoppedPart = 32.49667;
         yield self::wholeDataCaseDescription($message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | short liq distance / ticker right before liquidation (in critical range) + minimal allowed parameters') => [
             $message, $long, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];
@@ -286,7 +282,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $expectedStopPrice = $symbol->makePrice(94526.5);
         $warningDistance = 1500.0;
         $criticalDistance = 473.5;
-        $acceptableStoppedPart = 25.86571;
+        $acceptableStoppedPart = 30.17667;
         yield self::wholeDataCaseDescription($message, $short, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart, 'manual | ticker in crit.range') => [
             $message, $short, $ticker, $expectedPriceRange, $expectedStopPrice, $warningDistance, $criticalDistance, $acceptableStoppedPart,
         ];

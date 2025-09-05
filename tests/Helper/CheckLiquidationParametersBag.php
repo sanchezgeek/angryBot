@@ -82,7 +82,7 @@ class CheckLiquidationParametersBag
 
                 $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
                 $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $priceToCalcModifier)->value();
-                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
                 if ($modifier > 1) {
                     $modifier = 1;
                 }
@@ -95,7 +95,7 @@ class CheckLiquidationParametersBag
                 $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
                 $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
-                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
                 if ($modifier > 1) {
                     $modifier = 1;
                 }
