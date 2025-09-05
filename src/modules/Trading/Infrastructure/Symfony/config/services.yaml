@@ -32,3 +32,12 @@ services:
         class: App\Trading\Infrastructure\Cache\CachedContractBalanceProvider
         arguments:
             $innerProvider: '@App\Trading\Application\Provider\ContractBalanceProvider'
+
+    periodicalOrder.cacheWrapper:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@periodicalOrder.cache'
+
+    App\Trading\Application\Job\PeriodicalOrder\PeriodicalOrderJobCache:
+        arguments:
+            $cache: '@periodicalOrder.cacheWrapper'
