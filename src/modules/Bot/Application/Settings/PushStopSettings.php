@@ -20,6 +20,9 @@ enum PushStopSettings: string implements AppSettingInterface, AppSettingsGroupIn
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: PriceRangeLeadingToUseMarkPriceOptions::class)]
     case WhichRangeToUse_While_ChooseMarkPrice_AsTriggerPrice = 'push.stop.whichRangeToUse.while.chooseMarkPrice.asTriggerPrice';
 
+    #[SettingParametersAttribute(type: SettingType::Boolean)]
+    case MainPositions_InitialFilter_If_StopsNotFound = 'push.stop.mainPositions.initialFilterPosition.ifStopsNotFound';
+
     public function getSettingKey(): string
     {
         return $this->value;

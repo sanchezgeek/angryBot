@@ -8,13 +8,13 @@ use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicPa
 use App\Bot\Application\Messenger\Job\Cache\UpdateTicker;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
-use App\Bot\Domain\Position;
+use App\Bot\Application\Settings\PushStopSettings;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
-use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Value\CachedValue;
 use DateInterval;
 use RuntimeException;
@@ -43,14 +43,24 @@ final readonly class PushAllMainPositionsStopsHandler
         $positionsCache = [];
         $queryInput = [];
         foreach ($positions as $position) {
-            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $lastMarkPrices[$position->symbol->name()]);
+            $currentPrice = $lastMarkPrices[$position->symbol->name()];
+
+            // @todo get last diff between mark and index
+            // add some offset as if it situation when indexPrice leans above markPrice
+//            $offset = $position->symbol->minimalPriceMove() * 100 * 10;
+//            $currentPrice = $position->isShort() ? $currentPrice->add($offset) : $currentPrice->sub($offset);
+
+            $queryInput[] = new FindStopsDto($position->symbol, $position->side, $currentPrice);
             $positionsCache[$position->symbol->name()] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);
         }
 
         $stopsToSymbolsMap = [];
-        foreach ($this->stopRepository->findAllActive($queryInput) as $stop) {
-            $stopsToSymbolsMap[$stop['symbol']][] = $stop;
+        foreach ($this->stopRepository->findAllActive($queryInput) as $stops) {
+            $stopsToSymbolsMap[$stops['symbol']][] = $stops;
         }
+
+        $filterPositionsWithoutStops = SettingsHelper::exact(PushStopSettings::MainPositions_InitialFilter_If_StopsNotFound) === true;
+        $foundStopsForSymbols = array_keys($stopsToSymbolsMap);
 
         $sort = [];
         foreach ($positions as $position) {
@@ -86,6 +96,10 @@ final readonly class PushAllMainPositionsStopsHandler
         foreach ($sort as $symbolRaw) {
             $position = $positions[$symbolRaw];
             $lastSort[] = $symbol = $position->symbol;
+
+            if ($filterPositionsWithoutStops && !in_array($symbolRaw, $foundStopsForSymbols, true)) {
+                continue;
+            }
 
             try {
                 $positionState = $positionsCache[$symbolRaw]->get();
@@ -149,7 +163,6 @@ final readonly class PushAllMainPositionsStopsHandler
     public function __construct(
         private MainStopsPushLastSortStorage $lastSortStorage,
         private MessageBusInterface $messageBus,
-        private AppSettingsProviderInterface $settingsProvider,
         private ByBitLinearPositionService $positionService,
         private StopRepository $stopRepository,
         private PushStopsHandler $innerHandler,

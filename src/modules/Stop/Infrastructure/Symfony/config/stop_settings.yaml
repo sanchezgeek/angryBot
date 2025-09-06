@@ -1,4 +1,5 @@
 ### \App\Bot\Application\Settings\PushStopSettings
+push.stop.mainPositions.initialFilterPosition.ifStopsNotFound: true
 push.stop.whichRangeToUse.while.chooseMarkPrice.asTriggerPrice: 'warning'
 
 ### Stop\Application\Settings\FixOppositePositionSettings
