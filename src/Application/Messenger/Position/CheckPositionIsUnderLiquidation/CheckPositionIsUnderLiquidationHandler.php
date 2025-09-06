@@ -8,6 +8,7 @@ use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -18,6 +19,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
+use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
@@ -171,12 +173,13 @@ final class CheckPositionIsUnderLiquidationHandler
 
         if ($distanceWithLiquidation <= $this->dynamicParameters->transferFromSpotOnDistance()) {
             try {
-                $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
+                $spotBalance = $this->getSpotBalance($coin);
                 if ($spotBalance->available() > 2) {
                     $amountToTransfer = $this->getAmountToTransfer($position)->value();
                     $amountTransferred = min($amountToTransfer, $spotBalance->available->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value());
 
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amountTransferred);
+                    $this->resetSpotBalanceCache($coin);
                 }
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
@@ -403,6 +406,22 @@ final class CheckPositionIsUnderLiquidationHandler
     private static function lastRunMarkPriceCacheKey(Position $position): string
     {
         return sprintf('liq_handler_last_run_mark_price_%s_%s', $position->symbol->name(), $position->side->value);
+    }
+
+    private array $spotBalanceCache = [];
+
+    private function getSpotBalance(Coin $coin): SpotBalance
+    {
+        if (isset($this->spotBalanceCache[$coin->value])) {
+            return $this->spotBalanceCache[$coin->value];
+        }
+
+        return $this->spotBalanceCache[$coin->value] = $this->exchangeAccountService->getSpotWalletBalance($coin);
+    }
+
+    private function resetSpotBalanceCache(Coin $coin): void
+    {
+        unset($this->spotBalanceCache[$coin->value]);
     }
 
     /**
