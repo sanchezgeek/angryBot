@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DependencyInjection;
+
+use data\CollectorDependent;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+
+final readonly class CollectDependencyInfoCompilerPass implements CompilerPassInterface
+{
+    /**
+     * @see CollectorDependent
+     */
+    const string DEPENDENT_TAG = 'info.info_registrator';
+
+    public function process(ContainerBuilder $container): void
+    {
+        foreach ($container->findTaggedServiceIds(self::DEPENDENT_TAG) as $id => $params) {
+            /** @see \App\Info\Contract\DependencyInfoProviderInterface::registerInfo */
+            $container->findDefinition($id)->addMethodCall('registerInfo');
+        }
+    }
+}

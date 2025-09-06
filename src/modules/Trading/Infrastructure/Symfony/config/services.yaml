@@ -41,3 +41,7 @@ services:
     App\Trading\Application\Job\PeriodicalOrder\PeriodicalOrderJobCache:
         arguments:
             $cache: '@periodicalOrder.cacheWrapper'
+
+    App\Trading\Application\Parameters\TradingParametersProviderInterface:
+        alias: App\Trading\Application\Parameters\TradingDynamicParameters
+        public: true

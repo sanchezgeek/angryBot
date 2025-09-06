@@ -44,10 +44,11 @@ final readonly class RegisterAppDynamicParametersCompilerPass implements Compile
                      *      class: App\Trading\Application\Parameters\TradingDynamicParameters
                      *      public: true
                      */
-                    if ($e->getMessage() === 'Call to a member function getParameters() on null' && AppContext::isTest()) {
-                        var_dump($e->getMessage());
-                        continue;
-                    }
+//                    if ($e->getMessage() === 'Call to a member function getParameters() on null' && AppContext::isTest()) {
+//                    if ($e->getMessage() === 'Call to a member function getParameters() on null') {
+//                        var_dump($e->getMessage());
+//                        continue;
+//                    }
 
                     throw $e;
                 }
@@ -57,7 +58,7 @@ final readonly class RegisterAppDynamicParametersCompilerPass implements Compile
                         $container->getDefinition($constructorParameter->getType()->getName())->setPublic(true);
                     }
                 }
-            } catch (ReflectionException) {
+            } catch (ReflectionException $exception) {
             }
         }
 

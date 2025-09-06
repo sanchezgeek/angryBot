@@ -20,10 +20,16 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Distance;
-use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Trading\Enum\RiskLevel;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Info\Contract\DependencyInfoProviderInterface;
+use App\Info\Contract\Dto\AbstractDependencyInfo;
+use App\Info\Contract\Dto\InfoAboutEnumDependency;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Stop\Application\Settings\CreateOppositeBuySettings;
@@ -35,8 +41,14 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
  * @see \App\Tests\Functional\Modules\Stop\Applicaiton\Handler\CreateBuyOrdersAfterStopCommandHandlerTest
  */
 #[AsMessageHandler]
-final class CreateBuyOrderAfterStopCommandHandler
+final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProviderInterface,  AppDynamicParametersProviderInterface
 {
+    public function getDependencyInfo(): AbstractDependencyInfo
+    {
+        // либо можно полное имя метода, а дальше спарсить тег
+        return InfoAboutEnumDependency::create(self::class, RiskLevel::class, 'use RiskLevel to determine martingale setting usage. Info: `./bin/console parameters:show martingale.isMartingaleEnabled`');
+    }
+
     public const int BIG_STOP_VOLUME_MULTIPLIER = 10;
 
     public const int DEFAULT_ATR_PERIOD = PredefinedStopLengthProcessor::DEFAULT_PERIOD_FOR_ATR;
@@ -270,7 +282,11 @@ final class CreateBuyOrderAfterStopCommandHandler
         );
     }
 
-    private function isMartingaleEnabled(SymbolInterface $symbol, Side $side, RiskLevel $riskLevel): bool
+    /**
+     * @todo `stop.oppositeBuy`
+     */
+    #[AppDynamicParameter(group: 'stopOpposite')]
+    public function isMartingaleEnabled(SymbolInterface $symbol, Side $side, RiskLevel $riskLevel): bool
     {
         $override = SettingsHelper::exactForSymbolAndSideOrSymbol(self::MARTINGALE_SETTING, $symbol, $side);
         if ($override !== null) {
@@ -298,8 +314,10 @@ final class CreateBuyOrderAfterStopCommandHandler
     }
 
     public function __construct(
+        #[AppDynamicParameterAutowiredArgument]
         private readonly StopRepository $stopRepository,
         private readonly TradingParametersProviderInterface $tradingParametersProvider,
+        #[AppDynamicParameterAutowiredArgument]
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
     ) {
     }

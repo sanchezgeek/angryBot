@@ -68,6 +68,7 @@
             "App\\Notification\\": "src/modules/Notification",
             "App\\Watch\\": "src/modules/Watch",
             "App\\UserInteraction\\": "src/modules/UserInteraction",
+            "App\\Info\\": "src/modules/Info",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

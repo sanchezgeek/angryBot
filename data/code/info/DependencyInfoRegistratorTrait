@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace data;
+
+use App\Info\Application\Service\DependencyInfoCollector;
+use App\Info\Contract\Dto\AbstractDependencyInfo;
+
+trait DependencyInfoRegistratorTrait
+{
+    abstract protected function getDependencyInfo(): AbstractDependencyInfo;
+
+    public function registerInfo(DependencyInfoCollector $collector): void
+    {
+        $collector->addInfo($this->getDependencyInfo());
+    }
+}

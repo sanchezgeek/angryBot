@@ -12,6 +12,9 @@ final readonly class AddSymbolEntityProviderToCommandsCompilerPass implements Co
 {
     private const string SYMBOL_ENTITY_PROVIDER_SERVICE_ID = SymbolProvider::class;
 
+    /**
+     * @see \App\Command\SymbolDependentCommand
+     */
     const string COMMAND_SYMBOL_DEPENDENT_TAG = 'command.symbol_dependent';
 
     public function process(ContainerBuilder $container): void
