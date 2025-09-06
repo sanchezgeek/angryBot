@@ -79,8 +79,6 @@ class CreateFixationGridCommand extends AbstractCommand implements SymbolDepende
         private readonly ApplyStopsToPositionHandler $handler,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }
