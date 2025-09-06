@@ -55,11 +55,6 @@ use function sprintf;
 #[AsMessageHandler]
 final class CheckPositionIsUnderLiquidationHandler
 {
-    /** @var SymbolInterface[] */
-    private const array SKIP_LIQUIDATION_CHECK_ON_SYMBOLS = [
-//        Symbol::LAIUSDT->value,
-    ];
-
     # Transfer from spot
     public const int TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
     public const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
@@ -108,10 +103,6 @@ final class CheckPositionIsUnderLiquidationHandler
                 }
 
                 $symbol = $main->symbol;
-
-                if (self::isSymbolIgnored($symbol)) {
-                    continue;
-                }
 
                 $messages[] = new CheckPositionIsUnderLiquidation(
                     symbol: $symbol,
@@ -178,9 +169,7 @@ final class CheckPositionIsUnderLiquidationHandler
             return; # skip checks if price didn't move to position loss direction AND liquidation is not in warning range
         }
 
-//        $decreaseStopDistance = false;
-        $transferFromSpotOnDistance = $this->transferFromSpotOnDistance($ticker);
-        if ($distanceWithLiquidation <= $transferFromSpotOnDistance) {
+        if ($distanceWithLiquidation <= $this->dynamicParameters->transferFromSpotOnDistance()) {
             try {
                 $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin);
                 if ($spotBalance->available() > 2) {
@@ -188,10 +177,6 @@ final class CheckPositionIsUnderLiquidationHandler
                     $amountTransferred = min($amountToTransfer, $spotBalance->available->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value());
 
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amountTransferred);
-
-//                    $availableAfterTransfer = $spotBalance->available->sub($amountTransferred)->value();
-//                    if ($availableAfterTransfer / $amountToTransfer >= self::SPOT_TRANSFERS_BEFORE_ADD_STOP) return;}
-//                    if ($amountTransferred >= $amountToTransfer) $decreaseStopDistance = true;
                 }
             } catch (Throwable $e) {
                 $msg = sprintf('%s: %s', OutputHelper::shortClassName(__METHOD__), $e->getMessage());
@@ -336,14 +321,6 @@ final class CheckPositionIsUnderLiquidationHandler
         return $position;
     }
 
-    private function transferFromSpotOnDistance(Ticker $ticker): float
-    {
-        return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
-            $this->dynamicParameters->warningDistancePnlPercent(),
-            $ticker->markPrice
-        );
-    }
-
     private function getStaleStops(Position $position): StopsCollection
     {
         # if opposite position previously was main
@@ -390,11 +367,6 @@ final class CheckPositionIsUnderLiquidationHandler
         }
 
         return new StopsCollection(...$result);
-    }
-
-    public static function isSymbolIgnored(SymbolInterface $symbol): bool
-    {
-        return in_array($symbol->name(), self::SKIP_LIQUIDATION_CHECK_ON_SYMBOLS);
     }
 
     private function getLastRunMarkPrice(Position $position): ?SymbolPrice

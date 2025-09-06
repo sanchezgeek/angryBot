@@ -61,6 +61,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentTicker, skipUserInput: true)]
         private readonly Ticker $ticker,
 
+        /** @internal tests only */
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::LiquidationHandlerHandledMessage, skipUserInput: true)]
         private readonly ?CheckPositionIsUnderLiquidation $handledMessage = null,
     ) {
@@ -88,13 +89,11 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function checkStopsOnDistance(): float
     {
-        $ticker = $this->ticker;
-
         if ($override = $this->handledMessage?->checkStopsOnPnlPercent) {
-            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($override, $ticker->markPrice);
+            return PnlHelper::convertPnlPercentOnPriceToAbsDelta($override, $this->ticker->markPrice);
         }
 
-        return $this->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 1.5)->value();
+        return $this->symbol->makePrice($this->additionalStopDistanceWithLiquidation() * 2)->value();
     }
 
 //    #[AppDynamicParameter(group: 'liquidation-handler')]
@@ -118,6 +117,12 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 ? $position->liquidationPrice()->sub($stopDistanceWithLiquidation)
                 : $position->liquidationPrice()->add($stopDistanceWithLiquidation)
         );
+    }
+
+    #[AppDynamicParameter(group: 'liquidation-handler')]
+    public function transferFromSpotOnDistance(): float
+    {
+        return $this->warningDistanceRaw() * 1.5;
     }
 
     #[AppDynamicParameter(group: 'liquidation-handler')]

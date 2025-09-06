@@ -13,6 +13,9 @@ interface LiquidationDynamicParametersInterface
     public function checkStopsOnDistance(): float;
     public function additionalStopTriggerDelta(): float;
     public function additionalStopPrice(): SymbolPrice;
+
+    public function transferFromSpotOnDistance(): float;
+
     public function warningDistance(): float;
     public function warningRange(): PriceRange;
     public function criticalDistance(): float;
