@@ -6,7 +6,7 @@ namespace App\Stop\Application\Handler;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
-use App\Bot\Domain\Entity\BuyOrder;
+use App\Bot\Domain\Entity\BuyOrder as BO;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
@@ -97,39 +97,39 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                 RiskLevel::Cautious => Distance::Short,
             });
 
-            $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BuyOrder::FORCE_BUY_CONTEXT => $forceBuyEnabled && !$isBigStop]);
+            $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume, $distance, [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled && !$isBigStop]);
         } else {
-            $withForceBuy = [BuyOrder::FORCE_BUY_CONTEXT => $forceBuyEnabled];
+            $withForceBuy = [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, match ($riskLevel) {
-                    RiskLevel::Aggressive => Distance::ModerateLong,
-                    RiskLevel::Conservative => Distance::Standard,
-                    RiskLevel::Cautious => Distance::ModerateShort,
-                });
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5, match ($riskLevel) {
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Standard,
-                    RiskLevel::Conservative => Distance::Short,
+                    default => Distance::Short,
                     RiskLevel::Cautious => Distance::VeryShort,
                 });
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, match ($riskLevel) {
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Short,
-                    RiskLevel::Conservative => Distance::VeryShort,
+                    default => Distance::VeryShort,
+                    RiskLevel::Cautious => Distance::VeryVeryShort,
+                });
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, match ($riskLevel) {
+                    RiskLevel::Aggressive => Distance::Short,
+                    default => Distance::VeryShort,
                     RiskLevel::Cautious => Distance::VeryVeryShort,
                 }, $withForceBuy);
 
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, 0, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, $withForceBuy);
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
 
                 if ($this->isMartingaleEnabled($symbol, $side, $riskLevel)) {
                     $martingaleOrdersStopLength = match ($riskLevel) {
                         RiskLevel::Aggressive => Distance::Standard,
-                        RiskLevel::Conservative => Distance::ModerateShort,
+                        RiskLevel::Conservative => Distance::BetweenShortAndStd,
                         RiskLevel::Cautious => Distance::Short,
                     };
 
-                    $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
+                    $forcedWithShortStop = BO::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
 
                     if (!$doubleHashes) {
                         $doubleHashes[] = md5(uniqid('BO_double', true));
@@ -147,18 +147,18 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 //                        $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, $orderLengthImmediatelyAfterStop, array_merge($forcedWithVeryVeryShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
 //                    }
 
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::ModerateLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, Distance::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Standard, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::BetweenLongAndStd, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3, Distance::Long, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2, Distance::VeryLong, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
 
                     $martingaleOrders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 2,
                         match ($riskLevel) {
                             RiskLevel::Aggressive => Distance::Short,
-                            RiskLevel::Conservative => Distance::ModerateShort,
+                            RiskLevel::Conservative => Distance::BetweenShortAndStd,
                             RiskLevel::Cautious => Distance::Standard,
                         },
-                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]),
+                        BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[1]),
                         sign: -1
                     );
 
@@ -166,9 +166,9 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                         match ($riskLevel) {
                             RiskLevel::Aggressive => Distance::VeryShort,
                             RiskLevel::Conservative => Distance::Short,
-                            RiskLevel::Cautious => Distance::ModerateShort,
+                            RiskLevel::Cautious => Distance::BetweenShortAndStd,
                         },
-                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]),
+                        BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]),
                         sign: -1
                     );
 
@@ -178,16 +178,16 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                             RiskLevel::Conservative => Distance::VeryShort,
                             RiskLevel::Cautious => Distance::Short,
                         },
-                        array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]),
+                        BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]),
                         sign: -1
                     );
                 }
 
                 $stopLengthContext = [];
                 if ($riskLevel === RiskLevel::Cautious) {
-                    $stopLengthContext = BuyOrder::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::Short));
+                    $stopLengthContext = BO::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::Short));
                 } elseif ($riskLevel === RiskLevel::Aggressive) {
-                    $stopLengthContext = BuyOrder::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::ModerateLong));
+                    $stopLengthContext = BO::addStopCreationStrategyToContext($stopLengthContext, new PredefinedStopLength(Distance::BetweenLongAndStd));
                 }
 
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
@@ -196,32 +196,32 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                         RiskLevel::Conservative => Distance::VeryShort,
                         RiskLevel::Cautious => Distance::Short,
                     },
-                    array_merge($stopLengthContext, $withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : [])
+                    BO::addDoubleFlag(array_merge($stopLengthContext, $withForceBuy), $doubleHashes[0] ?? null)
                 );
 
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3,
                     match ($riskLevel) {
                         RiskLevel::Aggressive => Distance::VeryShort,
                         RiskLevel::Conservative => Distance::Short,
-                        RiskLevel::Cautious => Distance::ModerateShort,
+                        RiskLevel::Cautious => Distance::BetweenShortAndStd,
                     },
-                    array_merge($stopLengthContext, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : [])
+                    BO::addDoubleFlag($stopLengthContext, $doubleHashes[1] ?? null)
                 );
 
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
                     match ($riskLevel) {
                         RiskLevel::Aggressive => Distance::Short,
-                        RiskLevel::Conservative => Distance::ModerateShort,
+                        RiskLevel::Conservative => Distance::BetweenShortAndStd,
                         RiskLevel::Cautious => Distance::Standard,
                     },
-                    array_merge($stopLengthContext, $withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : [])
+                    BO::addDoubleFlag(array_merge($stopLengthContext, $withForceBuy), $doubleHashes[2] ?? null)
                 );
 
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5,
                     match ($riskLevel) {
-                        RiskLevel::Aggressive => Distance::ModerateShort,
+                        RiskLevel::Aggressive => Distance::BetweenShortAndStd,
                         RiskLevel::Conservative => Distance::Standard,
-                        RiskLevel::Cautious => Distance::ModerateLong,
+                        RiskLevel::Cautious => Distance::BetweenLongAndStd,
                     },
                     $stopLengthContext
                 );
@@ -252,9 +252,9 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
     private function orderBasedOnLengthEnum(Stop $stop, SymbolPrice $refPrice, float $volume, Distance|float $length, array $additionalContext = [], int $sign = 1): Order
     {
         $commonContext = [
-            BuyOrder::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
-            BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
-            BuyOrder::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
+            BO::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
+            BO::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT => $stop->getExchangeOrderId(),
+            BO::OPPOSITE_SL_ID_CONTEXT => $stop->getId(),
         ];
 
         $side = $stop->getPositionSide();
