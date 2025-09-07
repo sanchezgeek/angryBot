@@ -8,3 +8,5 @@ screener.significantPriceChange.enabled: true
 
 ### \App\Screener\Application\Settings\ScreenerNotificationsSettings
 screener.significantPriceChange.notifications.enabled: true
+screener.significantPriceChange.notifications.enabled[symbol=USD1USDT]: false
+screener.significantPriceChange.notifications.enabled[symbol=USDCUSDT]: false

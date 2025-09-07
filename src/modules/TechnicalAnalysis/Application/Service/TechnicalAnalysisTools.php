@@ -12,6 +12,9 @@ use App\TechnicalAnalysis\Application\Contract\Query\CalcAverageTrueRange;
 use App\TechnicalAnalysis\Application\Contract\Query\FindAveragePriceChange;
 use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPrices;
 use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
+use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAge;
+use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeHandlerInterface;
+use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeResult;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -23,6 +26,7 @@ final readonly class TechnicalAnalysisTools implements TechnicalAnalysisToolsInt
         private FindAveragePriceChangeHandlerInterface $findAveragePriceChangeHandler,
         private CalcAverageTrueRangeHandlerInterface $calcAverageTrueRangeHandler,
         private FindHighLowPricesHandlerInterface $findHighLowPricesHandler,
+        private GetInstrumentAgeHandlerInterface $getInstrumentAgeHandler,
         public SymbolInterface $symbol,
         public ?TimeFrame $candleInterval = null,
     ) {
@@ -59,6 +63,13 @@ final readonly class TechnicalAnalysisTools implements TechnicalAnalysisToolsInt
     {
         return $this->findHighLowPricesHandler->handle(
             new FindHighLowPrices($this->symbol)
+        );
+    }
+
+    public function instrumentAge(): GetInstrumentAgeResult
+    {
+        return $this->getInstrumentAgeHandler->handle(
+            new GetInstrumentAge($this->symbol)
         );
     }
 
