@@ -147,7 +147,6 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             $this->openPositionHandler->handle($openPositionEntry);
             $this->notifyAboutSuccess($event, $openPositionEntry);
         } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException $e) {
-            $this->notifyAboutFail($openPositionEntry, $e, true);
         } catch (Throwable $e) {
             $this->notifyAboutFail($openPositionEntry, $e);
         }
