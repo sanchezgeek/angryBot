@@ -38,10 +38,6 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
         $toDate = date_create_immutable();
         $partOfDayPassed = ($toDate->getTimestamp() - $fromDate->getTimestamp()) / 86400;
 
-        if ($partOfDayPassed < 0.1) {
-            return []; // ??? to do
-        }
-
         // возможно $daysDelta надо уменьшать, если позиция открыта и цена ушла в сторону прибыли
 
         $res = [];
@@ -59,7 +55,12 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
             $currentPrice = $ticker->lastPrice;
             $delta = $currentPrice->value() - $prevPrice;
 
-            $significantPriceChangePercent = $this->parameters->significantPriceChange($symbol, $partOfDayPassed);
+            $atrBaseMultiplierOverride = $message->atrBaseMultiplierOverride;
+            if ($partOfDayPassed < 0.04 && !$message->atrBaseMultiplierOverride) {
+                $atrBaseMultiplierOverride = 10;
+            }
+
+            $significantPriceChangePercent = $this->parameters->significantPriceChange($symbol, $partOfDayPassed, $atrBaseMultiplierOverride);
 
             $significantPriceChange = $significantPriceChangePercent->of($prevPrice);
             if ($partOfDayPassed < 0.15) {

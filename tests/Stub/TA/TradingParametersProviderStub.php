@@ -62,7 +62,8 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
 
     public function significantPriceChange(
         SymbolInterface $symbol,
-        float $passedPartOfDay
+        float $passedPartOfDay,
+        ?float $atrBaseMultiplierOverride = null,
     ): Percent {
         throw new RuntimeException('Not implemented yet');
     }

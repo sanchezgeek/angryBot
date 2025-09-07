@@ -140,6 +140,11 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         ]);
     }
 
+    public static function addDoubleFlag(array $context, ?string $hash = null): array
+    {
+        return array_merge($context, $hash !== null ? [self::DOUBLE_HASH_FLAG => $hash] : []);
+    }
+
     /**
      * @internal For tests
      */
