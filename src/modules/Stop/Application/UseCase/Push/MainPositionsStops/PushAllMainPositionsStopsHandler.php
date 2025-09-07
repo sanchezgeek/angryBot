@@ -20,6 +20,7 @@ use DateInterval;
 use RuntimeException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Throwable;
 
 /**
  * @see \App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\Push\PushMainPositionsStopsTest
@@ -107,11 +108,24 @@ final readonly class PushAllMainPositionsStopsHandler
                 $positionState = null; // @todo | all-main | if not in warn/crit // and get without cache if in crit/warn
             }
 
-            $this->innerHandler->__invoke(new PushStops($symbol, $position->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
+            $this->doHandle(new PushStops($symbol, $position->side, $positionState)); // $profilingContext->registerNewPoint(sprintf('dispatch PushStops for "%s %s"', $symbol->name(), $side->title()));
         }
         $this->lastSortStorage->setLastSort($lastSort);
 
         self::timeDiffInfo($start); // $profilingContext->registerNewPoint($spendTimeMsg);
+    }
+
+    private function doHandle(PushStops $dto): void
+    {
+        try {
+            $this->innerHandler->__invoke($dto);
+        } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), 'current position is zero')) {
+                OutputHelper::print(sprintf('%s %s position closed', $dto->symbol->name(), $dto->side->value));
+            }
+
+            throw $e;
+        }
     }
 
     private function warmupTickers(): void
