@@ -255,7 +255,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
                 $martingaleOrdersStopLength = match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Standard,
-                    RiskLevel::Conservative => Distance::ModerateShort,
+                    RiskLevel::Conservative => Distance::BetweenShortAndStd,
                     RiskLevel::Cautious => Distance::Short,
                 };
                 $forcedWithShortStop = BuyOrder::addStopCreationStrategyToContext($withForceBuy, new PredefinedStopLength($martingaleOrdersStopLength));
@@ -267,18 +267,18 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
                 }
 
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::ModerateLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::BetweenLongAndStd, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
 
-                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::ModerateShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::BetweenShortAndStd, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::VeryShort, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
             }
 
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::VeryShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]] : []));
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Short, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]] : []);
-            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::ModerateShort, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : []));
+            $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::BetweenShortAndStd, array_merge($withForceBuy, $doubleHashes ? [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]] : []));
             $orders[] = self::orderBasedOnLengthEnum($stop, $stopPrice, $stopVolume / 5, PriceDistanceSelector::Standard);
         }
 
@@ -367,9 +367,9 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
                 ->addTransformedLengthResult(Percent::string('0.3%'), $symbol, PriceDistanceSelector::VeryVeryShort, $timeframe, $period)
                 ->addTransformedLengthResult(Percent::string('0.5%'), $symbol, PriceDistanceSelector::VeryShort, $timeframe, $period)
                 ->addTransformedLengthResult(Percent::string('0.6%'), $symbol, PriceDistanceSelector::Short, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('0.7%'), $symbol, PriceDistanceSelector::ModerateShort, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('0.7%'), $symbol, PriceDistanceSelector::BetweenShortAndStd, $timeframe, $period)
                 ->addTransformedLengthResult(Percent::string('1%'), $symbol, PriceDistanceSelector::Standard, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('1.5%'), $symbol, PriceDistanceSelector::ModerateLong, $timeframe, $period)
+                ->addTransformedLengthResult(Percent::string('1.5%'), $symbol, PriceDistanceSelector::BetweenLongAndStd, $timeframe, $period)
                 ->addTransformedLengthResult(Percent::string('2%'), $symbol, PriceDistanceSelector::Long, $timeframe, $period)
                 ->addTransformedLengthResult(Percent::string('10%'), $symbol, PriceDistanceSelector::VeryLong, $timeframe, $period)
             ;

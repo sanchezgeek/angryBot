@@ -99,7 +99,8 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
     #[AppDynamicParameter(group: 'trading')]
     public function significantPriceChange(
         SymbolInterface $symbol,
-        float $passedPartOfDay = 1
+        float $passedPartOfDay = 1,
+        ?float $atrBaseMultiplierOverride = null
     ): Percent {
         if ($passedPartOfDay <= 0) {
             throw new LogicException(sprintf('$passedPartOfDay cannot be less than 0 (%s provided)', $passedPartOfDay));
@@ -142,12 +143,12 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
         $result = match ($length) {
-            PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 6,
-            PriceDistanceSelector::VeryShort => $atrChangePercent / 5,
-            PriceDistanceSelector::Short => $atrChangePercent / 4,
-            PriceDistanceSelector::ModerateShort => $atrChangePercent / 3.5,
-            PriceDistanceSelector::Standard => $atrChangePercent / 3,
-            PriceDistanceSelector::ModerateLong => $atrChangePercent / 2.5,
+            PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 7,
+            PriceDistanceSelector::VeryShort => $atrChangePercent / 6,
+            PriceDistanceSelector::Short => $atrChangePercent / 5,
+            PriceDistanceSelector::BetweenShortAndStd => $atrChangePercent / 4,
+            PriceDistanceSelector::Standard => $atrChangePercent / 3.5,
+            PriceDistanceSelector::BetweenLongAndStd => $atrChangePercent / 2.5,
             PriceDistanceSelector::Long => $atrChangePercent / 2,
             PriceDistanceSelector::VeryLong => $atrChangePercent,
             PriceDistanceSelector::VeryVeryLong => $atrChangePercent * 1.5,

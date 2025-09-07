@@ -195,7 +195,7 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
 
             // -- trading
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new ApplyLockInProfitJob())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new ApplyLockInProfitJob())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new MakePeriodicalOrderJob())),
         ];
     }

@@ -18,9 +18,9 @@ final readonly class ApplyLockInProfitJobJobHandler
 {
     public function __invoke(ApplyLockInProfitJob $job): void
     {
-        if (!SettingsHelper::exact(LockInProfitSettings::Enabled)) {
-            return;
-        }
+//        if (!SettingsHelper::exact(LockInProfitSettings::Enabled)) {
+//            return;
+//        }
 
         $positions = $this->positionService->getPositionsWithLiquidation();
 

@@ -110,7 +110,7 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
             $buyOrder = BuyOrderTestHelper::setActive(BuyOrderBuilder::short(10, 100500, 0.01)->build()),
             $averagePriceMoveToCalcStopLength,
             $averagePriceMoveToSelectStopPriceStrategy,
-            StopBuilder::short(1, 101505.0, $buyOrder->getVolume())->build(),
+            StopBuilder::short(1, 101002.5, $buyOrder->getVolume())->build(),
         ];
     }
 

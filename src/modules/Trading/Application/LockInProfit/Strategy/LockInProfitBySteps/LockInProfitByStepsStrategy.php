@@ -11,6 +11,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
@@ -105,6 +106,9 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         );
     }
 
+    /**
+     * Move somewhere + use for buy/stop grids on open
+     */
     private function parseGrid(Side $positionSide, SymbolInterface $symbol, SymbolPrice $refPrice, string $definition): OrdersGridDefinition
     {
         $arr = explode('|', $definition);
@@ -138,21 +142,21 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
                 // first part
                 new LockInProfitByStepDto(
                     'defaultThreeStepsLock-part1',
-                    Length::Standard, // settings?
-                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::ModerateLong->toStringWithNegativeSign(), 15, 10),
+                    Length::VeryShort, // settings?
+                    self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
                 ),
                 // second part
                 new LockInProfitByStepDto(
                     'defaultThreeStepsLock-part2',
-                    Length::Long,
-                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::ModerateLong->toStringWithNegativeSign(), 15, 10),
+                    Length::BetweenShortAndStd,
+                    self::makeGridDefinition(Length::VeryShort->toStringWithNegativeSign(), Length::BetweenLongAndStd->toStringWithNegativeSign(), 20, 10),
                 ),
                 // third part: back to position entry
                 new LockInProfitByStepDto(
                     'defaultThreeStepsLock-part3',
-                    Length::VeryVeryLong,
+                    Length::Long,
                     // @todo | lockInProfit | stops must be placed near position side
-                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryVeryLong->toStringWithNegativeSign(), 30, 30),
+                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 40, 30),
                 ),
             ]
         );

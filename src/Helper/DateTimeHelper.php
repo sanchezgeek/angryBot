@@ -16,4 +16,12 @@ final class DateTimeHelper
 
         return abs($endTime->getTimestamp() - $reference->getTimestamp());
     }
+
+    public static function dateIntervalToDays(DateInterval $dateInterval): float
+    {
+        $reference = new DateTimeImmutable();
+        $endTime = $reference->add($dateInterval);
+
+        return abs($endTime->getTimestamp() - $reference->getTimestamp()) / 86400;
+    }
 }

@@ -103,7 +103,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         $positionEntry = 0;
 
         $shortPnlPercent = $this->getBoundPnlPercent($symbol, PriceDistanceSelector::Short);
-        $moderateLongPnlPercent = $this->getBoundPnlPercent($symbol, PriceDistanceSelector::ModerateLong);
+        $moderateLongPnlPercent = $this->getBoundPnlPercent($symbol, PriceDistanceSelector::BetweenLongAndStd);
 
         $defs = [
             sprintf('%.2f%%..-%.2f%%|50%%|5', $positionEntry + $fromPnlPercent , $shortPnlPercent - $fromPnlPercent),

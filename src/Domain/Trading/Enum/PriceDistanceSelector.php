@@ -12,9 +12,9 @@ enum PriceDistanceSelector: string
     case VeryVeryShort = 'very-very-short';
     case VeryShort = 'very-short';
     case Short = 'short';
-    case ModerateShort = 'moderate-short';
+    case BetweenShortAndStd = 'moderate-short';
     case Standard = 'standard';
-    case ModerateLong = 'moderate-long';
+    case BetweenLongAndStd = 'moderate-long';
     case Long = 'long';
     case VeryLong = 'very-long';
     case VeryVeryLong = 'very-very-long';
