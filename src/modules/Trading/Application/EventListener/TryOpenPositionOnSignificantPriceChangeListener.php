@@ -36,6 +36,8 @@ use Throwable;
 #[AsEventListener]
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
+    public const int DAYS_THRESHOLD = 30;
+
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
         // @todo | autoOpen | check funding
@@ -53,15 +55,23 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             return;
         }
 
-        if ($positionSide === Side::Buy) return; // skip (now only for SHORTs)
+        if (($age = TA::instrumentAge($symbol))->countOfDays() < self::DAYS_THRESHOLD) {
+            self::output(sprintf('skip autoOpen (age of %s less than %d days [%s])', $symbol->name(), self::DAYS_THRESHOLD, $age));
+            return;
+        }
+
+        // @todo | autoOpen | calc size based on further liquidation (must be safe)
+
+        if ($positionSide === Side::Buy) return; // @todo | autoOpen | skip (now only for SHORTs) // diable force opposite for by through context
 
         $ticker = $this->exchangeService->ticker($symbol);
         $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
 
-        [$threshold, $minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($riskLevel) {
-            RiskLevel::Cautious => [70, 0.8, 5],
-            default => [60, 1.5, 10],
-            RiskLevel::Aggressive => [50, 2.5, 12],
+        $threshold = self::usedThresholdFromAth($riskLevel);
+        [$minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($riskLevel) {
+            RiskLevel::Cautious => [0.8, 4],
+            default => [1, 6],
+            RiskLevel::Aggressive => [1.5, 8],
         };
 
         // other logic for LONGs
@@ -143,15 +153,6 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         }
     }
 
-    private function setMaxLeverage(SymbolInterface $symbol): void
-    {
-        $maxLeverage = $this->marketService->getInstrumentInfo($symbol->name())->maxLeverage;
-
-        try {
-            $this->positionService->setLeverage($symbol, $maxLeverage, $maxLeverage);
-        } catch (Throwable) {}
-    }
-
     private function notifyAboutFail(OpenPositionEntryDto $openHandlerEntry, Throwable $e, bool $muted = false): void
     {
         $message = sprintf('%s: got "%s (%s)" error. Entry was: %s', OutputHelper::shortClassName($this), get_class($e), $e->getMessage(), $openHandlerEntry);
@@ -202,11 +203,29 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         return SettingsHelper::withAlternatives(AutoOpenPositionSettings::Notifications_Enabled, $symbol, $positionSide) === true;
     }
 
+    public static function usedThresholdFromAth(RiskLevel $riskLevel): float
+    {
+        return match ($riskLevel) {
+            RiskLevel::Cautious => 80,
+            default => 70,
+            RiskLevel::Aggressive => 50,
+        };
+    }
+
     private static function output(string $message): void
     {
         OutputHelper::warning(
             sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message)
         );
+    }
+
+    private function setMaxLeverage(SymbolInterface $symbol): void
+    {
+        $maxLeverage = $this->marketService->getInstrumentInfo($symbol->name())->maxLeverage;
+
+        try {
+            $this->positionService->setLeverage($symbol, $maxLeverage, $maxLeverage);
+        } catch (Throwable) {}
     }
 
     public function __construct(

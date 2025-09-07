@@ -14,13 +14,16 @@ use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 use App\Screener\Application\Settings\ScreenerNotificationsSettings;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
+use App\Trading\Application\EventListener\TryOpenPositionOnSignificantPriceChangeListener;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 #[AsEventListener]
 final readonly class NotifyAboutSignificantPriceChangeListener
 {
-    private const int THRESHOLD = 20;
+    public const int THRESHOLD_MODIFIER = 10;
+    public const ScreenerNotificationsSettings SETTING = ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled;
 
     private RateLimiterFactory $limiter;
 
@@ -33,13 +36,25 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
         $positionSide = $event->positionSideToPositionLoss();
 
+        if (SettingsHelper::exactForSymbolAndSideOrSymbol(self::SETTING, $symbol, $positionSide) === false) {
+            return;
+        }
+
         if ($positionSide === Side::Sell) {
             $ticker = $this->exchangeService->ticker($symbol);
             $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
-            if ($currentPricePartOfAth->value() < self::THRESHOLD) {
-                self::output(sprintf('skip notify about %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, self::THRESHOLD));
+            $thresholdFromAth = TryOpenPositionOnSignificantPriceChangeListener::usedThresholdFromAth(TradingDynamicParameters::riskLevel($symbol, $positionSide));
+            $thresholdFromAth -= self::THRESHOLD_MODIFIER;
+
+            if ($currentPricePartOfAth->value() < $thresholdFromAth) {
+                self::output(sprintf('skip notify about %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth,
+                    $thresholdFromAth));
                 return;
             }
+        } else {
+            // @todo mb near 00:00 and if used baseAtrMultiplier (pass it to result) > 6?
+            // + ath check
+            return;
         }
 
         // либо это должно быть в поисковике
@@ -69,7 +84,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $symbol->name(),
         );
 
-        match (SettingsHelper::exact(ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled)) {
+        match (SettingsHelper::exact(self::SETTING)) {
             true => $this->notifications->info($message),
             default => $this->notifications->muted($message),
         };
