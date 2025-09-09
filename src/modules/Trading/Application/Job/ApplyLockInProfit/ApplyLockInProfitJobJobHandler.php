@@ -18,9 +18,11 @@ final readonly class ApplyLockInProfitJobJobHandler
 {
     public function __invoke(ApplyLockInProfitJob $job): void
     {
-//        if (!SettingsHelper::exact(LockInProfitSettings::Enabled)) {
-//            return;
-//        }
+        if (SettingsHelper::exactDisabled(LockInProfitSettings::Enabled)) {
+            return;
+        }
+
+        // @todo @todo | lockInProfit | some im threshold?
 
         $positions = $this->positionService->getPositionsWithLiquidation();
 

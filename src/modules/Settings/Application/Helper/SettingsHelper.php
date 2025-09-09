@@ -13,6 +13,16 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class SettingsHelper
 {
+    public static function exactEnabled(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
+        return self::exact($setting, $symbol, $side) === true;
+    }
+
+    public static function exactDisabled(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
+        return self::exact($setting, $symbol, $side) === false;
+    }
+
     public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
     {
         return self::getSettingsService()->required(
