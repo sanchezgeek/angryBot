@@ -159,14 +159,9 @@ final readonly class AppDynamicParameterEvaluator
 
         // @todo if ! and without ?
         if ($providedValue === null) {
-            try {
-                $defaultValue = $ref->getDefaultValue();
-            } catch (ReflectionException $e) {
-                $defaultValue = null;
-            }
 
-            if ($defaultValue !== null) {
-                return $defaultValue;
+            if ($ref->isDefaultValueAvailable()) {
+                return $ref->getDefaultValue();
             }
 
             $type = $ref->getType()->getName();

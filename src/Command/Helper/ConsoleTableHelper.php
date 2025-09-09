@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Helper;
 
+use JsonSerializable;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableCellStyle;
@@ -26,7 +27,9 @@ class ConsoleTableHelper
             $options['style'] = new TableCellStyle($style);
         }
 
-        return new TableCell((string)$content, $options);
+        $content = $content instanceof JsonSerializable ? json_encode($content, JSON_PRETTY_PRINT) : (string)$content;
+
+        return new TableCell($content, $options);
     }
 
     public static function separator(): TableSeparator
