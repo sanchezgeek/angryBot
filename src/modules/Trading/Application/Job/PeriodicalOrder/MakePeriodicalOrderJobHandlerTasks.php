@@ -10,6 +10,7 @@ final class MakePeriodicalOrderJobHandlerTasks
 //        [
 //            'task' => 'buy 1 SOMEUSDT buy every 1 hour',
 //            'condition' => ':markPrice < <somePrice>', // and hedge->rate < 2
+//            'force' => true
 //        ],
     ];
 }

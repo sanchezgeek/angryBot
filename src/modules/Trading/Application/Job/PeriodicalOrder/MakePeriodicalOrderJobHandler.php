@@ -37,6 +37,8 @@ final readonly class MakePeriodicalOrderJobHandler
         $now = new DateTimeImmutable();
 
         foreach (self::TASKS as $task) {
+            $force = $task['force'] ?? false;
+
             $divided = explode(' every ', $task['task']);
             $parsed = explode(' ', $divided[0]);
             $action = $parsed[0];
@@ -70,7 +72,7 @@ final readonly class MakePeriodicalOrderJobHandler
                 if ($action === 'buy') {
                     $msg .= sprintf('MakePeriodicalOrderJobHandler for %s: ', $rawTask);
                     try {
-                        $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $side, $qty));
+                        $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $side, $qty, $force));
                         $success = true;
                     } catch (Throwable $e) {
                         $msg .= implode(', ', [OutputHelper::shortClassName($e), $e->getMessage()]);
