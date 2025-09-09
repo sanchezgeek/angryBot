@@ -59,7 +59,7 @@ final class SchedulerFactory
 
     private const string PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
 
-    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::MEDIUM_SLOW;
+    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::SLOW;
     private const string PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
 
     private const array TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
