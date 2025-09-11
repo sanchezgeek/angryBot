@@ -276,4 +276,9 @@ class ShowParametersCommand extends AbstractCommand implements SymbolDependentCo
     ) {
         parent::__construct($name);
     }
+
+    public static function url(string $group, string $parameter): string
+    {
+        return sprintf('./bin/console parameters:show %s.%s', $group, $parameter);
+    }
 }

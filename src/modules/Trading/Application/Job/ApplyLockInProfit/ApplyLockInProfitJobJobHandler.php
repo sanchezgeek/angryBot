@@ -28,7 +28,7 @@ final readonly class ApplyLockInProfitJobJobHandler
 
         foreach ($positions as $position) {
             if (SettingsHelper::exactForSymbolAndSideOrSymbol(LockInProfitSettings::Enabled, $position->symbol, $position->side) === false) {
-                return;
+                continue;
             }
 
             $entry = new LockInProfitEntry(
