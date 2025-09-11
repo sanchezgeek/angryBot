@@ -4,7 +4,7 @@ services:
         class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
         arguments:
             $parameters:
-                alarm.priceAlarm.soundsCount: 6
+                alarm.priceAlarm.soundsCount: 3
 
                 # profit / loss
                 alarm.loss.enabled: false
