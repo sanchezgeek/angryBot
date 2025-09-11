@@ -55,7 +55,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     private const int TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
     private const int CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
-    private const int MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
+    /** @see LiquidationHandlerSettings::Default_Transfer_Amount */
+    private const int MAX_TRANSFER_AMOUNT = 15;
     private const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
 
     private const int DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;

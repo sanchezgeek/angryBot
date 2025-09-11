@@ -9,12 +9,18 @@ use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\AppSettingsGroupInterface;
 use App\Settings\Domain\Enum\SettingType;
 
+/**
+ * @see root_liquidation_settings.yaml
+ */
 enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
     public static function category(): string
     {
         return 'liquidation.handler';
     }
+
+    #[SettingParametersAttribute(type: SettingType::Float)]
+    case Default_Transfer_Amount = 'liquidationHandlerSettings.transferFromSpot.defaultAmount';
 
     #[SettingParametersAttribute(type: SettingType::Integer)]
     case LastPriceCrossingThresholdDefaultCacheTtl = 'liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl';

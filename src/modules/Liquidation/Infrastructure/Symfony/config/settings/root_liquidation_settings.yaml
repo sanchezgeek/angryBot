@@ -1,4 +1,5 @@
 ### \App\Liquidation\Application\Settings\LiquidationHandlerSettings
+liquidationHandlerSettings.transferFromSpot.defaultAmount: 15
 liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
 liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
 liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '50%'

@@ -20,7 +20,6 @@ use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Bot\Domain\Ticker;
 use App\Domain\Coin\Coin;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceMovement;
@@ -29,17 +28,16 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
-use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Doctrine\ORM\QueryBuilder;
-use Exception;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Cache\CacheInterface;
 use Throwable;
@@ -47,7 +45,6 @@ use Throwable;
 use function array_filter;
 use function max;
 use function min;
-use function random_int;
 use function sprintf;
 
 /**
@@ -60,7 +57,7 @@ final class CheckPositionIsUnderLiquidationHandler
     # Transfer from spot
     public const int TRANSFER_FROM_SPOT_ON_DISTANCE = 200;
     public const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = 1;
-    public const int MAX_TRANSFER_AMOUNT = 60;
+
     private const float TRANSFER_AMOUNT_MODIFIER = 0.2;
     private const float SPOT_TRANSFERS_BEFORE_ADD_STOP = 2.5;
 
@@ -175,7 +172,7 @@ final class CheckPositionIsUnderLiquidationHandler
             try {
                 $spotBalance = $this->getSpotBalance($coin);
                 if ($spotBalance->available() > 2) {
-                    $amountToTransfer = $this->getAmountToTransfer($position)->value();
+                    $amountToTransfer = $this->getAmountToTransfer($position);
                     $amountTransferred = min($amountToTransfer, $spotBalance->available->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value());
 
                     $this->exchangeAccountService->interTransferFromSpotToContract($coin, $amountTransferred);
@@ -297,12 +294,12 @@ final class CheckPositionIsUnderLiquidationHandler
         );
     }
 
-    public function getAmountToTransfer(Position $position): CoinAmount
+    public function getAmountToTransfer(Position $position): float
     {
 //        $distanceForCalcTransferAmount = $this->distanceForCalcTransferAmount !== null ? $this->distanceForCalcTransferAmount : random_int(300, 500);
 //        $amountCalcByDistance = $distanceForCalcTransferAmount * $position->getNotCoveredSize();
 
-        return new CoinAmount($position->symbol->associatedCoin(), self::MAX_TRANSFER_AMOUNT);
+        return SettingsHelper::withAlternatives(LiquidationHandlerSettings::Default_Transfer_Amount, $position->symbol, $position->side);
     }
 
     private function getPositionOld(SymbolInterface $symbol): ?Position
