@@ -24,4 +24,12 @@ final class DateTimeHelper
 
         return abs($endTime->getTimestamp() - $reference->getTimestamp()) / 86400;
     }
+
+    public static function nextHour(): DateTimeImmutable
+    {
+        $date = new DateTimeImmutable();
+        $date->setTime((int)$date->format('H') + 1, 0, 0);
+
+        return $date;
+    }
 }

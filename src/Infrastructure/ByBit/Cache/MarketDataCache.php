@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Cache;
 
 use App\Application\Cache\AbstractCacheService;
+use App\Helper\DateTimeHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateTime;
+use DateTimeImmutable;
 
 final class MarketDataCache extends AbstractCacheService
 {
-    protected static function getDefaultTtl(): DateTime
+    protected static function getDefaultTtl(): DateTimeImmutable
     {
-        $date = new DateTime();
-        $date->setTime((int)$date->format('H') + 1, 0, 0);
-
-        return $date;
+        return DateTimeHelper::nextHour();
     }
 
     public function getLastFundingRate(SymbolInterface $symbol): ?float
