@@ -228,7 +228,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 
     private static function getExpectedAmountToTransferFromSpot(Position $position): CoinAmount
     {
-        $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), 60);
+        $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), self::MAX_TRANSFER_AMOUNT);
 
         return $position->symbol->associatedCoinAmount($amount);
     }

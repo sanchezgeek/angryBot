@@ -2,7 +2,6 @@
 
 namespace App\Settings\UI\Symfony\Command\Settings;
 
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
@@ -16,7 +15,6 @@ use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Domain\SettingValueValidator;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
-use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -25,17 +23,16 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:edit')]
 class EditSettingCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 
-    private const RESET_OPTION = 'reset-all-values';
+    private const string RESET_OPTION = 'reset';
 
-    private const SETTING_KEY_ARG = 'key';
-    private const SETTING_VALUE_OPTION = 'value';
+    private const string SETTING_KEY_ARG = 'key';
+    private const string SETTING_VALUE_OPTION = 'value';
 
     protected function configure(): void
     {

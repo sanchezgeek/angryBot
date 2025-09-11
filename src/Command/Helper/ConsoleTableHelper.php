@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Helper;
 
 use JsonSerializable;
+use Stringable;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableCellStyle;
@@ -27,7 +28,13 @@ class ConsoleTableHelper
             $options['style'] = new TableCellStyle($style);
         }
 
-        $content = $content instanceof JsonSerializable ? json_encode($content, JSON_PRETTY_PRINT) : (string)$content;
+        if ($content instanceof Stringable) {
+            $content = (string) $content;
+        } elseif ($content instanceof JsonSerializable) {
+            $content = json_encode($content, JSON_PRETTY_PRINT);
+        } else {
+            $content = (string)$content;
+        }
 
         return new TableCell($content, $options);
     }
