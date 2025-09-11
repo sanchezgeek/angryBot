@@ -310,7 +310,18 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function isManuallyCreatedStop(): bool
     {
-        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isStopAfterFixHedgeOppositePosition();
+        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isAnyKindOfFixation();
+    }
+
+    /**
+     * @see StopRepository::addIsAnyKindOfFixationCondition
+     */
+    public function isAnyKindOfFixation(): bool
+    {
+        return  $this->isStopAfterFixHedgeOppositePosition() ||
+                $this->isStopAfterOtherSymbolLoss()
+//                $this->createdAsLockInProfit()
+        ;
     }
 
     public static function getTakeProfitContext(): array

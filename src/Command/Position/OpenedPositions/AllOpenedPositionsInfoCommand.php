@@ -1190,11 +1190,13 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         /**
          * @var Stop[] $autoStops
          * @var Stop[] $manualStops
-         * @var Stop[] $stopsAfterFixOppositeHedgePosition
+         * @var Stop[] $fixationStops
+         * @var Stop[] $lockInProfitStops
          */
         $autoStops = array_filter($stops, static fn(Stop $stop) => $stop->isAdditionalStopFromLiquidationHandler() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
         $manualStops = array_filter($stops, static fn(Stop $stop) => $stop->isManuallyCreatedStop() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
-        $stopsAfterFixOppositeHedgePosition = array_filter($stops, static fn(Stop $stop) => $stop->isStopAfterFixHedgeOppositePosition() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
+        $fixationStops = array_filter($stops, static fn(Stop $stop) => $stop->isAnyKindOfFixation() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
+        $lockInProfitStops = array_filter($stops, static fn(Stop $stop) => $stop->createdAsLockInProfit() && !self::isMainPositionStopNotLyingInsideApplicableRange($stop, $position, $mainPosStopsApplicableRange));
 
         $stoppedVolume = [];
         if ($manualStops) {
@@ -1206,14 +1208,23 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                         sprintf('%s|%d[m]', $stoppedPartPct, $stopsCount)
             );
         }
-        if ($stopsAfterFixOppositeHedgePosition) {
+        if ($fixationStops) {
             $stopsColor = $position->isMainPositionOrWithoutHedge() ? ($position->isShort() ? 'bright-red-text' : 'green-text') : 'yellow-text';
-            $stoppedVolume[] = self::getStopsCollectionInfo($stopsAfterFixOppositeHedgePosition, $position, $markPrice,
+            $stoppedVolume[] = self::getStopsCollectionInfo($fixationStops, $position, $markPrice,
                 $this->showStops
                     ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
                         sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor), CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
                     : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
                         sprintf('%s|%d[%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('f', $stopsColor))
+            );
+        }
+        if ($lockInProfitStops) {
+            $stoppedVolume[] = self::getStopsCollectionInfo($lockInProfitStops, $position, $markPrice,
+                $this->showStops
+                    ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[l.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                    : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
+                        sprintf('%s|%d[l]', $stoppedPartPct, $stopsCount)
             );
         }
         if ($autoStops) {

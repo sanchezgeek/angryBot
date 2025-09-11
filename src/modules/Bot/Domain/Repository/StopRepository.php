@@ -290,6 +290,9 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
     }
 
+    /**
+     * @see Stop::isAnyKindOfFixation
+     */
     public static function addIsAnyKindOfFixationCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
     {
         $alias = $alias ?? QueryHelper::rootAlias($qb);
