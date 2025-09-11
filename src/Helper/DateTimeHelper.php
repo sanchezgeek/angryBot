@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Helper;
 
 use DateInterval;
+use DateTime;
 use DateTimeImmutable;
 
 final class DateTimeHelper
@@ -25,9 +26,9 @@ final class DateTimeHelper
         return abs($endTime->getTimestamp() - $reference->getTimestamp()) / 86400;
     }
 
-    public static function nextHour(): DateTimeImmutable
+    public static function nextHour(): DateTime
     {
-        $date = new DateTimeImmutable();
+        $date = new DateTime();
         $date->setTime((int)$date->format('H') + 1, 0, 0);
 
         return $date;

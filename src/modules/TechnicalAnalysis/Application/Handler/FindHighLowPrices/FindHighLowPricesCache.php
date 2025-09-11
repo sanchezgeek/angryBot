@@ -8,11 +8,11 @@ use App\Application\Cache\AbstractCacheService;
 use App\Application\Cache\CacheServiceInterface;
 use App\Helper\DateTimeHelper;
 use App\TechnicalAnalysis\Application\Cache\TechnicalAnalysisCacheInterface;
-use DateTimeImmutable;
+use DateTime;
 
 final class FindHighLowPricesCache extends AbstractCacheService implements TechnicalAnalysisCacheInterface
 {
-    protected static function getDefaultTtl(): DateTimeImmutable
+    protected static function getDefaultTtl(): DateTime
     {
         return DateTimeHelper::nextHour();
     }

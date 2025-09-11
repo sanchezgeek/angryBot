@@ -12,21 +12,26 @@ use DateTimeImmutable;
 
 final class MarketDataCache extends AbstractCacheService
 {
-    protected static function getDefaultTtl(): DateTimeImmutable
+    protected static function getDefaultTtl(): DateTime
     {
         return DateTimeHelper::nextHour();
     }
 
+    private static function fundingRateCacheKey(SymbolInterface $symbol): string
+    {
+        return sprintf('fundingRate_%s', $symbol->name());
+    }
+
     public function getLastFundingRate(SymbolInterface $symbol): ?float
     {
-        $key = sprintf('fundingRate_%s', $symbol->name());
+        $key = self::fundingRateCacheKey($symbol);
 
         return $this->get($key);
     }
 
     public function setLastFundingRate(SymbolInterface $symbol, float $value): void
     {
-        $key = sprintf('fundingRate_%s', $symbol->name());
+        $key = self::fundingRateCacheKey($symbol);
 
         $this->save($key, $value);
     }
