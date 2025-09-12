@@ -59,7 +59,7 @@ final class SchedulerFactory
 
     private const string PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
 
-    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::SLOW;
+    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::FAST;
     private const string PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
 
     private const array TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
@@ -90,7 +90,7 @@ final class SchedulerFactory
     private function critical(): array
     {
         return [
-            PeriodicalJob::create('2023-09-24T23:49:09Z', 'PT2S', new CheckPositionIsUnderLiquidation()),
+            PeriodicalJob::create('2023-09-24T23:49:09Z', self::interval(self::PUSH_MAIN_POSITIONS_SL_SPEED), new CheckPositionIsUnderLiquidation()),
         ];
     }
 
