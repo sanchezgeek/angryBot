@@ -33,10 +33,13 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 
+/**
+ * @todo funding!
+ */
 #[AsEventListener]
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
-    public const int DAYS_THRESHOLD = 30;
+    public const int DAYS_THRESHOLD = 6;
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
@@ -69,9 +72,9 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         $threshold = self::usedThresholdFromAth($riskLevel);
         [$minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($riskLevel) {
-            RiskLevel::Cautious => [0.8, 4],
-            default => [1, 6],
-            RiskLevel::Aggressive => [1.5, 8],
+            RiskLevel::Cautious => [0.6, 2],
+            default => [0.8, 3],
+            RiskLevel::Aggressive => [1.2, 5],
         };
 
         // other logic for LONGs
@@ -90,6 +93,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         if ($openedPosition = $this->positionService->getPosition($symbol, $positionSide)) {
             $realInitialMargin = InitialMarginHelper::realInitialMargin($openedPosition);
 
+            // либо которые force
             $orders = $this->buyOrderRepository->getCreatedAsBuyOrdersOnOpenPosition($symbol, $positionSide);
             foreach ($orders as $order) {
                 $realInitialMargin += $this->orderCostCalculator->orderMargin(new ExchangeOrder($symbol, $order->getVolume(), $order->getPrice()), new Leverage(100))->value();
@@ -115,6 +119,9 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
             }
 
             $percentOfDepositToRisk = $canUseAdditional->of($percentOfDepositToRisk);
+
+
+            // mb remove other?
             $asBuyOrder = true;
 
             self::output(
@@ -204,10 +211,12 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
     public static function usedThresholdFromAth(RiskLevel $riskLevel): float
     {
+        // funding time + hedge + close
+
         return match ($riskLevel) {
-            RiskLevel::Cautious => 80,
-            default => 70,
-            RiskLevel::Aggressive => 50,
+            RiskLevel::Cautious => 90,
+            default => 85,
+            RiskLevel::Aggressive => 75,
         };
     }
 
