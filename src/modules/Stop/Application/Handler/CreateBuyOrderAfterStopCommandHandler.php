@@ -102,23 +102,22 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             $withForceBuy = [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
-                    RiskLevel::Aggressive => Distance::Standard,
-                    default => Distance::Short,
-                    RiskLevel::Cautious => Distance::VeryShort,
-                });
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
-                    RiskLevel::Aggressive => Distance::Short,
-                    default => Distance::VeryShort,
-                    RiskLevel::Cautious => Distance::VeryVeryShort,
-                });
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, $withForceBuy);
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Short,
                     default => Distance::VeryShort,
                     RiskLevel::Cautious => Distance::VeryVeryShort,
                 }, $withForceBuy);
-
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, $withForceBuy);
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
+                    RiskLevel::Aggressive => Distance::Short,
+                    default => Distance::VeryShort,
+                    RiskLevel::Cautious => Distance::VeryVeryShort,
+                });
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
+                    RiskLevel::Aggressive => Distance::Standard,
+                    default => Distance::Short,
+                    RiskLevel::Cautious => Distance::VeryShort,
+                });
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
 
