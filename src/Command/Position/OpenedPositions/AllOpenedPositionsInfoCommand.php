@@ -46,6 +46,7 @@ use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder as QB;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -1170,6 +1171,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
     {
         $symbol = $position->symbol;
         $positionSide = $position->side;
+        $this->entityManager->clear();
+
         $stops = $this->stopRepository->findActive(
             symbol: $symbol,
             side: $positionSide,
@@ -1305,6 +1308,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         private readonly OpenedPositionsCache $openedPositionsCache,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
         private readonly MarketServiceInterface $marketService,
+        private readonly EntityManagerInterface $entityManager,
         ?string $name = null,
     ) {
         $this->withPositionService($positionService);
