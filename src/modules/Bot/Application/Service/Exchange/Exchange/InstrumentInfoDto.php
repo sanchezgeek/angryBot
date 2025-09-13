@@ -17,6 +17,7 @@ class InstrumentInfoDto implements JsonSerializable
         public int $priceScale,
         public string $quoteCoin,
         public string $contractType,
+        public int $fundingInterval, // minutes
     ) {
     }
 

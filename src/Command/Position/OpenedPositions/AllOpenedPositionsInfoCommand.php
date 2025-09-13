@@ -1225,9 +1225,9 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $stoppedVolume[] = self::getStopsCollectionInfo($lockInProfitStops, $position, $markPrice,
                 $this->showStops
                     ? static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
-                        sprintf('%s|%d[l.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
+                        sprintf('%s|%d[%s.%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('l', 'green-text'), TH::colorizeText($firstStopDistancePnlPct, $firstStopDistanceColor))
                     : static fn($stoppedPartPct, $stopsCount, $firstStopDistancePnlPct, $firstStopDistanceColor) =>
-                        sprintf('%s|%d[l]', $stoppedPartPct, $stopsCount)
+                        sprintf('%s|%d[%s]', $stoppedPartPct, $stopsCount, CTH::colorizeText('l', 'green-text'))
             );
         }
         if ($autoStops) {

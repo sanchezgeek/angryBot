@@ -310,7 +310,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     public function isManuallyCreatedStop(): bool
     {
-        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isAnyKindOfFixation();
+        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isAnyKindOfFixation() && !$this->createdAsLockInProfit();
     }
 
     /**

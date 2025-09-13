@@ -56,6 +56,7 @@ final class ByBitLinearMarketService
             (int)$data['list'][0]['priceScale'],
             $data['list'][0]['quoteCoin'],
             $data['list'][0]['contractType'],
+            $data['list'][0]['fundingInterval'],
         );
     }
 }
