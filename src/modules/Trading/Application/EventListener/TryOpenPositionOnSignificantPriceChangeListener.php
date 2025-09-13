@@ -83,9 +83,14 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         // other logic for LONGs
         if ($currentPricePartOfAth->value() < $threshold) {
-            self::output(
-                sprintf('skip autoOpen on %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, $threshold)
-            );
+            $thresholdForNotification = $threshold;
+            $thresholdForNotification -= ($thresholdForNotification / 10);
+
+            if ($currentPricePartOfAth->value() >= $thresholdForNotification) {
+                // notify in some range
+                self::output(sprintf('skip autoOpen on %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, $threshold));
+            }
+
             return;
         }
 

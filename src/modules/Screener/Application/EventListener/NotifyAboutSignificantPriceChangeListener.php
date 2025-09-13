@@ -22,7 +22,6 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 #[AsEventListener]
 final readonly class NotifyAboutSignificantPriceChangeListener
 {
-    public const int THRESHOLD_MODIFIER = 10;
     public const ScreenerNotificationsSettings SETTING = ScreenerNotificationsSettings::SignificantPriceChange_Notifications_Enabled;
 
     private RateLimiterFactory $limiter;
@@ -44,11 +43,9 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $ticker = $this->exchangeService->ticker($symbol);
             $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
             $thresholdFromAth = TryOpenPositionOnSignificantPriceChangeListener::usedThresholdFromAth(TradingDynamicParameters::riskLevel($symbol, $positionSide));
-            $thresholdFromAth -= self::THRESHOLD_MODIFIER;
+            $thresholdFromAth -= ($thresholdFromAth / 10);
 
             if ($currentPricePartOfAth->value() < $thresholdFromAth) {
-                self::output(sprintf('skip notify about %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth,
-                    $thresholdFromAth));
                 return;
             }
         } else {
