@@ -39,6 +39,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
  * @see \App\Tests\Functional\Modules\Stop\Applicaiton\Handler\CreateBuyOrdersAfterStopCommandHandlerTest
+ *
+ * @todo | stop | opposite | store BuyOrder.def to dinamically recalculate prices based on initial refPrice and current RiskLevel
  */
 #[AsMessageHandler]
 final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProviderInterface,  AppDynamicParametersProviderInterface
@@ -102,22 +104,28 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             $withForceBuy = [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
-                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, $withForceBuy);
+                $kind = match (true) {
+                    $stop->isStopAfterOtherSymbolLoss() => 'after.other.symbol.loss.fix',
+                    $stop->isStopAfterFixHedgeOppositePosition() => 'after.hedge.fix',
+                    $stop->createdAsLockInProfit() => 'after.lock.in.profit',
+                };
+
+                $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, BO::addOppositeFixationKind($withForceBuy, $kind));
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Short,
                     default => Distance::VeryShort,
                     RiskLevel::Cautious => Distance::VeryVeryShort,
-                }, $withForceBuy);
+                }, BO::addOppositeFixationKind($withForceBuy, $kind));
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Short,
                     default => Distance::VeryShort,
                     RiskLevel::Cautious => Distance::VeryVeryShort,
-                });
+                }, BO::addOppositeFixationKind([], $kind));
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 5.5, match ($riskLevel) {
                     RiskLevel::Aggressive => Distance::Standard,
                     default => Distance::Short,
                     RiskLevel::Cautious => Distance::VeryShort,
-                });
+                }, BO::addOppositeFixationKind([], $kind));
             } else {
                 $doubleHashes = $command->ordersDoublesHashes ?? [];
 

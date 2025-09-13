@@ -68,6 +68,8 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public const string AS_BUY_ON_OPEN_POSITION = 'asBuyOrder';
 
+    public const string AS_OPPOSITE_AFTER_FIXATION_KIND = 'oppositeAfterFixationKind';
+
     #[ORM\Id]
     #[ORM\Column]
     private int $id;
@@ -143,6 +145,16 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public static function addDoubleFlag(array $context, ?string $hash = null): array
     {
         return array_merge($context, $hash !== null ? [self::DOUBLE_HASH_FLAG => $hash] : []);
+    }
+
+    public static function addOppositeFixationKind(array $context, string $kind): array
+    {
+        return array_merge($context, [self::AS_OPPOSITE_AFTER_FIXATION_KIND => $kind]);
+    }
+
+    public function getOppositeFixationKind(): ?string
+    {
+        return $this->context[self::AS_OPPOSITE_AFTER_FIXATION_KIND] ?? null;
     }
 
     /**

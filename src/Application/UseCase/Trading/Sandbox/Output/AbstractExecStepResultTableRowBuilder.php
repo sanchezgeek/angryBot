@@ -131,7 +131,12 @@ abstract class AbstractExecStepResultTableRowBuilder
             $sourceOrder->isForceBuyOrder() && $info[] = '!force!';
 
             if ($sourceOrder->isOppositeBuyOrderAfterStopLoss()) {
-                $info[] = sprintf('after SL (s.%d, %s)', $sourceOrder->getOppositeStopId(), $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active');
+                $stopInfo = [];
+                $stopInfo[] = sprintf('s.%d', $sourceOrder->getOppositeStopId());
+                ($oppositeFixationKind = $sourceOrder->getOppositeFixationKind()) && $stopInfo[] = $oppositeFixationKind;
+                $stopInfo[] = $sourceOrder->isOppositeStopExecuted() ? 'executed' : 'active';
+
+                $info[] = sprintf('after SL (%s)', implode(', ', $stopInfo));
             }
 
             !$sourceOrder->isWithOppositeOrder() && $info[] = 'without SL';
