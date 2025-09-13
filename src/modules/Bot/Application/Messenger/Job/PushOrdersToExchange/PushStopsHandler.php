@@ -89,7 +89,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
-                    $this->pushStopToExchange($position, $ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                    $this->pushStopToExchange($position, $ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume())->exchangeOrderId);
                 }
                 continue;
             }
@@ -123,7 +123,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 try {
                     return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                 } catch (Throwable) {
-                    return $orderService->closeByMarket($position, $stop->getVolume());
+                    return $orderService->closeByMarket($position, $stop->getVolume())->exchangeOrderId;
                 }
             });
         }
@@ -134,8 +134,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private static function closeByMarketCallback(OrderServiceInterface $orderService, Position $position, Stop $stop, array &$stopsClosedByMarket): callable
     {
         return static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
-            $exchangeOrderId = $orderService->closeByMarket($position, $stop->getVolume());
-            $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), $stop->getPrice());
+            $result = $orderService->closeByMarket($position, $stop->getVolume());
+            $exchangeOrderId = $result->exchangeOrderId;
+            $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $result->realClosedQty, $stop->getPrice());
 
             return $exchangeOrderId;
         };

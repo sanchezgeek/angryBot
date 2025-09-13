@@ -9,6 +9,7 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -124,7 +125,7 @@ final class PushTakeProfitOrdersTest extends KernelTestCase
                     }
                     $closeByMarketMethodCalls[] = [$position, $qty];
 
-                    return $nextExchangeOrderId;
+                    return new ClosePositionResult($nextExchangeOrderId, $qty);
                 }
             )
         ;

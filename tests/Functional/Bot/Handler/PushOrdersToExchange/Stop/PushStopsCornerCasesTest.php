@@ -9,6 +9,7 @@ use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -137,7 +138,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->expects(self::once())
             ->method('closeByMarket')
             ->with($position, $stop->getVolume())
-            ->willReturn($exchangeOrderId = uuid_create());
+            ->willReturn(new ClosePositionResult($exchangeOrderId = uuid_create(), $stop->getVolume()));
 
         // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));
@@ -189,7 +190,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->expects(self::once())
             ->method('closeByMarket')
             ->with($position, $stop->getVolume())
-            ->willReturn($exchangeOrderId = uuid_create());
+            ->willReturn(new ClosePositionResult($exchangeOrderId = uuid_create(), $stop->getVolume()));
 
         // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));

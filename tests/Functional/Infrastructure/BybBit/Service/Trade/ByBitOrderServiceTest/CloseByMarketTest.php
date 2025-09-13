@@ -49,7 +49,7 @@ final class CloseByMarketTest extends ByBitOrderServiceTestAbstract
         $result = $this->service->closeByMarket($position, $orderQty);
 
         // Assert
-        self::assertSame($placedExchangeOrderId, $result);
+        self::assertSame($placedExchangeOrderId, $result->exchangeOrderId);
     }
 
     private function closeByMarketSuccessCases(): iterable

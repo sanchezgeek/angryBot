@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Service\Trade;
 
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
@@ -106,7 +107,7 @@ final class ByBitOrderService implements OrderServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest\MarketBuyTest
      */
-    public function closeByMarket(Position $position, float $qty): string
+    public function closeByMarket(Position $position, float $qty): ClosePositionResult
     {
         $symbol = $position->symbol;
         $qty = $symbol->roundVolume($qty);
@@ -132,7 +133,7 @@ final class ByBitOrderService implements OrderServiceInterface
             $this->fixationsStorage->removeStateBySymbolAndSide($position->symbol, $position->side);
         }
 
-        return $exchangeOrderId;
+        return new ClosePositionResult($exchangeOrderId, $qty);
     }
 
     /**

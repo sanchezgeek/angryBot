@@ -17,10 +17,7 @@ interface OrderServiceInterface
      */
     public function marketBuy(SymbolInterface $symbol, Side $positionSide, float $qty): string;
 
-    /**
-     * @return string `orderId` received from the exchange in case of success
-     */
-    public function closeByMarket(Position $position, float $qty): string;
+    public function closeByMarket(Position $position, float $qty): ClosePositionResult;
 
     /**
      * @return string `orderId` received from the exchange in case of success

@@ -12,6 +12,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Position;
@@ -180,13 +181,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $position->symbol, $position->side)
         );
 
+        $qty = $symbol->roundVolumeUp(new Percent($acceptableStoppedPartBeforeLiquidation)->of($position->size));
         $this->orderService
             ->expects(self::once())
             ->method('closeByMarket')
-            ->with(
-                $position,
-                $symbol->roundVolumeUp((new Percent($acceptableStoppedPartBeforeLiquidation))->of($position->size)),
-            )
+            ->with($position, $qty)
+            ->willReturn(new ClosePositionResult('some-exchange-order-id', $qty))
         ;
 
         ($this->handler)(new CheckPositionIsUnderLiquidation(symbol: $symbol, acceptableStoppedPart: $acceptableStoppedPartBeforeLiquidation));
