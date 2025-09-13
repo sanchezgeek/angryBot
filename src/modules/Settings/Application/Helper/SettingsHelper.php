@@ -25,10 +25,20 @@ final class SettingsHelper
 
     public static function enabledWithAlternatives(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
     {
+        return self::withAlternativesOptional($setting, $symbol, $side) === true;
+    }
+
+    public static function disabledWithAlternatives(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
+        return self::withAlternativesOptional($setting, $symbol, $side) === false;
+    }
+
+    public static function enabledWithAlternativesRequired(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
         return self::withAlternatives($setting, $symbol, $side) === true;
     }
 
-    public static function alternativesDisabled(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    public static function disabledWithAlternativesRequired(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
     {
         return self::withAlternatives($setting, $symbol, $side) === false;
     }

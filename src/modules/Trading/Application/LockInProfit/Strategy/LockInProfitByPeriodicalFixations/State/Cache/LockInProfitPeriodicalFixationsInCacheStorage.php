@@ -38,7 +38,7 @@ final class LockInProfitPeriodicalFixationsInCacheStorage extends AbstractCacheS
     {
         $state = $this->get($key);
 
-        if ($state instanceof PeriodicalFixationStepState) {
+        if (!$state instanceof PeriodicalFixationStepState) {
             throw new RuntimeException(sprintf('Cannot get state by key "%s"', $key));
         }
 
@@ -79,7 +79,7 @@ final class LockInProfitPeriodicalFixationsInCacheStorage extends AbstractCacheS
     {
         $allStoredKeysCacheKey = self::allStoredKeysCacheKey();
 
-        $allStoredKeys = $this->get($allStoredKeysCacheKey);
+        $allStoredKeys = $this->getAllStoredKeys();
         if (!in_array($key, $allStoredKeys, true)) {
             $allStoredKeys[] = $key;
         }

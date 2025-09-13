@@ -17,7 +17,7 @@ enum LinpByFixationsSettings: string implements AppSettingInterface, AppSettings
     }
 
     #[SettingParametersAttribute(type: SettingType::Boolean)]
-    case Periodical_Enabled = 'lockInProfit.periodicalFixations.enabled';
+    case Periodical_Enabled = 'trading.lockInProfit.periodicalFixations.enabled';
 
     public function getSettingKey(): string
     {

@@ -33,6 +33,7 @@ use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsSto
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob;
 use App\Trading\Application\Job\PeriodicalOrder\MakePeriodicalOrderJob;
+use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\Job\ActualizePeriodicalFixationsStateStorageJob;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss;
 use App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance;
@@ -57,9 +58,9 @@ final class SchedulerFactory
     private const string VERY_SLOW = '4 seconds';
     private const string VERY_VERY_SLOW = '8 seconds';
 
-    private const string PUSH_BUY_ORDERS_SPEED = self::VERY_VERY_SLOW;
+    private const string PUSH_BUY_ORDERS_SPEED = self::MEDIUM_SLOW;
 
-    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::FAST;
+    private const string PUSH_MAIN_POSITIONS_SL_SPEED = self::MEDIUM;
     private const string PUSH_REST_POSITIONS_SL_SPEED = self::VERY_VERY_SLOW;
 
     private const array TICKERS_CACHE = ['interval' => 'PT3S', 'delay' => 900];
@@ -195,8 +196,9 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT15S', AsyncMessage::for(new CheckPassedLiquidationDistance())),
 
             // -- trading
-            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT30S', AsyncMessage::for(new ApplyLockInProfitJob())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new MakePeriodicalOrderJob())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new ApplyLockInProfitJob())),
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new ActualizePeriodicalFixationsStateStorageJob())),
         ];
     }
 

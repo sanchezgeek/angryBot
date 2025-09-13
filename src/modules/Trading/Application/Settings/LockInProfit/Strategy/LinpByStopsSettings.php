@@ -17,7 +17,7 @@ enum LinpByStopsSettings: string implements AppSettingInterface, AppSettingsGrou
     }
 
     #[SettingParametersAttribute(type: SettingType::Boolean)]
-    case Enabled = 'lockInProfit.stops.enabled';
+    case Enabled = 'trading.lockInProfit.stopsGridSteps.enabled';
 
     public function getSettingKey(): string
     {

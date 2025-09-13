@@ -54,7 +54,7 @@ final class LockInProfitStrategiesDtoFactory
         return new LinpByPeriodicalFixationsStrategyDto(
             new PeriodicalFixationStep(
                 'periodical-fixation-on-standard-distance',
-                PriceDistanceSelector::Standard,
+                PriceDistanceSelector::Long,
                 new Percent(0.5),
                 new Percent(10),
                 DateTimeHelper::secondsInMinutes(30) // settings based on TradingStyle

@@ -30,13 +30,14 @@ final readonly class ActualizePeriodicalFixationsStateStorageJobHandler
 
         $openedPositionsKeys = [];
         $openedPositions = $this->positionService->getAllPositions();
-        foreach ($openedPositions as $symbolPositions) {
+        foreach ($openedPositions as $sr => $symbolPositions) {
             $symbolPositionsKeys = array_map(static fn (Position $position) => self::getPositionKey($position->symbol, $position->side), $symbolPositions);
-            $openedPositionsKeys = array_merge($openedPositionsKeys, $symbolPositionsKeys);
+            $openedPositionsKeys = array_merge($openedPositionsKeys, array_values($symbolPositionsKeys));
         }
 
         foreach ($allStoredStates as $state) {
             $key = self::getPositionKey($state->symbol, $state->positionSide);
+
             if (!in_array($key, $openedPositionsKeys, true)) {
                 OutputHelper::print(sprintf('Remove fixations state for %s', $key));
                 $this->storage->removeState($state);

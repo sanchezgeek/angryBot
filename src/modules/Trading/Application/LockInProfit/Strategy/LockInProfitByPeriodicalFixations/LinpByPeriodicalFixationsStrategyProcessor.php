@@ -7,6 +7,7 @@ namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodical
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Helper\DateTimeHelper;
+use App\Helper\OutputHelper;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\PeriodicalFixationStepState;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\Step\PeriodicalFixationStep;
@@ -69,15 +70,16 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
 
         $initialPositionSize = $state?->initialPositionSize ?? $position->size;
         $alreadyClosedOnThisStep = $state?->totalClosed ?? 0;
-        $maxPositionSizeToCloseOnThisStep = $step->maxPositionSizePart->of($initialPositionSize)->value();
+        $maxPositionSizeToCloseOnThisStep = $step->maxPositionSizePart->of($initialPositionSize);
 
         if ($alreadyClosedOnThisStep >= $maxPositionSizeToCloseOnThisStep) {
             return false;
         }
 
-        $closed = $step->singleFixationPart->of($initialPositionSize)->value();
-
+        $closed = $step->singleFixationPart->of($initialPositionSize);
         $this->orderService->closeByMarket($position, $closed);
+
+        self::print(sprintf('fix %s on %s', $closed, $position));
 
         $newState = new PeriodicalFixationStepState(
             $symbol,
@@ -91,6 +93,11 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
         $this->storage->saveState($newState);
 
         return true;
+    }
+
+    private static function print(string $message): void
+    {
+        OutputHelper::print(sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message));
     }
 
     private function stepMustBeRun(PeriodicalFixationStep $step, ?PeriodicalFixationStepState $state): bool
