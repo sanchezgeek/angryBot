@@ -73,6 +73,8 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
 
     private function getFixationStopsCountBeforePositionEntry(TradingCheckContext $context): int
     {
+        // @todo | buy | checks | DenyBuyIfFixationsExists | add some offset
+
         $position = $context->currentPositionState;
 
         return $this->stopsCache->get(

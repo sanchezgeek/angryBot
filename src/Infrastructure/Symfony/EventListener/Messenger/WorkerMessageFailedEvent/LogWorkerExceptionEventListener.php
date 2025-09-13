@@ -21,7 +21,7 @@ use function sprintf;
 #[AsEventListener]
 final class LogWorkerExceptionEventListener
 {
-    private const int CONN_ERR_PENDING_INTERVAL = 10;
+    private const int CONN_ERR_PENDING_INTERVAL = 15;
     private const int CONN_ERR_RESET_INTERVAL = 20;
 
     private ?int $connErrorReceivedAt = null;

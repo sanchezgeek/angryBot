@@ -6,6 +6,7 @@ use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Notification\Application\Contract\Enum\SoundLength;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
@@ -50,7 +51,7 @@ final class CheckAlarmHandler
     private function notify(string $message): void
     {
         for ($i = 0; $i <= $this->soundsCount; $i++) {
-            $this->appNotificationsService->warning($message);
+            $this->appNotificationsService->warning($message, length: SoundLength::Short);
         }
     }
 

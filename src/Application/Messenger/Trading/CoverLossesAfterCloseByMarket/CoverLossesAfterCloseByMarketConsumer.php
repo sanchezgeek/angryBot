@@ -32,6 +32,7 @@ readonly class CoverLossesAfterCloseByMarketConsumer
     public const float THRESHOLD = 1;
 
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
+    // @todo | RiskLevel | Apply RiskLevel
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 600;
     public const CoverLossSettings SETTING = CoverLossSettings::Cover_Loss_Enabled;
     public const float LOSS_PART_TO_COVER_BY_OTHER_SYMBOLS = 1.2;
