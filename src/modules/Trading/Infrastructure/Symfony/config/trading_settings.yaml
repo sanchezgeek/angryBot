@@ -1,5 +1,7 @@
 ### \App\Bot\Application\Settings\TradingSettings
 trading.global.riskLevel: conservative
+trading.global.riskLevel[symbol=BTCUSDT]: aggressive
+trading.global.riskLevel[symbol=ETHUSDT]: aggressive
 
 # @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
 trading.takeProfitWhenBalanceIsInsufficient.enabled: false

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Modules\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
@@ -16,7 +17,9 @@ use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyOrderPlaced
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
+use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Tests\Helper\Trading\PositionPreset;
 use App\Tests\Helper\Trading\TickerPreset;
@@ -64,6 +67,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
     ): void {
         $symbol = $ticker->symbol;
 
+        self::overrideSetting(SettingAccessor::exact(TradingSettings::Global_RiskLevel, $position->symbol, $position->side), RiskLevel::Conservative);
         self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol, $maxAllowedPercentPriceChange));
 
         $context = TradingCheckContext::withCurrentPositionState($ticker, $position);
