@@ -76,8 +76,9 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             return false;
         }
 
-        $closed = $step->singleFixationPart->of($initialPositionSize);
-        $this->orderService->closeByMarket($position, $closed);
+        $closed = $this->orderService->closeByMarket(
+            $position, $step->singleFixationPart->of($initialPositionSize)
+        )->realClosedQty;
 
         self::print(sprintf('fix %s on %s', $closed, $position));
 
