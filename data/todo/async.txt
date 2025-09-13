@@ -1,0 +1,2 @@
+### Async problems? ###
++    @todo manual release events or check what might happen in case of some exception

@@ -1,0 +1,73 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\TechnicalAnalysis\Domain\Dto;
+
+use App\Domain\Price\SymbolPrice;
+use App\Domain\Trading\Enum\TimeFrame;
+use App\Domain\Value\Percent\Percent;
+use JsonSerializable;
+use Stringable;
+
+final readonly class AveragePriceChange implements JsonSerializable, Stringable
+{
+    public function __construct(
+        public TimeFrame $interval,
+        public int $period,
+        public float $absoluteChange,
+        public Percent $percentChange,
+        public ?float $refPrice = null,
+    ) {
+    }
+
+    public function of(float|SymbolPrice $price): float
+    {
+        return $this->percentChange->of($price instanceof SymbolPrice ? $price->value() : $price);
+    }
+
+    public function multiply(float $multiplier): self
+    {
+        return new self(
+            $this->interval,
+            $this->period,
+            $this->absoluteChange * $multiplier,
+            new Percent($this->percentChange->value() * $multiplier, false),
+            $this->refPrice,
+        );
+    }
+
+    public function divide(float $divider): self
+    {
+        return new self(
+            $this->interval,
+            $this->period,
+            $this->absoluteChange / $divider,
+            new Percent($this->percentChange->value() / $divider, false),
+            $this->refPrice,
+        );
+    }
+
+    public function __toString(): string
+    {
+        return sprintf(
+            '%s [%s%s] (average`%s`priceChange[period=%d])',
+            $this->absoluteChange,
+            $this->percentChange,
+            $this->refPrice !== null ? sprintf(', refPrice=%s', $this->refPrice) : '',
+            $this->interval->value,
+            $this->period
+        );
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return [
+            'interval' => $this->interval->value,
+            'period' => $this->period,
+            'percentChange' => $this->percentChange->value(),
+            'absoluteChange' => $this->absoluteChange,
+            'refPrice' => $this->refPrice,
+        ];
+    }
+}

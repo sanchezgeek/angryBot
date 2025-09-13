@@ -23,6 +23,11 @@ final class SettingValueCaster
         if ($type === SettingType::Enum) {
             /** @var BackedEnum $enumClass */
             $enumClass = SettingParametersAttributeReader::getSettingValueEnumClass($setting);
+
+            if ($value instanceof $enumClass) {
+                return $value;
+            }
+
             return $enumClass::from($value);
         }
 

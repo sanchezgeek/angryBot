@@ -65,7 +65,7 @@ final readonly class StopChecksChain
                 // @todo but anyway exception must be caught (push handler must live...)
                 return TradingCheckResult::failed(
                     $check,
-                    CommonOrderCheckFailureEnum::UnexpectedSandboxExecutionExceptionThrown,
+                    CommonOrderCheckFailureEnum::UnexpectedSandboxException,
                     sprintf('sandbox error (%s)', $e->getMessage()),
                     true // quiet
                 );

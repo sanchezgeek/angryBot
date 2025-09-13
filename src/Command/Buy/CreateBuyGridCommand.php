@@ -16,6 +16,7 @@ use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\FloatHelper;
@@ -35,7 +36,7 @@ use function sprintf;
 use function str_contains;
 
 #[AsCommand(name: 'buy:grid')]
-class CreateBuyGridCommand extends AbstractCommand implements PositionDependentCommand
+class CreateBuyGridCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand {
@@ -72,7 +73,7 @@ class CreateBuyGridCommand extends AbstractCommand implements PositionDependentC
             }
 
             // @todo | calc real distance for each order in handler (or maybe in cmd, but for each BO)
-            if ($stopDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
+            if ($stopDistance = $this->getOppositeOrdersDistanceOption()) {
                 $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $stopDistance;
             }
 

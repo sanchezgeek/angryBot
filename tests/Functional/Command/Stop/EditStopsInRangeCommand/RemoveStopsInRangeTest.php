@@ -63,7 +63,7 @@ final class RemoveStopsInRangeTest extends KernelTestCase
             $this->expectsToMakeApiCalls($this->successCloseActiveConditionalOrderApiCallExpectation($symbol, $activeConditionalStop));
         }
 
-        $this->tester->execute(['position_side' => $side->value, '-f' => $from, '-t' => $to, '-a' => self::ACTION]);
+        $this->tester->execute(['position_side' => $side->value, '--symbol' => $symbol->name(), '-f' => $from, '-t' => $to, '-a' => self::ACTION]);
 
         $this->tester->assertCommandIsSuccessful();
         self::seeStopsInDb(...$expectedStopsInDb);

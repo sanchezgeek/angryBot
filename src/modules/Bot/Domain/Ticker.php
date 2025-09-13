@@ -25,6 +25,11 @@ final readonly class Ticker
         $this->indexPrice = $lastPrice instanceof SymbolPrice ? $indexPrice : $this->symbol->makePrice($indexPrice);
     }
 
+    public static function fakeForPrice(SymbolInterface $symbol, SymbolPrice|float $price): self
+    {
+        return new self($symbol, $price, $price, $price);
+    }
+
     public function isIndexAlreadyOverStop(Side $positionSide, float $price): bool
     {
         return $positionSide->isShort() ? $this->indexPrice->greaterOrEquals($price) : $this->indexPrice->lessOrEquals($price);

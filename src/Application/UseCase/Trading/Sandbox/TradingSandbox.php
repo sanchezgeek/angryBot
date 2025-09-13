@@ -25,7 +25,6 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\BuyChecksChain;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
@@ -221,12 +220,7 @@ class TradingSandbox implements TradingSandboxInterface
             );
 
             if (!$checksResult->success) {
-                match (true) {
-                    $checksResult instanceof FurtherPositionLiquidationAfterBuyIsTooClose => throw new ChecksNotPassedException(
-                        sprintf('liq. is too near [Δ=%s,safe=%s]', $checksResult->actualDistance(), $checksResult->safeDistance)
-                    ),
-                    default => throw new ChecksNotPassedException($checksResult->info()),
-                };
+                throw new ChecksNotPassedException($checksResult, true);
             }
         }
 

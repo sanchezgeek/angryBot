@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Service\Orders;
 
-use App\Bot\Application\Command\CreateStop;
 use App\Bot\Application\Service\Orders\Dto\CreatedIncGridInfo;
+use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
-use App\Bot\Domain\Repository\StopRepository;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\SymbolPrice;
+use App\Stop\Application\Contract\Command\CreateStop;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trait\DispatchCommandTrait;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -19,38 +19,30 @@ final class StopService implements StopServiceInterface
 {
     use DispatchCommandTrait;
 
-    private const DEFAULT_STEP = 11;
-    private const DEFAULT_TRIGGER_DELTA = 3;
+    private const int DEFAULT_STEP = 11;
+    private const int DEFAULT_TRIGGER_DELTA = 3;
 
-    public function __construct(
-        private readonly StopRepository $repository,
-        MessageBusInterface $commandBus,
-    ) {
-        $this->commandBus = $commandBus;
+    public function __construct(MessageBusInterface $messageBus)
+    {
+        $this->messageBus = $messageBus;
     }
 
-    public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice|float $price, float $volume, ?float $triggerDelta = null, array $context = []): int
+    public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice|float $price, float $volume, ?float $triggerDelta = null, array $context = []): Stop
     {
         // @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         // Но не переборщить
         // + может быть job, который будет как-то хитро делать rearrange
 
-        $id = $this->repository->getNextId();
-        $price = $price instanceof SymbolPrice ? $price->value() : $price;
-
-        $this->dispatchCommand(
+        return $this->dispatchCommand(
             new CreateStop(
-                $id,
-                $symbol,
-                $positionSide,
-                $volume,
-                $price,
-                $triggerDelta,
-                $context
+                symbol: $symbol,
+                positionSide: $positionSide,
+                volume: $volume,
+                price: $price instanceof SymbolPrice ? $price->value() : $price,
+                triggerDelta: $triggerDelta,
+                context: $context
             ),
         );
-
-        return $id;
     }
 
     /**

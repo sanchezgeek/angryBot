@@ -22,18 +22,6 @@ class StopVolumeCommand extends AbstractCommand implements PositionDependentComm
 {
     use PositionAwareCommand;
 
-    public function __construct(
-        private readonly StopService $stopService,
-        private readonly ExchangeServiceInterface $exchangeService,
-        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
-        PositionServiceInterface $positionService,
-        ?string $name = null,
-    ) {
-        $this->withPositionService($positionService);
-
-        parent::__construct($name);
-    }
-
     protected function configure(): void
     {
         $this
@@ -137,5 +125,14 @@ class StopVolumeCommand extends AbstractCommand implements PositionDependentComm
 
             return Command::FAILURE;
         }
+    }
+
+    public function __construct(
+        private readonly StopService $stopService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
+        ?string $name = null,
+    ) {
+        parent::__construct($name);
     }
 }

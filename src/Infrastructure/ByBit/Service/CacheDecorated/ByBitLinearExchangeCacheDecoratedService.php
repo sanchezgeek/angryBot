@@ -107,7 +107,7 @@ final readonly class ByBitLinearExchangeCacheDecoratedService implements Exchang
                     && $itemFromExternalCacheValue->updatedByAccName === self::thisAccName()
                 )
             ) {
-                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter(\DateInterval::createFromDateString('2 seconds'));
+                $item = $this->externalCache->getItem($key)->set($itemValue)->expiresAfter($ttl);
                 $this->externalCache->save($item);
             }
         }

@@ -7,7 +7,10 @@ namespace App\Command\Mixin;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\Console\Input\InputOption;
 
 use function count;
@@ -17,6 +20,8 @@ use function sprintf;
 trait PriceRangeAwareCommand
 {
     use ConsoleInputAwareCommand;
+
+    private TradingParametersProviderInterface $tradingParametersProvider;
 
     private string $fromOptionName = 'from';
     private string $toOptionName = 'to';
@@ -37,30 +42,64 @@ trait PriceRangeAwareCommand
         return $this;
     }
 
+    public function withTradingParameters(TradingParametersProviderInterface $tradingParametersProvider): void
+    {
+        $this->tradingParametersProvider = $tradingParametersProvider;
+    }
+
     protected function getPriceFromPnlPercentOptionWithFloatFallback(string $name, bool $required = true): ?SymbolPrice
     {
+        $position = $this->getPosition();
+
         try {
             $pnlValue = $this->paramFetcher->requiredPercentOption($name);
-            return PnlHelper::targetPriceByPnlPercentFromPositionEntry($this->getPosition(), $pnlValue);
+            return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);
         } catch (InvalidArgumentException) {
+            $symbol = $this->getSymbol();
+
             try {
-                return $this->getSymbol()->makePrice($this->paramFetcher->requiredFloatOption($name));
+                return $symbol->makePrice($this->paramFetcher->requiredFloatOption($name));
             } catch (InvalidArgumentException $e) {
-                if ($required) {
-                    throw $e;
+                if (!$providedValue = $this->paramFetcher->getStringOption($name, false)) {
+                    return null;
                 }
 
-                return null;
+                $sign = 1;
+                if (str_starts_with($providedValue, '-')) {
+                    $sign = -1;
+                    $providedValue = substr($providedValue, 1);
+                }
+
+                if ($length = PriceDistanceSelector::tryFrom($providedValue)) {
+                    $priceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, $length)->value();
+                    $pnlValue = PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent) * $sign;
+
+                    return PnlHelper::targetPriceByPnlPercentFromPositionEntry($position, $pnlValue);
+                } else {
+                    if ($required) {
+                        throw $e;
+                    }
+
+                    return null;
+                }
             }
         }
     }
 
-    protected function getPriceRange(): PriceRange
+    protected function getPriceRange(bool $required = true): ?PriceRange
     {
         $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName);
         $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName);
 
-        return PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
+        if ($fromPrice && $toPrice) {
+            return PriceRange::create($fromPrice, $toPrice, $this->getSymbol());
+        }
+
+        if ($required) {
+            throw new RuntimeException('Price range must be provided');
+        }
+
+        return null;
     }
 
     protected function getRangePretty(string $input): array

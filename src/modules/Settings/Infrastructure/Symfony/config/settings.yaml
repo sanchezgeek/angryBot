@@ -4,54 +4,14 @@ services:
         class: Symfony\Component\DependencyInjection\ParameterBag\ParameterBag
         arguments:
             $parameters:
+                alarm.priceAlarm.soundsCount: 3
+
                 # profit / loss
                 alarm.loss.enabled: false
                 alarm.profit.enabled: false
+                alarm.balance.greater: 'false'
+                alarm.balance.less: 'false'
+                alarm.liquidationDistance.passedPart.allowed: 50
 
                 # connection
                 connection.check.enabled: '%env(bool:CHECK_CONNECTION_ENABLED)%'
-
-                # @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
-                trading.opposite.BuyOrder.pnlDistance.forLongPosition: '50%'
-                trading.opposite.BuyOrder.pnlDistance.forShortPosition: '50%'
-
-                trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition: '200%'
-                trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition: '200%'
-
-                # push BuyOrder
-                push.BuyOrder.checks.isLastPriceOverIndexPrice.enabled: false
-                push.BuyOrder.checks.ignoreBuyBasedOnTotalPositionLeverage.enabled: false
-
-# other
-                trading.takeProfitWhenBalanceIsInsufficient.enabled: false
-                trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
-
-# Liquidation\Application\Settings\LiquidationHandlerSettings
-                liquidationHandlerSettings.lastPriceCrossingThresholdDefaultCacheTtl: 150
-                liquidationHandlerSettings.CriticalPartOfLiquidationDistance: 20
-                liquidationHandlerSettings.percentOfLiquidationDistanceToAddStop: '50%'
-                liquidationHandlerSettings.acceptableStoppedPartFallback: 4
-                liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain: true
-                liquidationHandlerSettings.fixOpposite.evenIf.oppositeIsSupport: false
-                liquidationHandlerSettings.afterStop.addOppositeBuyOrders: true
-
-                # @todo Must be based on current price? or volatility
-                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop: 50
-                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BTCUSDT]: 15
-                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=ETHUSDT]: 20
-                liquidationHandlerSettings.actualStopsRangeFromAdditionalStop[symbol=BNBUSDT]: 20
-
-                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics
-                liquidationHandlerSettings.warningDistancePnl: 300
-                liquidationHandlerSettings.warningDistancePnl[symbol=BTCUSDT]: 80
-                liquidationHandlerSettings.warningDistancePnl[symbol=ETHUSDT]: 150
-                liquidationHandlerSettings.warningDistancePnl[symbol=ARCUSDT]: 400
-                liquidationHandlerSettings.warningDistancePnl[symbol=FARTCOINUSDT]: 350
-
-                # @todo Must be (somehow) calculated automatically based on symbol volatility statistics (+ based on some `aggressive` / `conservative` [selected automatically in some situation and by config in common cases])
-                liquidationHandlerSettings.criticalDistancePnl: 200
-                liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT]: 60
-                liquidationHandlerSettings.criticalDistancePnl[symbol=BTCUSDT][side=sell]: 60 # as example of default for symbol and side
-                liquidationHandlerSettings.criticalDistancePnl[symbol=ETHUSDT]: 80
-                liquidationHandlerSettings.criticalDistancePnl[symbol=ARCUSDT]: 200
-                liquidationHandlerSettings.criticalDistancePnl[symbol=FARTCOINUSDT]: 200

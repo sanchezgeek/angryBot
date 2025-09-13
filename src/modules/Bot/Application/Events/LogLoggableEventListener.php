@@ -9,12 +9,9 @@ use App\Bot\Application\Events\Exchange\TickerUpdated;
 use App\Bot\Application\Events\Exchange\TickerUpdateSkipped;
 use App\Clock\ClockInterface;
 use App\Trait\LoggerTrait;
-use App\Worker\AppContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
-
-use function sprintf;
 
 final class LogLoggableEventListener implements EventSubscriberInterface
 {
@@ -36,9 +33,6 @@ final class LogLoggableEventListener implements EventSubscriberInterface
         }
 
         $message = $log;
-        if ($workerHash = AppContext::workerHash()) {
-            $message .= sprintf(' [%s]', $workerHash);
-        }
 
         if ($event instanceof TickerUpdated || $event instanceof TickerUpdateSkipped) {
             $symbol = $event instanceof TickerUpdated ? $event->ticker->symbol : $event->foundCachedTickerDto->ticker->symbol;

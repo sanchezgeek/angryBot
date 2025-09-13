@@ -21,7 +21,7 @@ use InvalidArgumentException;
 
 final readonly class DoctrineSettingsStorage implements StoredSettingsProviderInterface, SettingsStorageInterface
 {
-    private const CACHE_TTL = 60;
+    private const int CACHE_TTL = 60;
 
     public function __construct(
         private SettingValueRepository $repository,

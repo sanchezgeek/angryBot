@@ -13,6 +13,10 @@ services:
     App\Settings\:
         resource: '../../../'
 
+    App\Settings\Application\Service\AppSettingsProviderInterface:
+        public: true
+        alias: App\Settings\Application\Service\AppSettingsService
+
     App\Settings\Application\Service\AppSettingsService:
         public: true
         arguments:

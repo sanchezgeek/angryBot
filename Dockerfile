@@ -43,6 +43,7 @@ RUN set -eux; \
     install-php-extensions \
 		pdo \
 		pdo_pgsql \
+		trader \
     ;
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"

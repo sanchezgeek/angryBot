@@ -25,6 +25,11 @@ final class Json
         return \json_decode($json, true, 512, \JSON_THROW_ON_ERROR);
     }
 
+    public static function encodePretty($value): string
+    {
+        return \json_encode($value, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_PRETTY_PRINT);
+    }
+
     /**
      * @codeCoverageIgnore
      */

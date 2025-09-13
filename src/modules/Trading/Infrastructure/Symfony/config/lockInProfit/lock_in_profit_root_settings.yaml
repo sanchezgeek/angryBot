@@ -1,0 +1,8 @@
+
+### \App\Trading\Application\Settings\LockInProfitSettings
+lockInProfit.enabled: true
+
+## for tests
+#trading.coverLosses.enabled[symbol=A8USDT][side=sell]: false
+#trading.coverLosses.enabled[symbol=A8USDT][side=buy]: true
+#trading.coverLosses.otherSymbols.additionalStop.distance[side=buy]: standard

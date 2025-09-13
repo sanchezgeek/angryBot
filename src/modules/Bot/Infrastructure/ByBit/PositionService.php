@@ -19,6 +19,7 @@ use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Lin\Bybit\BybitLinear;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use RuntimeException;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Polyfill\Intl\Icu\Exception\NotImplementedException;
@@ -169,5 +170,10 @@ final class PositionService implements PositionServiceInterface
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array
     {
         return [];
+    }
+
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
+    {
+        throw new RuntimeException('not implemented');
     }
 }

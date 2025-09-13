@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+namespace data;
+
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+
+#[AutoconfigureTag('info.info_collector_dependent_implementation')]
+interface CollectorDependent
+{
+}

@@ -19,9 +19,6 @@ final readonly class SettingAccessor implements Stringable
         public ?Side $side = null,
         public bool $exact = false
     ) {
-        if ($this->side !== null && !$this->symbol) {
-            throw new LogicException('When $side specified Symbol must be specified too');
-        }
     }
 
     public static function withAlternativesAllowed(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): self

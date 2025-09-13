@@ -1,0 +1,36 @@
+#!/bin/bash
+
+SIDE=${1:-sell}
+SYMBOL=${2:-BTC}
+
+FROM1=${3:-400}
+TO1=${4:-1500}
+FROM2=${3:-450}
+TO2=${4:-1500}
+FROM3=${3:-500}
+TO3=${4:-1500}
+FROM4=${3:-500}
+TO4=${4:-1500}
+
+
+OPPOSITE_DISTANCE1=${5:-200}
+OPPOSITE_DISTANCE2=${6:-250}
+OPPOSITE_DISTANCE3=${7:-400}
+OPPOSITE_DISTANCE4=${8:-450}
+
+ORDERS_QNT=${9:-5}
+
+grids=(
+  "-f-${FROM1}% -t-${TO1}% 10% --bM -o${OPPOSITE_DISTANCE1}% -c${ORDERS_QNT} --sSC"
+  "-f-${FROM2}% -t-${TO2}% 20% --bM --fM -o${OPPOSITE_DISTANCE2}%  -c${ORDERS_QNT} --sSC"
+  "-f-${FROM3}% -t-${TO3}% 7% --bM -o${OPPOSITE_DISTANCE3}% -c${ORDERS_QNT} --sSC"
+  "-f-${FROM4}% -t-${TO4}% 13% --bM --fM -o${OPPOSITE_DISTANCE4}% -c${ORDERS_QNT} --sSC"
+)
+
+for grid_def in "${grids[@]}"
+  do
+    grid_cmd="./bin/console sl:grid --symbol=${SYMBOL} ${SIDE} ${grid_def}"
+    echo -e "${grid_cmd}\n  =>"
+    eval "${grid_cmd}"
+  done
+

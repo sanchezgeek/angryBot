@@ -20,6 +20,7 @@ use App\Domain\Position\Helper\PositionClone;
 use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Tests\Factory\Position\PositionBuilder;
+use App\Tests\Factory\PositionFactory;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Helper\Trading\PositionPreset;
 use App\Tests\Mixin\Check\ChecksAwareTest;
@@ -61,7 +62,7 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $this->check = new BuyAndCheckFurtherPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
-            self::getUnexpectedSandboxExecutionExceptionHandler(),
+            $this->getUnexpectedSandboxExecutionExceptionHandler(),
             $this->createMock(PositionServiceInterface::class),
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,
@@ -73,16 +74,17 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         $symbol = SymbolEnum::ETHUSDT;
         $side = Side::Buy;
         $ticker = TickerFactory::withEqualPrices($symbol, 1050);
+        $position = PositionFactory::long($symbol, 1000);
         $orderDto = self::simpleBuyDto($symbol, $side);
         $thrownException = new RuntimeException('some error');
-        $context = TradingCheckContext::withTicker($ticker);
+        $context = TradingCheckContext::withCurrentPositionState($ticker, $position);
 
         $sandboxOrder = SandboxBuyOrder::fromMarketBuyEntryDto($orderDto, $ticker->lastPrice);
         $sandbox = $this->makeSandboxThatWillThrowException($sandboxOrder, $thrownException);
         $this->mockFactoryToReturnSandbox($symbol, $sandbox);
 
         // Assert
-        $message = sprintf('[%s] Got "%s" error while processing %s order in sandbox (id = %d)', OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $thrownException->getMessage(), SandboxBuyOrder::class, $orderDto->sourceBuyOrder->getId());
+        $message = sprintf('[%s] Got "%s" error while processing %s order in sandbox (b.id = %d)', OutputHelper::shortClassName(BuyAndCheckFurtherPositionLiquidation::class), $thrownException->getMessage(), SandboxBuyOrder::class, $orderDto->sourceBuyOrder->getId());
         self::expectExceptionObject(new UnexpectedSandboxExecutionException($message, 0, $thrownException));
 
         // Assert
@@ -138,17 +140,17 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         // safe
         $positionAfterSandbox = PositionPreset::safeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // also safe (without liquidation)
         $positionAfterSandbox = PositionPreset::withoutLiquidation($side);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // not safe
         $positionAfterSandbox = PositionPreset::NOTSafeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $positionAfterSandbox, $order, $safeDistance, $liq)];
+        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $safeDistance, $liq)];
 
         // forced
         $order = self::forceBuyDto($symbol, $side);
@@ -163,17 +165,17 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         // safe
         $positionAfterSandbox = PositionPreset::safeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // also safe (without liquidation)
         $positionAfterSandbox = PositionPreset::withoutLiquidation($side);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $positionAfterSandbox, $order, $safeDistance, $liq))];
+        yield [$ticker, $order, $safeDistance, $liq, self::success(self::info($ticker, $safeDistance, $liq))];
 
         // not safe
         $positionAfterSandbox = PositionPreset::NOTSafeForMakeBuy($ticker, $side, $safeDistance);
         $liq = $positionAfterSandbox->liquidationPrice;
-        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $positionAfterSandbox, $order, $safeDistance, $liq)];
+        yield [$ticker, $order, $safeDistance, $liq, self::liquidationTooCloseResult($ticker, $safeDistance, $liq)];
 
         // forced
         $order = self::forceBuyDto($symbol, $side);
@@ -187,28 +189,25 @@ final class BuyAndCheckFurtherPositionLiquidationTest extends KernelTestCase
         return TradingCheckResult::succeed(self::CHECK_ALIAS, $info);
     }
 
-    private static function liquidationTooCloseResult(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose
+    private static function liquidationTooCloseResult(Ticker $ticker, float $safePriceDistance, float $liquidationPrice): FurtherPositionLiquidationAfterBuyIsTooClose
     {
-        $info = self::info($ticker, $position, $orderDto, $safePriceDistance, $liquidationPrice);
+        $info = self::info($ticker, $safePriceDistance, $liquidationPrice);
 
         return FurtherPositionLiquidationAfterBuyIsTooClose::create(self::CHECK_ALIAS, $ticker->markPrice, $ticker->symbol->makePrice($liquidationPrice), $safePriceDistance, $info);
     }
 
-    private static function info(Ticker $ticker, Position $position, MarketBuyEntryDto $orderDto, float $safePriceDistance, float $liquidationPrice): string
+    private static function info(Ticker $ticker, float $safePriceDistance, float $liquidationPrice): string
     {
         // @todo | liquidation | null
         if ($liquidationPrice === 0.00) {
-            return sprintf(
-                '%s | id=%d, qty=%s, price=%s | liq=0',
-                $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice
-            );
+            return 'liq=0';
         }
 
         $liquidationPrice = $ticker->symbol->makePrice($liquidationPrice);
 
         return sprintf(
-            '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
-            $position, $orderDto->sourceBuyOrder->getId(), $orderDto->volume, $ticker->lastPrice, $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $ticker->symbol->makePrice($safePriceDistance)
+            'liq=%s | Δ=%s, safeΔ=%s',
+            $liquidationPrice, $liquidationPrice->deltaWith($ticker->markPrice), $ticker->symbol->makePrice($safePriceDistance)
         );
     }
 

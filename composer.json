@@ -31,7 +31,8 @@
         "symfony/serializer": "*",
         "symfony/uid": "*",
         "symfony/validator": "*",
-        "symfony/yaml": "*"
+        "symfony/yaml": "*",
+        "timirey/trader-php": "^1.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",
@@ -64,9 +65,16 @@
             "App\\Buy\\": "src/modules/Buy",
             "App\\Profiling\\": "src/modules/Profiling",
             "App\\Screener\\": "src/modules/Screener",
+
             "App\\Admin\\": "src/modules/Admin",
             "App\\Api\\": "src/modules/Api",
             "App\\Chart\\": "src/modules/Chart",
+
+            "App\\TechnicalAnalysis\\": "src/modules/TechnicalAnalysis",
+            "App\\Notification\\": "src/modules/Notification",
+            "App\\Watch\\": "src/modules/Watch",
+            "App\\UserInteraction\\": "src/modules/UserInteraction",
+            "App\\Info\\": "src/modules/Info",
 
             "Lin\\Bybit\\": "lib/LinByBit/src"
         }

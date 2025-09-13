@@ -47,12 +47,14 @@ final class OrdersLimitedWithMaxVolume implements OrdersCollectionInterface
             ) {
                 $lastOrder = $orders[array_key_last($orders)];
 
-                $orders[array_key_last($orders)] = new Order($lastOrder->price(), $lastOrder->volume() + $volumeLeft);
+                $context = array_merge($lastOrder->context(), $order->context());
+
+                $orders[array_key_last($orders)] = new Order($lastOrder->price(), $lastOrder->volume() + $volumeLeft, $context);
                 break;
             }
             $volumeSum += $orderVolume;
 
-            $orders[] = new Order($orderPrice, $orderVolume);
+            $orders[] = new Order($orderPrice, $orderVolume, $order->context());
         }
 
         return $this->orders = $orders;
@@ -68,5 +70,15 @@ final class OrdersLimitedWithMaxVolume implements OrdersCollectionInterface
     public function count(): int
     {
         return count($this->getOrders());
+    }
+
+    public function totalVolume(): float
+    {
+        $totalVolume = 0;
+        foreach ($this->getOrders() as $order) {
+            $totalVolume += $order->volume();
+        }
+
+        return $totalVolume;
     }
 }

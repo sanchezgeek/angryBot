@@ -1,0 +1,9 @@
+#!/bin/bash
+
+symbols=()
+
+
+make sf c="p:opened:symbols" | while read    symbol
+do
+    open "https://www.tradingview.com/chart/7mIOwAJ7/?symbol=BYBIT%3A$symbol.P"
+done

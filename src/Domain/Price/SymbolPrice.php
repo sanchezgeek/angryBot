@@ -11,6 +11,7 @@ use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use JsonSerializable;
 use RuntimeException;
 use Stringable;
 
@@ -22,7 +23,7 @@ use function sprintf;
  *
  * @todo | ctrl-f: round(..., 2)
  */
-final readonly class SymbolPrice implements Stringable
+final readonly class SymbolPrice implements Stringable, JsonSerializable
 {
     /**
      * @throws PriceCannotBeLessThanZero
@@ -150,5 +151,13 @@ final readonly class SymbolPrice implements Stringable
     public function __toString(): string
     {
         return (string)$this->value();
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'value' => $this->value,
+            'symbol' => $this->symbol,
+        ];
     }
 }

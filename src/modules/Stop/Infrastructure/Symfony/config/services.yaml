@@ -35,3 +35,15 @@ services:
     App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStopsHandler:
         arguments:
             $innerHandler: '@App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler'
+    
+    App\Stop\Application\UseCase\MoveStopsToBreakeven\MoveStopsToBreakevenHandler:
+        public: true
+
+    stops.cacheWrapper:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@stops.cache'
+
+    App\Stop\Infrastructure\Cache\StopsCache:
+        arguments:
+            $cache: '@stops.cacheWrapper'

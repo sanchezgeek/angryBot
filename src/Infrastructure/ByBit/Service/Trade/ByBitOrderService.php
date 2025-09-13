@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\ByBit\Service\Trade;
 
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
@@ -23,6 +24,7 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\PositionIdxNotMatch;
 use App\Infrastructure\ByBit\Service\Exception\Trade\TickerOverConditionalOrderTriggerPrice;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Cache\PositionsCache;
+use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Closure;
 use Psr\Log\LoggerInterface;
@@ -38,6 +40,7 @@ final class ByBitOrderService implements OrderServiceInterface
     public function __construct(
         ByBitApiClientInterface $apiClient,
         private readonly PositionsCache $positionsCache,
+        private readonly LockInProfitPeriodicalFixationsStorageInterface $fixationsStorage,
         private ?LoggerInterface $appErrorLogger,
     ) {
         $this->apiClient = $apiClient;
@@ -104,7 +107,7 @@ final class ByBitOrderService implements OrderServiceInterface
      *
      * @see \App\Tests\Functional\Infrastructure\BybBit\Service\Trade\ByBitOrderServiceTest\MarketBuyTest
      */
-    public function closeByMarket(Position $position, float $qty): string
+    public function closeByMarket(Position $position, float $qty): ClosePositionResult
     {
         $symbol = $position->symbol;
         $qty = $symbol->roundVolume($qty);
@@ -125,7 +128,12 @@ final class ByBitOrderService implements OrderServiceInterface
 
         $this->positionsCache->clearPositionsCache($symbol);
 
-        return $exchangeOrderId;
+        // position closed
+        if ($qty >= $position->size) {
+            $this->fixationsStorage->removeStateBySymbolAndSide($position->symbol, $position->side);
+        }
+
+        return new ClosePositionResult($exchangeOrderId, $qty);
     }
 
     /**

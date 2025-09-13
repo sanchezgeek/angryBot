@@ -20,15 +20,35 @@ trait SymbolAwareCommand
     use ConsoleInputAwareCommand;
 
     private const string DEFAULT_SYMBOL_OPTION_NAME = 'symbol';
-    private const string DEFAULT_SYMBOL_NAME = 'BTCUSDT';
+    private const string DEFAULT_EXCEPT_SYMBOL_OPTION_NAME = 'except';
 
     private ?string $symbolOptionName = null;
+    private ?string $symbolExceptOptionName = null;
 
     private SymbolProvider $symbolProvider;
+
+    private ?SymbolInterface $providedSymbol = null;
 
     public function withSymbolProvider(SymbolProvider $symbolProvider): void
     {
         $this->symbolProvider = $symbolProvider;
+    }
+
+    protected function configureSymbolArgs(
+        string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
+        string $symbolExceptOptionName = self::DEFAULT_EXCEPT_SYMBOL_OPTION_NAME,
+    ): static {
+        if (!$this->isCoinArgsConfigured()) {
+            $this->configureCoinArgs();
+        }
+
+        $this->symbolOptionName = $symbolOptionName;
+        $this->symbolExceptOptionName = $symbolExceptOptionName;
+
+        return $this
+            ->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol')
+            ->addOption($symbolExceptOptionName, null, InputOption::VALUE_OPTIONAL, 'Symbol except')
+        ;
     }
 
     protected function symbolIsSpecified(): bool
@@ -46,10 +66,22 @@ trait SymbolAwareCommand
             $symbol = $this->getSymbol();
         } catch (Throwable $e) {
             $providedSymbolValue = $this->paramFetcher->getStringOption($this->symbolOptionName);
+
             if ($providedSymbolValue === 'all') {
-                return $this->positionService->getOpenedPositionsSymbols(...$exceptWhenGetAll);
+                $providedSymbols = $this->positionService->getOpenedPositionsSymbols(...$exceptWhenGetAll);
             } elseif (str_contains($providedSymbolValue, ',')) {
-                return $this->parseProvidedSymbols($providedSymbolValue);
+                $providedSymbols = $this->parseProvidedSymbols($providedSymbolValue);
+            }
+
+            if (isset($providedSymbols)) {
+                if (
+                    ($exceptSymbols = $this->paramFetcher->getStringOption($this->symbolExceptOptionName, false))
+                    && $exceptSymbols = $this->parseProvidedSymbols($exceptSymbols)
+                ) {
+                    $providedSymbols = array_diff($providedSymbols, $exceptSymbols);
+                }
+
+                return $providedSymbols;
             }
 
             throw $e;
@@ -61,11 +93,24 @@ trait SymbolAwareCommand
     /**
      * @throws UnsupportedAssetCategoryException|QuoteCoinNotEqualsSpecifiedOneException
      */
-    protected function getSymbol(): SymbolInterface
+    protected function getSymbol(bool $required = true): ?SymbolInterface
     {
-        return $this->tryGetSymbolByProvidedName(
-            $this->symbolOptionName ? $this->paramFetcher->getStringOption($this->symbolOptionName) : self::DEFAULT_SYMBOL_NAME
-        );
+        if ($this->providedSymbol !== null) {
+            return $this->providedSymbol;
+        }
+
+        $value = $this->paramFetcher->getStringOption($this->symbolOptionName, false);
+        if (!$value) {
+            $providedValue = $this->io->ask('symbol');
+
+            if (!$providedValue && $required) {
+                throw new InvalidArgumentException('symbol required');
+            }
+
+            $value = $providedValue;
+        }
+
+        return $this->providedSymbol = ($value ? $this->tryGetSymbolByProvidedName($value) : null);
     }
 
     /**
@@ -121,19 +166,6 @@ trait SymbolAwareCommand
         }
 
         return $this->symbolProvider->getOrInitialize($fullOrShortName);
-    }
-
-    protected function configureSymbolArgs(
-        string $symbolOptionName = self::DEFAULT_SYMBOL_OPTION_NAME,
-        ?string $defaultValue = self::DEFAULT_SYMBOL_NAME,
-    ): static {
-        if (!$this->isCoinArgsConfigured()) {
-            $this->configureCoinArgs();
-        }
-
-        $this->symbolOptionName = $symbolOptionName;
-
-        return $this->addOption($symbolOptionName, null, InputOption::VALUE_REQUIRED, 'Symbol', $defaultValue);
     }
 
     protected function isSymbolArgsConfigured(): bool

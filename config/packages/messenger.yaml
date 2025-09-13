@@ -12,6 +12,7 @@ framework:
             service: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=service'
             async_critical: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_critical'
             async_high: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_high'
+            async_low: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async_low'
             async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=async'
             cache: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=cache'
             tickers_updater_async: '%env(MESSENGER_TRANSPORT_DSN)%?queue_name=tickers_updater_async'
@@ -23,17 +24,11 @@ framework:
                     max_retries: 0 # do not retry
 
         routing:
-            # service
-#            App\Service\Infrastructure\Job\CheckMessengerMessages\CheckMessengerMessages: service
-#            App\Service\Infrastructure\Job\GenerateSupervisorConfigs\GenerateSupervisorConfigs: service
-            # account
-#            App\Application\Messenger\Account\ApiKey\CheckApiKeyDeadlineDay: service
-
             App\Bot\Application\Messenger\Job\Cache\UpdateTicker: tickers_updater_async
 
             # market
-            App\Screener\Application\Job\CheckSymbolsPriceChange\CheckSymbolsPriceChange: async
-            App\Application\Messenger\Market\TransferFundingFees: async_high
+            App\Screener\Application\Job\CheckSignificantPriceChangeJob: async_low
+            App\Application\Messenger\Market\TransferFundingFees: async
 
             # orders
             App\Bot\Application\Command\Exchange\TryReleaseActiveOrders: async_high
@@ -41,21 +36,32 @@ framework:
             App\Bot\Application\Messenger\Job\Utils\MoveStops: async
 
             # position
-            # App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation: async_critical # for now handled synchronously
-            App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async_high
-            App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfit: async_high
+            App\Watch\Application\Job\CheckMainPositionIsInLoss\CheckPositionIsInLoss: async
+            App\Watch\Application\Job\CheckPositionIsInProfit\CheckPositionIsInProfit: async
 
             # trading
-            App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async
-
-            # alarm
-            App\Alarm\Application\Messenger\Job\CheckAlarm: async_high
+            App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto: async_critical
+            App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob: async_critical
+            App\Trading\Application\Job\PeriodicalOrder\MakePeriodicalOrderJob: async_high
 
             # connection
             App\Connection\Application\Messenger\Job\CheckConnection: async
 
-            # orders
-            App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
+            # BuyOrder
+#            App\Bot\Application\Messenger\Job\BuyOrder\CheckOrdersNowIsActive: async_high
+            App\Bot\Application\Messenger\Job\BuyOrder\ResetBuyOrdersActiveState\ResetBuyOrdersActiveState: async_high
+
+            # Stop
+            App\Buy\Application\Command\CreateStopsAfterBuy: async_critical
+            App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop: async_critical
+
+            App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven: async_high
+
+            # liquidation
+            App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage: async
+
+            # watch
+            App\Watch\Application\Job\CheckPassedLiquidationDistance\CheckPassedLiquidationDistance: async_high
 
             # stale
             # App\Bot\Application\Command\Exchange\IncreaseHedgeSupportPositionByGetProfitFromMain: async

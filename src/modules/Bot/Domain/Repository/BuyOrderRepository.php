@@ -26,9 +26,17 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
     private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
     private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
 
+    private const string doublesFlag = BuyOrder::DOUBLE_HASH_FLAG;
+    private const string asBuy = BuyOrder::AS_BUY_ON_OPEN_POSITION;
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, BuyOrder::class);
+    }
+
+    public function getNextId(): int
+    {
+        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
     }
 
     public function save(BuyOrder $buyOrder): void
@@ -53,17 +61,23 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      * @return BuyOrder[]
      */
     public function findActive(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): array {
         $qb = $this->createQueryBuilder('bo')
             ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
+
+        if ($side) {
+            $qb->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         if ($exceptOppositeOrders) {
             $qb->andWhere("HAS_ELEMENT(bo.context, 'onlyAfterExchangeOrderExecuted') = false");
@@ -124,9 +138,9 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
      */
     public function findOppositeToStopByExchangeOrderId(Side $side, string $exchangeOrderId): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere('b.positionSide = :posSide')->setParameter(':posSide', $side)
+            ->andWhere("JSON_ELEMENT_EQUALS(b.context, '$this->onlyAfterExchangeOrderExecutedContext', '$exchangeOrderId') = true")
         ;
 
         return $qb->getQuery()->getResult();
@@ -134,7 +148,6 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
 
     /**
      * @return BuyOrder[]
-     * @todo MB use current price to find orders?
      */
     public function getAllIdleOrders(SymbolInterface ...$symbols): array
     {
@@ -146,6 +159,46 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
             $symbols = array_map(static fn(SymbolInterface $symbol) => $symbol->name(), $symbols);
             $qb->andWhere('b.symbol IN (:symbols)')->setParameter(':symbols', $symbols);
         }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return array<Side[]> Symbols names => position sides
+     */
+    public function getNotExecutedOrdersSymbolsMap(): array
+    {
+        $query = "select DISTINCT symbol, position_side from buy_order bo WHERE bo.context->'$this->exchangeOrderIdContext' is null";
+
+        $result = $this->getEntityManager()->getConnection()->executeQuery($query)->fetchAllAssociative();
+
+        $map = [];
+        foreach ($result as $item) {
+            $map[$item['symbol']][] = Side::from($item['position_side']);
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getOrdersAfterPrice(SymbolInterface $symbol, Side $positionSide, float $price): array
+    {
+        $qb = $this->createQueryBuilder('b');
+
+        $qb
+            ->andWhere('b.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere('b.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+        ;
+
+        if ($positionSide->isShort()) {
+            $qb->andWhere('b.price <= :price');
+        } else {
+            $qb->andWhere('b.price >= :price');
+        }
+
+        $qb->setParameter(':price', $price);
 
         return $qb->getQuery()->getResult();
     }
@@ -167,8 +220,34 @@ class BuyOrderRepository extends ServiceEntityRepository implements PositionOrde
         return $qb->getQuery()->getResult();
     }
 
-    public function getNextId(): int
+    /**
+     * @return BuyOrder[]
+     */
+    public function getByDoublesHash(string $hash): array
     {
-        return $this->getEntityManager()->getConnection()->executeQuery('SELECT nextval(\'buy_order_id_seq\')')->fetchOne();
+        $flag = self::doublesFlag;
+
+        $qb = $this->createQueryBuilder('b')
+            ->andWhere("HAS_ELEMENT(b.context, '$flag') = true")
+            ->andWhere("JSON_ELEMENT_EQUALS(b.context, '$flag', '$hash') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
+    public function getCreatedAsBuyOrdersOnOpenPosition(SymbolInterface $symbol, Side $positionSide): array
+    {
+        $flag = self::asBuy;
+
+        $qb = $this->createQueryBuilder('bo')
+            ->andWhere("HAS_ELEMENT(bo.context, '$this->exchangeOrderIdContext') = false")
+            ->andWhere('bo.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+            ->andWhere('bo.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere("HAS_ELEMENT(bo.context, '$flag') = true");
+
+        return $qb->getQuery()->getResult();
     }
 }

@@ -5,24 +5,35 @@ declare(strict_types=1);
 namespace App\Application\Cache;
 
 use DateInterval;
+use DateTimeInterface;
 
 /**
  * @example Just for handy autowiring
  */
 abstract class AbstractCacheService implements CacheServiceInterface
 {
-    public function __construct(private readonly CacheServiceInterface $cache)
+    public function __construct(protected CacheServiceInterface $cache)
     {
     }
 
-    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|int|null $ttl = null): mixed
+    public function remove(CacheKeyGeneratorInterface|string $key): void
     {
-        return $this->cache->get($key, $warmup, $ttl);
+        $this->cache->remove($key);
     }
 
-    public function save(CacheKeyGeneratorInterface|string $key, mixed $value, DateInterval|int|null $ttl = null): void
+    public function get(CacheKeyGeneratorInterface|string $key, ?callable $warmup = null, DateInterval|DateTimeInterface|int|null $ttl = null): mixed
     {
-        $this->cache->save($key, $value, $ttl);
+        return $this->cache->get($key, $warmup, $ttl ?? static::getDefaultTtl());
+    }
+
+    public function save(CacheKeyGeneratorInterface|string $key, mixed $value, DateInterval|DateTimeInterface|int|null $ttl = null): void
+    {
+        $this->cache->save($key, $value, $ttl ?? static::getDefaultTtl());
+    }
+
+    protected static function getDefaultTtl(): DateInterval|DateTimeInterface|int|null
+    {
+        return null;
     }
 
     public function clear(): void

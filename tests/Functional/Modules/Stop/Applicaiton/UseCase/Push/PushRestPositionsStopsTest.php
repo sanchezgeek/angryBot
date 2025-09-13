@@ -12,6 +12,7 @@ use App\Domain\Order\Parameter\TriggerBy;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\V5\Request\Position\GetPositionsRequest;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
@@ -19,13 +20,23 @@ use App\Tests\Fixture\StopFixture;
 use App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop\PushStopsCommonCasesTest;
 use App\Tests\Helper\StopTestHelper;
 use App\Tests\Mixin\Tester\ByBitApiRequests\ByBitApiCallExpectation;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Mock\Response\ByBitV5Api\PositionResponseBuilder;
 use App\Tests\Utils\TradingSetup\TradingSetup;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
 final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbstract
 {
+    use TradingParametersMocker;
+
     const AssetCategory CATEGORY = AssetCategory::linear;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        self::createTradingParametersStub();
+    }
 
     /**
      * @dataProvider cases
@@ -33,7 +44,8 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
     public function testTest(
         TradingSetup $setup,
         array $apiCalls,
-        array $stopsAfterHandle
+        array $mockedDistances,
+        array $stopsAfterHandle,
     ): void {
         $tickers = $setup->getTickers();
         $symbols = array_map(static fn(Ticker $ticker) => $ticker->symbol, $tickers);
@@ -41,6 +53,8 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
 
         $tickersApiCalls = [];
         foreach ($tickers as $ticker) {
+            self::mockTradingParametersForLiquidationTests($ticker->symbol, $mockedDistances[$ticker->symbol->name()] ?? null);
+
             $tickersApiCalls[] = self::tickerApiCallExpectation($ticker)->setNoNeedToTrackRequestCallToFurtherCheck();
         }
 
@@ -57,7 +71,7 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         $this->applyDbFixtures(...array_map(static fn(Stop $stop) => new StopFixture($stop), $setup->getStopsCollection()->getItems()));
 
         self::warmupSettings([
-            LiquidationHandlerSettings::WarningDistancePnl,
+            WarningDistanceSettings::WarningDistancePnl,
             LiquidationHandlerSettings::CriticalPartOfLiquidationDistance,
         ], $symbols);
 
@@ -125,6 +139,10 @@ final class PushRestPositionsStopsTest extends PushMultiplePositionsStopsTestAbs
         yield [
             'setup' => $setup,
             'apiCalls' => array_merge($btcShortStopsApiCalls, $linkShortStopsApiCalls),
+            'mockedWarningDistances' => [
+                SymbolEnum::LINKUSDT->name() => '0.0907%',
+                SymbolEnum::BTCUSDT->name() => '0.09%',
+            ],
             'stopsAfterHandle' => array_merge($linkShortResultStopsAfter, $btcStopsAfter),
             // @todo BuyOrders after handle
         ];

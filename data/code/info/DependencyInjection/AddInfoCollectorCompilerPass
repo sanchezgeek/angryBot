@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DependencyInjection;
+
+use App\Info\Application\Service\DependencyInfoCollector;
+use data\CollectorDependent;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+
+final readonly class AddInfoCollectorCompilerPass implements CompilerPassInterface
+{
+    private const string SERVICE_ID = DependencyInfoCollector::class;
+
+    /**
+     * @see CollectorDependent
+     */
+    const string DEPENDENT_TAG = 'info.info_collector_dependent_implementation';
+
+    public function process(ContainerBuilder $container): void
+    {
+        $collector = $container->getDefinition(self::SERVICE_ID);
+
+        foreach ($container->findTaggedServiceIds(self::DEPENDENT_TAG) as $id => $params) {
+            /** @see \data\DependencyInfoRegistratorTrait::setCollector */
+            $container->findDefinition($id)->addMethodCall('setCollector', [$collector]);
+        }
+    }
+}

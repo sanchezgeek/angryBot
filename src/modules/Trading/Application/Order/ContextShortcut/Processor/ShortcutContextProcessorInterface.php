@@ -8,7 +8,9 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\ValueObject\Order\OrderType;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
+#[AutoconfigureTag('trading.order.contextShortcutProcessor')]
 interface ShortcutContextProcessorInterface
 {
     public function supports(string $shortcut, OrderType $orderType): bool;

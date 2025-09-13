@@ -1,0 +1,176 @@
+imports
+    - { todos }
+
+buy / check
+    @todo Если стоп будет pushedToExchange, то проверка будет пройдена
+
+вспомнить про админку
+@todo | cover-losses
+
+symbols
+    @todo | symbol | for all symbols
+    @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols
+    @todo | symbols | profiling
+    @todo | symbol | performance
+        check queries (EAGER)
+        symbolProvider profiling
+    @todo | symbol | some way to get values based on symbol -> move to settings?
+
+
+05.07 21:53 (посмотреть во сколько примерно началсся движ и почему bmt, hifi, ...)
+foewCH ALL
+some pnl triggers check
+    or even every step after that pnl%
+       в итоге при пересечении опред уровня надо докупить минимальный (даже если до этого не был открыт)
+
+   сам atr (или что бы то ни было) нужно вычислять на истории до открытия (оно только такое там может быть и актуально)
+
+[cmd] команду для перестановки стопов в б/у
+
+
+PriceChange on short period
+        тут надо придумать multiply
+
+### TRADING
+    remove stale stops after position closed
+
+команду, чтобы опустить/поднять все стопы на опред PNL-процент
+
+
+opened
+    удалять из watch после некоторого профита
+
+
+держать fixations на том же profit-расстоянии, что и при создании (позиция погла сдвинуться)
+
+
+autoOpen | если больше 100% (или подобрать. мб как-то ta использовать) <= чем за 1 день - полюбому
+
+
+pushStops
+    @todo | stops | ta? or markPrice anyway?
+
+
+попробовать вписать технику глайда
+
+
+@todo | symbols | cache SymbolNotFoundException too
+
+
+@todo | liquidation | CheckPositionIsUnderLiquidationHandler | нужно придумать что-то, чтобы точно не ликвиднуло (atr, maxWarningPnlPercent, ...)
+
+@todo | check | может всё таки пускать дальше, чтобы потом в логах видеть почему allowed? Хотя возможно это лучше в базу. Anyway, возможно лучше проверку disabled внутри supports не делать
+
+может быть очень бюольшая волатильность. альты плюсанут, баланса станет много. safePriceDistance будет неактуален. а потом обратно
+    нужно среднее значение по балансу за период
+
+можно в зависимости от соотношение +unrealized/TOTAL выставлять safeLiquidationDistance,baseMultiplier
+
+как использовать разницу mark/last/index
+    mark_index_fundingRate.txt
+
+оповещать о высокой волатильности по открытой монете
+
+
+open: стопы за позицию (возможно интерактивно)
+breakeven ta
+
+посмотреть переоткроется ли elx (0.1914)
+    не переоткроется - scheduler надо поправить
+
+покупка по marketPrice?
+    например вот тут: src/modules/Buy/Application/UseCase/CheckBuyOrderCanBeExecuted/Checks/BuyAndCheckFurtherPositionLiquidation.php
+
+
+использовать \App\Bot\Domain\Entity\BuyOrder::SKIP_FURTHER_LIQUIDATION_CHECK_KEY для пропуска проверки. Или старый ключ?
+
+
+
+посмотреть в @todo для OpenPositionHandler
+
+@todo | buy | переделать расчёт pnl на основе markPrice
+    нужно найти где ещё накосячил
+
+
+src/modules/Stop/Console/CreateFixationGridCommand.php
+
+
+
+
+ветки в testnet:
+      admin
+      master
+      prod
+      stops_based_on_ta
+    * stops_based_on_ta_from_testnet_wip
+
+динамическая цена ордеров
+    back-процесс, который будет обновлять stop.price в зависимости от настроек
+        пример: стоп был создан как CREATED_AFTER_OTHER_SYMBOL_LOSS (Short from some ticker price - всю эу информацию надо положить в контекст)
+            поменял настройку на VeryShort - крон поменял цену
+
+
+some delay after balance became positive?
+
+set of linp-strategies
+
+
+
+какое-то оповещение о закрытии (siren)
+
+
+parameters changing corresponding to global set style
+
+claim other acc to open some volume on some symbol. if available (via created BuyOrder, with all checks)
+
+
+
+every50
+
+move fixation stops after averaeging
+
+
+push buy negative balance
+
+
+@todo | checks | cache?
+
+
+запоминать цену и размер позиции: оповещение, если что-то поменялось
+
+любая покупка (в т.ч. и через OpenHandler) должна происходить через MBH. (чтобы не усреднить позицию, по которой есть fixations)
+
+
+
+screener
+    near ath
+
+
+last executed stops
+
+
+
+cond instead market (and all that logic....)
+
+
+openHandler при создании стопов как-то их помечает. Остальные - сдвигаются в случае усреднения пощиции в сторону прибыли. Усреднение в сторону убытков - тоже сдвигает
+
+
+cached contract / total => base
+
+
+какой-то background, который проверит, что по позиции (после стопов) минусовой pnl превышает некоторый порог (либо size стал меньше опред. процента от изначально открытого) => надо переоткрыть позицию на определённый процент от первоначального объёма
+    (=> домен для лога открытия/закрытия позиции, чтобы найти эти данные)
+        при ручном kbuy этот posiiton_state должен также увеличивать размер
+
+tryToKeepEntry
+    с учётом opposite созданных ниже делать усреднение вверх, чтобы в итоге цена осталась такой же
+
+@todo | helpers | some helper for get main position
+
+@todo | cover-loss | на некотором расстоянии от позиции (н, 30% on short, 30% on ..., остатки - у основания)
+    или уже сделано? надо подумать как конфигурировать то решение
+
+@todo | liquidation | liquidation-handler | mb strict add condStop in any case? or actualize (ta)
+
+@todo | user-interaction | handlers

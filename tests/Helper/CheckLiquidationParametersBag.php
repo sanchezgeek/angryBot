@@ -23,22 +23,18 @@ use RuntimeException;
 
 class CheckLiquidationParametersBag
 {
-    /**
-     * @see LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER
-     */
-    public const ACCEPTABLE_STOPPED_PART_DIVIDER = 3.5;
+    public const float ACCEPTABLE_STOPPED_PART_DIVIDER = LiquidationDynamicParameters::ACCEPTABLE_STOPPED_PART_DIVIDER;
 
     /**
      * @see src/modules/Settings/Infrastructure/Symfony/config/settings.yaml [liquidationHandlerSettings.criticalDistancePnl]
      */
-    private const CRITICAL_DISTANCE_PNLS = [
-        SymbolEnum::BTCUSDT->value => 60,
+    private const array CRITICAL_DISTANCE_PNLS = [
+        SymbolEnum::BTCUSDT->value => 50,
         SymbolEnum::ETHUSDT->value => 80,
-        SymbolEnum::ARCUSDT->value => 200,
         'other' => 200
     ];
 
-    public const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
+    public const int TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
 
     private function __construct(
         private readonly AppSettingsProviderInterface $settingsProvider,
@@ -86,7 +82,7 @@ class CheckLiquidationParametersBag
 
                 $priceToCalcModifier = $position->liquidationPrice()->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $additionalStopDistanceWithLiquidation);
                 $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $priceToCalcModifier)->value();
-                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
                 if ($modifier > 1) {
                     $modifier = 1;
                 }
@@ -99,7 +95,7 @@ class CheckLiquidationParametersBag
                 $acceptableStoppedPart = 100 - $distanceLeftInPercent;
 
                 $currentDistanceWithLiquidationInPercentOfTickerPrice = PnlHelper::convertAbsDeltaToPnlPercentOnPrice($additionalStopDistanceWithLiquidation, $ticker->markPrice)->value();
-                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 7;
+                $modifier = (100 / $currentDistanceWithLiquidationInPercentOfTickerPrice) * 8;
                 if ($modifier > 1) {
                     $modifier = 1;
                 }

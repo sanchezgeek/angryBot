@@ -15,6 +15,8 @@ final class AppContext
     private static RunningWorker|null|false $runningWorker = false;
     private static ?TradingAccountType $accType = null;
 
+    private static bool $isParametersEvaluationContext = false;
+
     public static function workerHash(): ?string
     {
         if (!self::runningWorker()) {
@@ -92,5 +94,15 @@ final class AppContext
     public static function isProfilingEnabled(): bool
     {
         return (bool)($_ENV['PROFILING_ENABLED'] ?? null) === true;
+    }
+
+    public static function setIsParametersEvaluationContext(): void
+    {
+        self::$isParametersEvaluationContext = true;
+    }
+
+    public static function isParametersEvaluationContext(): bool
+    {
+        return self::$isParametersEvaluationContext;
     }
 }

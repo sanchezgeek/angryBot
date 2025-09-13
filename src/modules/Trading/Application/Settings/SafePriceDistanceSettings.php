@@ -12,14 +12,19 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum SafePriceDistanceSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.safeDistance';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Float, nullable: true)]
-    case SafePriceDistance_Percent = 'safePriceDistance.percent';
+    case SafePriceDistance_Percent = 'safePriceDistance.percent'; // optional
 
     #[SettingParametersAttribute(type: SettingType::Float)]
-    case SafePriceDistance_Multiplier = 'safePriceDistance.baseMultiplier';
+    case SafePriceDistance_Multiplier = 'safePriceDistance.baseMultiplier';  // optional
 
     #[SettingParametersAttribute(type: SettingType::Enum, enumClass: SafePriceAssertionStrategyEnum::class)]
-    case SafePriceDistance_Apply_Strategy = 'safePriceDistance.applyStrategy';
+    case SafePriceDistance_Apply_Strategy = 'safePriceDistance.applyStrategy';  // optional
 
     public function getSettingKey(): string
     {

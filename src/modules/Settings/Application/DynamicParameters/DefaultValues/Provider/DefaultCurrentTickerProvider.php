@@ -6,7 +6,6 @@ namespace App\Settings\Application\DynamicParameters\DefaultValues\Provider;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Ticker;
-use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Settings\Application\DynamicParameters\DefaultValues\ParameterDefaultValueProviderInterface;
 use App\Trading\Application\Symbol\SymbolProvider;
 use InvalidArgumentException;
@@ -21,7 +20,9 @@ final readonly class DefaultCurrentTickerProvider implements ParameterDefaultVal
 
     public function getRequiredKeys(): array
     {
-        return ['symbol'];
+        return [
+            'symbol' => 'symbol',
+        ];
     }
 
     public function get(array $input): Ticker

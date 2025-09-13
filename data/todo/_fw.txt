@@ -1,0 +1,5 @@
+закол на mav (после кого-то..а там ещё после кого-то)
+coverLosses: weight: profitable + less PNLPct
+не тупить
+
+priceImpact.txt

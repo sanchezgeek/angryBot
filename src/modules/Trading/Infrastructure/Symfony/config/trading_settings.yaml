@@ -1,6 +1,11 @@
-### \App\Trading\Application\Settings\SafePriceDistanceSettings
-safePriceDistance.baseMultiplier: 1    
-safePriceDistance.applyStrategy: 'conservative'
+### \App\Bot\Application\Settings\TradingSettings
+trading.global.riskLevel: conservative
+trading.global.riskLevel[symbol=BTCUSDT]: aggressive
+trading.global.riskLevel[symbol=ETHUSDT]: aggressive
+
+# @todo | MAIN_POSITION_..._OPPOSITE_PRICE_DISTANCE, SUPPORT_..._OPPOSITE_PRICE_DISTANCE ?
+trading.takeProfitWhenBalanceIsInsufficient.enabled: false
+trading.takeProfitWhenBalanceIsInsufficient.afterProfitPercent: 170
 
 # percent override
 # safePriceDistance.percent[symbol=BTCUSDT]: 6              # example with symbol
@@ -8,5 +13,30 @@ safePriceDistance.applyStrategy: 'conservative'
 
 ### \App\Trading\Application\Settings\OpenPositionSettings
 # 10% of whole risked balance will be opened with 4 delayed BuyOrders in -100%..100% range from position entry, ...
-openPosition.splitToBuyOrders.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..100%%|10%%|4|wOO;-200%%..200%%|30%%|10'
-openPosition.stops.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..-120%%|50%%|2;-200%%..-220%%|30%%|6'
+#openPosition.splitToBuyOrders.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..100%%|10%%|4|wOO;-200%%..200%%|30%%|10'
+#openPosition.stops.defaultGridsDefinition[symbol=AI16ZUSDT]: '-100%%..-120%%|50%%|2;-200%%..-220%%|30%%|6'
+
+### \App\Trading\Application\Settings\CoverLossSettings
+trading.coverLosses.enabled: true
+trading.coverLosses.bySpotBalance.enabled: false
+trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
+
+
+
+### \App\Trading\Application\Settings\AutoOpenPositionSettings
+autoOpen.notifications.enabled: true
+autoOpen.enabled: true
+autoOpen.enabled[symbol=PAXGUSDT]: false
+autoOpen.enabled[symbol=USD1USDT]: false
+autoOpen.enabled[symbol=USDCUSDT]: false
+autoOpen.enabled[symbol=XAUTUSDT]: false
+
+
+
+
+
+
+# for tests
+trading.coverLosses.enabled[symbol=A8USDT][side=sell]: false
+trading.coverLosses.enabled[symbol=A8USDT][side=buy]: true
+trading.coverLosses.otherSymbols.additionalStop.distance[side=buy]: standard

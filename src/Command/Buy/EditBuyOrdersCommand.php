@@ -10,12 +10,15 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\BuyOrder\BuyOrdersCollection;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Helper\OutputHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,7 +34,7 @@ use function in_array;
 use function sprintf;
 
 #[AsCommand(name: 'buy:edit')]
-class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentCommand
+class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -84,8 +87,21 @@ class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentC
 
         $buyOrdersCollection = new BuyOrdersCollection(...$orders);
 
-        $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
-        $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
+        try {
+            $fromPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->fromOptionName, false);
+        } catch (Exception $e) {
+            OutputHelper::print($e->getMessage());
+            $fromPrice = null;
+
+        }
+
+        try {
+            $toPrice = $this->getPriceFromPnlPercentOptionWithFloatFallback($this->toOptionName, false);
+        } catch (Exception $e) {
+            OutputHelper::print($e->getMessage());
+            $toPrice = null;
+        }
+
         if ($toPrice && $fromPrice) {
             $buyOrdersCollection = $buyOrdersCollection->grabFromRange(PriceRange::create($fromPrice, $toPrice, $this->getSymbol()));
         }
@@ -98,7 +114,7 @@ class EditBuyOrdersCommand extends AbstractCommand implements PositionDependentC
             $this->io->info('BuyOrders not found by provided conditions.'); return Command::SUCCESS;
         }
 
-        if ($totalCount === count($orders) && !$withoutConfirm && !$this->io->confirm('All orders matched provided conditions. Continue?')) {
+        if ($totalCount === count($orders) && !$withoutConfirm && !$this->io->confirm(sprintf('All orders (%d) matched provided conditions. Continue?', $totalCount))) {
             return Command::FAILURE;
         }
 

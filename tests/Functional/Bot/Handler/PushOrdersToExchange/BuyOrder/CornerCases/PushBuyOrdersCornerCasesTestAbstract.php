@@ -26,6 +26,7 @@ use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\TestWithDbFixtures;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -37,6 +38,7 @@ class PushBuyOrdersCornerCasesTestAbstract extends KernelTestCase
     use StopsTester;
     use SettingsAwareTest;
     use RateLimiterAwareTest;
+    use TradingParametersMocker;
 
     protected const SYMBOL = SymbolEnum::BTCUSDT;
 

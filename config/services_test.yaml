@@ -34,3 +34,14 @@ services:
         arguments:
             $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
             $externalCache: null
+
+    App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface:
+        class: App\TechnicalAnalysis\Application\Service\TAToolsProvider
+        public: true
+
+#    App\Trading\Application\Parameters\TradingParametersProviderInterface:
+#        class: App\Trading\Application\Parameters\TradingDynamicParameters
+#        public: true
+
+    App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice:
+        public: true

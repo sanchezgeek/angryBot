@@ -14,4 +14,12 @@ final class QuoteCoinNotEqualsSpecifiedOneException extends \Exception
             sprintf('QuoteCoin ("%s") !== specified coin ("%s")', $assetQuoteCoin, $specifiedCoin->value)
         );
     }
+
+    public function __sleep(): array
+    {
+        return [
+            'message',
+            'code',
+        ];
+    }
 }

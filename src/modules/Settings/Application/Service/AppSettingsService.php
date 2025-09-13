@@ -13,9 +13,14 @@ use App\Settings\Application\Storage\AssignedSettingValueCollection;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use App\Settings\Application\Storage\SettingsStorageInterface;
 use App\Settings\Application\Storage\StoredSettingsProviderInterface;
+use App\Worker\AppContext;
 use DateInterval;
 use Exception;
 
+/**
+ * @see \App\Tests\Unit\Modules\Settings\AppSettingsServiceTest
+ * @see \App\Tests\Functional\Modules\Settings\AppSettingsServiceFuncTest
+ */
 final class AppSettingsService implements AppSettingsProviderInterface
 {
     private const int CACHE_TTL = 300;
@@ -111,18 +116,27 @@ final class AppSettingsService implements AppSettingsProviderInterface
         $keys = [];
 
         $break = false;
-        if ($side) {
+        if ($side && $symbol) {
             $keys[] = sprintf('%s[symbol=%s][side=%s]', $baseKey, $symbol, $side->value);
+            if ($settingValueAccessor->exact) {
+                $break = true;
+            }
+        } elseif ($side && !$symbol) {
+            $keys[] = sprintf('%s[side=%s]', $baseKey, $side->value);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
         }
 
-        if ($symbol && !$break) {
+        if (!$break && $symbol) {
             $keys[] = sprintf('%s[symbol=%s]', $baseKey, $symbol);
             if ($settingValueAccessor->exact) {
                 $break = true;
             }
+        }
+
+        if (!$break && $side && $symbol) {
+            $keys[] = sprintf('%s[side=%s]', $baseKey, $side->value);
         }
 
         if (!$break) {

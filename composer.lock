@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3ce3a91106e04e89a20e1e22bfc654b5",
+    "content-hash": "76437b593067c75acd0255cebbcee3c9",
     "packages": [
         {
             "name": "doctrine/collections",
@@ -6205,6 +6205,59 @@
                 }
             ],
             "time": "2025-04-04T10:10:11+00:00"
+        },
+        {
+            "name": "timirey/trader-php",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/timirey/trader-php.git",
+                "reference": "862e8b3dd26437ab29b1c8954cbbcbc7dab406b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/timirey/trader-php/zipball/862e8b3dd26437ab29b1c8954cbbcbc7dab406b5",
+                "reference": "862e8b3dd26437ab29b1c8954cbbcbc7dab406b5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-trader": "*",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "mockery/mockery": "1.*",
+                "pestphp/pest": "2.*",
+                "phpstan/phpstan": "1.*",
+                "slevomat/coding-standard": "8.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Timirey\\Trader\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Artiom Misiru",
+                    "email": "misiru.artiom@gmail.com",
+                    "role": "Certified Web Developer"
+                }
+            ],
+            "description": "PHP wrapper for the trader extension, providing access to technical analysis indicators.",
+            "keywords": [
+                "indicators",
+                "php",
+                "trading"
+            ],
+            "support": {
+                "issues": "https://github.com/timirey/trader-php/issues",
+                "source": "https://github.com/timirey/trader-php/tree/1.0.1"
+            },
+            "time": "2024-12-20T23:30:46+00:00"
         },
         {
             "name": "twig/twig",

@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum OpenPositionSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'trading.openPosition';
+    }
+
     #[SettingParametersAttribute(type: SettingType::String, nullable: true)]
     case SplitToBuyOrders_DefaultGridsDefinition = 'openPosition.splitToBuyOrders.defaultGridsDefinition';
 

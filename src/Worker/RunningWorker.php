@@ -10,8 +10,10 @@ enum RunningWorker: string
 
     case BUY_ORDERS = 'buy-orders';
 
+    case ASYNC_LOW = 'async_low';
     case ASYNC = 'async';
     case ASYNC_HIGH = 'async_high';
+    case ASYNC_CRITICAL = 'async_critical';
 
     case CACHE = 'cache';
     case TICKERS_UPDATER = 'tickers_updater_async';

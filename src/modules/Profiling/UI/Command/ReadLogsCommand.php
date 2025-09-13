@@ -3,7 +3,6 @@
 namespace App\Profiling\UI\Command;
 
 use App\Command\AbstractCommand;
-use App\Command\PositionDependentCommand;
 use App\Profiling\Application\Storage\ProfilingPointStorage;
 use App\Profiling\SDK\ProfilingContext;
 use App\Profiling\SDK\ProfilingPointDto;
@@ -15,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 'profiling:read')]
-class ReadLogsCommand extends AbstractCommand implements PositionDependentCommand
+class ReadLogsCommand extends AbstractCommand
 {
     private const string UNIQID_ARG = 'unique-id';
 

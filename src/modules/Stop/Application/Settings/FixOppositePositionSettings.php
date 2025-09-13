@@ -11,6 +11,11 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum FixOppositePositionSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
+    public static function category(): string
+    {
+        return 'stop.fixOpposite';
+    }
+
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case FixOppositePosition_Enabled = 'stop.afterStop.fixOppositePosition.enabled';
 

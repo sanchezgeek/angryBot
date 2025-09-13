@@ -58,7 +58,7 @@ final class StopAndCheckFurtherMainPositionLiquidationTest extends KernelTestCas
         $this->check = new StopAndCheckFurtherMainPositionLiquidation(
             self::getContainerSettingsProvider(),
             $this->parameters,
-            self::getUnexpectedSandboxExecutionExceptionHandler(),
+            $this->getUnexpectedSandboxExecutionExceptionHandler(),
             $positionService,
             $this->tradingSandboxFactory,
             $this->sandboxStateFactory,

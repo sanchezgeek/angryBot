@@ -30,7 +30,7 @@ final readonly class OrdersGridDefinition
         SymbolInterface $symbol
     ): self {
         $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
-        $accurateRangePattern = '/^[-\d]+%\.\.[-\d]+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+        $accurateRangePattern = '/^[-\d]+(?:\.\d+)?%\.\.[-\d]+(?:\.\d+)?%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
         $isEquivRange = preg_match($equivRangePattern, $definition);
         $isAccurateRange = preg_match($accurateRangePattern, $definition);
@@ -43,7 +43,7 @@ final readonly class OrdersGridDefinition
 
         $parts = explode('|', $definition);
         if ($isEquivRange) {
-            $rangePnl = Percent::string($parts[0]);
+            $rangePnl = Percent::string($parts[0], false);
 
             $fromPnl = -$rangePnl->value();
             $toPnl = $rangePnl->value();

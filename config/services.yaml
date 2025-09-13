@@ -1,5 +1,7 @@
 imports:
     - { resource: parameters.yaml }
+    - { resource: ../src/modules/Watch/Infrastructure/Symfony/config/services.yaml }
+    - { resource: ../src/modules/Notification/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Settings/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Service/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Trading/Infrastructure/Symfony/config/services.yaml }
@@ -8,12 +10,13 @@ imports:
     - { resource: ../src/modules/Liquidation/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Profiling/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Screener/Infrastructure/Symfony/config/services.yaml }
+
     - { resource: ../src/modules/Admin/Infrastructure/Symfony/config/services.yaml }
     - { resource: ../src/modules/Api/Infrastructure/Symfony/config/services.yaml }
-    - { resource: ../src/modules/Chart/Infrastructure/Symfony/config/services.yaml }
 
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
+    - { resource: ../src/modules/Chart/Infrastructure/Symfony/config/services.yaml }
+    - { resource: ../src/modules/TechnicalAnalysis/Infrastructure/Symfony/config/services.yaml }
+    - { resource: ../src/modules/Info/Infrastructure/Symfony/config/services.yaml }
 
 services:
     # default configuration for services in *this* file
@@ -23,9 +26,8 @@ services:
         bind:
             $accountUids: '%account_uids%'
 
-    _instanceof:
-        App\Command\SymbolDependentCommand:
-            tags: ['command.symbol_dependent']
+    App\Clock\ClockInterface:
+        class: App\Clock\Clock
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -73,6 +75,26 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService'
 
 ### cache
+    cache.wrapper.default:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@cache.app'
+
+    App\Application\Cache\CacheServiceInterface:
+        alias: 'cache.wrapper.default'
+    
+    
+    ### Move somewhere ###
+    #    openedPositions.cacheWrapper:
+    #        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+    #        arguments:
+    #            $cache: '@openedPositions.cache'
+    #            
+    #    App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache:
+    #        arguments:
+    #            $cache: '@openedPositions.cacheWrapper'
+    
+    
     App\Infrastructure\Cache\TickersCache:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
 
@@ -97,6 +119,12 @@ services:
 #        tags:
 #            - { name: 'cache.pool', namespace: 'shared' }
 
+### attempts limitimg
+    App\Infrastructure\Symfony\AttemptsLimit\SymfonyAttemptLimitCheckerProvider:
+        arguments:
+            $cachePool: '@cache.rate_limiter'
+            $lockFactory: '@lock.factory'
+
 ### events
     App\Bot\Application\Events\LogLoggableEventListener:
         tags:
@@ -118,8 +146,7 @@ services:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
 ### commands
-    App\Command\Position\AllOpenedPositionsInfoCommand:
-        class: App\Command\Position\AllOpenedPositionsInfoCommand
+    App\Command\Position\OpenedPositions\AllOpenedPositionsInfoCommand:
         arguments:
             $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
 
@@ -138,12 +165,3 @@ services:
     App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageReceivedEvent\CheckShouldMessageRunHandlerListener:
         arguments:
             $handlersLocator: '@messenger.bus.default.messenger.handlers_locator'
-
-### handlers
-    App\Application\Messenger\Position\CheckMainPositionIsInLoss\CheckPositionIsInLossHandler:
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache
-
-    App\Application\Messenger\Position\CheckPositionIsInProfit\CheckPositionIsInProfitHandler:
-        arguments:
-            $positionService: '@App\Infrastructure\ByBit\Service\ByBitLinearPositionService' # without cache

@@ -57,11 +57,11 @@ final class StopsDumpRestoreCommandTest extends KernelTestCase
         yield 'without delete' => [
             __DIR__ . '/../../../../Mock/dump/sell.2023-09-07_23:32:32.json',
             [
-                (new Stop(2, 28922.2, 0.003, 10, SymbolEnum::ADAUSDT, Side::Sell))->setExchangeOrderId('885e602a-93fa-4a06-90c7-ae9f0d3b3e36'),
-                (new Stop(3, 28933.3, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell))->setIsWithoutOppositeOrder(),
-                (new Stop(4, 28931.1, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell)),
-                (new Stop(8, 28951.2, 0.001, 10, SymbolEnum::ADAUSDT, Side::Sell)),
-                (new Stop(13, 28972.3, 0.01, 10, SymbolEnum::ADAUSDT, Side::Sell)),
+                (new Stop(1, 28922.2, 0.003, 10, SymbolEnum::ADAUSDT, Side::Sell))->setExchangeOrderId('885e602a-93fa-4a06-90c7-ae9f0d3b3e36'),
+                (new Stop(2, 28933.3, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell))->setIsWithoutOppositeOrder(),
+                (new Stop(3, 28931.1, 0.002, 10, SymbolEnum::ADAUSDT, Side::Sell)),
+                (new Stop(4, 28951.2, 0.001, 10, SymbolEnum::ADAUSDT, Side::Sell)),
+                (new Stop(5, 28972.3, 0.01, 10, SymbolEnum::ADAUSDT, Side::Sell)),
             ]
         ];
     }

@@ -13,20 +13,28 @@ use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\Dto\Out\AbstractTradingCheckResult;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
+use Closure;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckInterface
 {
-    private const DEFAULT_CACHE_TTL = 45;
-    private const MAX_ITEMS = 100;
+    private const int DEFAULT_CACHE_TTL = 45;
+    private const int MAX_ITEMS = 100;
 
     private static array $pnlStepCache = [];
 
     private readonly CacheServiceInterface $cache;
 
-    public function __construct(private readonly TradingCheckInterface $decorated)
-    {
-        $this->cache = new SymfonyCacheWrapper(new ArrayAdapter(self::DEFAULT_CACHE_TTL, true, 0, self::MAX_ITEMS));
+    /**
+     * @param Closure|null $cacheKeyFactory Function that get CheckOrderDto and TradingCheckContext as parameters
+     */
+    public function __construct(
+        private readonly TradingCheckInterface $decorated,
+        int $ttl = self::DEFAULT_CACHE_TTL,
+        private readonly ?Closure $cacheKeyFactory = null,
+        private bool $quiet = true,
+    ) {
+        $this->cache = new SymfonyCacheWrapper(new ArrayAdapter($ttl, true, 0, self::MAX_ITEMS));
     }
 
     public function alias(): string
@@ -34,29 +42,20 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
         return $this->decorated->alias();
     }
 
-
     public function supports(CheckOrderDto $orderDto, TradingCheckContext $context): bool
     {
-        // cache?
+        // @todo | checks | cache?
         return $this->decorated->supports($orderDto, $context);
     }
 
     public function check(CheckOrderDto $orderDto, TradingCheckContext $context): AbstractTradingCheckResult
     {
-        // @todo use position state?
-        $symbol = $orderDto->symbol();
-        $cacheKey = (new CheckResultKeyBasedOnOrderAndPricePnlStep(
-            $orderDto->priceValueWillBeingUsedAtExecution(),
-            $orderDto->orderQty(),
-            $symbol,
-            $orderDto->positionSide(),
-            self::pnlPercentStep($symbol, $orderDto->priceValueWillBeingUsedAtExecution())
-        ))->generate();
+        $cacheKey = $this->getCacheKey($orderDto, $context);
 
         /** @var AbstractTradingCheckResult $cachedResult */
         if ($cachedResult = $this->cache->get($cacheKey)) {
 //            OutputHelper::warning(sprintf('hit %s: %s (%s %s %s)', $cacheKey, $orderDto->orderIdentifier(), $context->ticker->symbol->name(), $context->ticker->markPrice->value(), $orderDto->orderQty()));
-            return $cachedResult->quietClone();
+            return $this->quiet ? $cachedResult->quietClone() : $cachedResult;
         }
 
         $actualResult = $this->decorated->check($orderDto, $context);
@@ -68,11 +67,24 @@ final class UseNegativeCachedResultWhileCheckDecorator implements TradingCheckIn
         return $actualResult;
     }
 
+    private function getCacheKey(CheckOrderDto $orderDto, TradingCheckContext $context): string
+    {
+        $keyFactory = $this->cacheKeyFactory ?? static fn (CheckOrderDto $orderDto) => new CheckResultKeyBasedOnOrderAndPricePnlStep(
+            $orderDto->priceValueWillBeingUsedAtExecution(),
+            $orderDto->orderQty(),
+            $orderDto->symbol(),
+            $orderDto->positionSide(),
+            self::pnlPercentStep($orderDto->symbol(), $orderDto->priceValueWillBeingUsedAtExecution())
+        )->generate();
+
+        return $keyFactory($orderDto, $context);
+    }
+
     /**
      * @note 100x-leveraged
      * @see PnlHelper::getPositionLeverage
      */
-    public static function pnlPercentStep(SymbolInterface $symbol, float $currentPrice): int
+    private static function pnlPercentStep(SymbolInterface $symbol, float $currentPrice): int
     {
         if (isset(self::$pnlStepCache[$symbol->name()])) {
             return self::$pnlStepCache[$symbol->name()];

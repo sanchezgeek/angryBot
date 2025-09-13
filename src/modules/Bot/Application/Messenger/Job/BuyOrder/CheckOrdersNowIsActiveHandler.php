@@ -10,59 +10,57 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Clock\ClockInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Trading\Application\Symbol\SymbolProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+/**
+ * @see \App\Tests\Functional\Bot\Handler\ButOrder\CheckOrdersIsActiveHandlerTest
+ */
 #[AsMessageHandler]
 final readonly class CheckOrdersNowIsActiveHandler
 {
-    private const int ACTIVE_STATE_TTL = 20000;
-
     public function __construct(
         private BuyOrderRepository $buyOrderRepository,
         private ExchangeServiceInterface $exchangeService,
         private EntityManagerInterface $entityManager,
+        private SymbolProvider $symbolProvider,
         private ClockInterface $clock,
     ) {
     }
 
     public function __invoke(CheckOrdersNowIsActive $message): void
     {
-        $allActiveOrders = $this->buyOrderRepository->getAllActiveOrders();
-        $now = $this->clock->now();
-        foreach ($allActiveOrders as $buyOrder) {
-            if (!$activeStateSetAt = $buyOrder->getActiveStateChangeTimestamp()) {
-                continue;
-            }
+        $activeConditionalStopOrders = $this->exchangeService->activeConditionalOrders();
 
-            if ($now->getTimestamp() - $activeStateSetAt > self::ACTIVE_STATE_TTL) {
-                $buyOrder->setIdle();
-            }
-        }
-        $this->entityManager->flush();
-
+        /** @var array<array{symbol: string, items: BuyOrder[]}> $map */
         $map = [];
-        $allIdleOrders = $this->buyOrderRepository->getAllIdleOrders();
-        foreach ($allIdleOrders as $buyOrder) {
-            $symbol = $buyOrder->getSymbol();
-            $symbolName = $symbol->name();
 
-            $map[$symbolName] = $map[$symbolName] ?? ['symbol' => $symbol, 'items' => []];
-            $map[$symbolName]['items'][] = $buyOrder;
-        }
-
-        foreach ($map as $symbolItems) {
-            $symbol = $symbolItems['symbol'];
+        $notExecutedOrdersSymbols = $this->buyOrderRepository->getNotExecutedOrdersSymbolsMap();
+        foreach ($notExecutedOrdersSymbols as $symbolRaw => $positionSides) {
+            $symbol = $this->symbolProvider->getOneByName($symbolRaw);
             $ticker = $this->exchangeService->ticker($symbol);
 
-            foreach ($symbolItems['items'] as $buyOrder) {
-                /** @var BuyOrder $buyOrder */
-                $comparator = self::getComparator($buyOrder->getPositionSide());
-                if ($comparator($buyOrder->getPrice(), $ticker->indexPrice)) {
-                    $buyOrder->setActive($this->clock->now());
+            foreach ($positionSides as $positionSide) {
+                $symbolPrice = $ticker->indexPrice; /** @see BuyOrder::mustBeExecuted */
+
+                $orders = $this->buyOrderRepository->getOrdersAfterPrice($symbol, $positionSide, $symbolPrice->value());
+                foreach ($orders as $buyOrder) {
+                    if (
+                        ($createdAfterStopExchangeOrderId = $buyOrder->getOnlyAfterExchangeOrderExecutedContext())
+                        && isset($activeConditionalStopOrders[$createdAfterStopExchangeOrderId])
+                    ) {
+                        continue;
+                    }
+
+                    $comparator = self::getComparator($buyOrder->getPositionSide());
+                    if ($comparator($buyOrder->getPrice(), $symbolPrice)) {
+                        $buyOrder->setActive($this->clock->now());
+                    }
                 }
             }
         }
+
         $this->entityManager->flush();
     }
 

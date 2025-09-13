@@ -18,10 +18,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'buy:reset-active')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class ResetActiveFlagCommand extends AbstractCommand implements PositionDependentCommand
 {
     use PositionAwareCommand;
@@ -35,7 +33,7 @@ class ResetActiveFlagCommand extends AbstractCommand implements PositionDependen
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->configurePositionArgs(InputArgument::OPTIONAL)
             ->addOption(self::ALLOWED_PNL_DELTA_OPTION, null, InputOption::VALUE_OPTIONAL, 'PNL percent threshold to keep orders active even if order price laying before ticker', self::ALLOWED_PNL_DELTA_DEFAULT)
             ->addOption(self::ALL_OPTION, null, InputOption::VALUE_NEGATABLE, 'Reset for all orders')

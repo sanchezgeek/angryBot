@@ -35,7 +35,7 @@ abstract class AbstractShortcutContextProcessor implements ShortcutContextProces
 
     final public function modifyRawContextArray(string $shortcut, BuyOrder|Stop|OrderType $order, array &$contextRaw): void
     {
-        $contextRaw = array_merge($contextRaw, $this->getRawContextPart($shortcut, $order));
+        $contextRaw = array_merge_recursive($contextRaw, $this->getRawContextPart($shortcut, $order));
     }
 
     public function modifyOrder(string $shortcut, BuyOrder|Stop $order): void
@@ -45,11 +45,21 @@ abstract class AbstractShortcutContextProcessor implements ShortcutContextProces
         $this->doModifyOrder($shortcut, $order);
     }
 
-    abstract protected function rawContextPart(string $shortcut, BuyOrder|Stop $order);
+    abstract protected function rawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order);
     abstract protected function doModifyOrder(string $shortcut, BuyOrder|Stop $order);
 
     protected static function getOrderType(BuyOrder|Stop|OrderType $orderType): OrderType
     {
         return $orderType instanceof OrderType ? $orderType : OrderType::fromEntity($orderType);
+    }
+
+    protected static function isBuy(BuyOrder|Stop|OrderType $orderType): bool
+    {
+        return self::getOrderType($orderType) === OrderType::Add;
+    }
+
+    protected static function isStop(BuyOrder|Stop|OrderType $orderType): bool
+    {
+        return self::getOrderType($orderType) === OrderType::Stop;
     }
 }

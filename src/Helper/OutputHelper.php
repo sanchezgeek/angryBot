@@ -9,6 +9,7 @@ use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Worker\AppContext;
+use DateTimeImmutable;
 use JsonSerializable;
 
 use function is_array;
@@ -55,19 +56,24 @@ class OutputHelper
         }
     }
 
+    private static function currentDateTime(): string
+    {
+        return new DateTimeImmutable()->format('m/d H:i:s');
+    }
+
     public static function warning(string $message): void
     {
-        echo sprintf('@ %s', $message) . PHP_EOL;
+        echo sprintf('@ [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function success(string $message): void
     {
-        echo sprintf('+ %s', $message) . PHP_EOL;
+        echo sprintf('+ [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function failed(string $message): void
     {
-        echo sprintf('! %s', $message) . PHP_EOL;
+        echo sprintf('! [%s] %s', self::currentDateTime(), $message) . PHP_EOL;
     }
 
     public static function printIfDebug(mixed $data): void
@@ -131,13 +137,15 @@ class OutputHelper
 
     public static function printTimeDiff(string $desc, float $start): void
     {
-        self::print(self::timeDiff($desc, $start));
+        self::print(
+            sprintf('   ~~~ %s time diff: %.3f ~~~', $desc, self::timeDiff($start))
+        );
     }
 
-    public static function timeDiff(string $desc, float $start): string
+    public static function timeDiff(float $start): float
     {
         $end = microtime(true);
 
-        return sprintf('~~~ %s time diff: %.10f ~~~', $desc, $end - $start);
+        return $end - $start;
     }
 }

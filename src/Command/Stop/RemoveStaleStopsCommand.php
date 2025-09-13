@@ -3,7 +3,6 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Command\AbstractCommand;
@@ -53,11 +52,8 @@ class RemoveStaleStopsCommand extends AbstractCommand implements PositionDepende
     public function __construct(
         private readonly StopRepository $stopRepository,
         private readonly ExchangeServiceInterface $exchangeService,
-        PositionServiceInterface $positionService,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

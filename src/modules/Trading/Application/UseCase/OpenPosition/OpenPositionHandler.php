@@ -6,7 +6,10 @@ namespace App\Trading\Application\UseCase\OpenPosition;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
@@ -19,21 +22,37 @@ use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\OrdersGrid;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
+use App\Domain\Price\Helper\PriceHelper;
 use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
+use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use RuntimeException;
+use Throwable;
 
+/**
+ * @todo | open-position | positions lifetime
+ * @todo | open-position | full stops grid
+ * @todo | default buy-grid from ta
+ * @todo | а позиции сами точно переоткрываются (usual 11.07 17:43 мск) что с ним кстати было? разобрать ся
+ * lumia usual 11.07 ~17:00мск тоже хороший пример (надо ловить)
+ *
+ * FORMUSDT (11.07 ~19:00 мск) не поймался скринером: надо чаще
+ * BANK (18.07 ~20:00 мск) поймался скринером. посмотреть что можно сделать автоматически
+ *          [2025-07-18T16:49:20.124992+00:00] app_notification.INFO: days=0.70 [! 41.70% !] BANKUSDT [days=0.70 from 07-18].price=0.05895 vs curr.price = 0.08353: Δ = 0.02458 (> 17.868% [17.87%]) BANKUSDT [] {"acc_name":"sub1","worker_name":"ASYNC"}
+ */
 final class OpenPositionHandler
 {
     private OpenPositionEntryDto $entryDto;
@@ -45,6 +64,7 @@ final class OpenPositionHandler
         private readonly ExchangeAccountServiceInterface $accountService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly OrderServiceInterface $tradeService,
+        private readonly MarketBuyHandler $marketBuyHandler,
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
@@ -57,9 +77,27 @@ final class OpenPositionHandler
     /**
      * @throws CannotAffordOrderCostException
      * @throws AutoReopenPositionDenied
-     * @throws Exception
+     * @throws Throwable
      */
     public function handle(OpenPositionEntryDto $entryDto): void
+    {
+        try {
+            $this->doHandle($entryDto);
+        } catch (Throwable $e) {
+            if ($this->entityManager->getConnection()->isTransactionActive()) {
+                $this->entityManager->rollback();
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @throws CannotAffordOrderCostException
+     * @throws AutoReopenPositionDenied
+     * @throws Exception
+     */
+    public function doHandle(OpenPositionEntryDto $entryDto): void
     {
         $this->entryDto = $entryDto;
         $symbol = $this->entryDto->symbol;
@@ -92,22 +130,45 @@ final class OpenPositionHandler
         }
 
         $buyGridOrdersVolumeSum = 0;
-        $buyOrders = $entryDto->buyGridsDefinition === null ? [] : $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
+        $buyOrders = $entryDto->asBuyOrder || $entryDto->buyGridsDefinition === null ? [] : $this->createBuyOrdersGrid($this->entryDto->buyGridsDefinition, $totalSize);
         foreach ($buyOrders as $buyOrder) {
             $buyGridOrdersVolumeSum += $buyOrder->getVolume();
         }
 
 # do market buy
-        $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum); // $marketBuyPart = Percent::fromString('100%')->sub($gridPart); $marketBuyVolume = $marketBuyPart->of($size);
+        $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum);
 
-        if ($entryDto->stopsGridsDefinition) {
+        if (!$entryDto->asBuyOrder && $entryDto->stopsGridsDefinition) {
             $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
         }
 
-        $this->tradeService->marketBuy($symbol, $positionSide, $marketBuyVolume);
+        if ($entryDto->asBuyOrder) {
+            if (!$this->currentlyOpenedPosition) {
+                throw new RuntimeException('Wrong usage: $asBuyOrder applicable only if there is opened position');
+            }
+
+            // must be pushed as usual
+            $price = $positionSide->isShort()
+                ? PriceHelper::max($this->currentlyOpenedPosition->entryPrice(), $this->ticker->markPrice)
+                : PriceHelper::min($this->currentlyOpenedPosition->entryPrice(), $this->ticker->markPrice);
+
+            $context = [
+                BuyOrder::FORCE_BUY_CONTEXT => true,
+                BuyOrder::AS_BUY_ON_OPEN_POSITION => true,
+            ];
+
+            $buyOrder = $this->createBuyOrderHandler->handle(new CreateBuyOrderEntryDto($symbol, $positionSide, $marketBuyVolume, $price->value(), $context, BuyOrderState::Active))->buyOrder;
+        } else {
+            $checksContext = TradingCheckContext::withTicker($this->ticker);
+            $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $positionSide, $marketBuyVolume), $checksContext);
+        }
 
         $this->entityManager->flush();
         $this->entityManager->commit();
+
+        if ($entryDto->asBuyOrder) {
+            OutputHelper::print(sprintf('%s: additional BO.id = %d', OutputHelper::shortClassName($this), $buyOrder->getId()));
+        }
 
         // @todo | check on prod that position opened with desired size (vs testnet)
         $resultPosition = $this->positionService->getPosition($symbol, $positionSide);
@@ -116,12 +177,8 @@ final class OpenPositionHandler
         }
 
         foreach ($buyOrders as $buyOrder) {
-            if (!$buyOrder->getOppositeOrderDistance()) {
-                $buyOrder->setIsWithoutOppositeOrder(); // only if opposite distance was not provided while orders creation
-            }
-
             if ($resultPosition->isSupportPosition()) {
-                $buyOrder->isForceBuyOrder(); // @todo | open-position | research
+                $buyOrder->setIsForceBuyOrderContext(); // @todo | open-position | different logic for support position
             }
             $this->buyOrderRepository->save($buyOrder);
         }
@@ -238,14 +295,17 @@ final class OpenPositionHandler
     private function getTotalSize(): float
     {
         $contractBalance = $this->accountService->getContractWalletBalance($this->entryDto->symbol->associatedCoin());
-        if ($contractBalance->available() <= 0) {
-            throw new Exception('Insufficient available contract balance');
+        $available = $contractBalance->available();
+        if ($available <= 0) {
+            throw new InsufficientAvailableBalanceException('Insufficient available contract balance');
         }
 
         // @todo use leverage
         $contractCost = $this->ticker->indexPrice->value() / 100 * (1 + 0.1);
 
-        return $this->entryDto->percentOfDepositToRisk->of($contractBalance->available() / $contractCost);
+        $available = self::balanceConsideredAsAvailableForTrade($contractBalance);
+
+        return $this->entryDto->percentOfDepositToRisk->of($available / $contractCost);
     }
 
     private function isDryRun(): bool
@@ -258,5 +318,11 @@ final class OpenPositionHandler
         if ($this->entryDto->outputEnabled) {
             OutputHelper::print($message);
         }
+    }
+
+    public static function balanceConsideredAsAvailableForTrade(ContractBalance $contractBalance): float
+    {
+        // @todo | autoOpen | parameters
+        return $contractBalance->available() / max(1.5, $contractBalance->unrealizedPartToTotal());
     }
 }

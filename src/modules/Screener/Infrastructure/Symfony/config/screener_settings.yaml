@@ -1,6 +1,12 @@
-### \App\Screener\Application\Settings\ScreenerSettings
+### \App\Screener\Application\Settings\PriceChangeSettings
+priceChange.significantDelta.oneDay.atr.baseMultiplier: 2.5
+
 
 ### \App\Screener\Application\Settings\ScreenerEnabledHandlersSettings
-screener.significantPriceChange.enabled: false
+screener.significantPriceChange.enabled: true
 
-priceChange.significantDelta.oneDay.baseMultiplier: 1
+
+### \App\Screener\Application\Settings\ScreenerNotificationsSettings
+screener.significantPriceChange.notifications.enabled: true
+screener.significantPriceChange.notifications.enabled[symbol=USD1USDT]: false
+screener.significantPriceChange.notifications.enabled[symbol=USDCUSDT]: false

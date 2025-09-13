@@ -7,6 +7,8 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
+use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -15,7 +17,6 @@ use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\Query\Parameter;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
-use RuntimeException;
 
 /**
  * @extends ServiceEntityRepository<Stop>
@@ -27,8 +28,12 @@ use RuntimeException;
  */
 class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
 {
+    private const string isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
+    private const string createdAfterOtherSymbolLoss = Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS;
+    private const string createdAfterFixHedgeOppositePosition = Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION;
+    private const string lockInProfitStepAliasFlag = Stop::LOCK_IN_PROFIT_STEP_ALIAS;
+
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
-    private string $isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -60,12 +65,17 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     /**
      * @return Stop[]
      */
-    public function findAllByPositionSide(SymbolInterface $symbol, Side $side, ?callable $qbModifier = null): array
+    public function findAllByParams(?SymbolInterface $symbol = null, ?Side $side = null, ?callable $qbModifier = null): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
-        ;
+        $qb = $this->createQueryBuilder('s');
+
+        if ($side) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         if ($qbModifier) {
             $qbModifier($qb);
@@ -74,12 +84,30 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         return $qb->getQuery()->getResult();
     }
 
+    public function findActiveInRange(
+        SymbolInterface $symbol,
+        Side $side,
+        PriceRange $priceRange,
+        bool $exceptOppositeOrders = false,
+        ?callable $qbModifier = null
+    ): array {
+        return $this->findActiveQB($symbol, $side, null, $exceptOppositeOrders, function (QueryBuilder $qb) use ($priceRange, $qbModifier) {
+            $qbModifier && $qbModifier($qb);
+
+            $priceField = $qb->getRootAliases()[0] . '.price';
+            $from = $priceRange->from()->value();
+            $to = $priceRange->to()->value();
+
+            $qb->andWhere($priceField . ' BETWEEN :priceFrom AND :priceTo')->setParameter(':priceFrom', $from)->setParameter(':priceTo', $to);
+        })->getQuery()->getResult();
+    }
+
     /**
      * @return Stop[]
      */
     public function findActive(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
@@ -88,17 +116,25 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     }
 
     public function findActiveQB(
-        SymbolInterface $symbol,
-        Side $side,
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
         ?Ticker $nearTicker = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): QueryBuilder {
-        $qb = $this->createQueryBuilder('s')
+        $alias = 's';
+
+        $qb = $this->createQueryBuilder($alias)
             ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side)
-            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
         ;
+
+        if ($side) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
 
         // а это тут вообще зачем? Для случая ConditionalBO?
         if ($exceptOppositeOrders) {
@@ -115,7 +151,7 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         }
 
         if ($qbModifier) {
-            $qbModifier($qb);
+            $qbModifier($qb, $alias);
         }
 
         return $qb;
@@ -240,10 +276,82 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
 
     public function findActiveCreatedByLiquidationHandler(): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->isAdditionalStopFromLiquidationHandler', 'true') = true")
+        $qb = $this->createQueryBuilder($alias = 's')->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false");
+        $qb = self::addIsAdditionalStopFromLiqHandlerCondition($qb, $alias);
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public static function addIsAdditionalStopFromLiqHandlerCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    {
+        $alias = $alias ?? QueryHelper::rootAlias($qb);
+        $flagName = self::isAdditionalStopFromLiquidationHandler;
+
+        return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
+    }
+
+    /**
+     * @see Stop::isAnyKindOfFixation
+     */
+    public static function addIsAnyKindOfFixationCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    {
+        $alias = $alias ?? QueryHelper::rootAlias($qb);
+
+        $flagAfterOtherSymbolLoss = self::createdAfterOtherSymbolLoss;
+        $flagAfterFixHedge = self::createdAfterFixHedgeOppositePosition;
+        $lockInProfitStepAliasFlag = self::lockInProfitStepAliasFlag;
+
+        return $qb
+            ->andWhere(
+                "(JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true"
+                . " OR JSON_ELEMENT_EQUALS($alias.context, '$flagAfterFixHedge', 'true') = true"
+                . " OR HAS_ELEMENT(s.context, '$lockInProfitStepAliasFlag') = true)"
+            )
         ;
+    }
+
+    public function findStopsWithFakeExchangeOrderId(): array
+    {
+        $fakeExchangeOrderId = Stop::FAKE_EXCHANGE_ORDER_ID;
+
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$this->exchangeOrderIdContext', '$fakeExchangeOrderId') = true");
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return Stop[]
+     */
+    public function getByLockInProfitStepAlias(SymbolInterface $symbol, Side $positionSide, string $stepAlias): array
+    {
+        $flag = self::lockInProfitStepAliasFlag;
+
+        $qb = $this->findActiveQB($symbol, $positionSide)
+            ->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name())
+            ->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $positionSide)
+            ->andWhere("HAS_ELEMENT(s.context, '$flag') = true")
+            ->andWhere("JSON_ELEMENT_EQUALS(s.context, '$flag', '$stepAlias') = true")
+        ;
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function getCreatedAsLockInProfit(?SymbolInterface $symbol = null, ?Side $positionSide = null): array
+    {
+        $flag = self::lockInProfitStepAliasFlag;
+
+        $qb = $this->createQueryBuilder('s')
+            ->andWhere("HAS_ELEMENT(s.context, '$flag') = true")
+        ;
+
+        if ($symbol) {
+            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
+
+        if ($positionSide) {
+            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $positionSide);
+        }
 
         return $qb->getQuery()->getResult();
     }

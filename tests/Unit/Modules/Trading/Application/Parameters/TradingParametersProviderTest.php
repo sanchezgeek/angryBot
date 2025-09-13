@@ -4,14 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
+use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\RiskLevel;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -24,24 +32,49 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 final class TradingParametersProviderTest extends KernelTestCase
 {
     use SettingsAwareTest;
+    use TaToolsProviderMocker;
 
+    const int LONG_ATR_PERIOD = TradingParametersProviderInterface::LONG_ATR_PERIOD;
+    const int FAST_ATR_PERIOD = 2;
     private AppSettingsProviderInterface|MockObject $appSettingsProvider;
 
     protected function setUp(): void
     {
         $this->appSettingsProvider = self::getContainerSettingsProvider();
+        $this->initializeTaProviderStub();
     }
 
     /**
      * @dataProvider defaultValueCases
      */
-    public function testSafeDistanceOnRefPriceDefault(SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): void
-    {
+    public function testSafeDistanceOnRefPriceDefault(
+        SymbolInterface $symbol,
+        Side $positionSide,
+        float $refPrice,
+        float $longAtrPercentChange,
+        float $fastAtrPercentChange,
+        float $expectedSafeDistance,
+        ?float $k = null
+    ): void {
+        self::overrideSetting(SettingAccessor::exact(TradingSettings::Global_RiskLevel, $symbol, $positionSide), RiskLevel::Conservative);
+
         if ($k) {
             self::overrideSetting(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $k);
         }
 
-        $parameters = new TradingDynamicParameters($this->appSettingsProvider);
+        $this->analysisToolsProviderStub->mockedTaTools($symbol, TimeFrame::D1)->addAtrResult(
+            period: self::LONG_ATR_PERIOD,
+            percentChange: $longAtrPercentChange,
+            refPrice: $refPrice
+        );
+
+        $this->analysisToolsProviderStub->mockedTaTools($symbol, TimeFrame::D1)->addAtrResult(
+            self::FAST_ATR_PERIOD,
+            percentChange: $fastAtrPercentChange,
+            refPrice: $refPrice
+        );
+
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub, $this->contractBalanceProviderMock());
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
@@ -53,87 +86,39 @@ final class TradingParametersProviderTest extends KernelTestCase
         $symbol = SymbolEnum::BTCUSDT;
         $side = Side::Sell;
 
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 94835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
+        $refPrice = 100500;
+        $longAtrPercentChange = 2;
+        $fastAtrPercentChange = 4;
 
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 74835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
+        $expectedSafeDistance = 8040;
+        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [
+            $symbol,
+            $side,
+            $refPrice,
+            $longAtrPercentChange,
+            $fastAtrPercentChange,
+            $expectedSafeDistance,
+        ];
 
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 54835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
+        $k = 3;
+        $expectedSafeDistance = 12060;
+        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance, $k) => [
+            $symbol,
+            $side,
+            $refPrice,
+            $longAtrPercentChange,
+            $fastAtrPercentChange,
+            $expectedSafeDistance,
+            $k,
+        ];
+    }
 
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 34835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
+    private function contractBalanceProviderMock(): ContractBalanceProviderInterface
+    {
+        $contractBalanceProvider = $this->createMock(ContractBalanceProviderInterface::class);
+        $contractBalanceProvider->method('getContractWalletBalance')->willReturn(new ContractBalance(Coin::USDT, 100, 100, 100, 100));
 
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 24835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 14835.93);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 3824);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 2824);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 1824);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 606);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 388);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 148);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 80.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 50.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 10.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 5.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 2.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 1.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.9112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.7112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.5112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.3112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.1112);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.09351);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.03351);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.01351);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance) => [$symbol, $side, $refPrice, $expectedSafeDistance];
-
-        $k = 1.5;
-        $expectedSafeDistance = self::getExpectedSafeDistance($symbol, $side, $refPrice = 0.01351, $k);
-        yield self::caseDescription($symbol, $side, $refPrice, $expectedSafeDistance, $k) => [$symbol, $side, $refPrice, $expectedSafeDistance, $k];
+        return $contractBalanceProvider;
     }
 
     /**
@@ -143,7 +128,7 @@ final class TradingParametersProviderTest extends KernelTestCase
     {
         self::overrideSetting(SettingAccessor::exact(SafePriceDistanceSettings::SafePriceDistance_Percent, $symbol, $positionSide), $overridePercent);
 
-        $parameters = new TradingDynamicParameters($this->appSettingsProvider);
+        $parameters = new TradingDynamicParameters($this->appSettingsProvider, $this->analysisToolsProviderStub, $this->contractBalanceProviderMock());
 
         $result = $parameters->safeLiquidationPriceDelta($symbol, $positionSide, $refPrice);
 
@@ -158,25 +143,6 @@ final class TradingParametersProviderTest extends KernelTestCase
         $refPrice = 100000;
         $expectedSafeDistance = 5000;
         yield self::caseDescriptionWithOverride($overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance) => [$overridePercent, $symbol, $side, $refPrice, $expectedSafeDistance];
-    }
-
-    private static function getExpectedSafeDistance(SymbolInterface $symbol, Side $side, float $refPrice, float $k = 1): float
-    {
-        $base = match (true) {
-            $refPrice >= 10000 => $refPrice / 12,
-            $refPrice >= 5000 => $refPrice / 10,
-            $refPrice >= 2000 => $refPrice / 9,
-            $refPrice >= 1500 => $refPrice / 8,
-            $refPrice >= 1000 => $refPrice / 6,
-            $refPrice >= 100 => $refPrice / 4,
-            $refPrice >= 1 => $refPrice / 3,
-            $refPrice >= 0.1 => $refPrice / 2.5,
-            $refPrice >= 0.05 => $refPrice / 2,
-            $refPrice >= 0.03 => $refPrice,
-            default => $refPrice * 1.4,
-        };
-
-        return $base * $k;
     }
 
     private function caseDescription(SymbolInterface $symbol, Side $positionSide, float $refPrice, float $expectedSafeDistance, ?float $k = null): string

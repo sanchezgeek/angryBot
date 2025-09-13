@@ -6,7 +6,6 @@ namespace App\Application\UseCase\Trading\MarketBuy;
 
 use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
 use App\Application\UseCase\Trading\MarketBuy\Exception\ChecksNotPassedException;
-use App\Application\UseCase\Trading\Sandbox\Exception\Unexpected\UnexpectedSandboxExecutionException;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
@@ -33,30 +32,35 @@ readonly class MarketBuyHandler
     }
 
     /**
-     * # checks
-     * @throws UnexpectedSandboxExecutionException
+     * ### checks
      * @throws ChecksNotPassedException
      *
-     * # buy
+     * ### buy
      * @throws CannotAffordOrderCostException
      * @throws ApiRateLimitReached
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      * @throws OrderDoesNotMeetMinimumOrderValue
      */
-    public function handle(MarketBuyEntryDto $dto, TradingCheckContext $checksContext): string
+    public function handle(MarketBuyEntryDto $dto, ?TradingCheckContext $checksContext = null): string
     {
         $symbol = $dto->symbol;
+
         $ticker = $this->exchangeService->ticker($symbol);
 
-        $checksContext->ticker = $ticker;
+        if (!$checksContext) {
+            $checksContext = TradingCheckContext::withTicker($ticker);
+        } else {
+            $checksContext->ticker = $ticker;
+        }
+
         $checksResult = $this->checks->check($dto, $checksContext);
 
         if (!$checksResult->success) {
-            throw new ChecksNotPassedException(!$checksResult->quiet ? $checksResult->info() : '');
+            throw new ChecksNotPassedException($checksResult);
         }
 
-        $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->lastPrice);
+        $exchangeOrder = ExchangeOrder::roundedToMin($symbol, $dto->volume, $ticker->markPrice);
 
         try {
             $orderId = $this->orderService->marketBuy($symbol, $dto->positionSide, $exchangeOrder->getVolume());

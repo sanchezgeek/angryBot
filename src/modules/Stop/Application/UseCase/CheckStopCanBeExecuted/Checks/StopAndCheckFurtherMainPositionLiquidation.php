@@ -12,11 +12,10 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\Result\StopCheckFailureEnum;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopCheckDto;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
-use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
 use App\Trading\SDK\Check\Contract\TradingCheckInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
@@ -34,7 +33,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    public const ALIAS = 'check-mainPos-before-stop-support';
+    public const string ALIAS = 'STOP-SUPPORT/MAIN-LIQUIDATION_check';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
@@ -134,10 +133,10 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
 // @todo | stop/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $mainPositionStateAfterExec->isPositionInLoss($ticker->markPrice) ? $ticker->markPrice : $mainPositionStateAfterExec->entryPrice();
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side, $withPrice->value());
-        $safePriceAssertionStrategy = $this->settings->required(
-            SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $mainPositionStateAfterExec->symbol, $mainPositionStateAfterExec->side)
-        );
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $safePriceAssertionStrategy = TradingDynamicParameters::safePriceDistanceApplyStrategy($symbol, $mainPositionStateAfterExec->side);
+        $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($mainPositionStateAfterExec, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
+        $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;
 
         $info = sprintf(
             '%s | id=%d, qty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
@@ -146,7 +145,7 @@ final readonly class StopAndCheckFurtherMainPositionLiquidation implements Tradi
             $stop->getVolume(),
             $executionPrice,
             $mainPositionLiquidation,
-            $mainPositionLiquidation->deltaWith($withPrice),
+            $mainPositionLiquidation->deltaWith($usedPrice),
             $symbol->makePrice($safeDistance),
         );
 

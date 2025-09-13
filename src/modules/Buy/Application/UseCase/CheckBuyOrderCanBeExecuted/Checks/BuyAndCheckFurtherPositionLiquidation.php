@@ -13,9 +13,13 @@ use App\Application\UseCase\Trading\Sandbox\Handler\UnexpectedSandboxExecutionEx
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FurtherPositionLiquidationAfterBuyIsTooClose;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Liquidation\Domain\Assert\PositionLiquidationIsSafeAssertion;
+use App\Liquidation\Domain\Assert\SafePriceAssertionStrategyEnum;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\SafePriceDistanceSettings;
 use App\Trading\SDK\Check\Contract\Dto\In\CheckOrderDto;
@@ -35,7 +39,7 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     use CheckBasedOnExecutionInSandbox;
     use CheckBasedOnCurrentPositionState;
 
-    const ALIAS = 'check-liq-before-buy';
+    public const string ALIAS = 'LIQUIDATION';
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
@@ -61,20 +65,19 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
     {
         $orderDto = self::extractMarketBuyEntryDto($orderDto);
 
+        $checkMustBeSkipped = $orderDto->force;
+        if ($checkMustBeSkipped) {
+            return false;
+        }
+
         // position and order mismatch? => logic
         $this->enrichContextWithCurrentPositionState($orderDto->symbol, $orderDto->positionSide, $context);
 
-        $symbol = $orderDto->symbol;
-        $position = $context->currentPositionState;
-        $checkMustBeSkipped = $orderDto->force;
-
         return
-            !$checkMustBeSkipped && (
-                $position->isPositionWithoutHedge()
-                || $position->isMainPosition()
-                // @todo | buy/check | situation when position became main after buy
-//                || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
-            )
+            ($position = $context->currentPositionState)
+            && $position->isMainPositionOrWithoutHedge()
+            // @todo | buy/check | situation when position became main after buy
+//            || $symbol->roundVolume($position->size + $orderDto->volume) > $position->oppositePosition->size
         ;
     }
 
@@ -103,6 +106,10 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
         try {
             $sandbox->processOrders($sandboxOrder);
         } catch (Throwable $e) {
+            if (!$context->currentPositionState || $context->currentPositionState->isDummyAndFake) {
+                return TradingCheckResult::succeed($this, 'sandbox exception but position not opened');
+            }
+
             $this->unexpectedSandboxExceptionHandler->handle($this, $e, $sandboxOrder);
         }
 
@@ -115,33 +122,28 @@ final readonly class BuyAndCheckFurtherPositionLiquidation implements TradingChe
             return TradingCheckResult::succeed($this, 'position became support after buy');
         }
 
-        $executionPrice = $ticker->lastPrice;
+        $executionPrice = $ticker->lastPrice; // @todo | buy | переделать расчёт pnl на основе markPrice
         $liquidationPrice = $positionAfterBuy->liquidationPrice();
 
         // @todo | liquidation | null
-        $identifierInfo = $order->sourceBuyOrder ? sprintf('id=%d, ', $order->sourceBuyOrder->getId()) : '';
         if ($liquidationPrice->eq(0)) {
-            return TradingCheckResult::succeed(
-                $this,
-                sprintf('%s | %sqty=%s, price=%s | liq=0', $positionAfterBuy, $identifierInfo, $order->volume, $executionPrice)
-            );
+            return TradingCheckResult::succeed($this, 'liq=0');
         }
 
 // @todo | buy/check | separated strategy if support in loss / main not in loss (select price between ticker and entry / or add distance between support and ticker)
         $withPrice = $ticker->markPrice;
+
         $safeDistance = $this->parameters->safeLiquidationPriceDelta($symbol, $positionSide, $withPrice->value());
 // @todo | settings | it also can be setting for whole class to define hot to retrieve setting (with alternatives / exact)
-        $safePriceAssertionStrategy = $this->settings->required(SettingAccessor::withAlternativesAllowed(SafePriceDistanceSettings::SafePriceDistance_Apply_Strategy, $symbol, $positionSide));
-        $isLiquidationOnSafeDistance = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $safePriceAssertionStrategy = TradingDynamicParameters::safePriceDistanceApplyStrategy($symbol, $positionSide);
+        $isLiquidationOnSafeDistanceResult = PositionLiquidationIsSafeAssertion::assert($positionAfterBuy, $ticker, $safeDistance, $safePriceAssertionStrategy);
+        $isLiquidationOnSafeDistance = $isLiquidationOnSafeDistanceResult->success;
+        $usedPrice = $isLiquidationOnSafeDistanceResult->usedPrice;
 
         $info = sprintf(
-            '%s | %sqty=%s, price=%s | liq=%s, Δ=%s, safe=%s',
-            $positionAfterBuy,
-            $identifierInfo,
-            $order->volume,
-            $executionPrice,
+            'liq=%s | Δ=%s, safeΔ=%s',
             $liquidationPrice,
-            $liquidationPrice->deltaWith($withPrice),
+            $liquidationPrice->deltaWith($usedPrice),
             $symbol->makePrice($safeDistance)
         );
 

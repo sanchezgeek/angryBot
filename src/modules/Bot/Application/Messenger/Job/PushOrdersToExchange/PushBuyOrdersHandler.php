@@ -19,20 +19,17 @@ use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
-use App\Bot\Application\Settings\PushBuyOrderSettings;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
-use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Factory\PositionFactory;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Repository\StopRepository;
-use App\Bot\Domain\Strategy\StopCreate;
 use App\Bot\Domain\Ticker;
+use App\Buy\Application\Settings\PushBuyOrderSettings;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
-use App\Domain\Position\Exception\SizeCannotBeLessOrEqualsZeroException;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
@@ -50,6 +47,7 @@ use App\Infrastructure\ByBit\Service\Exception\Trade\OrderDoesNotMeetMinimumOrde
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use App\Worker\AppContext;
@@ -72,21 +70,19 @@ use function sprintf;
 #[AsMessageHandler]
 final class PushBuyOrdersHandler extends AbstractOrdersPusher
 {
-    public const STOP_ORDER_TRIGGER_DELTA = 37;
-
     # @todo | canUseSpot | must be calculated "on the fly" (required balance of funds must be provided by CheckPositionIsUnderLiquidationHandler)
-    public const USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
-    public const USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
-    public const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
+    public const float USE_SPOT_IF_BALANCE_GREATER_THAN = 65.5;
+    public const int USE_SPOT_AFTER_INDEX_PRICE_PNL_PERCENT = 70;
+    public const float TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = 0.05;
 
-    public const FIX_SUPPORT_ENABLED = false;
-    public const FIX_MAIN_POSITION_ENABLED = false;
-    public const FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
+    public const bool FIX_SUPPORT_ENABLED = false;
+    public const bool FIX_MAIN_POSITION_ENABLED = false;
+    public const bool FIX_SUPPORT_ONLY_FOR_BUY_OPPOSITE_ORDERS_AFTER_GOT_SL = true;
 
     /** "Reserved" - e.g. for avoiding liquidation */
-    private const RESERVED_BALANCE = 0;
-    public const SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
-    private const LAST_CANNOT_AFFORD_RESET_INTERVAL = 20;
+    private const float RESERVED_BALANCE = 0;
+    public const float SPOT_TRANSFER_ON_BUY_MULTIPLIER = 1.1;
+    private const int LAST_CANNOT_AFFORD_RESET_INTERVAL = 20;
 
     private array $lastCannotAffordAt = [];
     private array $lastCannotAffordAtPrice = [];
@@ -109,6 +105,10 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      */
     private function canUseSpot(Ticker $ticker, Position $position, SpotBalance $spotBalance, ?BuyOrder $buyOrder = null): bool
     {
+        if (!SettingsHelper::withAlternatives(PushBuyOrderSettings::UseSpot_Enabled, $position->symbol, $position->side) !== true) {
+            return false;
+        }
+
         // @todo | check | other | reserved balance
 //        if ($spotBalance->available() < self::RESERVED_BALANCE) {
 //            return false;
@@ -195,11 +195,11 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      * @throws UnexpectedSandboxExecutionException
      * @throws RandomException
      * @throws OrderDoesNotMeetMinimumOrderValue
-     * @throws SizeCannotBeLessOrEqualsZeroException
      * @throws UnexpectedApiErrorException
      * @throws TickerNotFoundException
      * @throws ApiRateLimitReached
      * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
      * @throws PermissionDeniedException
      */
     public function __invoke(PushBuyOrders $message): void
@@ -248,7 +248,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
                 if ($order->mustBeExecuted($ticker)) {
                     $lastBuy = $order;
-                    $this->buy($position, $ticker, $order);
+                    $this->buy($order);
 
                      if ($order->getExchangeOrderId()) {
                          $boughtOrders[] = new ExchangeOrder($symbol, $order->getVolume(), $last);
@@ -307,6 +307,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
 
                 // reopen closed volume on further movement
                 $distance = 100; if (!AppContext::isTest()) $distance += random_int(-20, 35);
+                // @todo | symbol | for all symbols
                 $reopenPrice = $position->isShort() ? $index->sub($distance) : $index->add($distance);
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($symbol, $side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
@@ -371,18 +372,13 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
      * @throws UnexpectedSandboxExecutionException
      * @throws OrderDoesNotMeetMinimumOrderValue
      */
-    private function buy(Position $position, Ticker $ticker, BuyOrder $order): void
+    private function buy(BuyOrder $order): void
     {
         try {
             $exchangeOrderId = $this->marketBuyHandler->handle(MarketBuyEntryDto::fromBuyOrder($order), $this->checksContext);
-            $order->setExchangeOrderId($exchangeOrderId);
-//            $this->events->dispatch(new BuyOrderPushedToExchange($order));
-
-            if ($order->isWithOppositeOrder()) {
-                $this->createStop($position, $ticker, $order);
-            }
+            $order->wasPushedToExchange($exchangeOrderId);
         } catch (ChecksNotPassedException $e) {
-            ($message = $e->getMessage()) && OutputHelper::failed($message);
+            !$e->result->quiet && OutputHelper::failed($e->getMessage());
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
             $this->sleep($e->getMessage());
@@ -391,123 +387,6 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
         } finally {
             $this->buyOrderRepository->save($order);
         }
-    }
-
-    private function createStop(Position $position, Ticker $ticker, BuyOrder $buyOrder): void
-    {
-        $side = $position->side;
-        $volume = $buyOrder->getVolume();
-
-        $context = [];
-        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
-            $context[Stop::CLOSE_BY_MARKET_CONTEXT] = true;
-        }
-
-        if ($specifiedStopDistance = $buyOrder->getOppositeOrderDistance()) {
-            $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $specifiedStopDistance : $buyOrder->getPrice() - $specifiedStopDistance;
-            $this->stopService->create($position->symbol, $side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
-            return;
-        }
-
-        $triggerPrice = null;
-
-        // @todo | based on liquidation if position under hedge?
-        $strategy = $this->getStopStrategy($position, $buyOrder, $ticker);
-
-        $stopStrategy = $strategy['strategy'];
-        $description = $strategy['description'];
-
-        $basePrice = null;
-        if ($stopStrategy === StopCreate::AFTER_FIRST_POSITION_STOP) {
-            if ($firstPositionStop = $this->stopRepository->findFirstPositionStop($position)) {
-                $basePrice = $firstPositionStop->getPrice();
-            }
-        } elseif ($stopStrategy === StopCreate::AFTER_FIRST_STOP_UNDER_POSITION || ($stopStrategy === StopCreate::ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM)) {
-            if ($firstStopUnderPosition = $this->stopRepository->findFirstStopUnderPosition($position)) {
-                $basePrice = $firstStopUnderPosition->getPrice();
-            } else {
-                $stopStrategy = StopCreate::UNDER_POSITION;
-            }
-        }
-
-        if ($stopStrategy === StopCreate::UNDER_POSITION || ($stopStrategy === StopCreate::ONLY_BIG_SL_UNDER_POSITION && $volume >= StopCreate::BIG_SL_VOLUME_STARTS_FROM)) {
-            $positionPrice = \ceil($position->entryPrice);
-            if ($ticker->isIndexAlreadyOverStop($side, $positionPrice)) {
-                $basePrice = $side->isLong() ? $ticker->indexPrice->value() - 15 : $ticker->indexPrice->value() + 15;
-            } else {
-                $basePrice = $side->isLong() ? $positionPrice - 15 : $positionPrice + 15;
-                $basePrice += random_int(-15, 15);
-            }
-        } elseif ($stopStrategy === StopCreate::SHORT_STOP) {
-            $stopPriceDelta = 20 + random_int(1, 25);
-            $triggerPrice = $side->isShort() ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
-        }
-
-        if ($basePrice) {
-            if (!$ticker->isIndexAlreadyOverStop($side, $basePrice)) {
-                $triggerPrice = $side === Side::Sell ? $basePrice + 1 : $basePrice - 1;
-            } else {
-                $description = 'because index price over stop)';
-            }
-        }
-
-        // If still cannot get best $triggerPrice
-        if ($stopStrategy !== StopCreate::DEFAULT && $triggerPrice === null) {
-            $stopStrategy = StopCreate::DEFAULT;
-        }
-
-        if ($stopStrategy === StopCreate::DEFAULT) {
-            $stopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($volume);
-
-            $triggerPrice = $side === Side::Sell ? $buyOrder->getPrice() + $stopPriceDelta : $buyOrder->getPrice() - $stopPriceDelta;
-        }
-
-        $this->stopService->create($position->symbol, $side, $triggerPrice, $volume, self::STOP_ORDER_TRIGGER_DELTA, $context);
-    }
-
-    /**
-     * @return array{strategy: StopCreate, description: string}
-     */
-    private function getStopStrategy(Position $position, BuyOrder $order, Ticker $ticker): array
-    {
-        if (($hedge = $position->getHedge()) && $hedge->isSupportPosition($position)) {
-            $hedgeStrategy = $hedge->getHedgeStrategy();
-            return [
-                'strategy' => $hedgeStrategy->supportPositionStopCreation, // 'strategy' => $hedge->isSupportPosition($position) ? $hedgeStrategy->supportPositionStopCreation : $hedgeStrategy->mainPositionStopCreation,
-                'description' => $hedgeStrategy->description,
-            ];
-        }
-
-        $delta = $position->getDeltaWithTicker($ticker);
-
-        // only if without hedge?
-        // if (($delta < 0) && (abs($delta) >= $defaultStrategyStopPriceDelta)) {return ['strategy' => StopCreate::SHORT_STOP, 'description' => 'position in loss'];}
-
-        if ($order->isWithShortStop()) {
-            return ['strategy' => StopCreate::SHORT_STOP, 'description' => 'by $order->isWithShortStop() condition'];
-        }
-
-        // @todo Нужен какой-то определятор состояния трейда
-        if ($delta >= 1500) {
-            return ['strategy' => StopCreate::AFTER_FIRST_STOP_UNDER_POSITION, 'description' => sprintf('delta=%.2f -> increase position size', $delta)];
-        }
-
-        if ($delta >= 500) {
-            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> to reduce added by mistake on start', $delta)];
-        }
-
-        $defaultStrategyStopPriceDelta = StopCreate::getDefaultStrategyStopOrderDistance($order->getVolume());
-
-        // To not reduce position size by placing stop orders between position and ticker
-        if ($delta > (2 * $defaultStrategyStopPriceDelta)) {
-            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> keep position size on start', $delta)];
-        }
-
-        if ($delta > $defaultStrategyStopPriceDelta) {
-            return ['strategy' => StopCreate::UNDER_POSITION, 'description' => sprintf('delta=%.2f -> keep position size on start', $delta)];
-        }
-
-        return ['strategy' => StopCreate::DEFAULT, 'description' => 'by default'];
     }
 
     /**

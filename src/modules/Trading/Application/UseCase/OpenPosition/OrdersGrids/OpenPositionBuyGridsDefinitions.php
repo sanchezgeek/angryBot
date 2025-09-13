@@ -19,7 +19,6 @@ final readonly class OpenPositionBuyGridsDefinitions
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
-
     ) {
     }
 

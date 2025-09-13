@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Chart\UI\Symfony\Controller;
 
-use App\Chart\Application\CandlesProvider;
+use App\Chart\Application\Service\CandlesProvider;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Trading\Application\Symbol\SymbolProvider;
 use DateInterval;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,7 +30,7 @@ final class CandlesApiController extends AbstractController
         $from = $to->sub(new DateInterval('P1D'));
 
         return new JsonResponse(
-            $this->candlesProvider->getCandles($symbolParsed, $from, $to)
+            $this->candlesProvider->getCandles($symbolParsed, TimeFrame::D1, $from, $to)
         );
     }
 }

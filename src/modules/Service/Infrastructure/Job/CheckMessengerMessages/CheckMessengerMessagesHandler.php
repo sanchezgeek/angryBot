@@ -21,7 +21,6 @@ final class CheckMessengerMessagesHandler
         $count = (int) $result['count'];
         if ($count > self::LIMIT) {
             $this->appErrorLogger->error(sprintf('Found %d messages in messenger_messages.', $count));
-            $connection->executeQuery('DELETE FROM messenger_messages WHERE 1=1');
         }
     }
 

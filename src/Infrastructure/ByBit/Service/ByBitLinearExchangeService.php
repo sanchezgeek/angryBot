@@ -12,6 +12,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Domain\Trading\Enum\TimeFrame;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -23,9 +24,9 @@ use App\Infrastructure\ByBit\API\V5\Request\Market\GetTickersRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\CancelOrderRequest;
 use App\Infrastructure\ByBit\API\V5\Request\Trade\GetCurrentOrdersRequest;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Infrastructure\ByBit\Service\Exception\Market\SymbolNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\Market\TickerNotFoundException;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
-use App\Trading\Application\Symbol\Exception\SymbolEntityNotFoundException;
 use App\Trading\Application\Symbol\SymbolProvider;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\QuoteCoinNotEqualsSpecifiedOneException;
 use App\Trading\Application\UseCase\Symbol\InitializeSymbols\Exception\UnsupportedAssetCategoryException;
@@ -197,7 +198,7 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
      * @throws UnexpectedApiErrorException
      * @throws UnknownByBitApiErrorException
      */
-    public function getAllTickers(Coin $settleCoin): array
+    public function getAllTickers(Coin $settleCoin, ?callable $symbolNameFilter = null): array
     {
         $request = new GetTickersRequest(self::ASSET_CATEGORY, null, $settleCoin);
 
@@ -208,9 +209,15 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
 
         $result = [];
         foreach ($list as $item) {
+            $symbolName = $item['symbol'];
+
+            if ($symbolNameFilter && !$symbolNameFilter($symbolName)) {
+                continue;
+            }
+
             try {
-                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($item['symbol'], $settleCoin);
-            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException) {
+                $symbol = $this->symbolProvider->getOrInitializeWithCoinSpecified($symbolName, $settleCoin);
+            } catch (QuoteCoinNotEqualsSpecifiedOneException|UnsupportedAssetCategoryException|SymbolNotFoundException) {
                 continue;
             }
 
@@ -220,8 +227,13 @@ final class ByBitLinearExchangeService implements ExchangeServiceInterface
         return $result;
     }
 
-    public function getCandles(SymbolInterface $symbol, DateTimeImmutable $from, DateTimeImmutable $to, int $interval = 15, ?int $limit = null): array
-    {
+    public function getCandles(
+        SymbolInterface $symbol,
+        TimeFrame $interval,
+        DateTimeImmutable $from,
+        ?DateTimeImmutable $to = null,
+        ?int $limit = null
+    ): array {
         $request = new GetKlinesRequest(self::ASSET_CATEGORY, $symbol, $interval, $from, $to, $limit);
         $data = $this->sendRequest($request)->data();
 

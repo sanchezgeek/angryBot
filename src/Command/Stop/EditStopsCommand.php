@@ -3,7 +3,6 @@
 namespace App\Command\Stop;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Exchange\ActiveStopOrder;
@@ -13,10 +12,12 @@ use App\Command\Mixin\ConsoleInputAwareCommand;
 use App\Command\Mixin\OrderContext\AdditionalStopContextAwareCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
-use App\Command\SymbolDependentCommand;
+use App\Command\PositionDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\StopsCollection;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
+use App\Stop\Infrastructure\Cache\StopsCache;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use DomainException;
@@ -25,6 +26,7 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -36,8 +38,10 @@ use function implode;
 use function in_array;
 use function sprintf;
 
+// @todo | user-interaction | handlers
+
 #[AsCommand(name: 'sl:edit')]
-class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
+class EditStopsCommand extends AbstractCommand implements PositionDependentCommand, TradingParametersDependentCommand
 {
     use ConsoleInputAwareCommand;
     use PositionAwareCommand;
@@ -66,7 +70,8 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
     protected function configure(): void
     {
         $this
-            ->configurePositionArgs()
+            ->configureSymbolArgs()
+            ->configurePositionArgs(InputArgument::OPTIONAL)
             ->configurePriceRangeArgs()
             ->addOption(self::ACTION_OPTION, '-a', InputOption::VALUE_REQUIRED, 'Mode (' . implode(', ', self::ACTIONS) . ')')
             ->addOption(self::MOVE_TO_PRICE_OPTION, null, InputOption::VALUE_REQUIRED, 'Move orders to price | pricePnl%')
@@ -82,21 +87,14 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $symbol = $this->getSymbol();
-        $all = $this->paramFetcher->getBoolOption('all');
+        $this->stopsCache->clear();
+
+        $symbol = $this->getSymbol(false);
         $priceRange = $this->getRange();
         $filterCallbacksOption = $this->paramFetcher->getStringOption(self::FILTER_CALLBACKS_OPTION, false);
 
-        if (!$priceRange && !$filterCallbacksOption && !$all) {
-            throw new InvalidArgumentException(sprintf('One of `priceRange`| `%s` | `all` options must be specified.', self::FILTER_CALLBACKS_OPTION));
-        }
-
-        if ($all && $priceRange) {
-            throw new InvalidArgumentException('`all` and `priceRange` cannot be both selected.');
-        }
-
         $action = $this->getAction();
-        $positionSide = $this->getPositionSide();
+        $positionSide = $this->getPositionSide(false);
         try {
             $position = $this->getPosition();
         } catch (Exception $e) {
@@ -105,7 +103,7 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
         }
 
         if ($action === self::ACTION_REMOVE) {
-            $stops = $this->stopRepository->findAllByPositionSide($symbol, $positionSide);
+            $stops = $this->stopRepository->findAllByParams($symbol, $positionSide);
         } else {
             $stops = $this->stopRepository->findActive(
                 symbol: $symbol,
@@ -288,7 +286,7 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
     protected function getRange(): ?PriceRange
     {
         try {
-            return $this->getPriceRange();
+            return $this->getPriceRange(false);
         } catch (InvalidArgumentException $e) {
             return null;
         }
@@ -328,13 +326,11 @@ class EditStopsCommand extends AbstractCommand implements SymbolDependentCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly StopRepository $stopRepository,
         private readonly StopService $stopService,
-        PositionServiceInterface $positionService,
         private readonly ExchangeServiceInterface $exchangeService,
         private readonly LoggerInterface $appErrorLogger,
+        private readonly StopsCache $stopsCache,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

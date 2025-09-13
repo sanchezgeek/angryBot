@@ -97,4 +97,13 @@ final class PnlHelper
     {
         return 100; // @todo | use $position->positionLeverage ??;
     }
+
+    public static function transformPriceChangeToPnlPercent(Percent|float $percent): Percent|float
+    {
+        if ($percent instanceof Percent) {
+            return Percent::notStrict($percent->value()  * 100);
+        }
+
+        return $percent * 100;
+    }
 }

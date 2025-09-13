@@ -59,7 +59,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             '$coin' => $coin,
             '$positions' => [],
             '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM)->build(),
-            'expectedContractBalance' => new ContractBalance($coin, $total, $total, $total),
+            'expectedContractBalance' => new ContractBalance($coin, $total, $total, $total, 0),
         ]; unset($total, $totalPositionIM, $expectedAvailable);
 
 // --- with only short is opened --- //
@@ -78,7 +78,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             '$coin' => $coin,
             '$positions' => [$short],
             '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM, $totalUnrealized)->build(),
-            'expectedContractBalance' => new ContractBalance($coin, $total, $totalUnrealized + $expectedFree, $expectedFree),
+            'expectedContractBalance' => new ContractBalance($coin, $total, $totalUnrealized + $expectedFree, $expectedFree, $totalUnrealized),
             '$ticker' => $ticker,
         ]; unset($total, $totalPositionIM, $expectedAvailable, $expectedFree, $expectedFreeForLiquidation, $totalUnrealized);
 
@@ -99,7 +99,7 @@ final class GetContractWalletBalanceTest extends ByBitExchangeAccountServiceTest
             '$coin' => $coin,
             '$positions' => [$short, $long],
             '$apiResponse' => GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, $total, $totalPositionIM, $totalUnrealized)->build(),
-            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree),
+            'expectedContractBalance' => new ContractBalance($coin, $total, $expectedAvailable, $expectedFree, $totalUnrealized),
             '$ticker' => $ticker,
         ];
 

@@ -20,6 +20,7 @@ use App\Domain\Stop\Event\StopPushedToExchange;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
+use App\Infrastructure\Doctrine\Identity\SkipIfIdAssignedGenerator;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolContainerInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -36,6 +37,8 @@ use function sprintf;
 #[ORM\Entity(repositoryClass: StopRepository::class)]
 class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
+    public const string FAKE_EXCHANGE_ORDER_ID = 'fakeExchangeOrderId';
+
     public const string SKIP_SUPPORT_CHECK_CONTEXT = 'skipSupportChecks';
     public const string IS_TP_CONTEXT = 'isTakeProfit';
     public const string CLOSE_BY_MARKET_CONTEXT = 'closeByMarket';
@@ -43,6 +46,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const string FIX_OPPOSITE_MAIN_ON_LOSS = 'fixOppositeMainOnLossEnabled';
     public const string FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
     public const string CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
+    public const string CREATED_AFTER_OTHER_SYMBOL_LOSS = 'createdAfterOtherSymbolLoss';
+
+    public const string LOCK_IN_PROFIT_STEP_ALIAS = 'lockInProfit.stepsStrategy.stepAlias';
 
     /** @todo | symbols | TakeProfit trigger delta (and whole mechanics) for all symbols */
     public const int TP_TRIGGER_DELTA = 50;
@@ -58,7 +64,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
 
     #[ORM\Id]
     #[ORM\Column]
-    private int $id;
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: SkipIfIdAssignedGenerator::class)]
+    private ?int $id;
 
     #[ORM\Column]
     private float $price;
@@ -67,7 +75,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     private float $volume;
 
     #[ORM\Column(nullable: true)]
-    private float $triggerDelta;
+    private ?float $triggerDelta;
 
     #[ORM\ManyToOne(targetEntity: Symbol::class, fetch: 'EAGER')]
     #[ORM\JoinColumn(name: 'symbol', referencedColumnName: 'name')]
@@ -80,9 +88,9 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
      * @var array<string, mixed>
      */
     #[ORM\Column(type: 'json', options: ['jsonb' => true])]
-    private array $context = [];
+    private array $context;
 
-    public function __construct(int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
+    public function __construct(?int $id, float $price, float $volume, ?float $triggerDelta, SymbolInterface $symbol, Side $positionSide, array $context = [])
     {
         $this->id = $id;
         $this->price = $symbol->makePrice($price)->value();
@@ -177,6 +185,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
+    public function resetTriggerDelta(): self
+    {
+        $this->triggerDelta = $this->symbol->stopDefaultTriggerDelta();
+
+        return $this;
+    }
+
     public function setTriggerDelta(float $triggerDelta): self
     {
         $this->triggerDelta = $this->symbol->makePrice($triggerDelta)->value();
@@ -207,11 +222,13 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
-    public function wasPushedToExchange(string $thisExchangeOrderId): self
+    public function wasPushedToExchange(string $exchangeOrderId, Position $prevPositionState): self
     {
-        $this->recordThat(new StopPushedToExchange($this));
+        if (!$this->isTakeProfitOrder()) {
+            $this->recordThat(new StopPushedToExchange($this, $prevPositionState));
+        }
 
-        return $this->setExchangeOrderId($thisExchangeOrderId);
+        return $this->setExchangeOrderId($exchangeOrderId);
     }
 
     public function isCloseByMarketContextSet(): bool
@@ -267,14 +284,44 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
+    public function isStopAfterOtherSymbolLoss(): bool
+    {
+        return ($this->context[self::CREATED_AFTER_OTHER_SYMBOL_LOSS] ?? null) === true;
+    }
+
+    public function setIsStopAfterOtherSymbolLoss(): self
+    {
+        $this->context[self::CREATED_AFTER_OTHER_SYMBOL_LOSS] = true;
+
+        return $this;
+    }
+
     public function isStopAfterFixHedgeOppositePosition(): bool
     {
         return ($this->context[self::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION] ?? null) === true;
     }
 
+    public function setStopAfterFixHedgeOppositePositionContest(): self
+    {
+        $this->context[self::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION] = true;
+
+        return $this;
+    }
+
     public function isManuallyCreatedStop(): bool
     {
-        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isStopAfterFixHedgeOppositePosition();
+        return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isAnyKindOfFixation() && !$this->createdAsLockInProfit();
+    }
+
+    /**
+     * @see StopRepository::addIsAnyKindOfFixationCondition
+     */
+    public function isAnyKindOfFixation(): bool
+    {
+        return  $this->isStopAfterFixHedgeOppositePosition() ||
+                $this->isStopAfterOtherSymbolLoss()
+//                $this->createdAsLockInProfit()
+        ;
     }
 
     public static function getTakeProfitContext(): array
@@ -355,5 +402,32 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         $this->context[self::SKIP_SUPPORT_CHECK_CONTEXT] = true;
 
         return $this;
+    }
+
+    public function setFakeExchangeOrderId(): self
+    {
+        $this->setExchangeOrderId(self::FAKE_EXCHANGE_ORDER_ID);
+
+        return $this;
+    }
+
+    public function setStepAlias(string $stepAlias): static
+    {
+        $this->context[self::LOCK_IN_PROFIT_STEP_ALIAS] = $stepAlias;
+
+        return $this;
+    }
+
+    public function getStepAlias(): ?string
+    {
+        return $this->context[self::LOCK_IN_PROFIT_STEP_ALIAS] ?? null;
+    }
+
+    public function createdAsLockInProfit(): bool
+    {
+        return
+            isset($this->context[self::LOCK_IN_PROFIT_STEP_ALIAS])
+//            || ...
+        ;
     }
 }

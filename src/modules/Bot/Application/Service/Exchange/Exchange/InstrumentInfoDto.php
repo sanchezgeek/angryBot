@@ -12,11 +12,12 @@ class InstrumentInfoDto implements JsonSerializable
         public float $minOrderQty,
         public float $minOrderValue,
         public float $minLeverage,
-        public float $maxLeverage,
+        public int $maxLeverage,
         public float $tickSize,
         public int $priceScale,
         public string $quoteCoin,
         public string $contractType,
+        public int $fundingInterval, // minutes
     ) {
     }
 

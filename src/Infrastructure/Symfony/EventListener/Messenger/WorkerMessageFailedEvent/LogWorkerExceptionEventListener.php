@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageFailedEvent;
 
 use App\Clock\ClockInterface;
+use App\Infrastructure\ByBit\API\ConnectionHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
@@ -16,17 +17,15 @@ use Throwable;
 
 use function print_r;
 use function sprintf;
-use function str_contains;
 
 #[AsEventListener]
 final class LogWorkerExceptionEventListener
 {
-    private const CONNECTION_ERR_MESSAGES = [
-        'timestamp or recv_window param',
-        'Server Timeout',
-        'Idle timeout reached',
-//        'Timestamp for this request is outside of the recvWindow',
-    ];
+    private const int CONN_ERR_PENDING_INTERVAL = 15;
+    private const int CONN_ERR_RESET_INTERVAL = 20;
+
+    private ?int $connErrorReceivedAt = null;
+    private ?int $resetAt = null;
 
     private readonly LimiterInterface $connectionErrorsLogThrottlingLimiter;
 
@@ -58,24 +57,11 @@ final class LogWorkerExceptionEventListener
 
     private function logError(\Throwable $error): void
     {
-        # connection errors
-        $exception = $error;
-        while (($previous = $exception->getPrevious()) && ($previous instanceof TransportExceptionInterface)) {
-            $exception = $previous;
-        }
-        if ($exception instanceof TransportExceptionInterface) {
-            $this->logConnectionError($exception);
+        if (ConnectionHelper::isConnectionError($error)) {
+            $this->logConnectionError($error);
             return;
         }
 
-        foreach (self::CONNECTION_ERR_MESSAGES as $expectedMessage) {
-            if (str_contains($error->getMessage(), $expectedMessage)) {
-                $this->logConnectionError($error);
-                return;
-            }
-        }
-
-        # app errors
         $this->appErrorLogger->critical($error->getMessage(), [
             'file' => $error->getFile(),
             'line' => $error->getLine(),
@@ -84,40 +70,39 @@ final class LogWorkerExceptionEventListener
         ]);
     }
 
-    private const CONN_ERR_PENDING_INTERVAL = 3;
-    private const CONN_ERR_RESET_INTERVAL = 20;
-
-    private ?int $connErrorRecievedAt = null;
-    private ?int $resetAt = null;
-
     private function logConnectionError(Throwable $error): void
     {
         $now = $this->clock->now()->getTimestamp();
 
         if ($this->resetAt && $now >= $this->resetAt) {
-            $this->connErrorRecievedAt = null;
+            $this->connErrorReceivedAt = null;
             $this->resetAt = null;
             return;
         }
 
-        if ($this->connErrorRecievedAt === null) {
-            $this->connErrorRecievedAt = $now;
+        if ($this->connErrorReceivedAt === null) {
+            $this->connErrorReceivedAt = $now;
             $this->resetAt = $now + self::CONN_ERR_RESET_INTERVAL;
             return;
         }
 
         $this->resetAt = $now + self::CONN_ERR_RESET_INTERVAL;
 
-        $pendingTill = $this->connErrorRecievedAt + self::CONN_ERR_PENDING_INTERVAL;
+        $pendingTill = $this->connErrorReceivedAt + self::CONN_ERR_PENDING_INTERVAL;
         if ($now <= $pendingTill) {
             return;
         }
 
+        $exception = $error;
+        while (($previous = $exception->getPrevious()) && ($previous instanceof TransportExceptionInterface)) {
+            $exception = $previous;
+        }
+
         if ($this->connectionErrorsLogThrottlingLimiter->consume()->isAccepted()) {
-            $this->connectionErrorLogger->critical($error->getMessage(), [
-                'file' => $error->getFile(),
-                'line' => $error->getLine(),
-                'previous' => $error->getPrevious(),
+            $this->connectionErrorLogger->critical($exception->getMessage(), [
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'previous' => $exception->getPrevious(),
             ]);
         }
     }

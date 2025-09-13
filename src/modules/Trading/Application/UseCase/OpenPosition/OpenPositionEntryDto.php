@@ -8,8 +8,9 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use Stringable;
 
-final readonly class OpenPositionEntryDto
+final readonly class OpenPositionEntryDto implements Stringable
 {
     public function __construct(
         public SymbolInterface $symbol,
@@ -22,6 +23,12 @@ final readonly class OpenPositionEntryDto
         public bool $outputEnabled = false,
         public ?OrdersGridDefinitionCollection $buyGridsDefinition = null,
         public ?OrdersGridDefinitionCollection $stopsGridsDefinition = null,
+        public bool $asBuyOrder = false,
     ) {
+    }
+
+    public function __toString(): string
+    {
+        return json_encode($this);
     }
 }

@@ -30,4 +30,6 @@ interface PositionServiceInterface
      * @return SymbolInterface[]
      */
     public function getOpenedPositionsSymbols(SymbolInterface ...$except): array;
+
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void;
 }

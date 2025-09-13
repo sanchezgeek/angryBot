@@ -1,0 +1,2 @@
+### \App\Trading\Application\Settings\LockInProfit\Strategy\LinpByFixationsSettings
+trading.lockInProfit.periodicalFixations.enabled: true

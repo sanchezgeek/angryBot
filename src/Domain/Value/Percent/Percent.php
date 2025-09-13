@@ -9,6 +9,7 @@ use App\Domain\Value\Common\IntegerValue;
 use DomainException;
 use InvalidArgumentException;
 use JsonSerializable;
+use RuntimeException;
 use Stringable;
 
 use function is_numeric;
@@ -110,5 +111,18 @@ final class Percent extends AbstractFloat implements Stringable, JsonSerializabl
         $this->outputFloatPrecision = $outputFloatPrecision;
 
         return $this;
+    }
+
+    public function getComplement(bool $throw = true): Percent
+    {
+        $value = $this->value();
+
+        if ($throw && $value > 100) {
+            throw new RuntimeException(sprintf('Cannot get complement (current value = %s)', $this));
+        }
+
+        $complement = max(0, 100 - $value);
+
+        return new self($complement, false);
     }
 }

@@ -20,7 +20,9 @@ final readonly class DefaultCurrentPriceProvider implements ParameterDefaultValu
 
     public function getRequiredKeys(): array
     {
-        return ['symbol'];
+        return [
+            'symbol' => 'symbol',
+        ];
     }
 
     public function get(array $input): float

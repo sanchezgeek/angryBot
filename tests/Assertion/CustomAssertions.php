@@ -7,9 +7,12 @@ namespace App\Tests\Assertion;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
+use Exception;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\ExpectationFailedException;
 use ReflectionClass;
+use ReflectionUnionType;
+use Throwable;
 
 class CustomAssertions extends Assert
 {
@@ -55,10 +58,13 @@ class CustomAssertions extends Assert
         foreach ($ref->getProperties() as $propertyRef) {
             $oldValue = $propertyRef->getValue($object);
 
-            if (SymbolInterface::class === $propertyRef->getType()->getName()) {
+            $reflectionIntersectionType = $propertyRef->getType();
+            if ($reflectionIntersectionType instanceof ReflectionUnionType) {
+                $value = $oldValue;
+            } elseif (SymbolInterface::class === $reflectionIntersectionType->getName()) {
                 /** @var SymbolInterface $value */
                 $value = SymbolEnum::from($oldValue->name());
-            } elseif (is_object($oldValue) && !is_subclass_of($propertyRef->getType()->getName(), BackedEnum::class)) {
+            } elseif (is_object($oldValue) && !is_subclass_of($reflectionIntersectionType->getName(), BackedEnum::class)) {
                 $value = self::prepareObjectWithInnerSymbol($oldValue);
             } else {
                 $value = $oldValue;

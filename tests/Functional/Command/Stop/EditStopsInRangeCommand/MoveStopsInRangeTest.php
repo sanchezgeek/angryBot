@@ -63,7 +63,7 @@ final class MoveStopsInRangeTest extends KernelTestCase
         $initialTotalVolume = $currentStops->totalVolume();
         $initialTotalCount = $currentStops->totalCount();
 
-        $params = ['position_side' => $side->value, '-f' => $from, '-t' => $to, '-a' => self::ACTION];
+        $params = ['position_side' => $side->value, '--symbol' => $symbol->name(), '-f' => $from, '-t' => $to, '-a' => self::ACTION];
         foreach ($additionalParams as $name => $value) {
             $params[sprintf('--%s', $name)] = $value;
         }

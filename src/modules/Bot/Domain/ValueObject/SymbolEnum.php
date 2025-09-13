@@ -414,17 +414,6 @@ enum SymbolEnum: string implements SymbolInterface
         return SymbolHelper::roundVolumeUp($this, $volume);
     }
 
-    public static function fromShortName(string $name): self
-    {
-        try {
-            $symbol = self::from($name);
-        } catch (ValueError) {
-            $symbol = self::from($name . 'USDT');
-        }
-
-        return $symbol;
-    }
-
     public function shortName(): string
     {
         if (str_contains($this->value, 'USDT')) {
@@ -436,7 +425,7 @@ enum SymbolEnum: string implements SymbolInterface
 
     public function veryShortName(): string
     {
-        return substr(self::VERY_SHORT_NAMES[$this->value] ?? $this->shortName(), 0, 3);
+        return substr(self::VERY_SHORT_NAMES[$this->value] ?? $this->shortName(), 0, 4);
     }
 
     public function associatedCoinAmount(float $amount): CoinAmount

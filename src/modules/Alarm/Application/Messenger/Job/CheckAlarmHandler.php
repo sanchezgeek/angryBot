@@ -2,7 +2,12 @@
 
 namespace App\Alarm\Application\Messenger\Job;
 
+use App\Alarm\Application\Settings\AlarmSettings;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Domain\ValueObject\SymbolEnum;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Notification\Application\Contract\Enum\SoundLength;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\Symbol\SymbolProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -10,27 +15,23 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use function sprintf;
 
 #[AsMessageHandler]
-final readonly class CheckAlarmHandler
+final class CheckAlarmHandler
 {
     private const array ALARMS = [
 //        Symbol::BTCUSDT->value => [98200, 100200],
-//        Symbol::ADAUSDT->value => [0.97, 1.2],
-//        Symbol::TONUSDT->value => [5.87, 6.55],
-//        Symbol::SOLUSDT->value => [210, 235],
-//        Symbol::XRPUSDT->value => [2, 2.65],
-//        Symbol::ETHUSDT->value => [3700, 3950],
-//        Symbol::LINKUSDT->value => [21.7, 29.1],
-//        Symbol::WIFUSDT->value => [2.77, 3.8],
-//        Symbol::OPUSDT->value => [2.156, 2.65],
-//        Symbol::DOGEUSDT->value => [0.38, 0.45],
-//        Symbol::SUIUSDT->value => [4.28, 5.35],
-//        Symbol::LTCUSDT->value => [null, 128],
-//        Symbol::AVAXUSDT->value => [null, 51.2],
-//        Symbol::AAVEUSDT->value => [null, 357],
+//        'SOMEUSDT' => [null, 0.102],
     ];
+
+    private int $soundsCount;
 
     public function __invoke(CheckAlarm $dto): void
     {
+        if ($this->appNotificationsService->isNowTimeToSleep()) {
+            return;
+        }
+
+        $this->soundsCount = SettingsHelper::exact(AlarmSettings::PriceAlarm_SoundsCount);
+
         foreach (self::ALARMS as $symbol => [$down, $up]) {
             $ticker = $this->exchangeService->ticker(
                 $this->symbolProvider->getOrInitialize($symbol)
@@ -38,19 +39,26 @@ final readonly class CheckAlarmHandler
             $markPrice = $ticker->markPrice;
 
             if ($up !== null && $markPrice->greaterThan($up)) {
-                $this->appErrorLogger->error(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up));
+                $this->notify(sprintf('buy %s: %s > %s', $symbol, $markPrice, $up));
             }
 
             if ($down !== null && $markPrice->lessThan($down)) {
-                $this->appErrorLogger->error(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down));
+                $this->notify(sprintf('sell %s: %s < %s', $symbol, $markPrice, $down));
             }
         }
     }
 
+    private function notify(string $message): void
+    {
+        for ($i = 0; $i <= $this->soundsCount; $i++) {
+            $this->appNotificationsService->warning($message, length: SoundLength::Short);
+        }
+    }
+
     public function __construct(
-        private ExchangeServiceInterface $exchangeService,
-        private SymbolProvider $symbolProvider,
-        private LoggerInterface $appErrorLogger
+        private readonly AppNotificationsServiceInterface $appNotificationsService,
+        private readonly ExchangeServiceInterface $exchangeService,
+        private readonly SymbolProvider $symbolProvider,
     ) {
     }
 }

@@ -19,6 +19,7 @@ use App\Command\Mixin\OrderContext\AdditionalBuyOrderContextAwareCommand;
 use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
 use App\Command\SymbolDependentCommand;
+use App\Command\TradingParametersDependentCommand;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
@@ -40,7 +41,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function sprintf;
 
 #[AsCommand(name: 'p:hedge:open')]
-class HedgePositionCommand extends AbstractCommand implements SymbolDependentCommand
+class HedgePositionCommand extends AbstractCommand implements SymbolDependentCommand, TradingParametersDependentCommand
 {
     use SymbolAwareCommand;
     use PriceRangeAwareCommand;
@@ -107,7 +108,7 @@ class HedgePositionCommand extends AbstractCommand implements SymbolDependentCom
             }
 
             // @todo | calc real distance for each order in handler (or maybe in cmd, but for each BO)
-            if ($stopDistance = $this->getOppositeOrdersDistanceOption($symbol)) {
+            if ($stopDistance = $this->getOppositeOrdersDistanceOption()) {
                 $context[BuyOrder::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $stopDistance;
             }
 

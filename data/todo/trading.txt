@@ -1,0 +1,2 @@
+remove stale stops (after position close)
+`AkaLimitOrder` entity + some threshold for not lost the trade

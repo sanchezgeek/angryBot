@@ -10,6 +10,11 @@ use App\Settings\Application\Contract\SettingCacheTtlAware;
 
 enum TestSetting: string implements AppSettingInterface, AppSettingsGroupInterface, SettingCacheTtlAware
 {
+    public static function category(): string
+    {
+        return 'test';
+    }
+
     case Test = 'test.test';
 
     public function getSettingKey(): string

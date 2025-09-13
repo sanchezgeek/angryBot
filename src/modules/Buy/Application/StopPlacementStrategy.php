@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Buy\Application;
+
+enum StopPlacementStrategy: string
+{
+    case DEFAULT = 'default';
+    case UNDER_POSITION = 'under_position';
+    case AFTER_FIRST_STOP_UNDER_POSITION = 'after_first_stop_under_position';
+//    case AFTER_FIRST_POSITION_STOP = 'after_first_position_stop';
+
+    private const REGULAR_ORDER_STOP_DISTANCE = 259;
+    private const ADDITION_ORDER_STOP_DISTANCE = 211;
+
+//    private const REGULAR_ORDER_STOP_DISTANCE = 791;
+//    private const ADDITION_ORDER_STOP_DISTANCE = 753;
+
+//    private const HEDGE_POSITION_REGULAR__ORDER_STOP_DISTANCE = 45;
+//    private const HEDGE_POSITION_ADDITION_ORDER_STOP_DISTANCE = 70;
+}
+
+
+//    case ONLY_BIG_SL_AFTER_FIRST_STOP_UNDER_POSITION = 'only_big_sl_after_first_stop_under_position';
+//    case ONLY_BIG_SL_UNDER_POSITION = 'only_big_sl_under_position';

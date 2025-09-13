@@ -6,13 +6,14 @@ namespace App\Tests\Unit\Application\ByBit\Service;
 
 use App\Clock\ClockInterface;
 use App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface;
+use App\Infrastructure\ByBit\Cache\MarketDataCache;
 use App\Infrastructure\ByBit\Service\ByBitMarketService;
-use DateTime;
+use App\Infrastructure\Cache\SymfonyCacheWrapper;
 use DateTimeInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 use function date_create_immutable;
-use function strtotime;
 
 class ByBitMarketServiceTest extends TestCase
 {
@@ -25,7 +26,8 @@ class ByBitMarketServiceTest extends TestCase
 
         $this->service = new ByBitMarketService(
             $this->clockMock,
-            $this->createMock(ByBitApiClientInterface::class)
+            $this->createMock(ByBitApiClientInterface::class),
+            new MarketDataCache(new SymfonyCacheWrapper(new ArrayAdapter())),
         );
     }
 

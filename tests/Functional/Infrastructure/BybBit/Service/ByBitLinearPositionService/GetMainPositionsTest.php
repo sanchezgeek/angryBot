@@ -55,7 +55,7 @@ final class GetMainPositionsTest extends KernelTestCase
         $category = self::CATEGORY;
 
         yield [
-            '$apiResponse' => (new PositionResponseBuilder($category))->build(),
+            '$apiResponse' => new PositionResponseBuilder($category)->build(),
             '$expectedSymbols' => [],
         ];
 
@@ -68,12 +68,12 @@ final class GetMainPositionsTest extends KernelTestCase
         $linkusdtShort = PositionBuilder::short()->symbol(SymbolEnum::LINKUSDT)->size(10)->entry(35)->build($linkusdtLong);
 
         yield [
-            '$apiResponse' => (new PositionResponseBuilder($category))
+            '$apiResponse' => new PositionResponseBuilder($category)
                 ->withPosition($ethusdtLong)
                 ->withPosition($btcusdtLong)->withPosition($btcusdtShort)
                 ->withPosition($linkusdtLong)->withPosition($linkusdtShort)
                 ->build(),
-            '$expectedResult' => [$ethusdtLong, $btcusdtLong],
+            '$expectedResult' => [SymbolEnum::ETHUSDT->name() => $ethusdtLong, SymbolEnum::BTCUSDT->name() => $btcusdtLong],
         ];
     }
 }

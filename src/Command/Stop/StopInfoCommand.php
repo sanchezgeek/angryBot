@@ -5,7 +5,6 @@ namespace App\Command\Stop;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionLiquidatedBeforeOrderPriceException;
 use App\Application\UseCase\Trading\Sandbox\Exception\SandboxPositionNotFoundException;
 use App\Application\UseCase\Trading\Sandbox\Factory\TradingSandboxFactory;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Pnl;
 use App\Bot\Domain\Position;
@@ -306,12 +305,9 @@ class StopInfoCommand extends AbstractCommand implements PositionDependentComman
 
     public function __construct(
         private readonly StopRepository $stopRepository,
-        PositionServiceInterface $positionService,
         private readonly TradingSandboxFactory $tradingSandboxFactory,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

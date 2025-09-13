@@ -44,7 +44,7 @@ final class OrdersWithMinExchangeVolume implements OrdersCollectionInterface
                 $volume = $minNotionalVolume;
             }
 
-            $this->orders[] = new Order($price, $volume);
+            $this->orders[] = new Order($price, $volume, $order->context());
         }
 
         return $this->orders;
@@ -60,5 +60,15 @@ final class OrdersWithMinExchangeVolume implements OrdersCollectionInterface
     public function count(): int
     {
         return count($this->getOrders());
+    }
+
+    public function totalVolume(): float
+    {
+        $totalVolume = 0;
+        foreach ($this->getOrders() as $order) {
+            $totalVolume += $order->volume();
+        }
+
+        return $totalVolume;
     }
 }

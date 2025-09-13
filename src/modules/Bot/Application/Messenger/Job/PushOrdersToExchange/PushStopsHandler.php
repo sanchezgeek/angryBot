@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Messenger\Job\PushOrdersToExchange;
 
-use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumerDto;
 use App\Bot\Application\Command\Exchange\TryReleaseActiveOrders;
 use App\Bot\Application\Helper\StopHelper;
@@ -46,8 +46,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
 {
     public function __invoke(PushStops $message): void
     {
-        // @todo | stop check mainPosition stops first
-
         $positionService = $this->positionService; $orderService = $this->orderService;
         $side = $message->side; $symbol = $message->symbol;
         $stopsClosedByMarket = []; /** @var ExchangeOrder[] $stopsClosedByMarket */
@@ -68,10 +66,14 @@ final class PushStopsHandler extends AbstractOrdersPusher
 //            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->name(), $diff, $updatedByWorker->value));
 //        }
 
-        $liquidationParameters = $this->liquidationDynamicParameters($position, $ticker);
+        // ta? or markPrice anyway?
+
+        $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
         $distanceToUseMarkPrice = $this->pushStopSettings->rangeToUseWhileChooseMarkPriceAsTriggerPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
             ? $liquidationParameters->warningDistanceRaw()
             : $liquidationParameters->criticalDistance();
+
+        $distanceToUseMarkPrice *= 2;
 
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
         if ($distanceWithLiquidation <= $distanceToUseMarkPrice) {
@@ -87,7 +89,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             ### TakeProfit ###
             if ($stop->isTakeProfitOrder()) {
                 if ($ticker->lastPrice->isPriceOverTakeProfit($side, $stop->getPrice())) {
-                    $this->pushStopToExchange($ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume()));
+                    $this->pushStopToExchange($position, $ticker, $stop, $checksContext, static fn() => $orderService->closeByMarket($position, $stop->getVolume())->exchangeOrderId);
                 }
                 continue;
             }
@@ -117,11 +119,11 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 }
             }
 
-            $this->pushStopToExchange($ticker, $stop, $checksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
+            $this->pushStopToExchange($position, $ticker, $stop, $checksContext, $callback ?: static function() use ($positionService, $orderService, $position, $stop, $triggerBy) {
                 try {
                     return $positionService->addConditionalStop($position, $stop->getPrice(), $stop->getVolume(), $triggerBy);
                 } catch (Throwable) {
-                    return $orderService->closeByMarket($position, $stop->getVolume());
+                    return $orderService->closeByMarket($position, $stop->getVolume())->exchangeOrderId;
                 }
             });
         }
@@ -132,8 +134,9 @@ final class PushStopsHandler extends AbstractOrdersPusher
     private static function closeByMarketCallback(OrderServiceInterface $orderService, Position $position, Stop $stop, array &$stopsClosedByMarket): callable
     {
         return static function () use ($orderService, $position, $stop, &$stopsClosedByMarket) {
-            $exchangeOrderId = $orderService->closeByMarket($position, $stop->getVolume());
-            $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $stop->getVolume(), $stop->getPrice());
+            $result = $orderService->closeByMarket($position, $stop->getVolume());
+            $exchangeOrderId = $result->exchangeOrderId;
+            $stopsClosedByMarket[] = new ExchangeOrder($position->symbol, $result->realClosedQty, $stop->getPrice());
 
             return $exchangeOrderId;
         };
@@ -154,13 +157,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         return $checkResult->success;
     }
 
-    private function pushStopToExchange(Ticker $ticker, Stop $stop, TradingCheckContext $checksContext, callable $pushStopCallback): void
+    private function pushStopToExchange(Position $prevPositionState, Ticker $ticker, Stop $stop, TradingCheckContext $checksContext, callable $pushStopCallback): void
     {
         try {
             $exchangeOrderId = $pushStopCallback();
-            $stop->wasPushedToExchange($exchangeOrderId);
-            // @todo manual release events
-            // or check what might happen in case of some exception
+            $stop->wasPushedToExchange($exchangeOrderId, $prevPositionState);
+            // @todo manual release events or check what might happen in case of some exception
             $checksContext->resetState();
         } catch (ApiRateLimitReached $e) {
             $this->logWarning($e);
@@ -206,16 +208,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
         }
     }
 
-    private function liquidationDynamicParameters(Position $position, Ticker $ticker): LiquidationDynamicParameters
-    {
-        return new LiquidationDynamicParameters(settingsProvider: $this->settingsProvider, position: $position, ticker: $ticker);
-    }
-
     public function __construct(
         private readonly StopRepository $repository,
         private readonly OrderServiceInterface $orderService,
         private readonly AppSettingsProviderInterface $settingsProvider,
         private readonly PushStopSettingsWrapper $pushStopSettings,
+        private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
 
         private readonly MessageBusInterface $messageBus,
         ExchangeServiceInterface $exchangeService,

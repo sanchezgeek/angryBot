@@ -61,6 +61,7 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         $params = [
             'position_side' => $side->value,
             'forVolume' => $forVolume,
+            '--symbol' => $position->symbol->name(),
             '-f' => $from,
             '-t' => $to,
         ];
@@ -285,12 +286,14 @@ final class CreateStopsGridCommandTest extends KernelTestCase
         \Throwable $expectedException
     ): void {
         $this->havePosition($symbol, $position);
-        $cmd = new CommandTester((new Application(self::$kernel))->find(self::COMMAND_NAME));
+        $cmd = new CommandTester(new Application(self::$kernel)->find(self::COMMAND_NAME));
 
         $this->expectException(get_class($expectedException));
 //        $this->expectExceptionMessage($expectedException->getMessage());
 
-        $params = [];
+        $params = [
+            '--symbol' => $position->symbol->name(),
+        ];
 
         $side !== null && $params['position_side'] = $side->value;
         $forVolume !== null && $params['forVolume'] = $forVolume;

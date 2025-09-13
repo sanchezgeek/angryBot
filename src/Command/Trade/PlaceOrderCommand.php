@@ -3,9 +3,10 @@
 namespace App\Command\Trade;
 
 use App\Application\UniqueIdGeneratorInterface;
+use App\Application\UseCase\Trading\MarketBuy\Dto\MarketBuyEntryDto;
+use App\Application\UseCase\Trading\MarketBuy\MarketBuyHandler;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
@@ -72,6 +73,8 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
 
     public const WITHOUT_CONFIRMATION_OPTION = 'y';
 
+    public const string FORCE_BUY_OPTION = 'force';
+
     protected function configure(): void
     {
         $this
@@ -81,6 +84,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
             ->addOption(self::TP_PRICE_OPTION, '-p', InputOption::VALUE_REQUIRED, 'Limit TP price | PositionPNL%. Use [`from` + `to` + `step`], if you need place orders in price range (actual for `limitTP` and `delayedTP` modes)')
             ->addOption(self::LIMIT_TP_PRICE_STEP_OPTION, '-s', InputOption::VALUE_REQUIRED, 'Price step (in case of `from` + `to`)')
             ->addOption(self::WITHOUT_CONFIRMATION_OPTION, null, InputOption::VALUE_NEGATABLE, 'Without confirm')
+            ->addOption(self::FORCE_BUY_OPTION, null, InputOption::VALUE_NEGATABLE, 'Force buy?')
             ->configurePriceRangeArgs()
         ;
     }
@@ -205,6 +209,8 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
      */
     private function doMarketBuy(array $symbols, Side $positionSide, float|Percent $volume, ?string $mode = null): void
     {
+        $force = $this->paramFetcher->getBoolOption(self::FORCE_BUY_OPTION);
+
         if ($mode === 'ofPosition' && !$volume instanceof Percent) {
             throw new InvalidArgumentException(
                 sprintf('Invalid usage: when selected `%s` mode, $volume argument must be of type Percent', $mode),
@@ -268,11 +274,14 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                     $symbol = $order->getSymbol();
 
                     try {
-                        $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
+                        $this->marketBuyHandler->handle(
+                            new MarketBuyEntryDto($symbol, $positionSide, $order->getVolume(), $force)
+                        );
+
                         $try = false;
                     } catch (PositionIdxNotMatch $e) {
                         if ($this->io->confirm(
-                            sprintf('Got "%s" error while do marketBuy. Need to change positionIdx to "both" sides mode. Continue?', $e->getMessage())
+                            sprintf('!!! Got "%s" error while do marketBuy. Need to change positionIdx to "both" sides mode. Continue?', $e->getMessage())
                         )) {
                             $this->positionService->switchPositionMode($symbol, PositionMode::BOTH_SIDES_MODE);
                             $this->tradeService->marketBuy($symbol, $positionSide, $order->getVolume());
@@ -283,9 +292,15 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
                         $cost = $this->orderCostCalculator->totalBuyCost($order, new Leverage(100), $this->getPositionSide());
 
                         $diff = $cost->sub($currentContract->available);
-                        $this->exchangeAccountService->interTransferFromSpotToContract($symbol->associatedCoin(), $diff->value());
+                        try {
+                            $this->exchangeAccountService->interTransferFromSpotToContract($symbol->associatedCoin(), $diff->value());
+                        } catch (Throwable $e) {
+                            OutputHelper::print(sprintf('!!! Got "%s" error while trying to interTransferFromSpotToContract %s', $e->getMessage(), $diff->value()));
+                            $try = false;
+                        }
                     } catch (Throwable $e) {
-                        OutputHelper::print(sprintf('Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $symbol->name(), $positionSide->title()));
+                        OutputHelper::print(sprintf('!!! Got "%s" error while trying to buy %s on %s %s', $e->getMessage(), $order->getVolume(), $symbol->name(), $positionSide->title()));
+                        $try = false;
                     }
                 }
 
@@ -330,6 +345,7 @@ class PlaceOrderCommand extends AbstractCommand implements PositionDependentComm
 
     public function __construct(
         private readonly OrderServiceInterface $tradeService,
+        private readonly MarketBuyHandler $marketBuyHandler,
         private readonly StopServiceInterface $stopService,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         ByBitLinearPositionService $positionService,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot\Application\Settings;
 
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Settings\Application\Attribute\SettingParametersAttribute;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Application\Contract\AppSettingsGroupInterface;
@@ -11,16 +12,13 @@ use App\Settings\Domain\Enum\SettingType;
 
 enum TradingSettings: string implements AppSettingInterface, AppSettingsGroupInterface
 {
-    # Opposite BuyOrders (after SL executed)
-    #[SettingParametersAttribute(type: SettingType::Percent)]
-    case Opposite_BuyOrder_PnlDistance_ForLongPosition = 'trading.opposite.BuyOrder.pnlDistance.forLongPosition';
-    #[SettingParametersAttribute(type: SettingType::Percent)]
-    case Opposite_BuyOrder_PnlDistance_ForShortPosition = 'trading.opposite.BuyOrder.pnlDistance.forShortPosition';
+    public static function category(): string
+    {
+        return 'trading.general';
+    }
 
-    #[SettingParametersAttribute(type: SettingType::Percent)]
-    case Opposite_BuyOrder_PnlDistance_ForLongPosition_AltCoin = 'trading.opposite.BuyOrder.altCoin.pnlDistance.forLongPosition';
-    #[SettingParametersAttribute(type: SettingType::Percent)]
-    case Opposite_BuyOrder_PnlDistance_ForShortPosition_AltCoin = 'trading.opposite.BuyOrder.altCoin.pnlDistance.forShortPosition';
+    #[SettingParametersAttribute(type: SettingType::Enum, enumClass: RiskLevel::class)]
+    case Global_RiskLevel = 'trading.global.riskLevel';
 
     # Other
     #[SettingParametersAttribute(type: SettingType::Boolean)]

@@ -1,5 +1,5 @@
 ### \App\Bot\Application\Settings\PushStopSettings
-push.stop.cover_loss_after_close_by_market.enabled: true
+push.stop.mainPositions.initialFilterPosition.ifStopsNotFound: true
 push.stop.whichRangeToUse.while.chooseMarkPrice.asTriggerPrice: 'warning'
 
 ### Stop\Application\Settings\FixOppositePositionSettings
@@ -16,3 +16,10 @@ stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=ETHUSDT]: '200%'
 
 stop.afterStop.fixOppositePosition.applyOnlyIf.oppositePositionPnl.greaterThan[symbol=BTCUSDT]: '300%'
 stop.afterStop.fixOppositePosition.supplyStopPnlDistance[symbol=BTCUSDT]: '120%'
+
+stop.movePositionStops.moveToBreakeven.after.positionPnlPercent: 900
+
+### \App\Stop\Application\Settings\CreateOppositeBuySettings
+stop.createOpposite.martingale.enabled: true
+stop.createOpposite.martingale.enabled[side=sell]: true
+stop.createOpposite.addForceFlag.enabled: true

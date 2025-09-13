@@ -30,11 +30,11 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
 {
     use SettingsAwareTest;
 
-    private const USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
-    private const USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 150;
-    private const TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
-    private const REOPEN_DISTANCE = 100;
-    private const SPOT_TRANSFER_ON_BUY_MULTIPLIER = PushBuyOrdersHandler::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
+    private const float USE_SPOT_IF_BALANCE_GREATER_THAN = PushBuyOrdersHandler::USE_SPOT_IF_BALANCE_GREATER_THAN;
+    private const int USE_PROFIT_AFTER_LAST_PRICE_PNL_PERCENT_IF_CANNOT_AFFORD_BUY = 150;
+    private const float TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT = PushBuyOrdersHandler::TRANSFER_TO_SPOT_PROFIT_PART_WHEN_TAKE_PROFIT;
+    private const int REOPEN_DISTANCE = 100;
+    private const float SPOT_TRANSFER_ON_BUY_MULTIPLIER = PushBuyOrdersHandler::SPOT_TRANSFER_ON_BUY_MULTIPLIER;
 
     private OrderCostCalculator $orderCostCalculator;
 
@@ -64,6 +64,9 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         bool $takeProfitInCaseOfInsufficientBalanceEnabled,
         float $availableSpotBalance,
     ): void {
+        self::markTestSkipped('For now it makes no sense (UTA)');
+        self::mockTradingParametersForBuyOnLongDistanceTests($position->symbol);
+
         $this->setMinimalSafePriceDistance($position->symbol, $position->side);
         $this->overrideSetting(
             TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled,
@@ -142,6 +145,9 @@ final class CloseByMarketToTakeProfitIfInsufficientAvailableMarginTest extends P
         BuyOrder $buyOrder,
         float $expectedCloseOrderVolume
     ): void {
+        self::markTestSkipped('For now it makes no sense (UTA)');
+        self::mockTradingParametersForBuyOnLongDistanceTests($position->symbol);
+
         $this->setMinimalSafePriceDistance($position->symbol, $position->side);
 
         $this->overrideSetting(TradingSettings::TakeProfit_InCaseOf_Insufficient_Balance_Enabled, true);

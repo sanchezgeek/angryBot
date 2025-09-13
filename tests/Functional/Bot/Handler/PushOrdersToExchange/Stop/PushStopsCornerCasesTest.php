@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Bot\Application\Service\Orders\StopService;
@@ -21,6 +23,7 @@ use App\Clock\ClockInterface;
 use App\Domain\Order\Parameter\TriggerBy;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -31,6 +34,7 @@ use App\Tests\Mixin\RateLimiterAwareTest;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\TestWithDbFixtures;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
 use Exception;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -52,6 +56,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     use StopsTester;
     use RateLimiterAwareTest;
     use SettingsAwareTest;
+    use TradingParametersMocker;
 
     private const SYMBOL = SymbolEnum::BTCUSDT;
     private const WITHOUT_OPPOSITE_CONTEXT = Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT;
@@ -88,11 +93,15 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         $this->loggerMock = $this->createMock(LoggerInterface::class);
         $this->clockMock = $this->createMock(ClockInterface::class);
 
+        self::createTradingParametersStub();
+
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
             $this->orderServiceMock,
             self::getContainerSettingsProvider(),
             self::getContainer()->get(PushStopSettingsWrapper::class),
+            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
+
             $this->messageBus,
             $this->exchangeServiceMock,
             $this->positionServiceMock,
@@ -109,7 +118,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
      */
     public function testCloseByMarketWhenAddConditionalStopMethodCallThrewSomeException(Ticker $ticker, Position $position, Stop $stop, TriggerBy $expectedTriggerBy): void
     {
-        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        self::mockTradingParametersForLiquidationTests($position->symbol, '0.09%');
+        $this->overrideSetting(SettingAccessor::exact(WarningDistanceSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 
         $this->haveTicker($ticker);
@@ -128,7 +138,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->expects(self::once())
             ->method('closeByMarket')
             ->with($position, $stop->getVolume())
-            ->willReturn($exchangeOrderId = uuid_create());
+            ->willReturn(new ClosePositionResult($exchangeOrderId = uuid_create(), $stop->getVolume()));
 
         // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));
@@ -142,7 +152,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
     public function closeByMarketWhenExceptionWasThrewTestDataProvider(): iterable
     {
         $ticker = TickerFactory::create(self::SYMBOL, 29050, 29060, 29070);
-        $liquidationWarningDistance = PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT, $ticker->markPrice);
+
+        $liquidationWarningDistance = PushStopsCommonCasesTest::getDistanceAfterWhichMarkPriceUsedForTrigger($ticker);
 
         yield '[BTCUSDT SHORT] liquidation is not in warning range => use IndexPrice' => [
             'ticker' => $ticker,
@@ -166,7 +177,8 @@ final class PushStopsCornerCasesTest extends KernelTestCase
      */
     public function testCloseByMarketWhenCurrentPriceOverStopAndLiquidationPriceInCriticalRange(Ticker $ticker, Position $position, Stop $stop): void
     {
-        $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
+        self::mockTradingParametersForLiquidationTests($position->symbol, '0.09%');
+        $this->overrideSetting(SettingAccessor::exact(WarningDistanceSettings::WarningDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_WARNING_DISTANCE_PNL_PERCENT);
         $this->overrideSetting(SettingAccessor::exact(LiquidationHandlerSettings::CriticalDistancePnl, $position->symbol, $position->side), self::LIQUIDATION_CRITICAL_DISTANCE_PNL_PERCENT);
 
         $this->haveTicker($ticker);
@@ -178,7 +190,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
             ->expects(self::once())
             ->method('closeByMarket')
             ->with($position, $stop->getVolume())
-            ->willReturn($exchangeOrderId = uuid_create());
+            ->willReturn(new ClosePositionResult($exchangeOrderId = uuid_create(), $stop->getVolume()));
 
         // Act
         ($this->handler)(new PushStops($position->symbol, $position->side));

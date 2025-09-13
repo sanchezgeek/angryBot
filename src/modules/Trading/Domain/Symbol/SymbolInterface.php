@@ -33,6 +33,4 @@ interface SymbolInterface
 
     public function shortName(): string;
     public function veryShortName(): string;
-
-    public static function fromShortName(string $name): self;
 }

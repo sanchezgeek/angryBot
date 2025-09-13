@@ -22,7 +22,7 @@ abstract readonly class AbstractTradingCheckResult
 
     public function info(): string
     {
-        return sprintf('%s %s: %s', $this->source, $this->success ? 'SUCCEED' : 'FAILED', $this->info);
+        return sprintf('!%s! %s%s', $this->source, $this->success ? 'succeed' : 'failed', $this->info ? sprintf(': %s', $this->info) : '');
     }
 
     abstract public function quietClone(): self;

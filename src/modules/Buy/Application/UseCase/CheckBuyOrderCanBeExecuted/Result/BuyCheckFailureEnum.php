@@ -6,5 +6,9 @@ use App\Trading\SDK\Check\Contract\Dto\Out\TradingCheckFailedReason;
 
 enum BuyCheckFailureEnum implements TradingCheckFailedReason
 {
+    case InsufficientContractBalance;
+    case FixationsStopsFound;
     case FurtherLiquidationIsTooClose;
+    case BuyOrderPlacedTooFarFromPositionEntry;
+    case ActiveFixationStopsBeforePositionEntryExists;
 }

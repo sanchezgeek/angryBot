@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Settings\Domain;
 
 use App\Domain\Value\Percent\Percent;
-use App\Helper\OutputHelper;
 use App\Settings\Application\Attribute\SettingParametersAttributeReader;
 use App\Settings\Application\Contract\AppSettingInterface;
 use App\Settings\Domain\Enum\SettingType;
 use BackedEnum;
-use Exception;
 use InvalidArgumentException;
 use Throwable;
 
@@ -27,6 +25,11 @@ final class SettingValueValidator
         if ($type === SettingType::Enum) {
             /** @var BackedEnum $enumClass */
             $enumClass = SettingParametersAttributeReader::getSettingValueEnumClass($setting);
+
+            if ($value instanceof $enumClass) {
+                return true;
+            }
+
             try {
                 $enumClass::from($value);
                 return true;

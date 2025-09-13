@@ -11,11 +11,16 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Buy\Domain\ValueObject\StopStrategy\Factory\StopCreationStrategyDefinitionStaticFactory;
+use App\Buy\Domain\ValueObject\StopStrategy\StopCreationStrategyDefinition;
+use App\Buy\Domain\ValueObject\StopStrategy\Strategy\PredefinedStopLength;
 use App\Domain\BuyOrder\Enum\BuyOrderState;
+use App\Domain\BuyOrder\Event\BuyOrderPushedToExchange;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use App\Trading\Domain\Symbol\Entity\Symbol;
@@ -31,12 +36,14 @@ use DomainException;
 #[ORM\Entity(repositoryClass: BuyOrderRepository::class)]
 class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterface, SymbolContainerInterface
 {
+    use RecordEvents;
+    use HasVolume;
+    use HasExchangeOrderContext;
     use HasWithoutOppositeContext;
+    use WithOppositeOrderDistanceContext;
 
     public const string SPOT_TRANSFERS_COUNT_CONTEXT = 'cannotAffordContext.spotTransfers.successTransfersCount';
     public const string SUPPORT_FIXATIONS_COUNT_CONTEXT = 'hedgeSupportTakeProfit.fixationsCount';
-    public const string WITH_SHORT_STOP_CONTEXT = 'withShortStop';
-    public const string FORCE_BUY_CONTEXT = 'forceBuy';
     public const string ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT = 'onlyIfHasAvailableBalance';
 
     /**
@@ -48,10 +55,20 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
 
     public const string ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT = 'activeStateSetAtTimestamp';
 
-    use HasVolume;
-    use HasExchangeOrderContext;
-    use WithOppositeOrderDistanceContext;
-    use RecordEvents;
+    public const string STOP_LENGTH_DEFINITION_TYPE = 'stopLengthDefinition';
+
+    # checks
+    public const string FORCE_BUY_CONTEXT = 'forceBuy';
+    public const string ROOT_CHECKS_KEY = 'checks';
+
+    public const string SKIP_AVERAGE_PRICE_CHECK_KEY = 'skipAveragePriceCheck';
+    public const string SKIP_FURTHER_LIQUIDATION_CHECK_KEY = 'skipFurtherLiquidationCheck';
+
+    public const string DOUBLE_HASH_FLAG = 'doubleOrderHash';
+
+    public const string AS_BUY_ON_OPEN_POSITION = 'asBuyOrder';
+
+    public const string AS_OPPOSITE_AFTER_FIXATION_KIND = 'oppositeAfterFixationKind';
 
     #[ORM\Id]
     #[ORM\Column]
@@ -71,7 +88,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private Side $positionSide;
 
     #[ORM\Column(type: 'string', enumType: BuyOrderState::class, options: ['default' => 'idle'])]
-    private BuyOrderState $state = BuyOrderState::Idle;
+    private BuyOrderState $state;
 
     /**
      * @var array<string, mixed>
@@ -80,8 +97,9 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private array $context = [];
 
     private bool $isOppositeStopExecuted = false;
+    private false|null|StopCreationStrategyDefinition $stopCreationStrategyDefinition = false;
 
-    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [])
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [], BuyOrderState $state = BuyOrderState::Idle)
     {
         $this->id = $id;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
@@ -89,6 +107,54 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
+        $this->state = $state;
+    }
+
+    public function getStopCreationDefinition(): ?StopCreationStrategyDefinition
+    {
+        if ($this->stopCreationStrategyDefinition !== false) {
+            return $this->stopCreationStrategyDefinition;
+        }
+
+        $value = ($data = $this->context[self::STOP_LENGTH_DEFINITION_TYPE] ?? null)
+            ? StopCreationStrategyDefinitionStaticFactory::fromData($data)
+            : null;
+
+        return $this->stopCreationStrategyDefinition = $value;
+    }
+
+    public function setStopCreationStrategy(StopCreationStrategyDefinition $definition): self
+    {
+        $this->stopCreationStrategyDefinition = $definition;
+
+        $this->context = self::addStopCreationStrategyToContext($this->context, $definition);
+
+        return $this;
+    }
+
+    public static function addStopCreationStrategyToContext(array $context, StopCreationStrategyDefinition $definition): array
+    {
+        return array_merge($context, [
+            self::STOP_LENGTH_DEFINITION_TYPE => [
+                StopCreationStrategyDefinition::TYPE_STORED_KEY => $definition::getType()->value,
+                StopCreationStrategyDefinition::PARAMS_STORED_KEY => $definition->toArray(),
+            ]
+        ]);
+    }
+
+    public static function addDoubleFlag(array $context, ?string $hash = null): array
+    {
+        return array_merge($context, $hash !== null ? [self::DOUBLE_HASH_FLAG => $hash] : []);
+    }
+
+    public static function addOppositeFixationKind(array $context, string $kind): array
+    {
+        return array_merge($context, [self::AS_OPPOSITE_AFTER_FIXATION_KIND => $kind]);
+    }
+
+    public function getOppositeFixationKind(): ?string
+    {
+        return $this->context[self::AS_OPPOSITE_AFTER_FIXATION_KIND] ?? null;
     }
 
     /**
@@ -99,6 +165,13 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->symbol = $symbol;
 
         return $this;
+    }
+
+    public function wasPushedToExchange(string $exchangeOrderId): self
+    {
+        $this->recordThat(new BuyOrderPushedToExchange($this));
+
+        return $this->setExchangeOrderId($exchangeOrderId);
     }
 
     public function getId(): int
@@ -166,11 +239,6 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     public function mustBeExecuted(Ticker $ticker): bool
     {
         return $this->isOrderActive() && $ticker->isIndexAlreadyOverBuyOrder($this->positionSide, $this->price);
-    }
-
-    public function isWithShortStop(): bool
-    {
-        return ($this->context[self::WITH_SHORT_STOP_CONTEXT] ?? null) === true;
     }
 
     public function isForceBuyOrder(): bool
@@ -262,6 +330,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         return [
             'symbol' => $this->getSymbol(),
             'side' => $this->positionSide,
+            'state' => $this->state->value,
             'price' => $this->price,
             'volume' => $this->volume,
             'context' => $this->context,
@@ -332,5 +401,41 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         unset($this->context[self::ACTIVE_STATE_CHANGE_TIMESTAMP_CONTEXT]);
 
         return $this;
+    }
+
+    public function disableAveragePriceCheck(): self
+    {
+        $this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY] = true;
+
+        return $this;
+    }
+
+    public function enableAveragePriceCheck(): self
+    {
+        unset($this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY]);
+
+        return $this;
+    }
+
+    public function isAveragePriceCheckDisabled(): bool
+    {
+        return $this->context[self::ROOT_CHECKS_KEY][self::SKIP_AVERAGE_PRICE_CHECK_KEY] ?? null === true;
+    }
+
+    public function setDoubleHash(string $hash): static
+    {
+        $this->context[self::DOUBLE_HASH_FLAG] = $hash;
+
+        return $this;
+    }
+
+    public function getDoubleHash(): ?string
+    {
+        return $this->context[self::DOUBLE_HASH_FLAG] ?? null;
+    }
+
+    public function hasDoubleOrder(): bool
+    {
+        return isset($this->context[self::DOUBLE_HASH_FLAG]);
     }
 }

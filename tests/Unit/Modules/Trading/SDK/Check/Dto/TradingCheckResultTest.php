@@ -12,7 +12,7 @@ final class TradingCheckResultTest extends TestCase
 {
     public function testClone(): void
     {
-        $prevResult = TradingCheckResult::failed('som-class', CommonOrderCheckFailureEnum::UnexpectedSandboxExecutionExceptionThrown, 'some-reason');
+        $prevResult = TradingCheckResult::failed('som-class', CommonOrderCheckFailureEnum::UnexpectedSandboxException, 'some-reason');
         $clone = $prevResult->quietClone();
 
         self::assertEquals($prevResult->success, $clone->success);

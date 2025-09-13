@@ -16,7 +16,9 @@ trait PositionAwareCommand
     use ConsoleInputAwareCommand;
     use SymbolAwareCommand;
 
-    private const POSITION_SIDE_ARGUMENT_NAME = 'position_side';
+    private bool $positionServiceInitialized = false;
+
+    private const string POSITION_SIDE_ARGUMENT_NAME = 'position_side';
 
     private readonly PositionServiceInterface $positionService;
 
@@ -58,9 +60,14 @@ trait PositionAwareCommand
         return $this->addArgument(self::POSITION_SIDE_ARGUMENT_NAME, $mode, 'Position side (sell|buy)');
     }
 
-    protected function withPositionService(PositionServiceInterface $positionService): static
+    public function withPositionService(PositionServiceInterface $positionService): static
     {
+        if ($this->positionServiceInitialized) {
+            return $this;
+        }
+
         $this->positionService = $positionService;
+        $this->positionServiceInitialized = true;
 
         return $this;
     }

@@ -6,12 +6,16 @@ namespace App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\Dyn
 
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Price\PriceRange;
+use App\Domain\Value\Percent\Percent;
 
 interface LiquidationDynamicParametersInterface
 {
     public function checkStopsOnDistance(): float;
     public function additionalStopTriggerDelta(): float;
     public function additionalStopPrice(): SymbolPrice;
+
+    public function transferFromSpotOnDistance(): float;
+
     public function warningDistance(): float;
     public function warningRange(): PriceRange;
     public function criticalDistance(): float;
@@ -20,4 +24,7 @@ interface LiquidationDynamicParametersInterface
     public function actualStopsRange(): PriceRange;
 
     public function addOppositeBuyOrdersAfterStop(): bool;
+    public function warningDistancePnlPercent(): float;
+
+    public function percentOfLiquidationDistanceToAddStop(): Percent;
 }

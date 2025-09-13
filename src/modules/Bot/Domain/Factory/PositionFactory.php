@@ -27,7 +27,8 @@ final class PositionFactory
             $positionValue,
             0,
             $initialMargin,
-            $leverage
+            $leverage,
+            isDummyAndFake: true
         );
     }
 }

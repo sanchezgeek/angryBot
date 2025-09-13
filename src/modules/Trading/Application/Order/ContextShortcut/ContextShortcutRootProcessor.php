@@ -30,6 +30,15 @@ final class ContextShortcutRootProcessor implements ShortcutContextProcessorInte
     }
 
     /**
+     * @todo MB unapplicable?
+     *      => just throw exception
+     */
+    public function getRawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order): array
+    {
+        return $this->getResultContextArray([$shortcut], $order);
+    }
+
+    /**
      * @throws UnapplicableContextShortcutProcessorException
      */
     public function getResultContextArray(array $shortcuts, OrderType $orderType): array
@@ -53,17 +62,6 @@ final class ContextShortcutRootProcessor implements ShortcutContextProcessorInte
         }
 
         return $result;
-    }
-
-    public function getRawContextPart(string $shortcut, BuyOrder|Stop|OrderType $order): array
-    {
-        foreach ($this->processors as $processor) {
-            if ($processor->supports($shortcut, $order)) {
-                return $processor->getRawContextPart($shortcut, $order);
-            }
-        }
-
-        self::throwUnapplicableException($shortcut, $order);
     }
 
     public function modifyRawContextArray(string $shortcut, BuyOrder|Stop|OrderType $order, array &$contextRaw): void

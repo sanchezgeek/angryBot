@@ -46,6 +46,7 @@ final class Position implements Stringable
         float $initialMargin,
         int $leverage,
         public readonly ?float $unrealizedPnl = null,
+        public readonly bool $isDummyAndFake = false,
     ) {
         PositionSizeAssertion::assert($this->size);
 
@@ -109,6 +110,13 @@ final class Position implements Stringable
         return ($hedge = $this->getHedge()) && $hedge->isMainPosition($this);
     }
 
+    public function isMainPositionOrWithoutHedge(): bool
+    {
+        $hedge = $this->getHedge();
+
+        return $hedge === null || $hedge->isMainPosition($this);
+    }
+
     public function isPositionWithoutHedge(): bool
     {
         return $this->getHedge() === null;
@@ -125,11 +133,11 @@ final class Position implements Stringable
             return $this->size;
         }
 
-        if (!$hedge->isMainPosition($this)) {
-            throw new RuntimeException(
-                sprintf('Trying to get `notCoveredSize` of %s, but position is not mainPosition of the hedge.', $this)
-            );
-        }
+//        if (!$hedge->isMainPosition($this)) {
+//            throw new RuntimeException(
+//                sprintf('Trying to get `notCoveredSize` of %s, but position is not mainPosition of the hedge.', $this)
+//            );
+//        }
 
         return $this->symbol->roundVolume($hedge->mainPosition->size - $hedge->supportPosition->size);
     }

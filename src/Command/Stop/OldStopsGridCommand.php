@@ -2,7 +2,6 @@
 
 namespace App\Command\Stop;
 
-use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Orders\StopService;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
@@ -160,11 +159,8 @@ class OldStopsGridCommand extends AbstractCommand implements PositionDependentCo
     public function __construct(
         private readonly StopService $stopService,
         private readonly StopRepository $stopRepository,
-        PositionServiceInterface $positionService,
         ?string $name = null,
     ) {
-        $this->withPositionService($positionService);
-
         parent::__construct($name);
     }
 }

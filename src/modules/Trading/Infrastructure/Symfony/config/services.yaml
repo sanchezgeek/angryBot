@@ -1,6 +1,20 @@
 imports:
     - { resource: doctrine.yaml }
 
+# @todo move to sandbox module
+framework:
+    rate_limiter:
+        symbol_initialize_exception_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '5 minute'
+        
+        # can delete
+        cannot_find_history_for_symbol_throttling:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '10 minutes'
+
 services:
     _defaults:
         autowire: true
@@ -10,26 +24,24 @@ services:
         resource: '../../../'
         exclude: '../../../SDK'
 
-    # dynamic parameters evaluation
-    App\Trading\Application\Parameters\TradingDynamicParameters:
-        public: true
-
-    _instanceof:
-        App\Trading\Application\Order\ContextShortcut\Processor\ShortcutContextProcessorInterface:
-            tags: ['trading.order.contextShortcutProcessor']
-
     App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor:
         arguments:
             $processors: !tagged_iterator trading.order.contextShortcutProcessor
 
-# @todo move to sandbox module
-framework:
-    rate_limiter:
-        unexpected_sandbox_exception_while_check_throttling:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '20 minutes'
-        symbol_initialize_exception_throttling:
-            policy: 'fixed_window'
-            limit: 1
-            interval: '5 minute'
+    App\Trading\Contract\ContractBalanceProviderInterface:
+        class: App\Trading\Infrastructure\Cache\CachedContractBalanceProvider
+        arguments:
+            $innerProvider: '@App\Trading\Application\Provider\ContractBalanceProvider'
+
+    periodicalOrder.cacheWrapper:
+        class: App\Infrastructure\Cache\SymfonyCacheWrapper
+        arguments:
+            $cache: '@periodicalOrder.cache'
+
+    App\Trading\Application\Job\PeriodicalOrder\PeriodicalOrderJobCache:
+        arguments:
+            $cache: '@periodicalOrder.cacheWrapper'
+
+    App\Trading\Application\Parameters\TradingParametersProviderInterface:
+        alias: App\Trading\Application\Parameters\TradingDynamicParameters
+        public: true

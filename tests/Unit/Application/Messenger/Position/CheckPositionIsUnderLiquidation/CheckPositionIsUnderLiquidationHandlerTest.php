@@ -12,6 +12,7 @@ use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
+use App\Bot\Application\Service\Exchange\Trade\ClosePositionResult;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Position;
@@ -20,6 +21,7 @@ use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
@@ -30,6 +32,8 @@ use App\Tests\Factory\TickerFactory;
 use App\Tests\Mixin\DataProvider\PositionSideAwareTest;
 use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
+use App\Tests\Mixin\Trading\TradingParametersMocker;
+use App\Tests\Stub\TA\TradingParametersProviderStub;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 use function min;
@@ -47,12 +51,16 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
     use PositionSideAwareTest;
     use AppErrorsSymfonyLoggerTrait;
     use SettingsAwareTest;
+    use TradingParametersMocker;
 
-    private const TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
-    private const CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
+    private const int TRANSFER_FROM_SPOT_ON_DISTANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_FROM_SPOT_ON_DISTANCE;
+    private const int CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN = CheckPositionIsUnderLiquidationHandler::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN;
 
-    private const MAX_TRANSFER_AMOUNT = CheckPositionIsUnderLiquidationHandler::MAX_TRANSFER_AMOUNT;
-    private const TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
+    /** @see LiquidationHandlerSettings::Default_Transfer_Amount */
+    private const int MAX_TRANSFER_AMOUNT = 15;
+    private const int TRANSFER_AMOUNT_DIFF_WITH_BALANCE = CheckPositionIsUnderLiquidationHandler::TRANSFER_AMOUNT_DIFF_WITH_BALANCE;
+
+    private const int DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
 
     private ExchangeServiceInterface $exchangeService;
     private PositionServiceInterface $positionService;
@@ -64,7 +72,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 
     private CheckPositionIsUnderLiquidationHandler $handler;
 
-    private const DISTANCE_FOR_CALC_TRANSFER_AMOUNT = 300;
+    private TradingParametersProviderStub $tradingParametersProvider;
 
     protected function setUp(): void
     {
@@ -75,6 +83,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
         $this->stopService = $this->createMock(StopServiceInterface::class);
         $this->stopRepository = $this->createMock(StopRepositoryInterface::class);
         $this->settingsProvider = $this->createMock(AppSettingsProviderInterface::class);
+
+        self::createTradingParametersStub();
 
         $this->handler = new CheckPositionIsUnderLiquidationHandler(
             $this->exchangeService,
@@ -96,6 +106,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
      */
     public function testDoNothingWhenPositionIsNotUnderLiquidation(Ticker $ticker, Position $position): void
     {
+        self::mockTradingParametersForLiquidationTests($ticker->symbol);
+
         $this->havePositions($position);
         $this->haveTicker($ticker);
 
@@ -132,6 +144,8 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
         float $spotAvailableBalance,
         ?float $expectedTransferAmount,
     ): void {
+        self::mockTradingParametersForLiquidationTests($position->symbol);
+
         $liquidationPrice = $position->liquidationPrice;
 
         $closeByMarketIfDistanceLessThan = FloatHelper::modify(PnlHelper::convertPnlPercentOnPriceToAbsDelta(self::CLOSE_BY_MARKET_IF_DISTANCE_LESS_THAN, $position->entryPrice()), 0.1);
@@ -167,13 +181,12 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::AcceptableStoppedPartOverride, $position->symbol, $position->side)
         );
 
+        $qty = $symbol->roundVolumeUp(new Percent($acceptableStoppedPartBeforeLiquidation)->of($position->size));
         $this->orderService
             ->expects(self::once())
             ->method('closeByMarket')
-            ->with(
-                $position,
-                $symbol->roundVolumeUp((new Percent($acceptableStoppedPartBeforeLiquidation))->of($position->size)),
-            )
+            ->with($position, $qty)
+            ->willReturn(new ClosePositionResult('some-exchange-order-id', $qty))
         ;
 
         ($this->handler)(new CheckPositionIsUnderLiquidation(symbol: $symbol, acceptableStoppedPart: $acceptableStoppedPartBeforeLiquidation));
@@ -191,10 +204,11 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
                 'expectedTransferAmount' => null,
             ];
 
+            $spotBalance = $expectedAmountToTransferFromSpot->sub(2);
             yield sprintf('[%s] spotBalance is more than default min value => transfer min default value', $position) => [
                 'position' => $position,
-                'spotAvailableBalance' => $expectedAmountToTransferFromSpot->add(2)->value(),
-                'expectedTransferAmount' => $expectedAmountToTransferFromSpot->value(),
+                'spotAvailableBalance' => $spotBalance->value(),
+                'expectedTransferAmount' => $spotBalance->sub(self::TRANSFER_AMOUNT_DIFF_WITH_BALANCE)->value(),
             ];
 
             $spotBalance = $expectedAmountToTransferFromSpot->sub(2.22);
@@ -215,7 +229,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
 
     private static function getExpectedAmountToTransferFromSpot(Position $position): CoinAmount
     {
-        $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), 60);
+        $amount = min(self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT * $position->getNotCoveredSize(), self::MAX_TRANSFER_AMOUNT);
 
         return $position->symbol->associatedCoinAmount($amount);
     }

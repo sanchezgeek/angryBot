@@ -12,9 +12,7 @@ use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Hedge\HedgeService;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\CommandRunnerCommand;
-use App\Command\Mixin\PriceRangeAwareCommand;
 use App\Command\Mixin\SymbolAwareCommand;
-use App\Domain\Coin\CoinAmount;
 use App\Domain\Value\Percent\Percent;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -28,7 +26,6 @@ use function sprintf;
 class DiffStopCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
-    use PriceRangeAwareCommand;
     use CommandRunnerCommand;
 
     public const TARGET_PRICE_OPTION = 'targetPrice';

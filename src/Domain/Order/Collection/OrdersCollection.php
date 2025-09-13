@@ -46,4 +46,14 @@ final class OrdersCollection implements OrdersCollectionInterface
     {
         return count($this->orders);
     }
+
+    public function totalVolume(): float
+    {
+        $totalVolume = 0;
+        foreach ($this->getOrders() as $order) {
+            $totalVolume += $order->volume();
+        }
+
+        return $totalVolume;
+    }
 }

@@ -86,7 +86,6 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
 
     public function clearPositionsCache(SymbolInterface $symbol, ?Side $positionSide = null): void
     {
-        // @todo | cache | all symbols?
         $this->cache->delete(
             self::positionsCacheKey($symbol)
         );
@@ -95,5 +94,10 @@ final readonly class ByBitLinearPositionCacheDecoratedService implements Positio
     public static function positionsCacheKey(SymbolInterface $symbol): string
     {
         return sprintf('api_%s_%s_positions_data', self::ASSET_CATEGORY->value, $symbol->name());
+    }
+
+    public function setLeverage(SymbolInterface $symbol, float $forBuy, float $forSell): void
+    {
+        $this->positionService->setLeverage($symbol, $forBuy, $forSell);
     }
 }

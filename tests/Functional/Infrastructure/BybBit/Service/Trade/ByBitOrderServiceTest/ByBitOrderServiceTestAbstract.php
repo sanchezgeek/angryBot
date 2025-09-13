@@ -8,6 +8,7 @@ use App\Infrastructure\ByBit\Service\Trade\ByBitOrderService;
 use App\Infrastructure\Cache\PositionsCache;
 use App\Tests\Mixin\Logger\AppErrorsSymfonyLoggerTrait;
 use App\Tests\Mixin\Tester\ByBitV5ApiTester;
+use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class ByBitOrderServiceTestAbstract extends KernelTestCase
@@ -22,6 +23,7 @@ abstract class ByBitOrderServiceTestAbstract extends KernelTestCase
         $this->service = new ByBitOrderService(
             $this->initializeApiClient(),
             self::getContainer()->get(PositionsCache::class),
+            $this->createMock(LockInProfitPeriodicalFixationsStorageInterface::class),
             null // this tests not need logging
         );
     }

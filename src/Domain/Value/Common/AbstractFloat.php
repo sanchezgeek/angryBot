@@ -29,6 +29,14 @@ abstract class AbstractFloat implements PercentModifiableValue
         return $this->value;
     }
 
+    public function abs(): static
+    {
+        $clone = clone $this;
+        $clone->value = abs($this->value);
+
+        return $clone;
+    }
+
     final public function add(float|AbstractFloat $otherFloat): static
     {
         is_object($otherFloat) && $this->checkType($otherFloat);

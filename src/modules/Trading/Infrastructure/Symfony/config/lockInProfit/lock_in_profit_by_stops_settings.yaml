@@ -1,0 +1,2 @@
+### \App\Trading\Application\Settings\LockInProfit\Strategy\LinpByStopsSettings
+trading.lockInProfit.stopsGridSteps.enabled: true

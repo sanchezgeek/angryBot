@@ -26,28 +26,40 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:show')]
-#[AutoconfigureTag(name: 'command.symbol_dependent')]
 class ShowSettingsCommand extends AbstractCommand implements SymbolDependentCommand
 {
     use SymbolAwareCommand;
 
-    private const ONLY_OVERRIDES_OPTION = 'only-overrides';
+    private const string ONLY_OVERRIDES_OPTION = 'only-overrides';
+    private const string CATEGORY_OPTION = 'category';
+    private const string EXACT_CATEGORY_OPTION = 'exact-category';
 
     protected function configure(): void
     {
         $this
-            ->configureSymbolArgs(defaultValue: null)
+            ->configureSymbolArgs()
             ->addOption(self::ONLY_OVERRIDES_OPTION, 'o', InputOption::VALUE_NEGATABLE, 'Show only overridden values')
+            ->addOption(self::CATEGORY_OPTION, 'c', InputOption::VALUE_OPTIONAL, 'Category')
+            ->addOption(self::EXACT_CATEGORY_OPTION, 's', InputOption::VALUE_OPTIONAL, 'Exact category')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $category = $this->paramFetcher->getStringOption(self::CATEGORY_OPTION, false);
+        $exactCategory = $this->paramFetcher->getStringOption(self::EXACT_CATEGORY_OPTION, false);
+
         $symbol = $this->symbolIsSpecified() ? $this->getSymbol() : null;
         $onlyOverrides = $this->paramFetcher->getBoolOption(self::ONLY_OVERRIDES_OPTION);
 
         $rows = [];
         foreach ($this->settingsLocator->getRegisteredSettingsGroups() as $group) {
+            if ($exactCategory && $group::category() !== $exactCategory) {
+                continue;
+            } elseif ($category && !str_contains($group::category(), $category)) {
+                continue;
+            }
+
             $groupValuesRows = [];
             foreach ($groupCases = $group::cases() as $settKey => $setting) {
                 $values = $this->settingsProvider->getAllSettingAssignedValuesCollection($setting);
