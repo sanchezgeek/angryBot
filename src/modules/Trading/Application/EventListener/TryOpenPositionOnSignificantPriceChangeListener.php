@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\EventListener;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Repository\BuyOrderRepository;
@@ -33,9 +34,6 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 
-/**
- * @todo funding!
- */
 #[AsEventListener]
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
@@ -50,11 +48,17 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $symbol = $priceChangeInfo->symbol;
         $positionSide = $event->positionSideToPositionLoss();
 
+        // @todo | autoOpen | or use insteadof ath check
+        $funding = $this->fundingProvider->getPreviousPeriodFundingRate($symbol);
+        if ($funding < -0.0001) {
+            self::output(sprintf('skip autoOpen %s %s (prev funding [%s] < 0)', $symbol->name(), $positionSide->title(), $funding));
+        }
+
         $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
 //        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
 
         if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
-            self::output(sprintf('skip autoOpen (disabled for %s %s', $symbol->name(), $positionSide->title()));
+            self::output(sprintf('skip autoOpen (disabled for %s %s)', $symbol->name(), $positionSide->title()));
             return;
         }
 
@@ -247,6 +251,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         private ContractBalanceProviderInterface $contractBalanceProvider,
         private BuyOrderRepository $buyOrderRepository,
         private OrderCostCalculator $orderCostCalculator,
+        private MarketServiceInterface $fundingProvider,
     ) {
     }
 }
