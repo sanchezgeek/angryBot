@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitBySteps;
+namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step;
 
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 
-final class LockInProfitByStepDto
+final class LinpByStopsGridStep
 {
     public function __construct(
-        public string $alias,
+        public string $stepAlias,
         public PriceDistanceSelector $checkOnPriceLength,
         public string $gridsDefinition
     ) {

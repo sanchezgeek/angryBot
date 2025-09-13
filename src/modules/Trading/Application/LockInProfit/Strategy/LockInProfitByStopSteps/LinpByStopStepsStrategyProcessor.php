@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitBySteps;
+namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\Stop;
@@ -11,12 +11,11 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
-use App\Domain\Trading\Enum\RiskLevel;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
-use App\Trading\Application\LockInProfit\Strategy\LockInpProfitStrategyInterface;
+use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
+use App\Trading\Application\LockInProfit\Strategy\LockInProfitStrategyProcessorInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
@@ -25,7 +24,7 @@ use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
-final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrategyInterface
+final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
     public function __construct(
         private TradingParametersProviderInterface $parameters,
@@ -37,12 +36,12 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
 
     public function supports(LockInProfitEntry $entry): bool
     {
-        return $entry->innerStrategyDto instanceof LockInProfitByStepsInnerDto;
+        return $entry->innerStrategyDto instanceof LinpByStopStepsStrategyDto;
     }
 
     public function process(LockInProfitEntry $entry): void
     {
-        /** @var LockInProfitByStepsInnerDto $dto */
+        /** @var LinpByStopStepsStrategyDto $dto */
         $dto = $entry->innerStrategyDto;
 
         foreach ($dto->steps as $key => $step) {
@@ -50,13 +49,13 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         }
     }
 
-    private function applyStep(LockInProfitEntry $entry, LockInProfitByStepDto $step): void
+    private function applyStep(LockInProfitEntry $entry, LinpByStopsGridStep $step): void
     {
         if (!$step->gridsDefinition) {
             throw new InvalidArgumentException('Grid must be specified');
         }
 
-        $stepAlias = $step->alias;
+        $stepAlias = $step->stepAlias;
         $position = $entry->position;
         $symbol = $position->symbol;
         $positionSide = $position->side;
@@ -79,6 +78,7 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         if ($existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias)) {
             $collection = new StopsCollection(...$existedStops);
 
+            // @todo | lockInProfit | stops | mb use initial position size?
             $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->size));
             if ($percent->value() <= 0) {
                 return;
@@ -121,45 +121,6 @@ final readonly class LockInProfitByStepsStrategy implements LockInpProfitStrateg
         $stringDef = sprintf('%.2f%%..%.2f%%|%s', $fromPnlPercent, $toPnlPercent, implode('|', $arr));
 
         return OrdersGridDefinition::create($stringDef, $refPrice, $positionSide, $symbol);
-    }
-
-    public static function makeGridDefinition(
-        string $from,
-        string $to,
-        float $positionSizePercent,
-        int $stopsCount,
-    ): string {
-        return sprintf('%s..%s|%d%%|%s', $from, $to, $positionSizePercent, $stopsCount);
-    }
-
-    public static function defaultThreeStepsLock(?RiskLevel $riskLevel = null): LockInProfitByStepsInnerDto
-    {
-        // add trading style to alias (for further recreate after style changed)
-        return new LockInProfitByStepsInnerDto(
-            [
-                // @todo | lockInProfit | ability to specify price from which make grid
-
-                // first part
-                new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-part1',
-                    Length::VeryShort, // settings?
-                    self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
-                ),
-                // second part
-                new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-part2',
-                    Length::BetweenShortAndStd,
-                    self::makeGridDefinition(Length::VeryShort->toStringWithNegativeSign(), Length::BetweenLongAndStd->toStringWithNegativeSign(), 20, 10),
-                ),
-                // third part: back to position entry
-                new LockInProfitByStepDto(
-                    'defaultThreeStepsLock-part3',
-                    Length::Long,
-                    // @todo | lockInProfit | stops must be placed near position side
-                    self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 40, 30),
-                ),
-            ]
-        );
     }
 
     /**

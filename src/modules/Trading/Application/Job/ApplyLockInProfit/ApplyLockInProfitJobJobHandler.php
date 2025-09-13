@@ -6,9 +6,10 @@ namespace App\Trading\Application\Job\ApplyLockInProfit;
 
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Helper\SettingsHelper;
-use App\Trading\Application\LockInProfit\Strategy\LockInProfitBySteps\LockInProfitByStepsStrategy;
-use App\Trading\Application\Settings\LockInProfitSettings;
-use App\Trading\Contract\LockInProfit\Enum\LockInProfitStrategy;
+use App\Trading\Application\LockInProfit\Factory\LockInProfitStrategiesDtoFactory;
+use App\Trading\Application\Settings\LockInProfit\LockInProfitSettings;
+use App\Trading\Application\Settings\LockInProfit\Strategy\LinpByFixationsSettings;
+use App\Trading\Application\Settings\LockInProfit\Strategy\LinpByStopsSettings;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
 use App\Trading\Contract\LockInProfit\LockInProfitHandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -16,9 +17,11 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class ApplyLockInProfitJobJobHandler
 {
+    const LockInProfitSettings ROOT_SETTING = LockInProfitSettings::Enabled;
+
     public function __invoke(ApplyLockInProfitJob $job): void
     {
-        if (SettingsHelper::exactDisabled(LockInProfitSettings::Enabled)) {
+        if (SettingsHelper::exactDisabled(self::ROOT_SETTING)) {
             return;
         }
 
@@ -27,22 +30,32 @@ final readonly class ApplyLockInProfitJobJobHandler
         $positions = $this->positionService->getPositionsWithLiquidation();
 
         foreach ($positions as $position) {
-            if (SettingsHelper::exactForSymbolAndSideOrSymbol(LockInProfitSettings::Enabled, $position->symbol, $position->side) === false) {
+            $symbol = $position->symbol;
+            $side = $position->side;
+
+            if (!SettingsHelper::enabledWithAlternatives(self::ROOT_SETTING, $symbol, $side)) {
                 continue;
             }
 
-            $entry = new LockInProfitEntry(
-                $position,
-                LockInProfitStrategy::BySteps,
-                LockInProfitByStepsStrategy::defaultThreeStepsLock()
-            );
+            $entries = [];
 
-            $this->handler->handle($entry);
+            if (SettingsHelper::enabledWithAlternatives(LinpByStopsSettings::Enabled, $symbol, $side)) {
+                $entries[] = new LockInProfitEntry($position, $this->strategyDtoFactory->threeStopStepsLock());
+            }
+
+            if (SettingsHelper::enabledWithAlternatives(LinpByFixationsSettings::Periodical_Enabled, $symbol, $side)) {
+                $entries[] = new LockInProfitEntry($position, $this->strategyDtoFactory->defaultPeriodicalFixationsLock());
+            }
+
+            foreach ($entries as $entry) {
+                $this->handler->handle($entry);
+            }
         }
     }
 
     public function __construct(
         private ByBitLinearPositionService $positionService,
+        private LockInProfitStrategiesDtoFactory $strategyDtoFactory,
         private LockInProfitHandlerInterface $handler,
     ) {
     }

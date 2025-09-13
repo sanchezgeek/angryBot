@@ -6,5 +6,6 @@ namespace App\Trading\Contract\LockInProfit\Enum;
 
 enum LockInProfitStrategy: string
 {
-    case BySteps = 'by_steps';
+    case StopsGrids = 'stops_by_steps';
+    case Periodical_Fixations = 'periodical_fixations';
 }

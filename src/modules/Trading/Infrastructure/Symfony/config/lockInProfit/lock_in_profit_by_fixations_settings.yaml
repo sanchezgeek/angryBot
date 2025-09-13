@@ -1,0 +1,2 @@
+### \App\Trading\Application\Settings\LockInProfitStepsSettings
+lockInProfit.periodicalFixations.enabled: true

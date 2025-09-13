@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Modules\Buy\Application\Handler;
 
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
@@ -13,8 +14,10 @@ use App\Buy\Application\Command\CreateStopsAfterBuy;
 use App\Buy\Application\Handler\Command\CreateStopsAfterBuyCommandHandler;
 use App\Buy\Application\Service\BaseStopLength\Processor\PredefinedStopLengthProcessor;
 use App\Buy\Application\StopPlacementStrategy;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
+use App\Settings\Application\Service\SettingAccessor;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\Tests\Factory\Entity\BuyOrderBuilder;
 use App\Tests\Factory\Entity\StopBuilder;
@@ -24,6 +27,7 @@ use App\Tests\Fixture\BuyOrderFixture;
 use App\Tests\Helper\Buy\BuyOrderTestHelper;
 use App\Tests\Mixin\BuyOrdersTester;
 use App\Tests\Mixin\Messenger\MessageConsumerTrait;
+use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\StopsTester;
 use App\Tests\Mixin\SymbolsDependentTester;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
@@ -44,6 +48,7 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
     use BuyOrdersTester;
     use SymbolsDependentTester;
     use TaToolsProviderMocker;
+    use SettingsAwareTest;
 
     private const int CALC_BASE_STOP_LENGTH_DEFAULT_INTERVALS_COUNT = PredefinedStopLengthProcessor::DEFAULT_PERIOD_FOR_ATR;
     private const TimeFrame CALC_BASE_STOP_LENGTH_DEFAULT_INTERVAL = PredefinedStopLengthProcessor::DEFAULT_TIMEFRAME_FOR_ATR;
@@ -70,6 +75,8 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
         Stop $expectedStop
     ): void {
         $symbol = $ticker->symbol;
+
+        self::overrideSetting(SettingAccessor::exact(TradingSettings::Global_RiskLevel, $position->symbol, $position->side), RiskLevel::Conservative);
 
         $this->haveTicker($ticker);
         $this->havePosition($position->symbol, $position);

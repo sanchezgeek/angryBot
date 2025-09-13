@@ -31,8 +31,10 @@ autoOpen.enabled[symbol=USD1USDT]: false
 autoOpen.enabled[symbol=USDCUSDT]: false
 autoOpen.enabled[symbol=XAUTUSDT]: false
 
-### \App\Trading\Application\Settings\LockInProfitSettings
-lockInProfit.enabled: true
+
+
+
+
 
 # for tests
 trading.coverLosses.enabled[symbol=A8USDT][side=sell]: false

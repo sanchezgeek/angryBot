@@ -23,6 +23,16 @@ final class SettingsHelper
         return self::exact($setting, $symbol, $side) === false;
     }
 
+    public static function enabledWithAlternatives(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
+        return self::withAlternatives($setting, $symbol, $side) === true;
+    }
+
+    public static function alternativesDisabled(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): bool
+    {
+        return self::withAlternatives($setting, $symbol, $side) === false;
+    }
+
     public static function exact(AppSettingInterface $setting, ?SymbolInterface $symbol = null, ?Side $side = null): mixed
     {
         return self::getSettingsService()->required(

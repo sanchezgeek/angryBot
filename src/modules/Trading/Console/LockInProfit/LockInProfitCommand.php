@@ -2,13 +2,15 @@
 
 namespace App\Trading\Console\LockInProfit;
 
+use App\Bot\Domain\Factory\PositionFactory;
 use App\Bot\Domain\Ticker;
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Command\PositionDependentCommand;
+use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\RiskLevel;
-use App\Trading\Application\LockInProfit\Strategy\LockInProfitBySteps\LockInProfitByStepsStrategy;
-use App\Trading\Contract\LockInProfit\Enum\LockInProfitStrategy;
+use App\Trading\Application\LockInProfit\Factory\LockInProfitStrategiesDtoFactory;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
 use App\Trading\Contract\LockInProfit\LockInProfitHandlerInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -46,8 +48,7 @@ class LockInProfitCommand extends AbstractCommand implements PositionDependentCo
     {
         $entry = new LockInProfitEntry(
             $this->getPosition(),
-            LockInProfitStrategy::BySteps,
-            LockInProfitByStepsStrategy::defaultThreeStepsLock()
+            $this->stepsFactory->threeStopStepsLock()
         );
 
         $this->handler->handle($entry);
@@ -57,6 +58,7 @@ class LockInProfitCommand extends AbstractCommand implements PositionDependentCo
 
     public function __construct(
         private readonly LockInProfitHandlerInterface $handler,
+        private readonly LockInProfitStrategiesDtoFactory $stepsFactory,
         ?string $name = null,
     ) {
         parent::__construct($name);

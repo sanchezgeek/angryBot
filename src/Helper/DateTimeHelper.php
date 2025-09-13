@@ -10,6 +10,11 @@ use DateTimeImmutable;
 
 final class DateTimeHelper
 {
+    public static function secondsInMinutes(int $minutes): int
+    {
+        return $minutes * 60;
+    }
+
     public static function dateIntervalToSeconds(DateInterval $dateInterval): int
     {
         $reference = new DateTimeImmutable();
@@ -32,5 +37,10 @@ final class DateTimeHelper
         $date->setTime((int)$date->format('H') + 1, 0, 0);
 
         return $date;
+    }
+
+    public static function now(): DateTimeImmutable
+    {
+        return new DateTimeImmutable();
     }
 }

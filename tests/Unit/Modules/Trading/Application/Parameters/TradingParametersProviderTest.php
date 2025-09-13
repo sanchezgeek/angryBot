@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Modules\Trading\Application\Parameters;
 
 use App\Bot\Application\Service\Exchange\Dto\ContractBalance;
+use App\Bot\Application\Settings\TradingSettings;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
@@ -54,6 +56,8 @@ final class TradingParametersProviderTest extends KernelTestCase
         float $expectedSafeDistance,
         ?float $k = null
     ): void {
+        self::overrideSetting(SettingAccessor::exact(TradingSettings::Global_RiskLevel, $symbol, $positionSide), RiskLevel::Conservative);
+
         if ($k) {
             self::overrideSetting(SafePriceDistanceSettings::SafePriceDistance_Multiplier, $k);
         }
