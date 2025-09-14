@@ -20,6 +20,8 @@ export default {
   marketStructure: (symbol: string, timeFrame: string) =>
     `${apiBaseUrl}/technical-analysis/market-structure/${symbol}/${timeFrame}`,
 
+  instrumentInfo: (symbol: string) => `${apiBaseUrl}/chart/instrument-info/${symbol}/`,
+
   allProjects: () => `${apiBaseUrl}/projects`,
   project: (id: string) => `${apiBaseUrl}/projects/${id}`,
   projects: ({ page, pageSize }: { page: number; pageSize: number }) =>

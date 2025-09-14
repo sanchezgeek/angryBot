@@ -16,6 +16,7 @@ import {
   CrosshairMode,
 } from 'lightweight-charts'
 import {MarketStructurePointDto} from "../../market-structure/dto/marketStructureTypes";
+import {getInstrumentInfo} from "../../instrument/api/instrumentApi";
 
 const props = defineProps({
   symbol: String,
@@ -27,6 +28,7 @@ const props = defineProps({
         crosshair: {
           mode: CrosshairMode.Normal,
         },
+        width: 1000,
         timeScale: {
           timeVisible: true, // Показывать время на шкале
           secondsVisible: false, // Скрывать секунды для 4H-данных
@@ -84,42 +86,35 @@ async function updateChart() {
   candleSeries.setData(candlesData.value)
 }
 
-function updateStructure() {
-  // let markers = [];
-  const lineData = []
+async function setupInstrumentInfo(symbol: string) {
+  const info = await getInstrumentInfo(symbol)
 
+  candleSeries.applyOptions({
+    priceFormat: {
+      type: 'price', // Тип формата: 'price', 'volume', 'percent' или 'custom'
+      minMove: info.info.tickSize, // Минимальный шаг цены. Например, 0.0001 для 4 десятичных знаков
+      precision: info.info.priceScale // Количество знаков после запятой (для большей точности)
+    }
+  })
+}
+
+function updateStructure() {
   let marketStructurePoints = props.marketStructurePoints as Array<MarketStructurePointDto>
 
+  const lineData = []
   for (let i = 0; i < marketStructurePoints.length - 1; i++) {
     const currentPoint = marketStructurePoints[i]
 
-    // markers.push({
-    //   time: currentPoint.time,
-    //   position: currentPoint.type === 'peak' ? 'aboveBar' : 'belowBar',
-    //   color: 'red',
-    //   shape: 'circle',
-    //   size: 1,
-    // });
-
+    // markers.push({time: currentPoint.time,position: currentPoint.type === 'peak' ? 'aboveBar' : 'belowBar', color: 'red', shape: 'circle', size: 1});
     lineData.push(
-      // { time: prevPoint.time, value: prevPoint.price },
       { time: currentPoint.time, value: currentPoint.price },
     )
   }
-
-  // try {
-  //   // seriesMarkers.setMarkers([]);
-  //   seriesMarkers.setMarkers(markers);
-  // } catch (error) {
-  //   console.error('Ошибка при установке маркеров:', error);
-  //   // Дополнительная обработка ошибки
-  // }
+  // try {seriesMarkers.setMarkers([]);seriesMarkers.setMarkers(markers);} catch (error) {console.error('Ошибка при установке маркеров:', error);}
 
   try {
     structureLineSeries.setData(lineData)
-  } catch (error) {
-    console.error('Ошибка при установке маркеров:', error)
-  }
+  } catch (error) { console.error('Ошибка при установке маркеров:', error) }
 }
 
 function updatePositions() {
@@ -157,10 +152,16 @@ onMounted(() => {
     wickDownColor: '#ef5350',
   })
 
+  setupInstrumentInfo(props.symbol ?? '')
+
   shortPositionLineSeries = chart.addSeries(LineSeries, { color: 'red', lineWidth: 1 })
   longPositionLineSeries = chart.addSeries(LineSeries, { color: 'green', lineWidth: 1 })
   structureLineSeries = chart.addSeries(LineSeries, { color: '#0000b1', lineWidth: 1 })
-  updateChart()
+
+  setInterval(() => {
+    updateChart()
+  }, 10000)
+
   updateStructure()
 
   chart.timeScale().fitContent()

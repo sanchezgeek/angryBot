@@ -38,7 +38,7 @@ final readonly class PreviousCandlesProvider
             $back -= 1;
         }
         $to = new DateTimeImmutable()->setTimestamp($dayStart->getTimestamp() + (int)$intervalsPassed * $secondsInInterval);
-        $start = new DateTimeImmutable()->setTimestamp($to->getTimestamp() - $back * $secondsInInterval);
+        $start = new DateTimeImmutable()->setTimestamp(max($to->getTimestamp() - $back * $secondsInInterval, 0));
 
         $array = $this->candlesProvider->getCandles(symbol: $symbol, interval: $candleInterval, from: $start, limit: $count);
         return array_values(

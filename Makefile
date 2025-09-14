@@ -72,6 +72,7 @@ run-front:
 
 build-front:
 	npm run build --prefix ./frontend
+	rm -rf ./public/admin/assets
 	mv ./public/build/assets ./public/admin/assets
 	@$(API_CONT) bash -c "bin/console ca:cl"
 

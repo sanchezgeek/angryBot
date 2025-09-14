@@ -15,12 +15,12 @@ final readonly class CalcAverageTrueRangeEntryEvaluationProvider implements Para
     private const array REQUIRED_KEYS = [
         'symbol',
         'interval',
-        'intervalsBack',
+        'period',
     ];
 
     private const array DEFAULTS = [
         'interval' => '1D',
-        'intervalsBack' => '7',
+        'period' => '7',
     ];
 
     public function __construct(
@@ -53,14 +53,14 @@ final readonly class CalcAverageTrueRangeEntryEvaluationProvider implements Para
             $input['interval'] = self::DEFAULTS['interval'];
         }
 
-        if (!$input['intervalsBack']) {
-            $input['intervalsBack'] = self::DEFAULTS['intervalsBack'];
+        if (!$input['period']) {
+            $input['period'] = self::DEFAULTS['period'];
         }
 
         $symbol = $this->symbolProvider->getOrInitialize($input['symbol']);
         $interval = TimeFrame::from($input['interval']);
-        $intervalsBack = (int)$input['intervalsBack'];
+        $period = (int)$input['period'];
 
-        return new CalcAverageTrueRange($symbol, $interval, $intervalsBack);
+        return new CalcAverageTrueRange($symbol, $interval, $period);
     }
 }

@@ -22,6 +22,7 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
 
     private const array MINUTES_DEF = [
         TimeFrame::m1->value => '1',
+        TimeFrame::m3->value => '3',
         TimeFrame::m5->value => '5',
         TimeFrame::m15->value => '15',
         TimeFrame::m30->value => '30',

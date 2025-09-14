@@ -10,6 +10,7 @@ use DateInterval;
 enum TimeFrame: string
 {
     case m1 = '1m';
+    case m3 = '3m';
     case m5 = '5m';
     case m15 = '15m';
     case m30 = '30m';
@@ -25,6 +26,7 @@ enum TimeFrame: string
 
     public const array DATE_INTERVALS = [
         self::m1->value => '1 minute',
+        self::m3->value => '3 minutes',
         self::m5->value => '5 minutes',
         self::m15->value => '15 minutes',
         self::m30->value => '30 minutes',
