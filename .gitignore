@@ -19,6 +19,7 @@
 ###> pentatrion/vite-bundle ###
 /public/build/
 ###< pentatrion/vite-bundle ###
+/public/admin/
 
 ###> phpunit/phpunit ###
 /phpunit.xml
