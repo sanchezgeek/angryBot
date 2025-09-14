@@ -19,5 +19,12 @@ chart_api:
         path: ../../src/modules/Chart/UI/Symfony/Controller/
         namespace: App\Chart\UI\Symfony\Controller
 
+technical_analysis_api:
+    prefix: /api/technical-analysis
+    type: attribute
+    resource:
+        path: ../../src/modules/TechnicalAnalysis/UI/Symfony/Controller/
+        namespace: App\TechnicalAnalysis\UI\Symfony\Controller
+
 #    resource: "../../src/modules/Api/Infrastructure/Symfony/config/routes.yaml"
     
