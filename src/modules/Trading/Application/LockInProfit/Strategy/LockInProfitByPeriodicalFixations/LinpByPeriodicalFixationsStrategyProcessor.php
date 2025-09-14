@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
 use App\Helper\DateTimeHelper;
 use App\Helper\OutputHelper;
@@ -20,7 +19,6 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
     public function __construct(
         private TradingParametersProviderInterface $parameters,
         private LockInProfitPeriodicalFixationsStorageInterface $storage,
-        private ExchangeServiceInterface $exchangeService,
         private OrderServiceInterface $orderService,
     ) {
     }
@@ -57,13 +55,11 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             return false;
         }
 
-        $ticker = $this->exchangeService->ticker($symbol);
-
         $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->applyAfterPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
         $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->sub($absoluteLength) : $position->entryPrice()->add($absoluteLength);
 
-        $applicable = $ticker->markPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
+        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
         if (!$applicable) {
             return false;
         }

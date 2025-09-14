@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 
-use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
+use App\Helper\OutputHelper;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
@@ -29,7 +30,6 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
     public function __construct(
         private TradingParametersProviderInterface $parameters,
         private ApplyStopsToPositionHandler $applyStopsToHandler,
-        private ExchangeServiceInterface $exchangeService,
         private StopRepositoryInterface $stopRepository,
     ) {
     }
@@ -63,11 +63,14 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->checkOnPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
 
-        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->sub($absoluteLength) : $position->entryPrice()->add($absoluteLength);
+        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->value() - $absoluteLength : $position->entryPrice()->value() + $absoluteLength;
+        if ($triggerOnPrice <= 0) {
+            $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
+        }
 
-        $ticker = $this->exchangeService->ticker($symbol);
+        $triggerOnPrice = $symbol->makePrice($triggerOnPrice);
 
-        $applicable = $ticker->markPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
+        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
         if (!$applicable) {
             return;
         }
@@ -143,5 +146,10 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $priceChangePercent = $this->parameters->transformLengthToPricePercent($symbol, $lengthSelector)->value();
 
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
+    }
+
+    private static function print(string $message): void
+    {
+        OutputHelper::print(sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message));
     }
 }

@@ -28,10 +28,12 @@ final readonly class ApplyLockInProfitJobJobHandler
         // @todo @todo | lockInProfit | some im threshold?
 
         $positions = $this->positionService->getPositionsWithLiquidation();
+        $lastPrices = $this->positionService->getLastMarkPrices();
 
         foreach ($positions as $position) {
             $symbol = $position->symbol;
             $side = $position->side;
+            $markPrice = $lastPrices[$symbol->name()];
 
             if (!SettingsHelper::enabledWithAlternatives(self::ROOT_SETTING, $symbol, $side)) {
                 continue;
@@ -40,11 +42,11 @@ final readonly class ApplyLockInProfitJobJobHandler
             $entries = [];
 
             if (SettingsHelper::enabledWithAlternatives(LinpByStopsSettings::Enabled, $symbol, $side)) {
-                $entries[] = new LockInProfitEntry($position, $this->strategyDtoFactory->threeStopStepsLock());
+                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->threeStopStepsLock());
             }
 
             if (SettingsHelper::enabledWithAlternatives(LinpByFixationsSettings::Periodical_Enabled, $symbol, $side)) {
-                $entries[] = new LockInProfitEntry($position, $this->strategyDtoFactory->defaultPeriodicalFixationsLock());
+                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->defaultPeriodicalFixationsLock());
             }
 
             foreach ($entries as $entry) {
