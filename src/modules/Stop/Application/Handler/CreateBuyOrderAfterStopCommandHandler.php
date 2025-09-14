@@ -105,9 +105,9 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 
             if ($isAdditionalFixationsStop) {
                 $kind = match (true) {
-                    $stop->isStopAfterOtherSymbolLoss() => 'after.other.symbol.loss.fix',
-                    $stop->isStopAfterFixHedgeOppositePosition() => 'after.hedge.fix',
-                    $stop->createdAsLockInProfit() => 'after.lock.in.profit',
+                    $stop->isStopAfterOtherSymbolLoss() => 'other.symbol.loss',
+                    $stop->isStopAfterFixHedgeOppositePosition() => 'hedge',
+                    $stop->createdAsLockInProfit() => 'lock.in.profit',
                 };
 
                 $orders[] = $this->orderBasedOnLengthEnum($stop, $refPrice, $stopVolume / 3.5, 0, BO::addOppositeFixationKind($withForceBuy, $kind));
