@@ -9,7 +9,7 @@ import SettingsTable from './widgets/SettingsTable.vue'
 
 const doShowEditUserModal = ref(false)
 
-const { settingsGroups, isLoading, filters, error, ...usersApi } = settingsDataProxy(null)
+const { settingsGroups, isLoading, filters, error, ...usersApi } = settingsDataProxy()
 
 const userToEdit = ref<Setting | null>(null)
 

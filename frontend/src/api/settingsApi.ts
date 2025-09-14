@@ -3,13 +3,13 @@ import { Setting } from '../pages/setting/types'
 
 export type Filters = {
   isActive: boolean
-  search: string,
-  symbol: string|null
+  search: string
+  symbol: string | null
 }
 
 export const getSettings = async (filters: Partial<Filters>) => {
   const { search, symbol } = filters
-  let filteredSettings: Setting[] = await fetch(api.allSettings(symbol)).then((r) => r.json())
+  let filteredSettings: Setting[] = await fetch(api.allSettings(symbol ?? null)).then((r) => r.json())
 
   // filteredSettings = filteredSettings.filter((setting) => setting.active === isActive)
 

@@ -8,5 +8,7 @@ export type Setting = {
   // avatar: string
   // projects: UUID[]
   // notes: string
-  active: boolean
+  active: boolean,
+  caption: string,
+  items: Array<any>,
 }

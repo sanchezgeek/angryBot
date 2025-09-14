@@ -7,7 +7,9 @@ export type OpenedPositionsFilters = {
 }
 
 export const getOpenedPositions = async (filters: Partial<OpenedPositionsFilters>) => {
-  const openedSymbolPositions: OpenedPositionDto[] = await fetch(api.openedPositions(filters.symbol)).then((r) => r.json())
+  const openedSymbolPositions: OpenedPositionDto[] = await fetch(api.openedPositions(filters.symbol)).then((r) =>
+    r.json(),
+  )
 
   return {
     data: openedSymbolPositions,

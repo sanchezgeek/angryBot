@@ -20,7 +20,7 @@ const props = defineProps({
 </script>
 
 <template>
-<VaDataTable :columns="columns" :items="$props.openedPositions" :loading="$props.loading">
+  <VaDataTable :columns="columns" :items="$props.openedPositions" :loading="$props.loading">
     <template #cell(symbol)="{ rowData }">
       <div class="gap-2 ellipsis" :class="rowData.side === 'sell' ? 'short' : 'long'">
         <a :href="`/admin/dashboard/symbol-page/${rowData.symbol}`">{{ rowData.symbol }}</a>
@@ -32,9 +32,7 @@ const props = defineProps({
         {{ rowData.entryPrice }}
       </div>
     </template>
-</VaDataTable>
-
-
+  </VaDataTable>
 </template>
 
 <style lang="scss" scoped>
@@ -44,7 +42,10 @@ const props = defineProps({
   }
 }
 
-.short{color: red}
-.long{color: green}
-
+.short {
+  color: red;
+}
+.long {
+  color: green;
+}
 </style>

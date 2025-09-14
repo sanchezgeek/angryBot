@@ -21,16 +21,17 @@ final class CandlesApiController extends AbstractController
     ) {
     }
 
-    #[Route(path: '/candles/list/{symbol}', requirements: ['symbol' => '\w+'])]
-    public function openedPositions(string $symbol): Response
+    #[Route(path: '/candles/list/{symbol}/{timeFrame}', requirements: ['symbol' => '\w+', 'timeFrame' => '\w+'])]
+    public function symbols(string $symbol, string $timeFrame): Response
     {
+        $timeFrame = TimeFrame::from($timeFrame);
         $symbolParsed = $this->symbolProvider->getOrInitialize($symbol);
 
         $to = date_create_immutable();
-        $from = $to->sub(new DateInterval('P1D'));
+        $from = $to->sub(new DateInterval('P100D'));
 
         return new JsonResponse(
-            $this->candlesProvider->getCandles($symbolParsed, TimeFrame::D1, $from, $to)
+            $this->candlesProvider->getCandles($symbolParsed, $timeFrame, $from, $to)
         );
     }
 }

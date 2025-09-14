@@ -43,11 +43,16 @@ final readonly class CandleDto implements JsonSerializable
         ];
     }
 
-    public function jsonSerialize(): array
+    public function getUtcDatetime(): string
+    {
+        return date('Y-m-d H:i:s', $this->time);
+    }
+
+    public function jsonSerialize(): mixed
     {
         return [
             'time' => $this->time,
-            'utcDatetime' => date('Y-m-d H:i:s', $this->time),
+            'utcDatetime' => $this->getUtcDatetime(),
             'open' => $this->open,
             'high' => $this->high,
             'low' => $this->low,
@@ -58,5 +63,15 @@ final readonly class CandleDto implements JsonSerializable
     public function highLowDiff(): float
     {
         return abs($this->high - $this->low);
+    }
+
+    public function getHigh(): float
+    {
+        return $this->high;
+    }
+
+    public function getLow(): float
+    {
+        return $this->low;
     }
 }

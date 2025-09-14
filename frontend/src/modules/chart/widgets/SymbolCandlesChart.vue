@@ -1,88 +1,183 @@
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
+import { makeCandlesFilter, getCandles } from '../api/candlesApi'
 
-import {onMounted, ref, watch} from "vue";
-import {makeCandlesFilter, getCandles} from "../api/candlesApi";
-
-import {LightweightCharts, ChartApi, SeriesApi} from '../../../library/tv.js';
-import {OpenedPositionDto} from "../../position/dto/positionTypes";
+import {
+  createSeriesMarkers,
+  LineSeries,
+  AreaSeries,
+  BarSeries,
+  BaselineSeries,
+  CandlestickSeries,
+  createChart,
+  IChartApi,
+  ISeriesApi,
+  ISeriesMarkersPluginApi,
+  CrosshairMode,
+} from 'lightweight-charts'
+import {MarketStructurePointDto} from "../../market-structure/dto/marketStructureTypes";
 
 const props = defineProps({
   symbol: String,
-  msg: '',
   chartOptions: {
     type: Object,
     default() {
       return {
-        layout: {textColor: 'black', background: {type: 'solid', color: 'white'}},
+        layout: { textColor: 'black', background: { type: 'solid', color: 'white' } },
         crosshair: {
-          mode: LightweightCharts.CrosshairMode.Normal,
-        }
+          mode: CrosshairMode.Normal,
+        },
+        timeScale: {
+          timeVisible: true, // Показывать время на шкале
+          secondsVisible: false, // Скрывать секунды для 4H-данных
+        },
       }
-    }
+    },
   },
-  positions: Array
+  positions: Array,
+  marketStructurePoints: Array,
+  timeFrame: String,
 })
 
 // const emit = defineEmits(['response'])
 // emit('response', `hello from child (intiialized with ${props.msg})`)
 
-const candlesData = ref([]);
+const candlesData = ref([])
 
-let chart: ChartApi
-let candleSeries: SeriesApi
-let shortPositionLineSeries: SeriesApi
-let longPositionLineSeries: SeriesApi
+let chart: IChartApi
+// @ts-ignore
+let candleSeries: ISeriesApi
+// @ts-ignore
+let shortPositionLineSeries: ISeriesApi
+// @ts-ignore
+let longPositionLineSeries: ISeriesApi
+// @ts-ignore
+let seriesMarkers: ISeriesMarkersPluginApi
+// @ts-ignore
+let structureLineSeries: ISeriesApi
+
+watch(
+  () => props.timeFrame,
+  (newTimeFrame) => {
+    updateChart()
+  },
+  { immediate: true },
+) // immediate: true запустит watcher сразу после монтирования
+
+watch(
+  () => props.positions,
+  (newPositions) => {
+    updatePositions()
+  },
+)
+
+watch(
+  () => props.marketStructurePoints,
+  (newStructurePoints) => {
+    updateStructure()
+  },
+)
 
 async function updateChart() {
-  const res = await getCandles(makeCandlesFilter(props.symbol))
-  candlesData.value = res.data;
-  candleSeries.setData(candlesData.value);
+  const res = await getCandles(makeCandlesFilter(props.symbol ?? '', props.timeFrame ?? ''))
+  candlesData.value = res.data
+  candleSeries.setData(candlesData.value)
+}
+
+function updateStructure() {
+  // let markers = [];
+  const lineData = []
+
+  let marketStructurePoints = props.marketStructurePoints as Array<MarketStructurePointDto>
+
+  for (let i = 0; i < marketStructurePoints.length - 1; i++) {
+    const currentPoint = marketStructurePoints[i]
+
+    // markers.push({
+    //   time: currentPoint.time,
+    //   position: currentPoint.type === 'peak' ? 'aboveBar' : 'belowBar',
+    //   color: 'red',
+    //   shape: 'circle',
+    //   size: 1,
+    // });
+
+    lineData.push(
+      // { time: prevPoint.time, value: prevPoint.price },
+      { time: currentPoint.time, value: currentPoint.price },
+    )
+  }
+
+  // try {
+  //   // seriesMarkers.setMarkers([]);
+  //   seriesMarkers.setMarkers(markers);
+  // } catch (error) {
+  //   console.error('Ошибка при установке маркеров:', error);
+  //   // Дополнительная обработка ошибки
+  // }
+
+  try {
+    structureLineSeries.setData(lineData)
+  } catch (error) {
+    console.error('Ошибка при установке маркеров:', error)
+  }
 }
 
 function updatePositions() {
-  let candles = JSON.parse(JSON.stringify(candlesData.value));
+  const candles = JSON.parse(JSON.stringify(candlesData.value))
   if (candles.length === 0) {
-    return;
+    return
   }
-  // console.log(candles.length)
-  //
-  // candlesData.value
 
-  for (let i in props.positions) {
-    let position = props.positions[i];
+  for (const i in props.positions) {
+    // @ts-ignore
+    const position = props.positions[i]
     if (position.side === 'sell') {
-      shortPositionLineSeries.setData([{value: position.entryPrice, time: candles[0].time}, {value: position.entryPrice, time: candles[candles.length - 1].time}]);
+      shortPositionLineSeries.setData([
+        { value: position.entryPrice, time: candles[0].time },
+        { value: position.entryPrice, time: candles[candles.length - 1].time },
+      ])
     }
     if (position.side === 'buy') {
-      longPositionLineSeries.setData([{value: position.entryPrice, time: candles[0].time}, {value: position.entryPrice, time: candles[candles.length - 1].time}]);
-      // longPositionLineSeries.setMarkers([
-      //   {
-      //     time: candles[candles.length - 1].time,
-      //     position: 'belowBar',
-      //     color: 'green',
-      //     shape: 'arrowUp',
-      //   }]);
+      longPositionLineSeries.setData([
+        { value: position.entryPrice, time: candles[0].time },
+        { value: position.entryPrice, time: candles[candles.length - 1].time },
+      ])
     }
   }
 }
 
-watch((props.positions, () => {
-  updatePositions();
-}))
-
 onMounted(() => {
-  console.log(props.positions)
-    chart = LightweightCharts.createChart(document.getElementById("tvchart"), props.chartOptions);
-    candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, { upColor: '#26a69a', downColor: '#ef5350', borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350' });
-    shortPositionLineSeries = chart.addSeries(LightweightCharts.LineSeries, { color: 'red', lineWidth: 1});
-    longPositionLineSeries = chart.addSeries(LightweightCharts.LineSeries, { color: 'green', lineWidth: 1});
-    updateChart()
+  let element = document.getElementById('tvchart') as HTMLElement
+  chart = createChart(element, props.chartOptions)
+  candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    borderVisible: false,
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350',
+  })
+
+  shortPositionLineSeries = chart.addSeries(LineSeries, { color: 'red', lineWidth: 1 })
+  longPositionLineSeries = chart.addSeries(LineSeries, { color: 'green', lineWidth: 1 })
+  structureLineSeries = chart.addSeries(LineSeries, { color: '#0000b1', lineWidth: 1 })
+  updateChart()
+  updateStructure()
+
+  chart.timeScale().fitContent()
+
+  seriesMarkers = createSeriesMarkers(candleSeries, [
+    {
+      color: 'red',
+      position: 'inBar',
+      shape: 'arrowDown',
+      time: 1556880900,
+    },
+  ])
 })
 </script>
 
 <template>
-  <div id="tvchart" style="height: 500px; width: 500px"></div>
+  <div id="tvchart" style="height: 500px; width: 500px" />
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

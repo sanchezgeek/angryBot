@@ -7,14 +7,14 @@ const makeFiltersRef = () => ref<Partial<OpenedPositionsFilters>>({})
 export const symbolPageDataProxy = (options?: { filters?: Ref<Partial<OpenedPositionsFilters>> }) => {
   const isLoading = ref(false)
   const error = ref()
-  const storage = openedPositionsStore()
+  const positionsStore = openedPositionsStore()
 
   const { filters = makeFiltersRef() } = options || {}
 
   const fetch = async () => {
     isLoading.value = true
     try {
-      await storage.getOpenedPositions({
+      await positionsStore.getOpenedPositions({
         filters: unref(filters),
       })
     } finally {
@@ -22,11 +22,11 @@ export const symbolPageDataProxy = (options?: { filters?: Ref<Partial<OpenedPosi
     }
   }
 
-  watch(filters, () => fetch(),{ deep: true })
+  watch(filters, () => fetch(), { deep: true })
   fetch()
 
   const openedPositions = computed(() => {
-    return storage.items
+    return positionsStore.items
   })
 
   return {

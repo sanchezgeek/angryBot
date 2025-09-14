@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import { openedPositionsDataProxy } from './dataProxy/openedPositionsDataProxy'
 import OpenedPositionsTable from '../../modules/opened-positions/widggets/OpenedPositionsTable.vue'
 
@@ -14,10 +13,7 @@ fetchPositions()
   <VaCard>
     <VaCardContent>
       <!--    // filters-->
-      <OpenedPositionsTable
-        :opened-positions="openedPositions"
-        :loading="isPositionsLoading"
-      />
+      <OpenedPositionsTable :opened-positions="openedPositions" :loading="isPositionsLoading" />
     </VaCardContent>
   </VaCard>
 </template>

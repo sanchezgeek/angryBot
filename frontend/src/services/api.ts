@@ -15,7 +15,10 @@ export default {
   openedPositions: (symbol: string | null | undefined) =>
     symbol ? `${apiBaseUrl}/positions/opened-positions/${symbol}` : `${apiBaseUrl}/positions/opened-positions/`,
 
-  candles: (symbol: string) => `${apiBaseUrl}/chart/candles/list/${symbol}`,
+  candles: (symbol: string, timeFrame: string) => `${apiBaseUrl}/chart/candles/list/${symbol}/${timeFrame}`,
+
+  marketStructure: (symbol: string, timeFrame: string) =>
+    `${apiBaseUrl}/technical-analysis/market-structure/${symbol}/${timeFrame}`,
 
   allProjects: () => `${apiBaseUrl}/projects`,
   project: (id: string) => `${apiBaseUrl}/projects/${id}`,

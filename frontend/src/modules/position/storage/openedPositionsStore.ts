@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import {getOpenedPositions, OpenedPositionsFilters} from '../api/positionsApi'
+import { getOpenedPositions, OpenedPositionsFilters } from '../api/positionsApi'
 import { OpenedPositionDto } from '../dto/positionTypes'
 
 export const openedPositionsStore = defineStore('opened-positions', {
@@ -11,7 +11,7 @@ export const openedPositionsStore = defineStore('opened-positions', {
   },
 
   actions: {
-    async getOpenedPositions( options: {filters: Partial<OpenedPositionsFilters> }) {
+    async getOpenedPositions(options: { filters: Partial<OpenedPositionsFilters> }) {
       const { data } = await getOpenedPositions(options.filters)
       this.items = data
     },

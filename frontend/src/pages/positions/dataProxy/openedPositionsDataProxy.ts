@@ -22,7 +22,7 @@ export const openedPositionsDataProxy = (options?: { filters?: Ref<Partial<Opene
     }
   }
 
-  watch(filters, () => fetchPositions(),{ deep: true })
+  watch(filters, () => fetchPositions(), { deep: true })
 
   const openedPositions = computed(() => {
     return storage.items
@@ -33,6 +33,6 @@ export const openedPositionsDataProxy = (options?: { filters?: Ref<Partial<Opene
     isPositionsLoading: isLoading,
     filters,
     openedPositions: openedPositions,
-    fetchPositions
+    fetchPositions,
   }
 }
