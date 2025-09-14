@@ -563,7 +563,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $extraSymbolCell,
             sprintf('%s %.2f', $initialLiquidationDistancePercentOfEntry, $initialLiquidationDistance),
             sprintf('%s %.2f', $distanceBetweenLiquidationAndTickerPercentOfEntry, $distanceBetweenLiquidationAndTicker),
-            $extraSymbolCell,
+            OutputHelper::linkToSymbolDashboard($symbol, $symbol->shortName()),
             !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
         ]);
 
