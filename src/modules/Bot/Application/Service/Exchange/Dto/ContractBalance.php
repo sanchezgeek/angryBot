@@ -55,6 +55,7 @@ final readonly class ContractBalance implements JsonSerializable, Stringable
         return $this->total->add($this->unrealisedPnl ?? 0);
     }
 
+    // @todo | LockInProfit | need to add stops to profitable positions if at least half of total - unrealized
     public function unrealizedPartToTotal(): float
     {
         return ($this->unrealisedPnl ?? 0) / $this->totalWithUnrealized()->value();

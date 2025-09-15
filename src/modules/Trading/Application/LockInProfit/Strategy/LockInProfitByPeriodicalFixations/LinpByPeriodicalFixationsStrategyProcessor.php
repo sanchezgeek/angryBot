@@ -76,7 +76,10 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             $position, $step->singleFixationPart->of($initialPositionSize)
         )->realClosedQty;
 
-        self::print(sprintf('fix %s on %s', $closed, $position));
+        $totalClosed = $alreadyClosedOnThisStep + $closed;
+        $left = $initialPositionSize - $totalClosed;
+
+        self::print(sprintf('fix %s (%s left) on %s [%s]', $closed, $left, $position, $step->alias));
 
         $newState = new PeriodicalFixationStepState(
             $symbol,
@@ -84,7 +87,7 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             $step,
             DateTimeHelper::now(),
             $initialPositionSize,
-            $alreadyClosedOnThisStep + $closed
+            $totalClosed
         );
 
         $this->storage->saveState($newState);

@@ -25,7 +25,7 @@ final readonly class ApplyLockInProfitJobJobHandler
             return;
         }
 
-        // @todo @todo | lockInProfit | some im threshold?
+        // @todo | lockInProfit | some im threshold?
 
         $positions = $this->positionService->getPositionsWithLiquidation();
         $lastPrices = $this->positionService->getLastMarkPrices();
