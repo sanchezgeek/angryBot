@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Application\EventListener;
+namespace App\Trading\Application\AutoOpen\Handler;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
-use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Repository\BuyOrderRepository;
@@ -20,9 +19,9 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
-use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 use App\Settings\Application\Helper\SettingsHelper;
-use App\TechnicalAnalysis\Application\Helper\TA;
+use App\Trading\Application\AutoOpen\Handler\Review\AutoOpenClaimReviewer;
+use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\AutoOpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
@@ -31,73 +30,25 @@ use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 
-#[AsEventListener]
-final readonly class TryOpenPositionOnSignificantPriceChangeListener
+final readonly class AutoOpenHandler
 {
-    public const int DAYS_THRESHOLD = 6;
-    public const float FUNDING_THRESHOLD_FOR_SHORT = -0.0001;
-
-    public function __invoke(SignificantPriceChangeFoundEvent $event): void
+    public function handle(InitialPositionAutoOpenClaim $claim): void
     {
-        // @todo | autoOpen | check funding
-        if (!$event->tryOpenPosition) return;
+        $claimReview = $this->claimReviewer->handle($claim);
 
-        $priceChangeInfo = $event->info->info;
-        $symbol = $priceChangeInfo->symbol;
-        $positionSide = $event->positionSideToPositionLoss();
-
-        // @todo | autoOpen | or use insteadof ath check
-        $funding = $this->fundingProvider->getPreviousPeriodFundingRate($symbol);
-        if ($funding < self::FUNDING_THRESHOLD_FOR_SHORT) {
-            self::output(sprintf('skip autoOpen %s %s: prev funding (%s) < %s', $symbol->name(), $positionSide->title(), $funding, self::FUNDING_THRESHOLD_FOR_SHORT));
+        if (!$claimReview->suggestedParameters) {
+            self::output(sprintf('skip autoOpen (%s)', json_encode($claimReview->info)));
+            return;
         }
 
+        $symbol = $claim->symbol;
+        $positionSide = $claim->positionSide;
+        $percentOfDepositToUseAsMargin = $claimReview->suggestedParameters->percentOfDepositToUseAsMargin;
+
+        // @todo | probably better to get from claim checker?
         $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
-//        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
-
-        if (!SettingsHelper::withAlternatives(AutoOpenPositionSettings::AutoOpen_Enabled, $symbol, $positionSide)) {
-            self::output(sprintf('skip autoOpen (disabled for %s %s)', $symbol->name(), $positionSide->title()));
-            return;
-        }
-
-        if (($age = TA::instrumentAge($symbol))->countOfDays() < self::DAYS_THRESHOLD) {
-            self::output(sprintf('skip autoOpen (age of %s less than %d days [%s])', $symbol->name(), self::DAYS_THRESHOLD, $age));
-            return;
-        }
-
-        // @todo | autoOpen | calc size based on further liquidation (must be safe)
-
-        if ($positionSide === Side::Buy) return; // @todo | autoOpen | skip (now only for SHORTs) // diable force opposite for by through context
-
-        $ticker = $this->exchangeService->ticker($symbol);
-        $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
-
-        $threshold = self::usedThresholdFromAth($riskLevel);
-        [$minPercentOfDepositToRisk, $maxPercentOfDepositToRisk] = match ($riskLevel) {
-            RiskLevel::Cautious => [0.6, 2],
-            default => [0.8, 3],
-            RiskLevel::Aggressive => [1.2, 5],
-        };
-
-        // other logic for LONGs
-        if ($currentPricePartOfAth->value() < $threshold) {
-            $thresholdForNotification = $threshold;
-            $thresholdForNotification -= ($thresholdForNotification / 10);
-
-            if ($currentPricePartOfAth->value() >= $thresholdForNotification) {
-                // notify in some range
-                self::output(sprintf('skip autoOpen on %s %s ($currentPricePartOfAth (%s) < %s)', $symbol->name(), $positionSide->title(), $currentPricePartOfAth, $threshold));
-            }
-
-            return;
-        }
-
-        $percentOfDepositToRisk = $currentPricePartOfAth->of($maxPercentOfDepositToRisk);
-        $percentOfDepositToRisk = max($percentOfDepositToRisk, $minPercentOfDepositToRisk);
-        $percentOfDepositToRisk = new Percent($percentOfDepositToRisk);
 
         $asBuyOrder = false;
         if ($openedPosition = $this->positionService->getPosition($symbol, $positionSide)) {
@@ -117,10 +68,10 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
                 return;
             }
 
-            $balanceCanUseForOpen = $percentOfDepositToRisk->of($available);
+            $balanceCanUseForOpen = $percentOfDepositToUseAsMargin->of($available);
             $positionImPercentOfAvailableForOpen = Percent::fromPart($realInitialMargin / $balanceCanUseForOpen, false);
 
-            $commonInfo = sprintf('currentRealIm=%s | %s of %s available for open [%s]', $realInitialMargin, $positionImPercentOfAvailableForOpen->setOutputFloatPrecision(2), $percentOfDepositToRisk->setOutputFloatPrecision(2), $balanceCanUseForOpen);
+            $commonInfo = sprintf('currentRealIm=%s | %s of %s available for open [%s]', $realInitialMargin, $positionImPercentOfAvailableForOpen->setOutputFloatPrecision(2), $percentOfDepositToUseAsMargin->setOutputFloatPrecision(2), $balanceCanUseForOpen);
 
             $canUseAdditional = $positionImPercentOfAvailableForOpen->getComplement(false);
             if ($canUseAdditional->value() <= 0) {
@@ -128,16 +79,17 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
                 return;
             }
 
-            $percentOfDepositToRisk = $canUseAdditional->of($percentOfDepositToRisk);
+            $percentOfDepositToUseAsMargin = $canUseAdditional->of($percentOfDepositToUseAsMargin);
 
-
-            // mb remove other?
+            // mb remove other existed orders?
             $asBuyOrder = true;
 
             self::output(
-                sprintf('add additional im (%s%% of availableBalance = %s) to %s (%s)', $percentOfDepositToRisk->setOutputFloatPrecision(2), $available, $openedPosition->getCaption(), $commonInfo)
+                sprintf('add additional im (%s%% of availableBalance = %s) to %s (%s)', $percentOfDepositToUseAsMargin->setOutputFloatPrecision(2), $available, $openedPosition->getCaption(), $commonInfo)
             );
         }
+
+        $ticker = $this->exchangeService->ticker($symbol);
 
         $priceToRelate = $ticker->markPrice;
         $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
@@ -148,7 +100,7 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         $openPositionEntry = new OpenPositionEntryDto(
             symbol: $symbol,
             positionSide: $positionSide,
-            percentOfDepositToRisk: $percentOfDepositToRisk,
+            percentOfDepositToRisk: $percentOfDepositToUseAsMargin,
             withStops: true, // withStops: !$this->paramFetcher->getBoolOption(self::WITHOUT_STOPS_OPTION),
             closeAndReopenCurrentPosition: false,
             removeExistedStops: false,
@@ -162,15 +114,19 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         try {
             $this->setMaxLeverage($symbol);
             $this->openPositionHandler->handle($openPositionEntry);
-            $this->notifyAboutSuccess($event, $openPositionEntry);
-        } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException $e) {
+            // @todo throw event and handle in some listener
+            $this->notifyAboutSuccess($claim, $openPositionEntry);
+        } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException) {
+
         } catch (Throwable $e) {
+            // @todo throw event and handle in some listener
             $this->notifyAboutFail($openPositionEntry, $e);
         }
     }
 
     private function notifyAboutFail(OpenPositionEntryDto $openHandlerEntry, Throwable $e, bool $muted = false): void
     {
+        // @todo add claim reason?
         $message = sprintf('%s: got "%s (%s)" error. Entry was: %s', OutputHelper::shortClassName($this), get_class($e), $e->getMessage(), $openHandlerEntry);
 
         if (!self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide)) {
@@ -181,31 +137,20 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         self::output($message);
     }
 
-    private function notifyAboutSuccess(SignificantPriceChangeFoundEvent $event, OpenPositionEntryDto $openHandlerEntry): void
+    private function notifyAboutSuccess(InitialPositionAutoOpenClaim $claim, OpenPositionEntryDto $openHandlerEntry): void
     {
-        $info = $event->info;
-        $symbol = $info->info->symbol;
-        $priceChangePercent = $info->info->getPriceChangePercent()->setOutputFloatPrecision(2);
+        $reason = $claim->reason->getStringInfo();
+        $symbol = $claim->symbol;
 
         $message = sprintf(
-            '%s: %s %s %s position [percentOfDepositToRisk = %s, stopsGrid = "%s"] (days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) %s)',
+            '%s: %s %s %s position [percentOfDepositToRisk = %s, stopsGrid = "%s"] (reason: %s)',
             OutputHelper::shortClassName(self::class),
             $openHandlerEntry->asBuyOrder ? 'add additional to' : 'open',
             $symbol->name(),
             $openHandlerEntry->positionSide->title(),
             $openHandlerEntry->percentOfDepositToRisk->setOutputFloatPrecision(2),
             $openHandlerEntry->stopsGridsDefinition,
-            $info->info->partOfDayPassed,
-            $priceChangePercent,
-            $symbol->name(),
-            $info->info->partOfDayPassed,
-            $info->info->fromDate->format('m-d'),
-            $info->info->fromPrice,
-            $info->info->toPrice,
-            $info->info->priceDelta(),
-            $priceChangePercent,
-            $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
-            $symbol->name(),
+            $reason
         );
 
         $muted = !self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide);
@@ -219,24 +164,6 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         return SettingsHelper::withAlternatives(AutoOpenPositionSettings::Notifications_Enabled, $symbol, $positionSide) === true;
     }
 
-    public static function usedThresholdFromAth(RiskLevel $riskLevel): float
-    {
-        // funding time + hedge + close
-
-        return match ($riskLevel) {
-            RiskLevel::Cautious => 90,
-            default => 85,
-            RiskLevel::Aggressive => 75,
-        };
-    }
-
-    private static function output(string $message): void
-    {
-        OutputHelper::warning(
-            sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message)
-        );
-    }
-
     private function setMaxLeverage(SymbolInterface $symbol): void
     {
         $maxLeverage = $this->marketService->getInstrumentInfo($symbol->name())->maxLeverage;
@@ -246,7 +173,16 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         } catch (Throwable) {}
     }
 
+    private static function output(string $message): void
+    {
+        OutputHelper::warning(
+            sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message)
+        );
+    }
+
     public function __construct(
+        private AutoOpenClaimReviewer $claimReviewer,
+
         private PositionServiceInterface $positionService,
         private TradingParametersProviderInterface $parameters,
         private ExchangeServiceInterface $exchangeService,
@@ -257,7 +193,15 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
         private ContractBalanceProviderInterface $contractBalanceProvider,
         private BuyOrderRepository $buyOrderRepository,
         private OrderCostCalculator $orderCostCalculator,
-        private MarketServiceInterface $fundingProvider,
     ) {
     }
+
+//    #[AppDynamicParameter(group: 'autoOpen', name: 'params')]
+//    public function getDependencyInfo(): AbstractDependencyInfo
+//    {
+//        $info = [];
+//        $info['cmd'] = ShowParametersCommand::url('autoOpen', 'params');
+//
+//        return InfoAboutEnumDependency::create(AutoOpenPositionParameters::class, RiskLevel::class, $info, 'autoOpen', 'params');
+//    }
 }

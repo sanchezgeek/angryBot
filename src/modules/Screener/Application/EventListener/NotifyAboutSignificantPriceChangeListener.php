@@ -14,7 +14,7 @@ use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 use App\Screener\Application\Settings\ScreenerNotificationsSettings;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
-use App\Trading\Application\EventListener\TryOpenPositionOnSignificantPriceChangeListener;
+use App\Trading\Application\EventListener\RunAutoOpenPositionOnSignificantPriceChangeListener;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -39,20 +39,20 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             return;
         }
 
-        if ($positionSide === Side::Sell) {
-            $ticker = $this->exchangeService->ticker($symbol);
-            $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
-            $thresholdFromAth = TryOpenPositionOnSignificantPriceChangeListener::usedThresholdFromAth(TradingDynamicParameters::riskLevel($symbol, $positionSide));
-            $thresholdFromAth -= ($thresholdFromAth / 10);
-
-            if ($currentPricePartOfAth->value() < $thresholdFromAth) {
-                return;
-            }
-        } else {
-            // @todo mb near 00:00 and if used baseAtrMultiplier (pass it to result) > 6?
-            // + ath check
-            return;
-        }
+//        if ($positionSide === Side::Sell) {
+//            $ticker = $this->exchangeService->ticker($symbol);
+//            $currentPricePartOfAth = TA::currentPricePartOfAth($symbol, $ticker->markPrice);
+//            $thresholdFromAth = TryOpenPositionOnSignificantPriceChangeListener::usedThresholdFromAth(TradingDynamicParameters::riskLevel($symbol, $positionSide));
+//            $thresholdFromAth -= ($thresholdFromAth / 10);
+//
+//            if ($currentPricePartOfAth->value() < $thresholdFromAth) {
+//                return;
+//            }
+//        } else {
+//            // @todo mb near 00:00 and if used baseAtrMultiplier (pass it to result) > 6?
+//            // + ath check
+//            return;
+//        }
 
         // либо это должно быть в поисковике
         // @todo | priceChange | save prev percent and notify again if new percent >= prev
