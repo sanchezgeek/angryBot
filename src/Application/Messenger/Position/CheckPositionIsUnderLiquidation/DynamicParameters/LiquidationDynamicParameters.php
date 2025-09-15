@@ -268,6 +268,8 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         );
     }
 
+    // @todo | RiskLevel | Apply RiskLevel
+    // @todo | RiskLevel | Apply RiskLevel | liquidation | LiquidationDynamicParameters::percentOfLiquidationDistanceToAddStop | risk + partOfBalance + im | + test
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function percentOfLiquidationDistanceToAddStop(): Percent
     {
@@ -375,6 +377,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         $position = $this->position;
         $additionalStopPrice = $this->additionalStopPrice();
 
+        // @todo | Apply TA | LiquidationDynamicParameters::actualStopsRange
         $actualStopsRangeFromAdditionalStop = $this->settingsProvider->required(
             SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
         );

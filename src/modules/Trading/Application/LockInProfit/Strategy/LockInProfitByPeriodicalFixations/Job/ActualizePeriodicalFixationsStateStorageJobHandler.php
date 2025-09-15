@@ -10,6 +10,7 @@ use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use RuntimeException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -25,7 +26,10 @@ final readonly class ActualizePeriodicalFixationsStateStorageJobHandler
     {
         $allStoredStates = [];
         foreach ($this->storage->getAllStoredKeys() as $key) {
-            $allStoredStates[] = $this->storage->getStateByStoredKey($key);
+            try {
+                $allStoredStates[] = $this->storage->getStateByStoredKey($key);
+            } catch (RuntimeException) {
+            }
         }
 
         $openedPositionsKeys = [];

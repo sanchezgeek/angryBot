@@ -38,6 +38,7 @@ use Throwable;
 final readonly class TryOpenPositionOnSignificantPriceChangeListener
 {
     public const int DAYS_THRESHOLD = 6;
+    public const float FUNDING_THRESHOLD_FOR_SHORT = -0.0001;
 
     public function __invoke(SignificantPriceChangeFoundEvent $event): void
     {
@@ -50,8 +51,8 @@ final readonly class TryOpenPositionOnSignificantPriceChangeListener
 
         // @todo | autoOpen | or use insteadof ath check
         $funding = $this->fundingProvider->getPreviousPeriodFundingRate($symbol);
-        if ($funding < -0.0001) {
-            self::output(sprintf('skip autoOpen %s %s (prev funding [%s] < 0)', $symbol->name(), $positionSide->title(), $funding));
+        if ($funding < self::FUNDING_THRESHOLD_FOR_SHORT) {
+            self::output(sprintf('skip autoOpen %s %s: prev funding (%s) < %s', $symbol->name(), $positionSide->title(), $funding, self::FUNDING_THRESHOLD_FOR_SHORT));
         }
 
         $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);

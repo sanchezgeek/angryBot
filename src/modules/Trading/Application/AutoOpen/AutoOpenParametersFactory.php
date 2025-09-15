@@ -11,6 +11,7 @@ use App\Info\Contract\Dto\AbstractDependencyInfo;
 use App\Info\Contract\Dto\InfoAboutEnumDependency;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\UI\Symfony\Command\DynamicParameters\ShowParametersCommand;
 use App\Trading\Application\Parameters\TradingDynamicParameters;
 use App\Trading\Domain\Symbol\SymbolInterface;
 
@@ -28,6 +29,8 @@ final readonly class AutoOpenParametersFactory implements DependencyInfoProvider
     ): AutoOpenParameters {
         $riskLevel = $riskLevel ?? TradingDynamicParameters::riskLevel($symbol, $positionSide);
 
+        return AutoOpenParameters::createFromDefaults($riskLevel);
+
         [$minPercentOfDepositToUseAsMargin, $maxPercentOfDepositToUseAsMargin] = match ($riskLevel) {
             RiskLevel::Cautious => [0.8, 4],
             default => [1, 6],
@@ -43,6 +46,9 @@ final readonly class AutoOpenParametersFactory implements DependencyInfoProvider
 
     public function getDependencyInfo(): AbstractDependencyInfo
     {
-        return InfoAboutEnumDependency::create(AutoOpenParameters::class, RiskLevel::class, '');
+        $info = [];
+        $info['cmd'] = ShowParametersCommand::url('autoOpen', 'params');
+
+        return InfoAboutEnumDependency::create(AutoOpenParameters::class, RiskLevel::class, $info, 'autoOpen', 'params');
     }
 }

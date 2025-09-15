@@ -43,6 +43,7 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
+use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -277,6 +278,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     public function doOut(?array $selectedCache, ?array $prevCache): void
     {
+        $this->ath = [];
         $positionService = $this->positionService; /** @var ByBitLinearPositionService $positionService */
         $this->positions = $positionService->getAllPositions();
         $this->lastMarkPrices = $positionService->getLastMarkPrices();
@@ -448,8 +450,11 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $initialLiquidationDistance = $main->liquidationDistance();
         $distanceBetweenLiquidationAndTicker = $main->liquidationPrice()->deltaWith($markPrice);
 
-        $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
-        $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $main->entryPrice, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+        $priceToCalcPercentOfEntry = $main->side->isShort() ? $this->currentPriceDeltaFromLow($main->entryPrice()) : $main->entryPrice;
+
+
+        $initialLiquidationDistancePercentOfEntry = Percent::fromPart($initialLiquidationDistance / $priceToCalcPercentOfEntry, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
+        $distanceBetweenLiquidationAndTickerPercentOfEntry = Percent::fromPart($distanceBetweenLiquidationAndTicker / $priceToCalcPercentOfEntry, false)->setOutputDecimalsPrecision(7)->setOutputFloatPrecision(1);
         if ($distanceBetweenLiquidationAndTickerPercentOfEntry->value() < $initialLiquidationDistancePercentOfEntry->value()) {
             $passedLiquidationDistancePercent = Percent::fromPart(($initialLiquidationDistancePercentOfEntry->value() - $distanceBetweenLiquidationAndTickerPercentOfEntry->value()) / $initialLiquidationDistancePercentOfEntry->value());
             $passedLiquidationDistancePercent = match (true) {
@@ -493,7 +498,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             if ($funding < 0) {
                 $fundingContent = CTH::colorizeText($fundingContent, 'light-yellow-text');
             }
-            $cells = [sprintf('%10s: % 8s / %8s %5s', $symbol->shortName(), $fundingContent, $markPrice, self::athInfo($main, $markPrice))];
+            $cells = [sprintf('%10s: % 8s / %8s %5s', $symbol->shortName(), $fundingContent, $markPrice, $this->athInfo($main, $markPrice))];
         }
 
         $cells = array_merge($cells, [
@@ -501,10 +506,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 '%s: %9s %5s  %7s %3s   %6s',
                 CTH::colorizeText(sprintf('%5s', $main->side->title()), $main->isShort() ? 'red-text' : 'green-text'),
                 $main->entryPrice(),
-                self::athInfo($main, $main->entryPrice()),
+                $this->athInfo($main, $main->entryPrice()),
                 $liquidationContent,
 //                '(100%)',
-                self::athInfo($main, $main->liquidationPrice(), 4),
+                $this->athInfo($main, $main->liquidationPrice(), 4),
                 self::formatChangedValue(value: $main->size, specifiedCacheValue: (($specifiedCache[$mainPositionCacheKey] ?? null)?->size), formatter: static fn($value) => $symbol->roundVolume($value)),
             ),
             sprintf('%.1f', $this->ims[$main->symbol->name()]),
@@ -558,7 +563,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             $extraSymbolCell,
             sprintf('%s %.2f', $initialLiquidationDistancePercentOfEntry, $initialLiquidationDistance),
             sprintf('%s %.2f', $distanceBetweenLiquidationAndTickerPercentOfEntry, $distanceBetweenLiquidationAndTicker),
-            $extraSymbolCell,
+            OutputHelper::linkToSymbolDashboard($symbol, $symbol->shortName()),
             !$isEquivalentHedge ? ($passedLiquidationDistancePercent ?? '') : '',
         ]);
 
@@ -634,9 +639,29 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         return $result;
     }
 
-    private static function athInfo(Position $position, SymbolPrice $price, int $decimals = 3): string
+    private array $ath;
+
+    private function getAthInfo(SymbolInterface $symbol): FindHighLowPricesResult
     {
-        $percent = TA::currentPricePartOfAth($position->symbol, $price)->setOutputFloatPrecision(0)->setOutputDecimalsPrecision($decimals);
+        return $this->ath[$symbol->name()] ?? $this->ath[$symbol->name()] = TA::allTimeHighLow($symbol);
+    }
+
+    private function currentPriceDeltaFromLow(SymbolPrice $price): float
+    {
+        return $price->deltaWith($this->getAthInfo($price->symbol)->low);
+    }
+
+    public function currentPricePartOfAth(SymbolInterface $symbol, SymbolPrice $price): Percent
+    {
+        $allTimeHighLow = $this->getAthInfo($symbol);
+        $currentPriceDeltaFromLow = $this->currentPriceDeltaFromLow($price);
+
+        return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta(), false);
+    }
+
+    private function athInfo(Position $position, SymbolPrice $price, int $decimals = 3): string
+    {
+        $percent = $this->currentPricePartOfAth($position->symbol, $price)->setOutputFloatPrecision(0)->setOutputDecimalsPrecision($decimals);
         $percentValue = $percent->value();
 
         if ($position->isShort()) {

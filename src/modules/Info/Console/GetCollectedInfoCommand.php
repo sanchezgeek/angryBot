@@ -2,10 +2,20 @@
 
 namespace App\Info\Console;
 
+use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
+use App\Domain\Position\ValueObject\Side;
 use App\Info\Application\Service\DependencyInfoCollector;
 use App\Info\Contract\DependencyInfoProviderInterface;
+use App\Info\Contract\Dto\InfoAboutEnumDependency;
+use App\Output\Table\Dto\Cell;
+use App\Output\Table\Dto\DataRow;
+use App\Output\Table\Dto\Style\CellStyle;
+use App\Output\Table\Dto\Style\Enum\Color;
+use App\Output\Table\Formatter\ConsoleTableBuilder;
+use App\Settings\Application\Helper\SettingsHelper;
+use App\Trading\Application\Settings\LockInProfitSettings;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,8 +33,25 @@ class GetCollectedInfoCommand extends AbstractCommand
             $this->collector->addInfo($service->getDependencyInfo());
         }
 
-        $info = $this->collector->getInfo();
-        var_dump($info);die;
+        /** @var array<string, InfoAboutEnumDependency[]> $groupsByDependentOn */
+        $groupsByDependentOn = $this->collector->getGroupedByDependentOn(InfoAboutEnumDependency::class);
+
+
+        $rows = [];
+        foreach ($groupsByDependentOn as $dependentOn => $items) {
+
+            $rows[] = DataRow::separated([Cell::restColumnsMerged(sprintf('        dependendsOn: %s', $dependentOn))->addStyle(new CellStyle(fontColor: Color::GREEN))]);
+            foreach ($items as $infoItem) {
+                $rows[] = DataRow::separated([$infoItem->dependentTarget, $infoItem->stringInfo("\n")]);
+            }
+        }
+
+        ConsoleTableBuilder::withOutput($this->output)
+            ->withRows(...$rows)
+            ->withHeader(['target', 'info'])
+            ->build()
+            ->setStyle('box')
+            ->render();
 
         return Command::SUCCESS;
     }

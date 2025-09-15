@@ -8,6 +8,7 @@ use App\Application\UseCase\Position\CalcPositionLiquidationPrice\CalcPositionLi
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use DateTimeImmutable;
 use JsonSerializable;
@@ -147,5 +148,13 @@ class OutputHelper
         $end = microtime(true);
 
         return $end - $start;
+    }
+
+    public static function linkToSymbolDashboard(SymbolInterface $symbol, ?string $caption = null): string
+    {
+        $host = $_ENV['SERVER_NAME'];
+        $caption = $caption ?? $symbol->name();
+
+        return sprintf('<href=https://%s/admin/dashboard/symbol-page/%s>%s</>', $host, $symbol->name(), $caption);
     }
 }

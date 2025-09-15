@@ -95,12 +95,12 @@ final readonly class PushAllMainPositionsStopsHandler
 
         $lastSort = [];
         foreach ($sort as $symbolRaw) {
-            $position = $positions[$symbolRaw];
-            $lastSort[] = $symbol = $position->symbol;
-
             if ($filterPositionsWithoutStops && !in_array($symbolRaw, $foundStopsForSymbols, true)) {
                 continue;
             }
+
+            $position = $positions[$symbolRaw];
+            $lastSort[] = $symbol = $position->symbol;
 
             try {
                 $positionState = $positionsCache[$symbolRaw]->get();

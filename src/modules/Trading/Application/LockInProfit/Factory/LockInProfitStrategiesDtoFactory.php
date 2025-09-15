@@ -51,14 +51,30 @@ final class LockInProfitStrategiesDtoFactory
 
     public function defaultPeriodicalFixationsLock(): LinpByPeriodicalFixationsStrategyDto
     {
+        // @todo use funding here
+
         return new LinpByPeriodicalFixationsStrategyDto(
             new PeriodicalFixationStep(
-                'periodical-fixation-on-standard-distance',
+                'periodical-fixation-on-long-distance',
                 PriceDistanceSelector::Long,
                 new Percent(0.5),
-                new Percent(10),
+                new Percent(12),
                 DateTimeHelper::secondsInMinutes(30) // settings based on TradingStyle
-            )
+            ),
+            new PeriodicalFixationStep(
+                'periodical-fixation-on-very-long-distance',
+                PriceDistanceSelector::VeryLong,
+                new Percent(1),
+                new Percent(16),
+                DateTimeHelper::secondsInMinutes(30)
+            ),
+            new PeriodicalFixationStep(
+                'periodical-fixation-on-very-very-long-distance',
+                PriceDistanceSelector::VeryVeryLong,
+                new Percent(0.5),
+                new Percent(18),
+                DateTimeHelper::secondsInMinutes(30)
+            ),
         );
     }
 
