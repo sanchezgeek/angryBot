@@ -22,4 +22,20 @@ final class DependencyInfoCollector
     {
         return $this->info;
     }
+
+    /**
+     * @return array<string, AbstractDependencyInfo[]>
+     */
+    public function getGroupedByDependentOn(?string $type = null): array
+    {
+        $result = [];
+        foreach ($this->info as $item) {
+            if ($type && !$item instanceof $type) {
+                continue;
+            }
+            $result[$item->dependentOn][] = $item;
+        }
+
+        return $result;
+    }
 }

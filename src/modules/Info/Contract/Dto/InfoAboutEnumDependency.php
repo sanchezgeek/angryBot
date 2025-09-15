@@ -11,12 +11,16 @@ final class InfoAboutEnumDependency extends AbstractDependencyInfo
     /**
      * @param string $dependentTarget
      * @param class-string<BackedEnum> $usedEnum
-     * @param string $info
+     * @param string|array $info
+     * @param string|null $parametersGroup
+     * @param string|null $parameterName
      */
     private function __construct(
         public string $dependentTarget,
         public string $usedEnum,
-        string $info,
+        string|array $info,
+        public ?string $parametersGroup = null,
+        public ?string $parameterName = null,
     ) {
         parent::__construct($info, $usedEnum);
     }
@@ -24,8 +28,13 @@ final class InfoAboutEnumDependency extends AbstractDependencyInfo
     /**
      * @param class-string<BackedEnum> $usedEnum
      */
-    public static function create(string $target, string $usedEnum, string $info): self
-    {
-        return new self($target, $usedEnum, $info);
+    public static function create(
+        string $target,
+        string $usedEnum,
+        string|array $info,
+        ?string $parametersGroup = null,
+        ?string $parameterName = null,
+    ): self {
+        return new self($target, $usedEnum, $info, $parametersGroup, $parameterName);
     }
 }
