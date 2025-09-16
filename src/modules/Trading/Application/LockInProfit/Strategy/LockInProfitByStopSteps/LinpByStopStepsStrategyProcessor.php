@@ -82,7 +82,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             $collection = new StopsCollection(...$existedStops);
 
             // @todo | lockInProfit | stops | mb use initial position size?
-            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->size));
+            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->getNotCoveredSize()));
             if ($percent->value() <= 0) {
                 return;
             }
@@ -99,7 +99,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $positionSide,
-                $position->size,
+                $position->getNotCoveredSize(),
                 new OrdersGridDefinitionCollection($symbol, 'from strategy', $ordersGridDefinition),
                 [
                     Stop::LOCK_IN_PROFIT_STEP_ALIAS => $stepAlias,

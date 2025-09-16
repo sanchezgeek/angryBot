@@ -64,7 +64,7 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             return false;
         }
 
-        $initialPositionSize = $state?->initialPositionSize ?? $position->size;
+        $initialPositionSize = $state?->initialPositionSize ?? $position->getNotCoveredSize();
         $alreadyClosedOnThisStep = $state?->totalClosed ?? 0;
         $maxPositionSizeToCloseOnThisStep = $step->maxPositionSizePart->of($initialPositionSize);
 
@@ -77,7 +77,7 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
         )->realClosedQty;
 
         $totalClosed = $alreadyClosedOnThisStep + $closed;
-        $left = $initialPositionSize - $totalClosed;
+        $left = $maxPositionSizeToCloseOnThisStep - $totalClosed;
 
         self::print(sprintf('fix %s (%s left) on %s [%s]', $closed, $left, $position, $step->alias));
 
