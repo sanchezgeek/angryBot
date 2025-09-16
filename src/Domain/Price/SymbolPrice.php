@@ -62,9 +62,15 @@ final readonly class SymbolPrice implements Stringable, JsonSerializable
     /**
      * @throws PriceCannotBeLessThanZero
      */
-    public function sub(SymbolPrice|float $subValue): self
+    public function sub(SymbolPrice|float $subValue, bool $zeroSafe = false): self
     {
-        return self::create($this->value - self::toFloat($subValue), $this->symbol);
+        $value = $this->value - self::toFloat($subValue);
+
+        if ($zeroSafe && $value < 0) {
+            $value = 0;
+        }
+
+        return self::create($value, $this->symbol);
     }
 
     public function eq(SymbolPrice|float $otherPrice): bool

@@ -92,7 +92,7 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         bool $exceptOppositeOrders = false,
         ?callable $qbModifier = null
     ): array {
-        return $this->findActiveQB($symbol, $side, null, $exceptOppositeOrders, function (QueryBuilder $qb) use ($priceRange, $qbModifier) {
+        return $this->findActiveQB($symbol, $side, $exceptOppositeOrders, function (QueryBuilder $qb) use ($priceRange, $qbModifier) {
             $qbModifier && $qbModifier($qb);
 
             $priceField = $qb->getRootAliases()[0] . '.price';
@@ -109,82 +109,24 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
     public function findActive(
         ?SymbolInterface $symbol = null,
         ?Side $side = null,
-        ?Ticker $nearPrice = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): array {
-        return $this->findActiveQB($symbol, $side, $nearPrice, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
+        return $this->findActiveQB($symbol, $side, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
     }
 
+    /**
+     * @return Stop[]
+     */
     public function findActiveForPush(
         SymbolInterface $symbol,
         Side $side,
         SymbolPrice $nearPrice,
         ?callable $qbModifier = null
-    ): QueryBuilder {
-        $qb = $this->findActiveForPushQB(symbol: $symbol, side: $side, nearPrice: $nearPrice, qbModifier: $qbModifier);
+    ): array {
+        $qb = $this->findActiveForPushQB(symbol: $symbol, side: $side, currentPrice: $nearPrice, qbModifier: $qbModifier);
 
         return $qb->getQuery()->getResult();
-    }
-
-    public function findActiveQB(
-        ?SymbolInterface $symbol = null,
-        ?Side $side = null,
-        ?Ticker $nearPrice = null,
-        bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
-        ?callable $qbModifier = null
-    ): QueryBuilder {
-        $alias = 's';
-
-        $qb = $this->createQueryBuilder($alias)
-            ->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false")
-        ;
-
-        if ($side) {
-            $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
-        }
-
-        if ($symbol) {
-            $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
-        }
-
-        // а это тут вообще зачем? Для случая ConditionalBO?
-        if ($exceptOppositeOrders) {
-            $qb->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false");
-        }
-
-        if ($nearPrice) {
-            $range = $nearPrice->symbol->makePrice($nearPrice->indexPrice->value() / 600)->value();
-
-            $cond = $side->isShort()    ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
-            $price = $side->isShort()   ? $nearPrice->indexPrice->value() + $range  : $nearPrice->indexPrice->value() - $range;
-
-            $qb->andWhere($cond)->setParameter(':price', $price);
-        }
-
-        if ($qbModifier) {
-            $qbModifier($qb, $alias);
-        }
-
-        return $qb;
-    }
-
-    private function findActiveForPushQB(
-        SymbolInterface $symbol,
-        Side $side,
-        SymbolPrice $nearPrice,
-        ?callable $qbModifier = null
-    ): QueryBuilder {
-        $qb = $this->findActiveQB(symbol: $symbol, side: $side, qbModifier: $qbModifier);
-
-        $range = $nearPrice->value() / 600;
-        $price = $side->isShort() ? $nearPrice->value() + $range  : $nearPrice->value() - $range;
-        $price = $symbol->makePrice($price);
-
-        $cond = $side->isShort() ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
-        $qb->andWhere($cond)->setParameter(':price', $price);
-
-        return $qb;
     }
 
     /**
@@ -229,6 +171,43 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         }
 
         return $this->getEntityManager()->getConnection()->executeQuery($query, $params)->fetchAllAssociative();
+    }
+
+    private function findActiveQB(
+        ?SymbolInterface $symbol = null,
+        ?Side $side = null,
+        bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
+        ?callable $qbModifier = null
+    ): QueryBuilder {
+        $qb = $this->createQueryBuilder($alias = 's');
+        $qb->andWhere("HAS_ELEMENT(s.context, '$this->exchangeOrderIdContext') = false");
+
+        $side   && $qb->andWhere('s.positionSide = :posSide')->setParameter(':posSide', $side);
+        $symbol && $qb->andWhere('s.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+
+        // а это тут вообще зачем? Для случая ConditionalBO?
+        $exceptOppositeOrders && $qb->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false");
+
+        $qbModifier !== null && $qbModifier($qb, $alias);
+
+        return $qb;
+    }
+
+    private function findActiveForPushQB(
+        SymbolInterface $symbol,
+        Side $side,
+        SymbolPrice $currentPrice,
+        ?callable $qbModifier = null
+    ): QueryBuilder {
+        $qb = $this->findActiveQB(symbol: $symbol, side: $side, qbModifier: $qbModifier);
+
+        $range = $currentPrice->value() / 600;
+        $price = $side->isShort() ? $currentPrice->add($range)  : $currentPrice->sub($range, zeroSafe: true);
+
+        $cond = $side->isShort() ? '(:currentPrice > s.price - s.triggerDelta)'  : '(:currentPrice < s.price + s.triggerDelta)';
+        $qb->andWhere($cond)->setParameter(':currentPrice', $price->value());
+
+        return $qb;
     }
 
     public function findFirstStopUnderPosition(Position $position): ?Stop

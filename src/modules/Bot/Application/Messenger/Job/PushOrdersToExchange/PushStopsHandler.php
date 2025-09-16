@@ -51,10 +51,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
             return;
         }
 
-        $stops = $this->repository->findActive($symbol, $side, $this->exchangeService->ticker($symbol),
-            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC')
-        );
-        $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
+        $ticker = $this->exchangeService->ticker($symbol);
 
         $parameters = new PushStopsDP($this->liquidationDynamicParametersFactory, $position, $ticker);
         $triggerBy = $parameters->priceToUseWhenPushStopsToExchange();
@@ -64,9 +61,12 @@ final class PushStopsHandler extends AbstractOrdersPusher
             TriggerBy::LastPrice => $ticker->lastPrice,
         };
 
-        $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
+        $sort = static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC');
+        $stops = $this->repository->findActiveForPush($symbol, $side, $currentPrice, qbModifier: $sort);
 
+        // @todo | what if ticker changed while get stops?
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
+        $criticalDistance = $parameters->criticalDistance();
 
         $checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);
         foreach ($stops as $stop) {
@@ -91,7 +91,7 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 if ((!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) || !$this->stopCanBePushed($stop, $checksContext)) continue;
 
                 if ($currentPriceOverStop) {
-                    if ($distanceWithLiquidation <= $liquidationParameters->criticalDistance()) {
+                    if ($distanceWithLiquidation <= $criticalDistance) {
                         $callback = self::closeByMarketCallback($orderService, $position, $stop, $stopsClosedByMarket);
                     } else {
                         $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);

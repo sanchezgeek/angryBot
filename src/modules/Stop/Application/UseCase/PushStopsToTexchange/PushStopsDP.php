@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Stop\Application\UseCase\PushStopsToTexchange;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersInterface;
 use App\Bot\Application\Settings\Enum\PriceRangeLeadingToUseMarkPriceOptions;
 use App\Bot\Application\Settings\PushStopSettingsWrapper;
 use App\Bot\Domain\Position;
@@ -19,17 +20,19 @@ use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProvide
 /**
  * aka "DynamicParameters"
  */
-final readonly class PushStopsDP implements AppDynamicParametersProviderInterface
+final class PushStopsDP implements AppDynamicParametersProviderInterface
 {
+    private ?LiquidationDynamicParametersInterface $liquidationDP = null;
+
     public function __construct(
         #[AppDynamicParameterAutowiredArgument]
-        private LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
+        private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
 
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentPositionState, skipUserInput: true)]
-        private Position $position,
+        private readonly Position $position,
 
         #[AppDynamicParameterEvaluations(defaultValueProvider: DefaultValueProviderEnum::CurrentTicker, skipUserInput: true)]
-        private Ticker $ticker,
+        private readonly Ticker $ticker,
     ) {
     }
 
@@ -39,15 +42,31 @@ final readonly class PushStopsDP implements AppDynamicParametersProviderInterfac
         $position = $this->position;
         $ticker = $this->ticker;
 
-        $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
+        $liquidationDP = $this->getLiquidationDP();
+
         $distanceToUseMarkPrice = PushStopSettingsWrapper::rangeToUseWhileChooseMarkPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
-            ? $liquidationParameters->warningDistanceRaw()
-            : $liquidationParameters->criticalDistance();
+            ? $liquidationDP->warningDistanceRaw()
+            : $liquidationDP->criticalDistance();
 
         $distanceToUseMarkPrice *= 2;
 
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
 
         return $distanceWithLiquidation <= $distanceToUseMarkPrice ? TriggerBy::MarkPrice : TriggerBy::IndexPrice;
+    }
+
+    #[AppDynamicParameter(group: 'push-stops', name: 'critical-distance')]
+    public function criticalDistance(): float
+    {
+        return $this->getLiquidationDP()->criticalDistance();
+    }
+
+    private function getLiquidationDP(): LiquidationDynamicParametersInterface
+    {
+        if ($this->liquidationDP !== null) {
+            return $this->liquidationDP;
+        }
+
+        return $this->liquidationDP = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($this->position, $this->ticker);
     }
 }
