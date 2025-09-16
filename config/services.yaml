@@ -162,3 +162,7 @@ services:
     App\Infrastructure\Symfony\EventListener\Messenger\WorkerMessageReceivedEvent\CheckShouldMessageRunHandlerListener:
         arguments:
             $handlersLocator: '@messenger.bus.default.messenger.handlers_locator'
+
+    App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface:
+        class: App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory
+        public: true

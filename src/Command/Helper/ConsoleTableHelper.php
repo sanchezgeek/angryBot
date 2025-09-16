@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Helper;
 
+use BackedEnum;
 use JsonSerializable;
 use Stringable;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -32,6 +33,8 @@ class ConsoleTableHelper
             $content = (string) $content;
         } elseif ($content instanceof JsonSerializable) {
             $content = json_encode($content, JSON_PRETTY_PRINT);
+        } elseif ($content instanceof BackedEnum) {
+            $content = $content->value;
         } else {
             $content = (string)$content;
         }

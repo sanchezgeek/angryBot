@@ -8,6 +8,7 @@ use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use BackedEnum;
@@ -26,7 +27,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Stop[]    findAll()
  * @method Stop[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class StopRepository extends ServiceEntityRepository implements PositionOrderRepository, StopRepositoryInterface
+class StopRepository extends ServiceEntityRepository implements StopRepositoryInterface
 {
     private const string isAdditionalStopFromLiquidationHandler = Stop::IS_ADDITIONAL_STOP_FROM_LIQUIDATION_HANDLER;
     private const string createdAfterOtherSymbolLoss = Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS;
@@ -108,17 +109,28 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
     public function findActive(
         ?SymbolInterface $symbol = null,
         ?Side $side = null,
-        ?Ticker $nearTicker = null,
+        ?Ticker $nearPrice = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): array {
-        return $this->findActiveQB($symbol, $side, $nearTicker, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
+        return $this->findActiveQB($symbol, $side, $nearPrice, $exceptOppositeOrders, $qbModifier)->getQuery()->getResult();
+    }
+
+    public function findActiveForPush(
+        SymbolInterface $symbol,
+        Side $side,
+        SymbolPrice $nearPrice,
+        ?callable $qbModifier = null
+    ): QueryBuilder {
+        $qb = $this->findActiveForPushQB(symbol: $symbol, side: $side, nearPrice: $nearPrice, qbModifier: $qbModifier);
+
+        return $qb->getQuery()->getResult();
     }
 
     public function findActiveQB(
         ?SymbolInterface $symbol = null,
         ?Side $side = null,
-        ?Ticker $nearTicker = null,
+        ?Ticker $nearPrice = null,
         bool $exceptOppositeOrders = false, // Change to true when MakeOppositeOrdersActive-logic has been realised
         ?callable $qbModifier = null
     ): QueryBuilder {
@@ -141,11 +153,11 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
             $qb->andWhere("HAS_ELEMENT(s.context, 'onlyAfterExchangeOrderExecuted') = false");
         }
 
-        if ($nearTicker) {
-            $range = $nearTicker->symbol->makePrice($nearTicker->indexPrice->value() / 600)->value();
+        if ($nearPrice) {
+            $range = $nearPrice->symbol->makePrice($nearPrice->indexPrice->value() / 600)->value();
 
             $cond = $side->isShort()    ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
-            $price = $side->isShort()   ? $nearTicker->indexPrice->value() + $range  : $nearTicker->indexPrice->value() - $range;
+            $price = $side->isShort()   ? $nearPrice->indexPrice->value() + $range  : $nearPrice->indexPrice->value() - $range;
 
             $qb->andWhere($cond)->setParameter(':price', $price);
         }
@@ -153,6 +165,24 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         if ($qbModifier) {
             $qbModifier($qb, $alias);
         }
+
+        return $qb;
+    }
+
+    private function findActiveForPushQB(
+        SymbolInterface $symbol,
+        Side $side,
+        SymbolPrice $nearPrice,
+        ?callable $qbModifier = null
+    ): QueryBuilder {
+        $qb = $this->findActiveQB(symbol: $symbol, side: $side, qbModifier: $qbModifier);
+
+        $range = $nearPrice->value() / 600;
+        $price = $side->isShort() ? $nearPrice->value() + $range  : $nearPrice->value() - $range;
+        $price = $symbol->makePrice($price);
+
+        $cond = $side->isShort() ? '(:price > s.price - s.triggerDelta)'  : '(:price < s.price + s.triggerDelta)';
+        $qb->andWhere($cond)->setParameter(':price', $price);
 
         return $qb;
     }
@@ -171,12 +201,11 @@ class StopRepository extends ServiceEntityRepository implements PositionOrderRep
         $key = 0;
         $parameters = new ArrayCollection();
         foreach ($data as $dto) {
-            $symbol = $dto->symbol;
             $currentPrice = $dto->currentPrice;
-            $positionSide = $dto->positionSide;
-            $ticker = new Ticker($symbol, $currentPrice, $currentPrice, $currentPrice);
+//            $offset =
+//            $currentPrice += $dto->positionSide->isShort()
 
-            $qb = $this->findActiveQB($symbol, $positionSide, $ticker);
+            $qb = $this->findActiveForPushQB($dto->symbol, $dto->positionSide, $currentPrice);
             $queries[] = $qb->getQuery()->getSQL();
             foreach ($qb->getQuery()->getParameters()->toArray() as $param) {
                 $parameters->add(new Parameter($key, $param->getValue()));

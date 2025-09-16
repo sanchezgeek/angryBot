@@ -136,7 +136,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalDistance(): float
     {
-        // @todo | возможно надо брать position->entry при опред. обстоятельствах
+        // @todo | LiquidationDynamicParameters | use TA
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->criticalDistancePnl(), $this->ticker->markPrice);
     }
 

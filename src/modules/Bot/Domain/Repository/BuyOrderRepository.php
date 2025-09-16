@@ -21,7 +21,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @see \App\Tests\Functional\Infrastructure\Repository\DoctrineBuyOrderRepositoryTest
  */
-class BuyOrderRepository extends ServiceEntityRepository implements PositionOrderRepository
+class BuyOrderRepository extends ServiceEntityRepository
 {
     private string $exchangeOrderIdContext = BuyOrder::EXCHANGE_ORDER_ID_CONTEXT;
     private string $onlyAfterExchangeOrderExecutedContext = BuyOrder::ONLY_AFTER_EXCHANGE_ORDER_EXECUTED_CONTEXT;
