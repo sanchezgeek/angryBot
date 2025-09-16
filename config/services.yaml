@@ -130,12 +130,13 @@ services:
         tags:
             - { name: doctrine.event_listener, event: postFlush, method: postFlush }
 
-    App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient:
+    App\Infrastructure\ByBit\API\Common\ByBitApiClientInterface:
         class: App\Infrastructure\ByBit\API\V5\ByBitV5ApiClient
         arguments:
             $host: 'https://%env(BYBIT_API_HOST)%'
             $apiKey: '%env(default:env_bybit_api_key:BYBIT_API_KEY_OVERRIDE)%'
             $secretKey: '%env(default:env_bybit_api_secret:BYBIT_API_SECRET_OVERRIDE)%'
+        public: true
 
     App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler:
         arguments:
