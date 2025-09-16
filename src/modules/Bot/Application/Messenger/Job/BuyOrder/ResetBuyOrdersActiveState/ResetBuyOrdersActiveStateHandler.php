@@ -20,7 +20,7 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 final readonly class ResetBuyOrdersActiveStateHandler
 {
-    public const int ACTIVE_STATE_TTL = 846000;
+    public const int ACTIVE_STATE_TTL = 100000;
 
     /**
      * @todo | priceChange statistics | ResetBuyOrdersActiveStateHandler | use statistics for get appropriate allowed distance
