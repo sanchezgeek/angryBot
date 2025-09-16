@@ -17,6 +17,7 @@ use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Tests\Factory\Position\PositionBuilder;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 
 /**
  * @covers \App\Application\Messenger\Trading\CoverLossesAfterCloseByMarket\CoverLossesAfterCloseByMarketConsumer
@@ -71,9 +72,15 @@ class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstr
 
         $this->havePosition($symbol, $closedPosition);
 
+        $contractBalance = new ContractBalance($coin, 100, 0, $freeContractBalance);
+
         $exchangeAccountServiceMock = $this->createMock(ExchangeAccountServiceInterface::class);
-        $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn(new ContractBalance($coin, 100, 0, $freeContractBalance));
+        $exchangeAccountServiceMock->expects(self::once())->method('getContractWalletBalance')->with($coin)->willReturn($contractBalance);
         $exchangeAccountServiceMock->expects(self::once())->method('getSpotWalletBalance')->with($coin)->willReturn(new SpotBalance($coin, $availableSpotBalance, $availableSpotBalance));
+
+        $contractBalanceProvider = self::createMock(ContractBalanceProviderInterface::class);
+        $contractBalanceProvider->method('getContractWalletBalance')->willReturn($contractBalance);
+
         $consumer = new CoverLossesAfterCloseByMarketConsumer(
             self::getContainer()->get(ExchangeServiceInterface::class),
             $exchangeAccountServiceMock,
@@ -81,6 +88,7 @@ class SuccessTransferTest extends CoverLossesAfterCloseByMarketConsumerTestAbstr
             self::getContainer()->get(ByBitLinearPositionService::class),
             self::createMock(CreateStopHandlerInterface::class),
             self::createMock(TradingParametersProviderInterface::class),
+            $contractBalanceProvider,
         );
 
         # assert
