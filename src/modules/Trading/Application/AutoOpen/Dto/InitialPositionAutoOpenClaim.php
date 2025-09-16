@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\AutoOpen\Dto;
 
 use App\Domain\Position\ValueObject\Side;
-use App\Trading\Application\AutoOpen\Reason\AbstractReasonForOpen;
+use App\Trading\Application\AutoOpen\Reason\ReasonForOpenPositionInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Stringable;
 
@@ -17,7 +17,7 @@ final readonly class InitialPositionAutoOpenClaim implements Stringable
     public function __construct(
         public SymbolInterface $symbol,
         public Side $positionSide,
-        public AbstractReasonForOpen $reason,
+        public ReasonForOpenPositionInterface $reason,
     ) {
     }
 

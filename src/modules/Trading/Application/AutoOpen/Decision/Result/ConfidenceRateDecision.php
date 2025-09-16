@@ -6,7 +6,7 @@ namespace App\Trading\Application\AutoOpen\Decision\Result;
 
 use App\Domain\Value\Percent\Percent;
 
-final class ConfidenceRate
+final class ConfidenceRateDecision
 {
     /**
      * @param string $source

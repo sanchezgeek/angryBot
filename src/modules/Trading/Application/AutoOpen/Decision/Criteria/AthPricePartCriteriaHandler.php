@@ -11,7 +11,7 @@ use App\Helper\OutputHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionConfidenceRateDecisionVoterInterface;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionPrerequisiteCheckerInterface;
-use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRate;
+use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateDecision;
 use App\Trading\Application\AutoOpen\Decision\Result\OpenPositionPrerequisiteCheckResult;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -76,12 +76,12 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         );
     }
 
-    public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRate
+    public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRateDecision
     {
         $symbol = $claim->symbol;
         $currentPricePartOfAth = $this->getCurrentPricePartOfAth($symbol);
 
-        return new ConfidenceRate(
+        return new ConfidenceRateDecision(
             OutputHelper::shortClassName($this),
             $currentPricePartOfAth,
             'current price part of ATH'

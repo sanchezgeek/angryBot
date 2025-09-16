@@ -7,10 +7,11 @@ namespace App\Trading\Application\AutoOpen\Decision\Criteria;
 use App\Bot\Application\Service\Exchange\MarketServiceInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionConfidenceRateDecisionVoterInterface;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionPrerequisiteCheckerInterface;
-use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRate;
+use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateDecision;
 use App\Trading\Application\AutoOpen\Decision\Result\OpenPositionPrerequisiteCheckResult;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 use RuntimeException;
@@ -85,7 +86,7 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
 //        );
 //    }
 
-    public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRate
+    public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRateDecision
     {
         $symbol = $claim->symbol;
         $positionSide = $claim->positionSide;
@@ -99,16 +100,16 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
 
         // Рассчитываем итоговый множитель с учетом истории
         $baseMultiplier = $this->calculateBaseFundingMultiplier($currentFunding, $positionSide);
-        $historicalMultiplier = $this->calculateHistoricalMultiplier($historicalAnalysis);
+        $historicalMultiplier = $this->calculateHistoricalMultiplier($historicalAnalysis, $positionSide);
 
         $finalMultiplier = $baseMultiplier * $historicalMultiplier;
         $finalMultiplier = min(max($finalMultiplier, self::MIN_CONFIDENCE_MULTIPLIER), self::MAX_CONFIDENCE_MULTIPLIER);
 
         $info = $this->generateFundingInfo($currentFunding, $positionSide, $finalMultiplier, $historicalAnalysis);
 
-        return new ConfidenceRate(
+        return new ConfidenceRateDecision(
             OutputHelper::shortClassName($this),
-            Percent::fromPart($finalMultiplier, false),
+            Percent::fromPart(FloatHelper::round($finalMultiplier, 5), false),
             $info
         );
     }
@@ -168,9 +169,7 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
         }
 
         // Формула линейной регрессии: y = a + bx
-        $slope = ($n * $sumXY - $sumX * $sumY) / ($n * $sumX2 - $sumX * $sumX);
-
-        return $slope;
+        return ($n * $sumXY - $sumX * $sumY) / ($n * $sumX2 - $sumX * $sumX);
     }
 
     private function countExtremeValues(array $fundingRates, Side $positionSide, float $mean, float $stdDev): int
@@ -219,39 +218,76 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
         }
     }
 
-    private function calculateHistoricalMultiplier(array $historicalAnalysis): float
+    private function calculateHistoricalMultiplier(array $historicalAnalysis, Side $positionSide): float
     {
         $multiplier = 1.0;
 
-        // Учет тренда
-        if ($historicalAnalysis['trend'] > 0) {
-            // Положительный тренд (funding увеличивается) - хорошо для шортов
-            $multiplier *= 1.0 + min($historicalAnalysis['trend'] * 10000, 0.2);
+        // Учет тренда - ОШИБКА: не учитывается направление позиции
+        $trendImpact = $historicalAnalysis['trend'] * 10000;
+
+        if ($positionSide->isShort()) {
+            // Для шортов: положительный тренд (funding увеличивается) - хорошо
+            $multiplier *= 1.0 + min(max($trendImpact, 0), 0.2);
         } else {
-            // Отрицательный тренд (funding уменьшается) - хорошо для лонгов
-            $multiplier *= 1.0 + min(abs($historicalAnalysis['trend']) * 10000, 0.2);
+            // Для лонгов: отрицательный тренд (funding уменьшается) - хорошо
+            $multiplier *= 1.0 + min(max(-$trendImpact, 0), 0.2);
         }
 
         // Учет волатильности (меньшая волатильность = больше уверенности)
-        if ($historicalAnalysis['volatility'] < 0.0005) {
+        // ОШИБКА: абсолютные значения порогов могут быть неподходящими
+        // Лучше использовать относительную волатильность
+        $relativeVolatility = $historicalAnalysis['volatility'] / max(0.0001, abs($historicalAnalysis['mean']));
+
+        if ($relativeVolatility < 0.5) {
             $multiplier *= 1.1; // Низкая волатильность увеличивает уверенность
-        } elseif ($historicalAnalysis['volatility'] > 0.002) {
+        } elseif ($relativeVolatility > 2.0) {
             $multiplier *= 0.9; // Высокая волатильность уменьшает уверенность
         }
 
         // Учет экстремальных значений
-        if ($historicalAnalysis['extreme_count'] > count($historicalAnalysis['history']) * 0.3) {
-            $multiplier *= 0.8; // Много экстремальных значений - уменьшаем уверенность
+        // ОШИБКА: не учитывается направление позиции при определении "экстремальности"
+        $totalPeriods = count($historicalAnalysis['history']);
+        $extremeRatio = $historicalAnalysis['extreme_count'] / max(1, $totalPeriods);
+
+        if ($extremeRatio > 0.3) {
+            // Много экстремальных значений - уменьшаем уверенность
+            // Но для шортов экстремально положительные значения могут быть хороши
+            if ($positionSide->isShort()) {
+                $multiplier *= 0.9; // Умеренное уменьшение для шортов
+            } else {
+                $multiplier *= 0.8; // Сильное уменьшение для лонгов
+            }
         }
 
         // Учет Z-score (отклонение от среднего)
-        if (abs($historicalAnalysis['z_score']) > 2) {
-            $multiplier *= 0.7; // Сильное отклонение от исторической нормы
-        } elseif (abs($historicalAnalysis['z_score']) < 0.5) {
-            $multiplier *= 1.1; // Близко к исторической норме
+        // ОШИБКА: не учитывается направление позиции
+        $zScore = $historicalAnalysis['z_score'];
+
+        if ($positionSide->isShort()) {
+            // Для шортов: положительный z-score (выше среднего) - хорошо
+            if ($zScore > 2) {
+                $multiplier *= 1.2; // Сильно выше среднего - увеличиваем уверенность
+            } elseif ($zScore > 1) {
+                $multiplier *= 1.1; // Выше среднего - немного увеличиваем уверенность
+            } elseif ($zScore < -2) {
+                $multiplier *= 0.7; // Сильно ниже среднего - уменьшаем уверенность
+            } elseif ($zScore < -1) {
+                $multiplier *= 0.9; // Ниже среднего - немного уменьшаем уверенность
+            }
+        } else {
+            // Для лонгов: отрицательный z-score (ниже среднего) - хорошо
+            if ($zScore < -2) {
+                $multiplier *= 1.2; // Сильно ниже среднего - увеличиваем уверенность
+            } elseif ($zScore < -1) {
+                $multiplier *= 1.1; // Ниже среднего - немного увеличиваем уверенность
+            } elseif ($zScore > 2) {
+                $multiplier *= 0.7; // Сильно выше среднего - уменьшаем уверенность
+            } elseif ($zScore > 1) {
+                $multiplier *= 0.9; // Выше среднего - немного уменьшаем уверенность
+            }
         }
 
-        return $multiplier;
+        return max(self::MIN_CONFIDENCE_MULTIPLIER, min($multiplier, self::MAX_CONFIDENCE_MULTIPLIER));
     }
 
     private function generateFundingInfo(float $funding, Side $positionSide, float $multiplier, array $historicalAnalysis): string
@@ -279,5 +315,4 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
 
         return $info;
     }
-
 }

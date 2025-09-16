@@ -10,16 +10,16 @@ use Stringable;
 
 final class ConfidenceRateVotesCollection implements JsonSerializable, Stringable
 {
-    /** @var ConfidenceRate[]  */
+    /** @var ConfidenceRateDecision[]  */
     private array $votes;
 
     public function __construct(
-        ConfidenceRate ...$votes
+        ConfidenceRateDecision ...$votes
     ) {
         $this->votes = $votes;
     }
 
-    public function add(ConfidenceRate $vote): self
+    public function add(ConfidenceRateDecision $vote): self
     {
         $this->votes[] = $vote;
 

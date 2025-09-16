@@ -6,7 +6,7 @@ namespace App\Trading\Application\AutoOpen\Reason;
 
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
 
-final class AutoOpenOnSignificantPriceChangeReason extends AbstractReasonForOpen
+final class AutoOpenOnSignificantPriceChangeReason implements ReasonForOpenPositionInterface
 {
     public function __construct(
         public SignificantPriceChangeFoundEvent $source
