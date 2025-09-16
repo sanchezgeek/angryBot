@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations;
 
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Helper\DateTimeHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
@@ -57,9 +58,13 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
 
         $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->applyAfterPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
-        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->sub($absoluteLength) : $position->entryPrice()->add($absoluteLength);
 
-        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
+        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice - $absoluteLength : $position->entryPrice + $absoluteLength;
+        if ($triggerOnPrice <= 0) {
+            $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
+        }
+
+        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice);
         if (!$applicable) {
             return false;
         }
@@ -72,6 +77,7 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             return false;
         }
 
+        // @todo | lockInProfit | fixations | add it as stop (for further opposite BO creation near position)
         $closed = $this->orderService->closeByMarket(
             $position, $step->singleFixationPart->of($initialPositionSize)
         )->realClosedQty;
