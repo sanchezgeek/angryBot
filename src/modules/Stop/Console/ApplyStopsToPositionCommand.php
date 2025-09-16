@@ -45,6 +45,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     public const string FORCE_OPTION = 'force';
     public const string MODE_OPTION = 'mode';
     public const string DANGER_MODE = 'danger';
+    public const string FIXATION_MODE = 'fixation';
 
     public const string RISK_LEVEL = 'riskLevel';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
@@ -135,17 +136,19 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
         }
 
-        if ($mode === self::DANGER_MODE) {
+        if (in_array($mode, [self::DANGER_MODE, self::FIXATION_MODE], true)) {
             $this->riskLevel = RiskLevel::Cautious;
-            if ($this->fromPnlPercent === null) {
-                $this->fromPnlPercent = sprintf('-%s', PriceDistanceSelector::VeryVeryShort->value);
-            }
+
+            $this->fromPnlPercent = $this->fromPnlPercent ?? match ($mode) {
+                self::DANGER_MODE => sprintf('-%s', PriceDistanceSelector::VeryVeryShort->value),
+                self::FIXATION_MODE => sprintf('-%s', PriceDistanceSelector::AlmostImmideately->value),
+            };
         }
 
         $addedStopsCount = 0;
         foreach ($positions as $position) {
             $priceToRelate = match ($mode) {
-                self::DANGER_MODE => $markPrices[$position->symbol->name()],
+                self::DANGER_MODE, self::FIXATION_MODE => $markPrices[$position->symbol->name()],
                 default => $position->entryPrice()
             };
 

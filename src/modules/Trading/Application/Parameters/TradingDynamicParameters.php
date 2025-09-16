@@ -143,6 +143,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
         $result = match ($length) {
+            PriceDistanceSelector::AlmostImmideately => $atrChangePercent / 9,
             PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 7,
             PriceDistanceSelector::VeryShort => $atrChangePercent / 6,
             PriceDistanceSelector::Short => $atrChangePercent / 5,

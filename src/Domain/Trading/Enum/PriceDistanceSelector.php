@@ -9,6 +9,7 @@ namespace App\Domain\Trading\Enum;
  */
 enum PriceDistanceSelector: string
 {
+    case AlmostImmideately = 'almost-immideately';
     case VeryVeryShort = 'very-very-short';
     case VeryShort = 'very-short';
     case Short = 'short';
