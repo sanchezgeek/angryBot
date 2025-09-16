@@ -30,7 +30,7 @@ final class ByBitMarketService implements MarketServiceInterface
         $this->apiClient = $apiClient;
     }
 
-    public function getPreviousPeriodFundingRate(SymbolInterface $symbol, int $limit = 1): float
+    public function getPreviousPeriodFundingRate(SymbolInterface $symbol): float
     {
         $last = $this->cache->getLastFundingRate($symbol);
 
@@ -38,7 +38,7 @@ final class ByBitMarketService implements MarketServiceInterface
             return $last;
         }
 
-        $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol, $limit);
+        $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol);
 
         $data = $this->sendRequest($request)->data();
 
@@ -60,6 +60,39 @@ final class ByBitMarketService implements MarketServiceInterface
         $this->cache->setLastFundingRate($symbol, $fundingRate);
 
         return $fundingRate;
+    }
+
+    public function getPreviousFundingRatesHistory(SymbolInterface $symbol, int $limit): array
+    {
+        assert($limit > 1);
+
+        $cachedHistory = $this->cache->getFundingRatesHistory($symbol, $limit);
+        if ($cachedHistory !== null) {
+            return $cachedHistory;
+        }
+
+        $request = new GetFundingRateHistoryRequest($symbol->associatedCategory(), $symbol, $limit);
+
+        $data = $this->sendRequest($request)->data();
+
+        if (!is_array($list = $data['list'] ?? null)) {
+            throw BadApiResponseException::invalidItemType($request, 'result.`list`', $list, 'array', __METHOD__);
+        }
+
+        $fundingRateHistory = [];
+        foreach ($list as $item) {
+            if ($item['symbol'] === $symbol->name()) {
+                $fundingRateHistory[] = (float)$item['fundingRate'];
+            }
+        }
+
+        if (!$fundingRateHistory) {
+            throw new RuntimeException(sprintf('Cannot find fundingRate history for "%s (%s)"', $symbol->name(), $symbol->associatedCategory()->name));
+        }
+
+        $this->cache->setFundingRatesHistory($symbol, $limit, $fundingRateHistory);
+
+        return $fundingRateHistory;
     }
 
     public function isNowFundingFeesPaymentTime(): bool

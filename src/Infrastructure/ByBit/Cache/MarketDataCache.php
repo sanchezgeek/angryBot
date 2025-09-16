@@ -22,6 +22,11 @@ final class MarketDataCache extends AbstractCacheService
         return sprintf('fundingRate_%s', $symbol->name());
     }
 
+    private static function fundingRatesHistoryCacheKey(SymbolInterface $symbol, int $limit): string
+    {
+        return sprintf('fundingRates_history_%s_%d', $symbol->name(), $limit);
+    }
+
     public function getLastFundingRate(SymbolInterface $symbol): ?float
     {
         $key = self::fundingRateCacheKey($symbol);
@@ -34,5 +39,19 @@ final class MarketDataCache extends AbstractCacheService
         $key = self::fundingRateCacheKey($symbol);
 
         $this->save($key, $value);
+    }
+
+    public function getFundingRatesHistory(SymbolInterface $symbol, int $limit): ?array
+    {
+        $key = self::fundingRatesHistoryCacheKey($symbol, $limit);
+
+        return $this->get($key);
+    }
+
+    public function setFundingRatesHistory(SymbolInterface $symbol, int $limit, array $values): void
+    {
+        $key = self::fundingRatesHistoryCacheKey($symbol, $limit);
+
+        $this->save($key, $values);
     }
 }
