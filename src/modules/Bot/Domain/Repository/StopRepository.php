@@ -7,6 +7,7 @@ use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
@@ -143,11 +144,7 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         $key = 0;
         $parameters = new ArrayCollection();
         foreach ($data as $dto) {
-            $currentPrice = $dto->currentPrice;
-//            $offset =
-//            $currentPrice += $dto->positionSide->isShort()
-
-            $qb = $this->findActiveForPushQB($dto->symbol, $dto->positionSide, $currentPrice);
+            $qb = $this->findActiveForPushQB($dto->symbol, $dto->positionSide, $dto->currentPrice);
             $queries[] = $qb->getQuery()->getSQL();
             foreach ($qb->getQuery()->getParameters()->toArray() as $param) {
                 $parameters->add(new Parameter($key, $param->getValue()));
@@ -202,7 +199,7 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         $qb = $this->findActiveQB(symbol: $symbol, side: $side, qbModifier: $qbModifier);
 
         $range = $currentPrice->value() / 600;
-        $price = $side->isShort() ? $currentPrice->add($range)  : $currentPrice->sub($range, zeroSafe: true);
+        $price = $currentPrice->modifyByDirection($side, PriceMovementDirection::TO_LOSS, $range, zeroSafe: true);
 
         $cond = $side->isShort() ? '(:currentPrice > s.price - s.triggerDelta)'  : '(:currentPrice < s.price + s.triggerDelta)';
         $qb->andWhere($cond)->setParameter(':currentPrice', $price->value());
