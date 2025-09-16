@@ -196,98 +196,52 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
 
     private function calculateBaseFundingMultiplier(float $funding, Side $positionSide): float
     {
-        // Базовая логика (как в предыдущем примере)
+        // Более агрессивная реакция на текущее значение funding
+        $aggressionFactor = 800; // Увеличиваем коэффициент влияния текущего funding
+
         if ($positionSide->isShort()) {
-            if ($funding >= 0) {
-                $normalized = min($funding * 10000, 2.0);
-                return 1.0 + $normalized * 0.15;
-            } else {
-                $normalized = max($funding, self::FUNDING_THRESHOLD_FOR_SHORT);
-                $ratio = ($normalized - self::FUNDING_THRESHOLD_FOR_SHORT) / self::FUNDING_THRESHOLD_FOR_SHORT;
-                return 1.0 + $ratio * 0.3;
-            }
+            // Для шортов: положительный funding хорош, отрицательный - плох
+            $base = 1 + $aggressionFactor * $funding;
         } else {
-            if ($funding <= 0) {
-                $normalized = min(abs($funding) * 10000, 2.0);
-                return 1.0 + $normalized * 0.15;
-            } else {
-                $normalized = min($funding, self::FUNDING_THRESHOLD_FOR_LONG);
-                $ratio = ($normalized - self::FUNDING_THRESHOLD_FOR_LONG) / self::FUNDING_THRESHOLD_FOR_LONG;
-                return 1.0 + $ratio * 0.3;
-            }
+            // Для лонгов: отрицательный funding хорош, положительный - плох
+            $base = 1 - $aggressionFactor * $funding;
         }
+
+        // Ограничиваем базовый множитель
+        return max(0.5, min($base, 1.5));
     }
 
     private function calculateHistoricalMultiplier(array $historicalAnalysis, Side $positionSide): float
     {
         $multiplier = 1.0;
 
-        // Учет тренда - ОШИБКА: не учитывается направление позиции
+        // Значительно уменьшаем влияние исторических факторов
         $trendImpact = $historicalAnalysis['trend'] * 10000;
 
+        // Тренд: максимальное влияние ±2%
         if ($positionSide->isShort()) {
-            // Для шортов: положительный тренд (funding увеличивается) - хорошо
-            $multiplier *= 1.0 + min(max($trendImpact, 0), 0.2);
+            $multiplier *= 1.0 + min(max($trendImpact, 0) * 0.01, 0.02);
         } else {
-            // Для лонгов: отрицательный тренд (funding уменьшается) - хорошо
-            $multiplier *= 1.0 + min(max(-$trendImpact, 0), 0.2);
+            $multiplier *= 1.0 + min(max(-$trendImpact, 0) * 0.01, 0.02);
         }
 
-        // Учет волатильности (меньшая волатильность = больше уверенности)
-        // ОШИБКА: абсолютные значения порогов могут быть неподходящими
-        // Лучше использовать относительную волатильность
+        // Волатильность: максимальное влияние ±1%
         $relativeVolatility = $historicalAnalysis['volatility'] / max(0.0001, abs($historicalAnalysis['mean']));
-
-        if ($relativeVolatility < 0.5) {
-            $multiplier *= 1.1; // Низкая волатильность увеличивает уверенность
-        } elseif ($relativeVolatility > 2.0) {
-            $multiplier *= 0.9; // Высокая волатильность уменьшает уверенность
+        if ($relativeVolatility < 0.3) {
+            $multiplier *= 1.01;
+        } elseif ($relativeVolatility > 1.5) {
+            $multiplier *= 0.99;
         }
 
-        // Учет экстремальных значений
-        // ОШИБКА: не учитывается направление позиции при определении "экстремальности"
-        $totalPeriods = count($historicalAnalysis['history']);
-        $extremeRatio = $historicalAnalysis['extreme_count'] / max(1, $totalPeriods);
-
-        if ($extremeRatio > 0.3) {
-            // Много экстремальных значений - уменьшаем уверенность
-            // Но для шортов экстремально положительные значения могут быть хороши
-            if ($positionSide->isShort()) {
-                $multiplier *= 0.9; // Умеренное уменьшение для шортов
-            } else {
-                $multiplier *= 0.8; // Сильное уменьшение для лонгов
-            }
-        }
-
-        // Учет Z-score (отклонение от среднего)
-        // ОШИБКА: не учитывается направление позиции
+        // Z-score: максимальное влияние ±2%
         $zScore = $historicalAnalysis['z_score'];
-
-        if ($positionSide->isShort()) {
-            // Для шортов: положительный z-score (выше среднего) - хорошо
-            if ($zScore > 2) {
-                $multiplier *= 1.2; // Сильно выше среднего - увеличиваем уверенность
-            } elseif ($zScore > 1) {
-                $multiplier *= 1.1; // Выше среднего - немного увеличиваем уверенность
-            } elseif ($zScore < -2) {
-                $multiplier *= 0.7; // Сильно ниже среднего - уменьшаем уверенность
-            } elseif ($zScore < -1) {
-                $multiplier *= 0.9; // Ниже среднего - немного уменьшаем уверенность
-            }
-        } else {
-            // Для лонгов: отрицательный z-score (ниже среднего) - хорошо
-            if ($zScore < -2) {
-                $multiplier *= 1.2; // Сильно ниже среднего - увеличиваем уверенность
-            } elseif ($zScore < -1) {
-                $multiplier *= 1.1; // Ниже среднего - немного увеличиваем уверенность
-            } elseif ($zScore > 2) {
-                $multiplier *= 0.7; // Сильно выше среднего - уменьшаем уверенность
-            } elseif ($zScore > 1) {
-                $multiplier *= 0.9; // Выше среднего - немного уменьшаем уверенность
-            }
+        if (abs($zScore) > 2) {
+            $multiplier *= 0.98;
+        } elseif (abs($zScore) < 0.5) {
+            $multiplier *= 1.02;
         }
 
-        return max(self::MIN_CONFIDENCE_MULTIPLIER, min($multiplier, self::MAX_CONFIDENCE_MULTIPLIER));
+        return $multiplier;
     }
 
     private function generateFundingInfo(float $funding, Side $positionSide, float $multiplier, array $historicalAnalysis): string

@@ -69,13 +69,17 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
 
     public function confidenceRateDecisionTestCases(): iterable
     {
-        yield 'no volatility' => [
-            [
-                -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041,
-                -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041,
-            ],
-            Side::Sell,
-            self::result(1.1, 'Current funding: -0.000410. Historical mean: -0.000410. Trend: -0.000000 per period. Volatility: 0.000000. Z-score: -1.00. Extreme values: 0/18. Confidence multiplier: 1.10')
+        $стабильноОтрицательный = [
+            -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041,
+            -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041, -0.00041,
+        ];
+
+        yield '$стабильноОтрицательный [sell] ' => [$стабильноОтрицательный, Side::Sell,
+            self::result(0.67872, 'Current funding: -0.000410. Historical mean: -0.000410. Trend: -0.000000 per period. Volatility: 0.000000. Z-score: -1.00. Extreme values: 0/20. Confidence multiplier: 0.68')
+        ];
+
+        yield '$стабильноОтрицательный (buy)' => [$стабильноОтрицательный, Side::Buy,
+            self::result(1.341280, 'Current funding: -0.000410. Historical mean: -0.000410. Trend: -0.000000 per period. Volatility: 0.000000. Z-score: -1.00. Extreme values: 0/20. Confidence multiplier: 1.34')
         ];
 
         ### 1 Низкая волатильность, положительный тренд (хорошо для шортов)
@@ -89,7 +93,7 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
         ];
 
         yield '[applying for long] Низкая волатильность, положительный тренд' => [$lowVolatilityPositiveTrend, Side::Buy,
-            self::result(0.9, 'Current funding: 0.002000. Historical mean: 0.001050. Trend: 0.000100 per period. Volatility: 0.000577. Z-score: 1.65. Extreme values: 1/20. Confidence multiplier: 0.90')
+            self::result(0.5, 'Current funding: 0.002000. Historical mean: 0.001050. Trend: 0.000100 per period. Volatility: 0.000577. Z-score: 1.65. Extreme values: 1/20. Confidence multiplier: 0.50')
         ];
 
 //        ### 2 Низкая волатильность, отрицательный тренд (хорошо для лонгов)
@@ -117,7 +121,7 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
         ];
 
         yield '[applying for long] 6' => [$changedFastFromNegativeToPositive, Side::Buy,
-            self::result(0.9, 'Current funding: 0.008000. Historical mean: 0.003250. Trend: 0.000500 per period. Volatility: 0.002883. Z-score: 1.65. Extreme values: 1/20. Confidence multiplier: 0.90')
+            self::result(0.5, 'Current funding: 0.008000. Historical mean: 0.003250. Trend: 0.000500 per period. Volatility: 0.002883. Z-score: 1.65. Extreme values: 1/20. Confidence multiplier: 0.50')
         ];
 
         ### 7 Резкое падение funding (от положительного к отрицательному)
@@ -127,7 +131,7 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
         ];
 
         yield '[applying for short] 7' => [$changedFastFromPositiveToNegative, Side::Sell,
-            self::result(0.9, 'Current funding: -0.008000. Historical mean: -0.003250. Trend: -0.000500 per period. Volatility: 0.002883. Z-score: -1.65. Extreme values: 1/20. Confidence multiplier: 0.90')
+            self::result(0.5, 'Current funding: -0.008000. Historical mean: -0.003250. Trend: -0.000500 per period. Volatility: 0.002883. Z-score: -1.65. Extreme values: 1/20. Confidence multiplier: 0.50')
         ];
 
         yield '[applying for long] 7' => [$changedFastFromPositiveToNegative, Side::Buy,
@@ -141,11 +145,11 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
         ];
 
         yield '[applying for short] 8' => [$positiveFundingHistory, Side::Sell,
-            self::result(1.287, 'Current funding: 0.000700. Historical mean: 0.000795. Trend: -0.000001 per period. Volatility: 0.000080. Z-score: -1.18. Extreme values: 0/20. Confidence multiplier: 1.29')
+            self::result(1.50, 'Current funding: 0.000700. Historical mean: 0.000795. Trend: -0.000001 per period. Volatility: 0.000080. Z-score: -1.18. Extreme values: 0/20. Confidence multiplier: 1.50')
         ];
 
         yield '[applying for long] 8' => [$positiveFundingHistory, Side::Buy,
-            self::result(1.21637, 'Current funding: 0.000700. Historical mean: 0.000795. Trend: -0.000001 per period. Volatility: 0.000080. Z-score: -1.18. Extreme values: 0/20. Confidence multiplier: 1.22')
+            self::result(0.50503, 'Current funding: 0.000700. Historical mean: 0.000795. Trend: -0.000001 per period. Volatility: 0.000080. Z-score: -1.18. Extreme values: 0/20. Confidence multiplier: 0.51')
         ];
 
         ### 8.1 Стабильный положительный funding с резким уменьшением в конце
@@ -155,11 +159,11 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
         ];
 
         yield '[applying for short] 8.1' => [$positiveFundingHistoryI, Side::Sell,
-            self::result(0.70, 'Current funding: -0.001100. Historical mean: 0.000540. Trend: -0.000065 per period. Volatility: 0.000562. Z-score: -2.92. Extreme values: 0/20. Confidence multiplier: 0.70')
+            self::result(0.50, 'Current funding: -0.001100. Historical mean: 0.000540. Trend: -0.000065 per period. Volatility: 0.000562. Z-score: -2.92. Extreme values: 0/20. Confidence multiplier: 0.50')
         ];
 
         yield '[applying for long] 8.1' => [$positiveFundingHistoryI, Side::Buy,
-            self::result(1.5, 'Current funding: -0.001100. Historical mean: 0.000540. Trend: -0.000065 per period. Volatility: 0.000562. Z-score: -2.92. Extreme values: 2/20. Confidence multiplier: 1.50')
+            self::result(1.47953, 'Current funding: -0.001100. Historical mean: 0.000540. Trend: -0.000065 per period. Volatility: 0.000562. Z-score: -2.92. Extreme values: 2/20. Confidence multiplier: 1.48')
         ];
     }
 
