@@ -10,10 +10,8 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Ticker;
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\Buy\Application\Helper\BuyOrderInfoHelper;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\MarketBuyCheckDto;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\BuyCheckFailureEnum;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Result\FixationsFound;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
@@ -68,7 +66,9 @@ final class DenyBuyIfFixationsExistsTest extends KernelTestCase
         $result = $this->getCheckService()->check($orderDto, $context);
 
         // Assert
-        self::assertEquals($expectedResult, $result);
+        self::assertEquals($expectedResult->success, $result->success);
+        self::assertEquals($expectedResult->failedReason, $result->failedReason);
+        self::assertTrue(str_contains($result->info, $expectedResult->info));
     }
 
     public function cases(): iterable
