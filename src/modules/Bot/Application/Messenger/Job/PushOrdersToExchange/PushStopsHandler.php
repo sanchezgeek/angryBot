@@ -18,6 +18,7 @@ use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -97,8 +98,8 @@ final class PushStopsHandler extends AbstractOrdersPusher
                         $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
                         $priceModifierIfCurrentPriceOverStop = StopHelper::priceModifierIfCurrentPriceOverStop($currentPrice);
 
-                        $newPrice = $side->isShort() ? $currentPrice->value() + $priceModifierIfCurrentPriceOverStop : $currentPrice->value() - $priceModifierIfCurrentPriceOverStop;
-                        $stop->setPrice($newPrice)->increaseTriggerDelta($additionalTriggerDelta);
+                        $newPrice = $currentPrice->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $priceModifierIfCurrentPriceOverStop, zeroSafe: true);
+                        $stop->setPrice($newPrice->value())->increaseTriggerDelta($additionalTriggerDelta);
                     }
                 }
             }

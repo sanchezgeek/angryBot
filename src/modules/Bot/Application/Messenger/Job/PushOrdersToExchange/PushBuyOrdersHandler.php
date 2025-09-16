@@ -31,6 +31,7 @@ use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\Helper\PriceHelper;
 use App\Domain\Price\PriceRange;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -308,7 +309,7 @@ final class PushBuyOrdersHandler extends AbstractOrdersPusher
                 // reopen closed volume on further movement
                 $distance = 100; if (!AppContext::isTest()) $distance += random_int(-20, 35);
                 // @todo | symbol | for all symbols
-                $reopenPrice = $position->isShort() ? $index->sub($distance) : $index->add($distance);
+                $reopenPrice = $index->modifyByDirection($position->side, PriceMovementDirection::TO_PROFIT, $distance, zeroSafe: true);
                 $this->createBuyOrderHandler->handle(
                     new CreateBuyOrderEntryDto($symbol, $side, $volumeClosed, $reopenPrice->value(), [BuyOrder::ONLY_IF_HAS_BALANCE_AVAILABLE_CONTEXT => true])
                 );
