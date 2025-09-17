@@ -52,6 +52,10 @@ COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
 COPY --link frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY --link frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 
+ARG BYBIT_API_KEY
+ARG BYBIT_API_SECRET
+ENV BYBIT_API_KEY=${BYBIT_API_KEY} BYBIT_API_SECRET=${BYBIT_API_SECRET}
+
 ENTRYPOINT ["docker-entrypoint"]
 
 HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
