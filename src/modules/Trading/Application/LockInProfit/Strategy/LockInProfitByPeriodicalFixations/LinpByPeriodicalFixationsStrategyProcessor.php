@@ -60,6 +60,7 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
 
         $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice - $absoluteLength : $position->entryPrice + $absoluteLength;
+        // @todo | linp | insteadof <=0 always use some distance from 0
         if ($triggerOnPrice <= 0) {
             $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
         }
