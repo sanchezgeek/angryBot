@@ -11,7 +11,9 @@ use InvalidArgumentException;
 final class TruncateOrdersEntry
 {
     public const string AFTER_SL_CALLBACK_ALIAS = 'after-sl';
+
     public const string ADDITIONAL_SL_FROM_LIQUIDATION_HANDLER_CALLBACK_ALIAS = 'additional-from-liquidation-handler';
+    public const string LOCK_IN_PROFIT_FIXATION_CALLBACK_ALIAS = 'lock-in-profit-fixation-sl';
 
     private const array PREDEFINED_BUY_ORDERS_FILTER_CALLBACKS = [
         self::AFTER_SL_CALLBACK_ALIAS => 'isAdditionalStopFromLiquidationHandler()',
@@ -19,6 +21,7 @@ final class TruncateOrdersEntry
 
     private const array PREDEFINED_STOPS_FILTER_CALLBACKS = [
         self::ADDITIONAL_SL_FROM_LIQUIDATION_HANDLER_CALLBACK_ALIAS => 'isAdditionalStopFromLiquidationHandler()',
+        self::LOCK_IN_PROFIT_FIXATION_CALLBACK_ALIAS => 'createdAsLockInProfit()',
     ];
 
     private array $buyOrdersFilterCallbacks = [];

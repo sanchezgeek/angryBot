@@ -14,12 +14,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 class TruncateOrdersCommand extends AbstractExecuteHandlerMessageCommand
 {
     private const string AFTER_SL = 'after-sl';
+    private const string LOCK_IN_PROFIT = 'lockInProfit';
     private const string DRY_RUN = 'dry';
 
     protected function configure(): void
     {
         $this
             ->addOption(self::AFTER_SL, null, InputOption::VALUE_NEGATABLE)
+            ->addOption(self::LOCK_IN_PROFIT, null, InputOption::VALUE_NEGATABLE)
             ->addOption(self::DRY_RUN, null, InputOption::VALUE_NEGATABLE)
         ;
     }
@@ -36,6 +38,10 @@ class TruncateOrdersCommand extends AbstractExecuteHandlerMessageCommand
 
         if ($this->paramFetcher->getBoolOption(self::AFTER_SL)) {
             $entry->addPredefinedBuyOrderFilterCallback(TruncateOrdersEntry::AFTER_SL_CALLBACK_ALIAS);
+        }
+
+        if ($this->paramFetcher->getBoolOption(self::LOCK_IN_PROFIT)) {
+            $entry->addPredefinedStopsFilterCallback(TruncateOrdersEntry::LOCK_IN_PROFIT_FIXATION_CALLBACK_ALIAS);
         }
 
         if ($this->paramFetcher->getBoolOption(self::DRY_RUN)) {

@@ -27,7 +27,8 @@ final readonly class TruncateOrdersHandler
     public function __invoke(TruncateOrdersEntry $entry): TruncateOrdersResult
     {
         $dryRun = $entry->dry;
-        $filterCallbacks = $entry->getBuyOrdersFilterCallbacks();
+        $buyOrdersFilterCallbacks = $entry->getBuyOrdersFilterCallbacks();
+        $slFilterCallbacks = $entry->getStopsFilterCallbacks();
         $mode = $entry->mode;
         $ordersType = $entry->ordersType;
 
@@ -36,7 +37,7 @@ final readonly class TruncateOrdersHandler
         $totalBuyOrdersCount = null;
         $removedBuyOrdersCount = null;
 
-        if ($mode === TruncateOrdersMode::All && !$filterCallbacks) {
+        if ($mode === TruncateOrdersMode::All && !$buyOrdersFilterCallbacks && !$slFilterCallbacks) {
             $connection = $this->entityManager->getConnection();
 
             if ($ordersType === TruncateOrdersType::All) {
@@ -105,9 +106,9 @@ final readonly class TruncateOrdersHandler
             $stops = new StopsCollection(...$stops);
             $totalStopsCount = $stops->totalCount();
 
-            if ($filterCallbacks) {
-                $stops = $stops->filterWithCallback(static function (Stop $stop) use ($filterCallbacks, &$errors) {
-                    foreach ($filterCallbacks as $filterCallback) {
+            if ($slFilterCallbacks) {
+                $stops = $stops->filterWithCallback(static function (Stop $stop) use ($slFilterCallbacks, &$errors) {
+                    foreach ($slFilterCallbacks as $filterCallback) {
                         try {
                             eval('$callbackResult = $stop->' . $filterCallback . ';');
                             if ($callbackResult !== true) {
@@ -133,9 +134,9 @@ final readonly class TruncateOrdersHandler
             $buyOrders = new BuyOrdersCollection(...$buyOrders);
             $totalBuyOrdersCount = $buyOrders->totalCount();
 
-            if ($filterCallbacks) {
-                $buyOrders = $buyOrders->filterWithCallback(static function (BuyOrder $buyOrder) use ($filterCallbacks, &$errors) {
-                    foreach ($filterCallbacks as $filterCallback) {
+            if ($buyOrdersFilterCallbacks) {
+                $buyOrders = $buyOrders->filterWithCallback(static function (BuyOrder $buyOrder) use ($buyOrdersFilterCallbacks, &$errors) {
+                    foreach ($buyOrdersFilterCallbacks as $filterCallback) {
                         try {
                             eval('$callbackResult = $buyOrder->' . $filterCallback . ';');
                             if ($callbackResult !== true) {
