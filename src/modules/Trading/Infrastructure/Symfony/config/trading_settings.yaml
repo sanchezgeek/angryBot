@@ -21,7 +21,9 @@ trading.coverLosses.enabled: true
 trading.coverLosses.bySpotBalance.enabled: false
 trading.coverLosses.otherSymbols.additionalStop.distance: very-very-short
 
-
+### \App\Trading\Application\Settings\Balance\TradingBalanceSettings
+trading.balance.realContractBalance.maxRatio: 0.4
+trading.balance.availableContractBalance.threshold: 5
 
 ### \App\Trading\Application\Settings\AutoOpenPositionSettings
 autoOpen.notifications.enabled: true
