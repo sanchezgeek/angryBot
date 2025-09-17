@@ -18,6 +18,9 @@ final class LockInProfitStrategiesDtoFactory
 {
     public function threeStopStepsLock(?RiskLevel $riskLevel = null): LinpByStopStepsStrategyDto
     {
+        // @todo | lockInProfit | stops | based on ath part
+        // @todo | lockInProfit | stops | based on funding
+        // @todo | lockInProfit | stops | based on instrument age
         // @todo | add trading style to alias (for further recreate after style changed)
         // @todo | lockInProfit | ability to specify price from which make grid
         return new LinpByStopStepsStrategyDto(
@@ -31,14 +34,14 @@ final class LockInProfitStrategiesDtoFactory
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part2',
                 Length::Standard,
-                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::BetweenLongAndStd->toStringWithNegativeSign(), 20, 10),
+                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::BetweenLongAndStd->toStringWithNegativeSign(), 15, 10),
             ),
             // third part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part3',
                 Length::Long,
                 // @todo | lockInProfit | stops must be placed near position side
-                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 40, 30),
+                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 30, 30),
             ),
             // fourth part: back to position entry
             new LinpByStopsGridStep(
@@ -64,16 +67,23 @@ final class LockInProfitStrategiesDtoFactory
             new PeriodicalFixationStep(
                 'periodical-fixation-on-very-long-distance',
                 PriceDistanceSelector::VeryLong,
-                new Percent(1),
-                new Percent(16),
+                new Percent(0.5),
+                new Percent(15),
                 DateTimeHelper::secondsInMinutes(30)
             ),
             new PeriodicalFixationStep(
                 'periodical-fixation-on-very-very-long-distance',
                 PriceDistanceSelector::VeryVeryLong,
-                new Percent(0.5),
-                new Percent(18),
-                DateTimeHelper::secondsInMinutes(30)
+                new Percent(1),
+                new Percent(20),
+                DateTimeHelper::secondsInMinutes(5)
+            ),
+            new PeriodicalFixationStep(
+                'periodical-fixation-on-double-long-distance',
+                PriceDistanceSelector::DoubleLong,
+                new Percent(1),
+                new Percent(20),
+                DateTimeHelper::secondsInMinutes(5)
             ),
         );
     }

@@ -190,9 +190,6 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
         return $this->buyOrdersGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate);
     }
 
-    /**
-     * @throws DefaultGridDefinitionNotFound
-     */
     private function getStopsGridDefinition(): ?OrdersGridDefinitionCollection
     {
         if ($this->paramFetcher->getBoolOption(self::WITHOUT_STOPS_OPTION)) {

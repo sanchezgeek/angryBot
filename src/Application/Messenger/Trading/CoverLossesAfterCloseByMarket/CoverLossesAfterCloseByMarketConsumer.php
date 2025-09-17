@@ -18,6 +18,7 @@ use App\Stop\Application\Contract\Command\CreateStop;
 use App\Stop\Application\Contract\CreateStopHandlerInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\CoverLossSettings;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -29,8 +30,6 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 readonly class CoverLossesAfterCloseByMarketConsumer
 {
-    public const float THRESHOLD = 1;
-
     public const int LIQUIDATION_DISTANCE_APPLICABLE_TO_NOT_MAKE_TRANSFER = 500;
     // @todo | RiskLevel | Apply RiskLevel
     public const int PNL_PERCENT_TO_CLOSE_POSITIONS = 600;
@@ -43,7 +42,8 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         private PositionServiceInterface $positionService,
         private ByBitLinearPositionService $positionServiceWithoutCache,
         private CreateStopHandlerInterface $createStopHandler,
-        private TradingParametersProviderInterface $tradingParameters
+        private TradingParametersProviderInterface $tradingParameters,
+        private ContractBalanceProviderInterface $contractBalanceProvider,
     ) {
     }
 
@@ -58,7 +58,9 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $side = $closedPosition->side;
         $loss = $dto->loss->value();
 
-        if ($loss < self::THRESHOLD) {
+        $threshold = $this->contractBalanceProvider->getContractWalletBalance($closedPosition->symbol->associatedCoin())->totalWithUnrealized()->value() / 120;
+
+        if ($loss < $threshold) {
             return;
         }
 

@@ -11,8 +11,6 @@ use App\Bot\Application\Helper\StopHelper;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
-use App\Bot\Application\Settings\Enum\PriceRangeLeadingToUseMarkPriceOptions;
-use App\Bot\Application\Settings\PushStopSettingsWrapper;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
@@ -20,7 +18,7 @@ use App\Bot\Domain\Ticker;
 use App\Clock\ClockInterface;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Parameter\TriggerBy;
-use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Exception\ApiRateLimitReached;
@@ -28,9 +26,8 @@ use App\Infrastructure\ByBit\API\Common\Exception\UnknownByBitApiErrorException;
 use App\Infrastructure\ByBit\Service\Exception\Trade\MaxActiveCondOrdersQntReached;
 use App\Infrastructure\ByBit\Service\Exception\UnexpectedApiErrorException;
 use App\Infrastructure\Doctrine\Helper\QueryHelper;
-use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Stop\Application\UseCase\CheckStopCanBeExecuted\StopChecksChain;
-use App\Trading\Domain\Symbol\SymbolInterface;
+use App\Stop\Application\UseCase\PushStopsToTexchange\PushStopsDP;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\QueryBuilder as QB;
 use Psr\Log\LoggerInterface;
@@ -55,34 +52,22 @@ final class PushStopsHandler extends AbstractOrdersPusher
             return;
         }
 
-        $stops = $this->findStops($side, $symbol);
-        $ticker = $this->exchangeService->ticker($symbol); // If ticker changed while get stops
-//        if ($message->dispatchedAt && $tickerDto->cacheSavedAt) {
-//            $diff = $message->dispatchedAt - $tickerDto->cacheSavedAt;
-//            $updatedByWorker = $tickerDto->updatedByWorker;
-//            if ($updatedByWorker !== AppContext::runningWorker()) OutputHelper::print(sprintf('%s ticker cache lifetime = %s', $symbol->name(), $tickerDto->lifetime($message->dispatchedAt)));
-//            // @todo compare with markPrice from all positions
-//            if ($diff < 0 && $updatedByWorker !== AppContext::runningWorker()) OutputHelper::warning(sprintf('negative diff: %s (by %s)', $diff, $updatedByWorker->value));
-//            $message->profilingContext && $message->profilingContext->registerNewPoint(sprintf('%s: "%s" ticker diff === %s (cache created by %s)', OutputHelper::shortClassName($this), $symbol->name(), $diff, $updatedByWorker->value));
-//        }
+        $ticker = $this->exchangeService->ticker($symbol);
 
-        // ta? or markPrice anyway?
+        $parameters = new PushStopsDP($this->liquidationDynamicParametersFactory, $position, $ticker);
+        $triggerBy = $parameters->priceToUseWhenPushStopsToExchange();
+        $currentPrice = match ($triggerBy) {
+            TriggerBy::MarkPrice => $ticker->markPrice,
+            TriggerBy::IndexPrice => $ticker->indexPrice,
+            TriggerBy::LastPrice => $ticker->lastPrice,
+        };
 
-        $liquidationParameters = $this->liquidationDynamicParametersFactory->fakeWithoutHandledMessage($position, $ticker);
-        $distanceToUseMarkPrice = $this->pushStopSettings->rangeToUseWhileChooseMarkPriceAsTriggerPrice($position) === PriceRangeLeadingToUseMarkPriceOptions::WarningRange
-            ? $liquidationParameters->warningDistanceRaw()
-            : $liquidationParameters->criticalDistance();
+        $sort = static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC');
+        $stops = $this->repository->findActiveForPush($symbol, $side, $currentPrice, qbModifier: $sort);
 
-        $distanceToUseMarkPrice *= 2;
-
+        // @todo | what if ticker changed while get stops?
         $distanceWithLiquidation = $position->priceDistanceWithLiquidation($ticker);
-        if ($distanceWithLiquidation <= $distanceToUseMarkPrice) {
-            $triggerBy = TriggerBy::MarkPrice;  $currentPrice = $ticker->markPrice;
-            // @todo | pushStops | max (for short and min for long) between index and mark
-            // + select $triggerBy based on selected price
-        } else {
-            $triggerBy = TriggerBy::IndexPrice; $currentPrice = $ticker->indexPrice;
-        }
+        $criticalDistance = $parameters->criticalDistance();
 
         $checksContext = TradingCheckContext::withCurrentPositionState($ticker, $position);
         foreach ($stops as $stop) {
@@ -107,14 +92,14 @@ final class PushStopsHandler extends AbstractOrdersPusher
                 if ((!$currentPriceOverStop && !$stopMustBePushedByTriggerDelta) || !$this->stopCanBePushed($stop, $checksContext)) continue;
 
                 if ($currentPriceOverStop) {
-                    if ($distanceWithLiquidation <= $liquidationParameters->criticalDistance()) {
+                    if ($distanceWithLiquidation <= $criticalDistance) {
                         $callback = self::closeByMarketCallback($orderService, $position, $stop, $stopsClosedByMarket);
                     } else {
                         $additionalTriggerDelta = StopHelper::additionalTriggerDeltaIfCurrentPriceOverStop($symbol);
                         $priceModifierIfCurrentPriceOverStop = StopHelper::priceModifierIfCurrentPriceOverStop($currentPrice);
 
-                        $newPrice = $side->isShort() ? $currentPrice->value() + $priceModifierIfCurrentPriceOverStop : $currentPrice->value() - $priceModifierIfCurrentPriceOverStop;
-                        $stop->setPrice($newPrice)->increaseTriggerDelta($additionalTriggerDelta);
+                        $newPrice = $currentPrice->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $priceModifierIfCurrentPriceOverStop, zeroSafe: true);
+                        $stop->setPrice($newPrice->value())->increaseTriggerDelta($additionalTriggerDelta);
                     }
                 }
             }
@@ -178,19 +163,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
     }
 
     /**
-     * @return Stop[]
-     */
-    private function findStops(Side $side, SymbolInterface $symbol): array
-    {
-        return $this->repository->findActive(
-            symbol: $symbol,
-            side: $side,
-            nearTicker: $this->exchangeService->ticker($symbol),
-            qbModifier: static fn(QB $qb) => QueryHelper::addOrder($qb, 'price', $side->isShort() ? 'ASC' : 'DESC'),
-        );
-    }
-
-    /**
      * @param ExchangeOrder[] $stopsClosedByMarket
      */
     private function processOrdersClosedByMarket(Position $position, array $stopsClosedByMarket): void
@@ -211,8 +183,6 @@ final class PushStopsHandler extends AbstractOrdersPusher
     public function __construct(
         private readonly StopRepository $repository,
         private readonly OrderServiceInterface $orderService,
-        private readonly AppSettingsProviderInterface $settingsProvider,
-        private readonly PushStopSettingsWrapper $pushStopSettings,
         private readonly LiquidationDynamicParametersFactoryInterface $liquidationDynamicParametersFactory,
 
         private readonly MessageBusInterface $messageBus,

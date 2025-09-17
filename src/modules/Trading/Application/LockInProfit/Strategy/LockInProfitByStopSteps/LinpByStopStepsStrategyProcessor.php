@@ -64,6 +64,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
 
         $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->value() - $absoluteLength : $position->entryPrice()->value() + $absoluteLength;
+        // @todo | linp | insteadof <=0 always use some distance from 0
         if ($triggerOnPrice <= 0) {
             $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
         }
@@ -82,7 +83,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             $collection = new StopsCollection(...$existedStops);
 
             // @todo | lockInProfit | stops | mb use initial position size?
-            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->size));
+            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->getNotCoveredSize()));
             if ($percent->value() <= 0) {
                 return;
             }
@@ -99,7 +100,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $positionSide,
-                $position->size,
+                $position->getNotCoveredSize(),
                 new OrdersGridDefinitionCollection($symbol, 'from strategy', $ordersGridDefinition),
                 [
                     Stop::LOCK_IN_PROFIT_STEP_ALIAS => $stepAlias,

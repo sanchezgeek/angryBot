@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations;
 
 use App\Bot\Application\Service\Exchange\Trade\OrderServiceInterface;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Helper\DateTimeHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\State\LockInProfitPeriodicalFixationsStorageInterface;
@@ -57,14 +58,19 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
 
         $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->applyAfterPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
-        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->sub($absoluteLength) : $position->entryPrice()->add($absoluteLength);
 
-        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
+        $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice - $absoluteLength : $position->entryPrice + $absoluteLength;
+        // @todo | linp | insteadof <=0 always use some distance from 0
+        if ($triggerOnPrice <= 0) {
+            $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
+        }
+
+        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice);
         if (!$applicable) {
             return false;
         }
 
-        $initialPositionSize = $state?->initialPositionSize ?? $position->size;
+        $initialPositionSize = $state?->initialPositionSize ?? $position->getNotCoveredSize();
         $alreadyClosedOnThisStep = $state?->totalClosed ?? 0;
         $maxPositionSizeToCloseOnThisStep = $step->maxPositionSizePart->of($initialPositionSize);
 
@@ -72,12 +78,13 @@ final readonly class LinpByPeriodicalFixationsStrategyProcessor implements LockI
             return false;
         }
 
+        // @todo | lockInProfit | fixations | add it as stop (for further opposite BO creation near position)
         $closed = $this->orderService->closeByMarket(
             $position, $step->singleFixationPart->of($initialPositionSize)
         )->realClosedQty;
 
         $totalClosed = $alreadyClosedOnThisStep + $closed;
-        $left = $initialPositionSize - $totalClosed;
+        $left = $maxPositionSizeToCloseOnThisStep - $totalClosed;
 
         self::print(sprintf('fix %s (%s left) on %s [%s]', $closed, $left, $position, $step->alias));
 

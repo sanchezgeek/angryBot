@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Bot\Handler\PushOrdersToExchange\Stop;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStops;
 use App\Bot\Application\Messenger\Job\PushOrdersToExchange\PushStopsHandler;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -98,9 +99,7 @@ final class PushStopsCornerCasesTest extends KernelTestCase
         $this->handler = new PushStopsHandler(
             $this->stopRepository,
             $this->orderServiceMock,
-            self::getContainerSettingsProvider(),
-            self::getContainer()->get(PushStopSettingsWrapper::class),
-            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
+            self::getContainer()->get(LiquidationDynamicParametersFactoryInterface::class),
 
             $this->messageBus,
             $this->exchangeServiceMock,

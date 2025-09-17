@@ -136,7 +136,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
     #[AppDynamicParameter(group: 'liquidation-handler')]
     public function criticalDistance(): float
     {
-        // @todo | возможно надо брать position->entry при опред. обстоятельствах
+        // @todo | LiquidationDynamicParameters | use TA
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta($this->criticalDistancePnl(), $this->ticker->markPrice);
     }
 
@@ -149,7 +149,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             $this->criticalRange = PriceRange::create(
                 $liquidationPrice,
-                $this->position->isShort() ? $liquidationPrice->sub($criticalDistance) : $liquidationPrice->add($criticalDistance),
+                $liquidationPrice->modifyByDirection($this->position->side, PriceMovementDirection::TO_PROFIT, $criticalDistance, zeroSafe: true),
                 $this->symbol
             );
         }
@@ -166,7 +166,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
 
             $this->warningRange = PriceRange::create(
                 $liquidationPrice,
-                $this->position->isShort() ? $liquidationPrice->sub($warningDistance) : $liquidationPrice->add($warningDistance),
+                $liquidationPrice->modifyByDirection($this->position->side, PriceMovementDirection::TO_PROFIT, $warningDistance, zeroSafe: true),
                 $this->symbol
             );
         }

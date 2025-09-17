@@ -8,6 +8,7 @@ use App\Application\Logger\AppErrorLoggerInterface;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidation;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\CheckPositionIsUnderLiquidationHandler;
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory;
+use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface;
 use App\Bot\Application\Service\Exchange\Account\ExchangeAccountServiceInterface;
 use App\Bot\Application\Service\Exchange\Dto\SpotBalance;
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
@@ -96,7 +97,7 @@ final class CheckPositionIsUnderLiquidationHandlerTest extends KernelTestCase
             self::getContainer()->get(AppErrorLoggerInterface::class),
             null,
             self::getContainerSettingsProvider(),
-            self::getContainer()->get(LiquidationDynamicParametersFactory::class),
+            self::getContainer()->get(LiquidationDynamicParametersFactoryInterface::class),
             self::DISTANCE_FOR_CALC_TRANSFER_AMOUNT
         );
     }

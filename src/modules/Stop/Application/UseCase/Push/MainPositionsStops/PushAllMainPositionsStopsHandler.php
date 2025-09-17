@@ -12,6 +12,7 @@ use App\Bot\Application\Settings\PushStopSettings;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\Ticker;
+use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\ByBitLinearPositionService;
 use App\Settings\Application\Helper\SettingsHelper;
@@ -47,9 +48,8 @@ final readonly class PushAllMainPositionsStopsHandler
             $currentPrice = $lastMarkPrices[$position->symbol->name()];
 
             // @todo get last diff between mark and index
-            // add some offset as if it situation when indexPrice leans above markPrice
-//            $offset = $position->symbol->minimalPriceMove() * 100 * 10;
-//            $currentPrice = $position->isShort() ? $currentPrice->add($offset) : $currentPrice->sub($offset);
+            // add some offset as if it's situation when indexPrice leans above markPrice
+            $currentPrice = $currentPrice->modifyByDirection($position->side, PriceMovementDirection::TO_LOSS, $currentPrice->value() / 600, zeroSafe: true);
 
             $queryInput[] = new FindStopsDto($position->symbol, $position->side, $currentPrice);
             $positionsCache[$position->symbol->name()] = new CachedValue(static fn() => throw new RuntimeException('Not implemented'), 2500, $position);

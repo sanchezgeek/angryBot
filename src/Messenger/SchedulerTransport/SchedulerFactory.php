@@ -31,6 +31,7 @@ use App\Service\Infrastructure\Job\RestartWorker\RestartWorkerMessage;
 use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
+use App\Trading\Application\Balance\Job\CheckContractBalanceRatioJob;
 use App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob;
 use App\Trading\Application\Job\PeriodicalOrder\MakePeriodicalOrderJob;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\Job\ActualizePeriodicalFixationsStateStorageJob;
@@ -199,6 +200,9 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT10S', AsyncMessage::for(new MakePeriodicalOrderJob())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new ApplyLockInProfitJob())),
             PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT20S', AsyncMessage::for(new ActualizePeriodicalFixationsStateStorageJob())),
+
+            // -- balance
+            PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new CheckContractBalanceRatioJob(Coin::USDT))),
         ];
     }
 

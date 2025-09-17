@@ -11,25 +11,31 @@ use App\Infrastructure\ByBit\API\Common\Exception\BadApiResponseException;
 use App\Infrastructure\ByBit\API\V5\Request\Market\GetFundingRateHistoryRequest;
 use App\Infrastructure\ByBit\Cache\MarketDataCache;
 use App\Infrastructure\ByBit\Service\Common\ByBitApiCallHandler;
+use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
+use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAutowiredArgument;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use DateTimeImmutable;
 use RuntimeException;
 
 use function is_array;
 use function sprintf;
 
-final class ByBitMarketService implements MarketServiceInterface
+final class ByBitMarketService implements MarketServiceInterface, AppDynamicParametersProviderInterface
 {
     use ByBitApiCallHandler;
 
     public function __construct(
+        #[AppDynamicParameterAutowiredArgument]
         private ClockInterface $clock,
+        #[AppDynamicParameterAutowiredArgument]
         ByBitApiClientInterface $apiClient,
+        #[AppDynamicParameterAutowiredArgument]
         private readonly MarketDataCache $cache,
     ) {
         $this->apiClient = $apiClient;
     }
 
+    #[AppDynamicParameter(group: 'market', name: 'prev-funding')]
     public function getPreviousPeriodFundingRate(SymbolInterface $symbol): float
     {
         $last = $this->cache->getLastFundingRate($symbol);
