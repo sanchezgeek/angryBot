@@ -24,7 +24,7 @@ final readonly class AutoOpenClaimReviewer
         $criteriaCollection = $this->getCriteriaCollectionFactory($claim)->create($claim);
 
         foreach ($criteriaCollection as $criteria) {
-            $checker = $this->getCriteriaChecker($criteria);
+            $checker = $this->getCriteriaChecker($claim, $criteria);
             $checkResult = $checker->checkCriteria($claim, $criteria);
             if (!$checkResult->success) {
                 return AutoOpenClaimReviewResult::negative([

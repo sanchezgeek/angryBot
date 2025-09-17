@@ -94,6 +94,7 @@ final readonly class AutoOpenHandler
         $priceToRelate = $ticker->markPrice;
         $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
 
+        // @todo | autoOpen | without stops? or other grid
         $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $riskLevel, $fromPnlPercent);
 
         // @todo | autoOpen | mb without stops in case of very small amount?

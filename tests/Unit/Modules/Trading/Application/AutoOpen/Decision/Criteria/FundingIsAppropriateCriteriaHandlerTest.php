@@ -152,6 +152,9 @@ final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
             self::result(0.50503, 'Current funding: 0.000700. Historical mean: 0.000795. Trend: -0.000001 per period. Volatility: 0.000080. Z-score: -1.18. Extreme values: 0/20. Confidence multiplier: 0.51')
         ];
 
+        // @todo | autoOpen | funding | в случае лонгов надо подумать правильно ли что тут понижение множителя
+        // @todo | autoOpen | funding | подумать какие другие условия могут быть и посмотреть что будет в случае, если rateDecision выносит кто-то ещё
+
         ### 8.1 Стабильный положительный funding с резким уменьшением в конце
         $positiveFundingHistoryI = [
             0.0008, 0.0007, 0.0009, 0.0008, 0.0007, 0.0009, 0.0008, 0.0007, 0.0009, 0.0008,

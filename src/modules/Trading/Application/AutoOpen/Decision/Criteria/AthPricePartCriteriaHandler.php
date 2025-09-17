@@ -25,9 +25,9 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         // @todo | autoOpen | funding time + hedge + close
 
         return match ($riskLevel) {
-            RiskLevel::Cautious => 90,
-            default => 85,
-            RiskLevel::Aggressive => 75,
+            RiskLevel::Cautious => 85,
+            default => 78,
+            RiskLevel::Aggressive => 70,
         };
     }
 
