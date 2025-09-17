@@ -1,9 +1,16 @@
 #!/bin/bash
 
+source .env.local
+
 symbols=()
 
+tv=${1:-false}
 
 make sf c="p:opened:symbols" | while read    symbol
 do
-    open "https://www.tradingview.com/chart/7mIOwAJ7/?symbol=BYBIT%3A$symbol.P"
+    if [ "$tv" = "tv" ]; then
+        open "https://www.tradingview.com/chart/7mIOwAJ7/?symbol=BYBIT%3A$symbol.P"
+    else
+        open "https://${SERVER_NAME}:${HTTPS_PORT}/admin/dashboard/symbol-page/$symbol"
+    fi
 done

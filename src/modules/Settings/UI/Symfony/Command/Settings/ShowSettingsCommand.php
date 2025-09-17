@@ -16,14 +16,12 @@ use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsService;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Settings\Application\Service\SettingsLocator;
-use App\Settings\Application\Storage\AssignedSettingValueCollection;
 use App\Settings\Application\Storage\Dto\AssignedSettingValue;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AsCommand(name: 'settings:show')]
 class ShowSettingsCommand extends AbstractCommand implements SymbolDependentCommand
