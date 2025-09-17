@@ -49,7 +49,7 @@ final class ConfidenceRateVotesCollection implements JsonSerializable, Stringabl
                 continue;
             }
 
-            $info[] = sprintf('x%.2f from %s (%s)', $vote->rate, $vote->source, $vote->info);
+            $info[] = sprintf('x%.2f from %s (%s)', $vote->rate->part(), $vote->source, $vote->info);
         }
 
         return $info;

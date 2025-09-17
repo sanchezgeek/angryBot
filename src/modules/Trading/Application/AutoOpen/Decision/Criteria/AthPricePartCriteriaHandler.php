@@ -20,15 +20,18 @@ use LogicException;
 
 final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface, OpenPositionConfidenceRateDecisionVoterInterface
 {
-    public static function usedThresholdFromAth(RiskLevel $riskLevel): float
+    public static function usedThresholdFromAth(RiskLevel $riskLevel): Percent
     {
         // @todo | autoOpen | funding time + hedge + close
+        // @todo | autoOpen | ath | возможно стоит снизить порог, т.к. сейчас будут ещё другие проверки, а эта пропорционально снизит процент депозита
 
-        return match ($riskLevel) {
-            RiskLevel::Cautious => 85,
-            default => 70,
-            RiskLevel::Aggressive => 65,
+        $percent = match ($riskLevel) {
+            RiskLevel::Cautious => 70,
+            default => 50,
+            RiskLevel::Aggressive => 40,
         };
+
+        return new Percent($percent);
     }
 
     public function supportsCriteriaCheck(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): bool
@@ -46,20 +49,19 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         AbstractOpenPositionCriteria|AthPricePartCriteria $criteria
     ): OpenPositionPrerequisiteCheckResult {
         $symbol = $claim->symbol;
-        $positionSide = $claim->positionSide;
+        $side = $claim->positionSide;
 
-        if (!$positionSide->isShort()) {
+        if (!$side->isShort()) {
             throw new LogicException('Now only for SHORTs');
         }
 
         $currentPricePartOfAth = $this->getCurrentPricePartOfAth($symbol);
+        $threshold = $criteria->getAthThresholdPercentOverride($side) ?? self::usedThresholdFromAth($this->parameters->riskLevel($symbol, $side));
 
-        $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
-        $threshold = self::usedThresholdFromAth($riskLevel);
-
-        if ($currentPricePartOfAth->value() < $threshold) {
-            $thresholdForNotification = $threshold;
-            $thresholdForNotification -= ($thresholdForNotification / 10);
+        if ($currentPricePartOfAth->value() < $threshold->value()) {
+            $thresholdForNotification = $threshold->value();
+//            $thresholdForNotification -= ($thresholdForNotification / 10);
+            $thresholdForNotification -= ($thresholdForNotification / 2);
 
             return new OpenPositionPrerequisiteCheckResult(
                 false,
