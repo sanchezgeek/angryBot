@@ -40,12 +40,13 @@ final readonly class AutoOpenHandler
         $positionSide = $claim->positionSide;
 
         $claimReview = $this->claimReviewer->handle($claim);
-        OutputHelper::print($claimReview);
 
         if (!$claimReview->suggestedParameters) {
-            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), json_encode($claimReview)));
+            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), json_encode($claimReview->info(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)));
             return;
         }
+
+        OutputHelper::print($claimReview);
 
         $percentOfDepositToUseAsMargin = $claimReview->suggestedParameters->percentOfDepositToUseAsMargin;
 
@@ -178,9 +179,11 @@ final readonly class AutoOpenHandler
 
     private static function output(string $message): void
     {
+        OutputHelper::print('');
         OutputHelper::warning(
             sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message)
         );
+        OutputHelper::print('');
     }
 
     public function __construct(

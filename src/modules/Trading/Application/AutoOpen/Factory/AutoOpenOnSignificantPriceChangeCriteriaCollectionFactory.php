@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\AutoOpen\Factory;
 
+use App\Helper\OutputHelper;
+use App\Notification\Application\Contract\AppNotificationsServiceInterface;
+use App\Trading\Application\AutoOpen\Decision\Criteria\AbstractOpenPositionCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AthPricePartCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AutoOpenNotDisabledCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\FundingIsAppropriateCriteria;
@@ -19,17 +22,39 @@ final class AutoOpenOnSignificantPriceChangeCriteriaCollectionFactory extends Ab
         return $claim->reason instanceof AutoOpenOnSignificantPriceChangeReason;
     }
 
-    public function create(InitialPositionAutoOpenClaim $claim): array
+    public function create(InitialPositionAutoOpenClaim|AutoOpenOnSignificantPriceChangeReason $claim): array
     {
         if (!$this->supports($claim)) {
             throw new RuntimeException('unsupported reason');
         }
 
-        return [
+        $defaultCriterias = [
             new AutoOpenNotDisabledCriteria(),
             new InstrumentAgeIsAppropriateCriteria(),
             new FundingIsAppropriateCriteria(),
-            new AthPricePartCriteria()
+            new AthPricePartCriteria(),
         ];
+
+        $criterias = self::mapToAliases($defaultCriterias);
+
+        foreach ($claim->reason->source->source->criteriasSuggestions as $criteriasSuggestion) {
+            $this->notifications->notify(sprintf('Override %s with %s', $criteriasSuggestion::getAlias(), json_encode($criteriasSuggestion)));
+            $criterias[$criteriasSuggestion::getAlias()] = $criteriasSuggestion;
+        }
+
+        return $criterias;
+    }
+
+    private static function mapToAliases(array $criterias): array
+    {
+        return array_combine(
+            array_map(static fn (AbstractOpenPositionCriteria $criterion) => $criterion::getAlias(), $criterias),
+            $criterias
+        );
+    }
+
+    public function __construct(
+        private readonly AppNotificationsServiceInterface $notifications
+    ) {
     }
 }

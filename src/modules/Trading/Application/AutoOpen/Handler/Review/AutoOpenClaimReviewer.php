@@ -29,9 +29,12 @@ final readonly class AutoOpenClaimReviewer
             $checker = $this->getCriteriaChecker($claim, $criteria);
             $checkResult = $checker->checkCriteria($claim, $criteria);
             if (!$checkResult->success) {
-                return AutoOpenClaimReviewResult::negative($symbol, $positionSide, [
-                    'failedChecks' => [$checkResult->source => $checkResult->info]
-                ]);
+                return AutoOpenClaimReviewResult::negative(
+                    $symbol,
+                    $positionSide,
+                    ['failedChecks' => [$checkResult->source => $checkResult->info]],
+                    $checkResult->silent
+                );
             }
         }
 
@@ -65,6 +68,7 @@ final readonly class AutoOpenClaimReviewer
         return new AutoOpenClaimReviewResult(
             $symbol,
             $positionSide,
+            true,
             new PositionAutoOpenParameters(
                 new Percent($percentOfDepositToUseAsMargin)
             ),

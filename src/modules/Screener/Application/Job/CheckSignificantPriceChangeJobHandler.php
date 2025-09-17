@@ -24,10 +24,13 @@ final readonly class CheckSignificantPriceChangeJobHandler
 
         $tryOpenPosition = $job->autoOpen;
 
-        $foundItems = $this->finder->handle(new FindSignificantPriceChange($job->settleCoin, $job->daysDelta));
+        $foundItems = $this->finder->handle(
+            new FindSignificantPriceChange($job->settleCoin, $job->daysDelta, $job->atrBaseMultiplierOverride)
+        );
+
         foreach ($foundItems as $item) {
             $this->events->dispatch(
-                new SignificantPriceChangeFoundEvent($item, $job->daysDelta, $tryOpenPosition)
+                new SignificantPriceChangeFoundEvent($item, $job->daysDelta, $job, $tryOpenPosition)
             );
         }
     }

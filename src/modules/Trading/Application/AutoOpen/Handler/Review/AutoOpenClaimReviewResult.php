@@ -19,16 +19,26 @@ final class AutoOpenClaimReviewResult implements JsonSerializable
     public function __construct(
         public SymbolInterface $symbol,
         public Side $positionSide,
+        public bool $success,
         public ?PositionAutoOpenParameters $suggestedParameters,
         public ?ConfidenceRateVotesCollection $confidenceVotes,
         public array $info = [],
+        public bool $silent = false,
     ) {
-        assert(($this->suggestedParameters && $this->confidenceVotes) || $this->info);
+        assert(!$this->success || ($this->suggestedParameters && $this->confidenceVotes));
+        assert($this->success || $this->info);
     }
 
-    public static function negative(SymbolInterface $symbol, Side $positionSide, array $info): self
+    public static function negative(SymbolInterface $symbol, Side $positionSide, array $info, bool $silent = false): self
     {
-        return new self($symbol, $positionSide, null, null, $info);
+        return new self($symbol, $positionSide, false, null, null, $info, $silent);
+    }
+
+    public function info(): array
+    {
+        return array_merge($this->info, [
+            'url' => OutputHelper::urlToSymbolDashboard($this->symbol)
+        ]);
     }
 
     public function jsonSerialize(): array

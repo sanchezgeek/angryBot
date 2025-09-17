@@ -9,7 +9,7 @@ use Stringable;
 
 abstract class AbstractOpenPositionCriteria implements Stringable
 {
-    abstract public function getAlias(): string;
+    abstract public static function getAlias(): string;
 
     public function __toString(): string
     {

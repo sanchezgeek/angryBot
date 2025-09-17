@@ -7,13 +7,15 @@ namespace App\Screener\Application\Event;
 use App\Domain\Position\ValueObject\Side;
 use App\EventBus\Event;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
+use App\Screener\Application\Job\CheckSignificantPriceChangeJob;
 
 final class SignificantPriceChangeFoundEvent implements Event
 {
     public function __construct(
         public FindSignificantPriceChangeResponse $info,
         public int $foundWhileSearchOnDaysDelta,
-        public bool $tryOpenPosition = false
+        public CheckSignificantPriceChangeJob $source,
+        public bool $tryOpenPosition = false,
     ) {
     }
 
