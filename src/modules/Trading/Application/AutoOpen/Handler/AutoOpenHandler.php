@@ -20,8 +20,8 @@ use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\Service\Market\ByBitLinearMarketService;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Settings\Application\Helper\SettingsHelper;
-use App\Trading\Application\AutoOpen\Handler\Review\AutoOpenClaimReviewer;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
+use App\Trading\Application\AutoOpen\Handler\Review\AutoOpenClaimReviewer;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\AutoOpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
@@ -36,15 +36,17 @@ final readonly class AutoOpenHandler
 {
     public function handle(InitialPositionAutoOpenClaim $claim): void
     {
+        $symbol = $claim->symbol;
+        $positionSide = $claim->positionSide;
+
         $claimReview = $this->claimReviewer->handle($claim);
+        OutputHelper::print($claimReview);
 
         if (!$claimReview->suggestedParameters) {
-            self::output(sprintf('skip autoOpen (%s)', json_encode($claimReview->info)));
+            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), json_encode($claimReview)));
             return;
         }
 
-        $symbol = $claim->symbol;
-        $positionSide = $claim->positionSide;
         $percentOfDepositToUseAsMargin = $claimReview->suggestedParameters->percentOfDepositToUseAsMargin;
 
         // @todo | probably better to get from claim checker?

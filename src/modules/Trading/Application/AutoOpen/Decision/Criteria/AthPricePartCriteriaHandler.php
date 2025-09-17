@@ -26,8 +26,8 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
 
         return match ($riskLevel) {
             RiskLevel::Cautious => 85,
-            default => 78,
-            RiskLevel::Aggressive => 70,
+            default => 70,
+            RiskLevel::Aggressive => 65,
         };
     }
 
@@ -64,7 +64,7 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
             return new OpenPositionPrerequisiteCheckResult(
                 false,
                 OutputHelper::shortClassName(self::class),
-                sprintf('$currentPricePartOfAth (%s) < %s', $currentPricePartOfAth, $threshold),
+                sprintf('$currentPricePartOfAth (%s) < %s%%', $currentPricePartOfAth, $threshold),
                 silent: $currentPricePartOfAth->value() < $thresholdForNotification // notify in some range
             );
         }
@@ -72,7 +72,7 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         return new OpenPositionPrerequisiteCheckResult(
             true,
             OutputHelper::shortClassName(self::class),
-            sprintf('$currentPricePartOfAth (%s) >= %s)', $currentPricePartOfAth, $threshold)
+            sprintf('$currentPricePartOfAth (%s) >= %s%%)', $currentPricePartOfAth, $threshold)
         );
     }
 

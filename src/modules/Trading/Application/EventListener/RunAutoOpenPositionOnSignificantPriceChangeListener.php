@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Trading\Application\EventListener;
 
 use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
-use App\Trading\Application\AutoOpen\Handler\AutoOpenHandler;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
+use App\Trading\Application\AutoOpen\Handler\AutoOpenHandler;
 use App\Trading\Application\AutoOpen\Reason\AutoOpenOnSignificantPriceChangeReason;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 

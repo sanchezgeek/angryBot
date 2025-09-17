@@ -152,9 +152,17 @@ class OutputHelper
 
     public static function linkToSymbolDashboard(SymbolInterface $symbol, ?string $caption = null): string
     {
-        $host = $_ENV['SERVER_NAME'];
+        $url = self::urlToSymbolDashboard($symbol);
         $caption = $caption ?? $symbol->name();
 
-        return sprintf('<href=https://%s/admin/dashboard/symbol-page/%s>%s</>', $host, $symbol->name(), $caption);
+        return sprintf('<href=%s>%s</>', $url, $caption);
+    }
+
+    public static function urlToSymbolDashboard(SymbolInterface $symbol): string
+    {
+        $host = $_ENV['SERVER_NAME'];
+        $port = $_ENV['HTTPS_PORT'];
+
+        return sprintf('https://%s:%s/admin/dashboard/symbol-page/%s', $host, $port, $symbol->name());
     }
 }

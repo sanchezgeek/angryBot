@@ -45,7 +45,8 @@ for path in "${instances[@]}"
 #tail -f ${LOG_PATH} | grep --line-buffered WARNING | while read line ; do afplay -t 0.8 ${BIN_DIR}/data/warning.wav -d1 ; echo $line ; done
 
 tail -f "${LOG_PATH}" | while IFS= read -r line; do
-echo "${line}"
+echo -e "${line}\n"
+
     time="0.8"
     if echo "${line}" | grep -q "short-sound"; then
         time=0.1

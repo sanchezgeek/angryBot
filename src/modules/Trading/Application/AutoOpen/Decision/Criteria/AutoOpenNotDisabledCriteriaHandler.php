@@ -16,7 +16,7 @@ final class AutoOpenNotDisabledCriteriaHandler implements OpenPositionPrerequisi
 {
     public function supportsCriteriaCheck(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): bool
     {
-        return $criteria instanceof FundingIsAppropriateCriteria;
+        return $criteria instanceof AutoOpenNotDisabledCriteria;
     }
 
     public function checkCriteria(

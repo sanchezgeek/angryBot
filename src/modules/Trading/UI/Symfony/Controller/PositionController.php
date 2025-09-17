@@ -30,23 +30,23 @@ final class PositionController extends AbstractController
     {
         $symbol = $symbol ? $this->symbolProvider->getOrInitialize($symbol) : null;
 
-//        if ($symbol) {
-//            $result = array_map([$this, 'mapToView'], $this->positionService->getPositions($symbol));
-//        } else {
-//            if (!$allPositions = $this->positionServiceWithoutCache->getAllPositions()) {
-//                $result = [];
-//            } else {
-//                $positions = [];
-//                foreach ($allPositions as $symbolPositions) {
-//                    $positions = array_merge($positions, array_values($symbolPositions));
-//                }
-//
-//                $result = array_map([$this, 'mapToView'], $positions);
-//            }
-//        }
+        if ($symbol) {
+            $result = array_map([$this, 'mapToView'], $this->positionService->getPositions($symbol));
+        } else {
+            if (!$allPositions = $this->positionServiceWithoutCache->getAllPositions()) {
+                $result = [];
+            } else {
+                $positions = [];
+                foreach ($allPositions as $symbolPositions) {
+                    $positions = array_merge($positions, array_values($symbolPositions));
+                }
 
-        $positions = [PositionFactory::fakeWithNoLiquidation($symbol, Side::Sell, 0.15)];
-        $result = array_map([$this, 'mapToView'], $positions);
+                $result = array_map([$this, 'mapToView'], $positions);
+            }
+        }
+
+//        $positions = [PositionFactory::fakeWithNoLiquidation($symbol, Side::Sell, 0.15)];
+//        $result = array_map([$this, 'mapToView'], $positions);
 
         return new JsonResponse($result);
     }

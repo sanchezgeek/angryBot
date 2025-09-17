@@ -54,14 +54,14 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
                 return new OpenPositionPrerequisiteCheckResult(
                     false,
                     OutputHelper::shortClassName(self::class),
-                    sprintf('prev funding on %s (%s) < %s', $symbol->name(), $funding, self::FUNDING_THRESHOLD_FOR_SHORT)
+                    sprintf('prev funding (%s) < %s', $funding, self::FUNDING_THRESHOLD_FOR_SHORT)
                 );
             }
         } else {
             throw new RuntimeException('not implemented yet');
         }
 
-        return new OpenPositionPrerequisiteCheckResult(true, OutputHelper::shortClassName(self::class), sprintf('current funding = %s', $funding));
+        return new OpenPositionPrerequisiteCheckResult(true, OutputHelper::shortClassName(self::class), sprintf('current funding (%s) >= %s', $funding, self::FUNDING_THRESHOLD_FOR_SHORT));
     }
 
 //    public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRate

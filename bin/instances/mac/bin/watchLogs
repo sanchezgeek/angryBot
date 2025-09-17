@@ -45,4 +45,4 @@ cmd="tail -f $LOGS_DIR/ping.log >> ${LOG_PATH} &"
 echo $cmd;
 $(eval "${cmd}")
 
-tail -f ${LOG_PATH} | while read line ; do afplay -t 0.3 ${BIN_DIR}/data/alarm.wav -d1 2>&1 1>/dev/null ; echo $line ; done
+tail -f ${LOG_PATH} | while read line ; do afplay -t 0.3 ${BIN_DIR}/data/alarm.wav -d1 2>&1 1>/dev/null ; echo -e "$line\n"; done

@@ -21,20 +21,19 @@ final readonly class AutoOpenClaimReviewer
 {
     public function handle(InitialPositionAutoOpenClaim $claim): AutoOpenClaimReviewResult
     {
+        $symbol = $claim->symbol;
+        $positionSide = $claim->positionSide;
         $criteriaCollection = $this->getCriteriaCollectionFactory($claim)->create($claim);
 
         foreach ($criteriaCollection as $criteria) {
             $checker = $this->getCriteriaChecker($claim, $criteria);
             $checkResult = $checker->checkCriteria($claim, $criteria);
             if (!$checkResult->success) {
-                return AutoOpenClaimReviewResult::negative([
+                return AutoOpenClaimReviewResult::negative($symbol, $positionSide, [
                     'failedChecks' => [$checkResult->source => $checkResult->info]
                 ]);
             }
         }
-
-        $symbol = $claim->symbol;
-        $positionSide = $claim->positionSide;
 
         // @todo | autoOpen | calc size based on further liquidation (must be safe)
         // it can be another criteria =)
@@ -64,6 +63,8 @@ final readonly class AutoOpenClaimReviewer
         $percentOfDepositToUseAsMargin = max($minPercentOfDepositToUseAsMargin, $percentOfDepositToUseAsMargin);
 
         return new AutoOpenClaimReviewResult(
+            $symbol,
+            $positionSide,
             new PositionAutoOpenParameters(
                 new Percent($percentOfDepositToUseAsMargin)
             ),
@@ -116,7 +117,7 @@ final readonly class AutoOpenClaimReviewer
      * @param iterable<OpenPositionConfidenceRateDecisionVoterInterface> $rateDecisionVoters
      */
     public function __construct(
-        #[AutowireIterator('info.info_provider')]
+        #[AutowireIterator('trading.autoOpen.decision.criteria_collection_factory')]
         private iterable $criteriaCollectionFactories,
 
         #[AutowireIterator('trading.autoOpen.decision.criteria_checker')]
