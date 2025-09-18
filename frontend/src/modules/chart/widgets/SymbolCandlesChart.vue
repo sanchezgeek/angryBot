@@ -13,7 +13,7 @@ import {
   IChartApi,
   ISeriesApi,
   ISeriesMarkersPluginApi,
-  CrosshairMode,
+  CrosshairMode, IPriceLine,
 } from 'lightweight-charts'
 import {MarketStructurePointDto} from "../../market-structure/dto/marketStructureTypes";
 import {getInstrumentInfo} from "../../instrument/api/instrumentApi";
@@ -57,6 +57,8 @@ let longPositionLineSeries: ISeriesApi
 let seriesMarkers: ISeriesMarkersPluginApi
 // @ts-ignore
 let structureLineSeries: ISeriesApi
+// @ts-ignore
+let priceLine: IPriceLine
 
 watch(
   () => props.timeFrame,
@@ -80,10 +82,31 @@ watch(
   },
 )
 
+function fit() {
+  chart.timeScale().fitContent()
+}
+
 async function updateChart() {
   const res = await getCandles(makeCandlesFilter(props.symbol ?? '', props.timeFrame ?? ''))
   candlesData.value = res.data
   candleSeries.setData(candlesData.value)
+
+  const candles = JSON.parse(JSON.stringify(candlesData.value))
+
+  if (priceLine !== undefined) {
+    candleSeries.removePriceLine(priceLine);
+  }
+
+  let lastCandle = candles[candles.length - 1];
+  let priceLineColor = lastCandle.close >= lastCandle.open ? 'green' : 'red';
+  priceLine = candleSeries.createPriceLine({
+    price: lastCandle.close,
+    color: priceLineColor,
+    lineWidth: 2,
+    lineStyle: 2,
+    axisLabelVisible: true,
+    title: '',
+  });
 }
 
 async function setupInstrumentInfo(symbol: string) {
@@ -147,16 +170,17 @@ onMounted(() => {
   candleSeries = chart.addSeries(CandlestickSeries, {
     upColor: '#26a69a',
     downColor: '#ef5350',
-    borderVisible: false,
+    borderVisible: true,
     wickUpColor: '#26a69a',
     wickDownColor: '#ef5350',
+    lastValueVisible: false
   })
 
   setupInstrumentInfo(props.symbol ?? '')
 
   shortPositionLineSeries = chart.addSeries(LineSeries, { color: 'red', lineWidth: 1 })
   longPositionLineSeries = chart.addSeries(LineSeries, { color: 'green', lineWidth: 1 })
-  structureLineSeries = chart.addSeries(LineSeries, { color: '#0000b1', lineWidth: 1 })
+  structureLineSeries = chart.addSeries(LineSeries, { color: '#47aEFA', lineWidth: 1 })
 
   setInterval(() => {
     updateChart()
@@ -178,6 +202,8 @@ onMounted(() => {
 </script>
 
 <template>
+  <va-button @click="fit">Fit content</va-button>
+  <br><br>
   <div id="tvchart" style="height: 500px; width: 500px" />
 </template>
 
