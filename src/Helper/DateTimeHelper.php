@@ -10,6 +10,11 @@ use DateTimeImmutable;
 
 final class DateTimeHelper
 {
+    public static function secondsInHours(int $hours): int
+    {
+        return $hours * 3600;
+    }
+
     public static function secondsInMinutes(int $minutes): int
     {
         return $minutes * 60;

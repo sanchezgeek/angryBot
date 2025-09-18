@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\AutoOpen\Factory;
 
-use App\Helper\OutputHelper;
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AbstractOpenPositionCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AthPricePartCriteria;
@@ -38,7 +37,7 @@ final class AutoOpenOnSignificantPriceChangeCriteriaCollectionFactory extends Ab
         $criterias = self::mapToAliases($defaultCriterias);
 
         foreach ($claim->reason->source->source->criteriasSuggestions as $criteriasSuggestion) {
-            $this->notifications->notify(sprintf('Override %s with %s', $criteriasSuggestion::getAlias(), json_encode($criteriasSuggestion)));
+            $this->notifications->muted(sprintf('Override %s for %s %s with %s', $criteriasSuggestion::getAlias(), $claim->symbol->name(), $claim->positionSide->value, $criteriasSuggestion));
             $criterias[$criteriasSuggestion::getAlias()] = $criteriasSuggestion;
         }
 

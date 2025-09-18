@@ -22,6 +22,7 @@ use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 use App\Trading\Application\AutoOpen\Handler\Review\AutoOpenClaimReviewer;
+use App\Trading\Application\AutoOpen\Handler\Review\AutoOpenClaimReviewResult;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\AutoOpenPositionSettings;
 use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
@@ -39,16 +40,16 @@ final readonly class AutoOpenHandler
         $symbol = $claim->symbol;
         $positionSide = $claim->positionSide;
 
-        $claimReview = $this->claimReviewer->handle($claim);
+        $reviewResult = $this->claimReviewer->handle($claim);
 
-        if (!$claimReview->suggestedParameters) {
-            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), json_encode($claimReview->info(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)));
+        if (!$reviewResult->suggestedParameters) {
+            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), OutputHelper::getPrettyUnescaped($reviewResult->info(), false)));
             return;
         }
 
-        OutputHelper::print($claimReview);
+        OutputHelper::print($reviewResult);
 
-        $percentOfDepositToUseAsMargin = $claimReview->suggestedParameters->percentOfDepositToUseAsMargin;
+        $percentOfDepositToUseAsMargin = $reviewResult->suggestedParameters->percentOfDepositToUseAsMargin;
 
         // @todo | probably better to get from claim checker?
         $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
@@ -119,19 +120,26 @@ final readonly class AutoOpenHandler
             $this->setMaxLeverage($symbol);
             $this->openPositionHandler->handle($openPositionEntry);
             // @todo throw event and handle in some listener
-            $this->notifyAboutSuccess($claim, $openPositionEntry);
+            $this->notifyAboutSuccess($claim, $reviewResult, $openPositionEntry);
         } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException) {
 
         } catch (Throwable $e) {
             // @todo throw event and handle in some listener
-            $this->notifyAboutFail($openPositionEntry, $e);
+            $this->notifyAboutFail($claim, $reviewResult, $openPositionEntry, $e);
         }
     }
 
-    private function notifyAboutFail(OpenPositionEntryDto $openHandlerEntry, Throwable $e, bool $muted = false): void
+    private function notifyAboutFail(InitialPositionAutoOpenClaim $claim, AutoOpenClaimReviewResult $reviewResult, OpenPositionEntryDto $openHandlerEntry, Throwable $e, bool $muted = false): void
     {
         // @todo add claim reason?
-        $message = sprintf('%s: got "%s (%s)" error. Entry was: %s', OutputHelper::shortClassName($this), get_class($e), $e->getMessage(), $openHandlerEntry);
+        $message = sprintf(
+            '%s: got "%s (%s)" error (autoOpenReason: %s) Entry was: %s',
+            OutputHelper::shortClassName($this),
+            get_class($e),
+            $e->getMessage(),
+            $openHandlerEntry,
+            $claim->reason->getStringInfo(),
+        );
 
         if (!self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide)) {
             $muted = true;
@@ -141,20 +149,20 @@ final readonly class AutoOpenHandler
         self::output($message);
     }
 
-    private function notifyAboutSuccess(InitialPositionAutoOpenClaim $claim, OpenPositionEntryDto $openHandlerEntry): void
+    private function notifyAboutSuccess(InitialPositionAutoOpenClaim $claim, AutoOpenClaimReviewResult $reviewResult, OpenPositionEntryDto $openHandlerEntry): void
     {
-        $reason = $claim->reason->getStringInfo();
         $symbol = $claim->symbol;
 
         $message = sprintf(
-            '%s: %s %s %s position [percentOfDepositToRisk = %s, stopsGrid = "%s"] (reason: %s)',
+            '%s: %s %s %s position [percentOfDepositToRisk = %s, stopsGrid = "%s"] (autoOpenReason: %s) (extendedInfo: %s)',
             OutputHelper::shortClassName(self::class),
             $openHandlerEntry->asBuyOrder ? 'add additional to' : 'open',
             $symbol->name(),
             $openHandlerEntry->positionSide->title(),
             $openHandlerEntry->percentOfDepositToRisk->setOutputFloatPrecision(2),
             $openHandlerEntry->stopsGridsDefinition,
-            $reason
+            $claim->reason->getStringInfo(),
+            $reviewResult,
         );
 
         $muted = !self::isNotificationsEnabled($openHandlerEntry->symbol, $openHandlerEntry->positionSide);

@@ -9,6 +9,11 @@ use App\Domain\Value\Percent\Percent;
 
 final class AthPricePartCriteria extends AbstractOpenPositionCriteria
 {
+    public static function getAlias(): string
+    {
+        return 'price-percent-of-ath';
+    }
+
     /**
      * @param array<string, Percent> $athPartThresholdOverrides
      */
@@ -33,8 +38,10 @@ final class AthPricePartCriteria extends AbstractOpenPositionCriteria
         return $this->athPartThresholdOverrides[$side->value] ?? null;
     }
 
-    public static function getAlias(): string
+    public function jsonSerialize(): mixed
     {
-        return 'at-h-l-price-appropriate';
+        return array_merge(parent::jsonSerialize(), [
+            'athPartThresholdOverrides' => $this->athPartThresholdOverrides
+        ]);
     }
 }

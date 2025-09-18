@@ -29,6 +29,6 @@ final readonly class OpenPositionEntryDto implements Stringable
 
     public function __toString(): string
     {
-        return json_encode($this);
+        return json_encode($this, JSON_PRETTY_PRINT);
     }
 }

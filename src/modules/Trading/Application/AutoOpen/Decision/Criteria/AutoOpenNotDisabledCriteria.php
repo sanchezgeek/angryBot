@@ -8,6 +8,6 @@ final class AutoOpenNotDisabledCriteria extends AbstractOpenPositionCriteria
 {
     public static function getAlias(): string
     {
-        return 'funding-is-appropriate';
+        return 'not-disabled';
     }
 }

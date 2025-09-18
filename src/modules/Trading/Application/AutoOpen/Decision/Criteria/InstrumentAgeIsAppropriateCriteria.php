@@ -8,6 +8,6 @@ final class InstrumentAgeIsAppropriateCriteria extends AbstractOpenPositionCrite
 {
     public static function getAlias(): string
     {
-        return 'instrument-age-is-appropriate';
+        return 'instrument-age';
     }
 }

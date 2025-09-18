@@ -21,6 +21,17 @@ use function var_dump;
 
 class OutputHelper
 {
+    public static function getPrettyUnescaped(mixed $data, bool $print = true): string
+    {
+        $data = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        if ($print) {
+            self::print($data);
+        }
+
+        return $data;
+    }
+
     public static function positionStats(string $desc, Position|CalcPositionLiquidationPriceResult $res): void
     {
         $entryPrice = $res instanceof Position ? $res->entryPrice : $res->positionEntryPrice()->value();

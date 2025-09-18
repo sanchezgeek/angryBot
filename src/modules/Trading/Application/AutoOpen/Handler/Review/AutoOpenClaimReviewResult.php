@@ -10,8 +10,9 @@ use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateVotesCollecti
 use App\Trading\Application\AutoOpen\Dto\PositionAutoOpenParameters;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use JsonSerializable;
+use Stringable;
 
-final class AutoOpenClaimReviewResult implements JsonSerializable
+final class AutoOpenClaimReviewResult implements JsonSerializable, Stringable
 {
     /**
      * @param array<array-key, mixed> $info
@@ -36,15 +37,28 @@ final class AutoOpenClaimReviewResult implements JsonSerializable
 
     public function info(): array
     {
-        return array_merge($this->info, [
-            'url' => OutputHelper::urlToSymbolDashboard($this->symbol)
-        ]);
+        return array_merge($this->info, $this->commonInfo());
     }
 
     public function jsonSerialize(): array
     {
-        return array_merge(get_object_vars($this), [
-            'url' => OutputHelper::urlToSymbolDashboard($this->symbol)
-        ]);
+        return array_merge(get_object_vars($this), $this->commonInfo());
+    }
+
+    public function __toString(): string
+    {
+        return json_encode($this, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Some rearrange =)
+     */
+    private function commonInfo(): array
+    {
+        return [
+            'url' => OutputHelper::urlToSymbolDashboard($this->symbol),
+            'symbolSide' => sprintf('%s %s', $this->symbol->name(), $this->positionSide->value),
+            'success' => $this->success,
+        ];
     }
 }
