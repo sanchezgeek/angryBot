@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\LockInProfit\Factory;
 
+use App\Bot\Domain\Position;
+use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
@@ -13,8 +15,9 @@ use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixati
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\Step\PeriodicalFixationStep;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\LinpByStopStepsStrategyDto;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
+use App\Trading\Contract\ContractBalanceProviderInterface;
 
-final class LockInProfitStrategiesDtoFactory
+final readonly class LockInProfitStrategiesDtoFactory
 {
     public function threeStopStepsLock(?RiskLevel $riskLevel = null): LinpByStopStepsStrategyDto
     {
@@ -27,65 +30,93 @@ final class LockInProfitStrategiesDtoFactory
             // first part
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part1',
-                Length::BetweenShortAndStd, // settings?
+                Length::Standard, // settings?
                 self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
             ),
             // second part
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part2',
-                Length::Standard,
-                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::BetweenLongAndStd->toStringWithNegativeSign(), 15, 10),
+                Length::BetweenLongAndStd,
+                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 15, 10),
             ),
             // third part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part3',
                 Length::Long,
                 // @todo | lockInProfit | stops must be placed near position side
-                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 30, 30),
+                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 30, 30),
             ),
             // fourth part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part4',
                 Length::VeryVeryLong,
-                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 40, 10),
+                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 25, 10),
             ),
         );
     }
 
-    public function defaultPeriodicalFixationsLock(): LinpByPeriodicalFixationsStrategyDto
+    public function defaultPeriodicalFixationsLock(Position $position): LinpByPeriodicalFixationsStrategyDto
     {
+        $smallPartToClose = $this->minPercentToClose($position);
+        $bigPartToClose = new Percent($smallPartToClose->value() * 2);
+
         // @todo use funding here
+        // @todo use free to total balance ratio (make faster for negative free)
 
         return new LinpByPeriodicalFixationsStrategyDto(
             new PeriodicalFixationStep(
                 'periodical-fixation-on-long-distance',
                 PriceDistanceSelector::Long,
-                new Percent(0.5),
-                new Percent(12),
+                $smallPartToClose,
+                new Percent(10),
                 DateTimeHelper::secondsInMinutes(30) // settings based on TradingStyle
             ),
             new PeriodicalFixationStep(
                 'periodical-fixation-on-very-long-distance',
                 PriceDistanceSelector::VeryLong,
-                new Percent(0.5),
+                $bigPartToClose,
                 new Percent(15),
-                DateTimeHelper::secondsInMinutes(30)
+                DateTimeHelper::secondsInMinutes(20)
             ),
             new PeriodicalFixationStep(
                 'periodical-fixation-on-very-very-long-distance',
                 PriceDistanceSelector::VeryVeryLong,
-                new Percent(1),
+                $smallPartToClose,
                 new Percent(20),
-                DateTimeHelper::secondsInMinutes(5)
+                DateTimeHelper::secondsInMinutes(30)
             ),
             new PeriodicalFixationStep(
                 'periodical-fixation-on-double-long-distance',
                 PriceDistanceSelector::DoubleLong,
-                new Percent(1),
+                $bigPartToClose,
                 new Percent(20),
-                DateTimeHelper::secondsInMinutes(5)
+                DateTimeHelper::secondsInMinutes(30)
             ),
         );
+    }
+
+    public function minPercentToClose(Position $position): Percent
+    {
+        $im = InitialMarginHelper::realInitialMargin($position);
+        $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($position->symbol->associatedCoin());
+
+        $totalWithUnrealized = $contractBalance->totalWithUnrealized()->value();
+        $imRatio = $im / $totalWithUnrealized / 2;
+
+        $minPercentToClose = .005;
+        $maxPercentToClose = .015;
+
+        $part = $imRatio * 100 / $totalWithUnrealized;
+
+        if ($part > $maxPercentToClose) {
+            $part = $maxPercentToClose;
+        }
+
+        if ($part < $minPercentToClose) {
+            $part = $minPercentToClose;
+        }
+
+        return Percent::fromPart($part, false);
     }
 
     public static function makeGridDefinition(
@@ -95,5 +126,10 @@ final class LockInProfitStrategiesDtoFactory
         int $stopsCount,
     ): string {
         return sprintf('%s..%s|%d%%|%s', $from, $to, $positionSizePercent, $stopsCount);
+    }
+
+    public function __construct(
+        private ContractBalanceProviderInterface $contractBalanceProvider
+    ) {
     }
 }
