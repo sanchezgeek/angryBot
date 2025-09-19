@@ -10,5 +10,5 @@ use App\Domain\Price\SymbolPrice;
 
 interface StopsQueryServiceInterface
 {
-    public function getAnyKindOfFixationsCountBeforePrice(Side $positionSide, SymbolPrice $price, SymbolPrice $tickerPrice): int;
+    public function getBlockingStopsCountBeforePrice(Side $positionSide, SymbolPrice $price, SymbolPrice $tickerPrice): int;
 }

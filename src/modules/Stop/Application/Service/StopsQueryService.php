@@ -19,7 +19,7 @@ final readonly class StopsQueryService implements StopsQueryServiceInterface
     ) {
     }
 
-    public function getAnyKindOfFixationsCountBeforePrice(Side $positionSide, SymbolPrice $price, SymbolPrice $tickerPrice): int
+    public function getBlockingStopsCountBeforePrice(Side $positionSide, SymbolPrice $price, SymbolPrice $tickerPrice): int
     {
         $symbol = $tickerPrice->symbol;
 
@@ -27,7 +27,7 @@ final readonly class StopsQueryService implements StopsQueryServiceInterface
             symbol: $symbol,
             side: $positionSide,
             qbModifier: function (QueryBuilder $qb, string $alias) use ($positionSide, $price, $tickerPrice) {
-                StopRepository::addIsAnyKindOfFixationCondition($qb, $alias);
+                StopRepository::addIsBlockingBuyStopCondition($qb, $alias);
 
                 $qb->andWhere(sprintf('%s %s :positionEntryPrice', QueryHelper::priceField($qb), $positionSide->isShort() ? '<' : '>'));
                 $qb->setParameter(':positionEntryPrice', $price->value());

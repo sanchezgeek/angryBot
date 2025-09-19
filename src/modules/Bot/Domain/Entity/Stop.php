@@ -13,6 +13,7 @@ use App\Bot\Domain\Entity\Common\WithOppositeOrderDistanceContext;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepository;
 use App\Bot\Domain\ValueObject\Order\OrderType;
+use App\Buy\Domain\ValueObject\StopStrategy\StopCreationStrategyDefinition;
 use App\Domain\Order\Contract\OrderTypeAwareInterface;
 use App\Domain\Order\Contract\VolumeSignAwareInterface;
 use App\Domain\Position\ValueObject\Side;
@@ -47,6 +48,7 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
     public const string FIX_OPPOSITE_SUPPORT_ON_LOSS = 'fixOppositeSupportOnLossEnabled';
     public const string CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION = 'createdAfterFixHedgeOpposite';
     public const string CREATED_AFTER_OTHER_SYMBOL_LOSS = 'createdAfterOtherSymbolLoss';
+    public const string CREATED_AS_FIXATION = 'createdAsFixation';
 
     public const string LOCK_IN_PROFIT_STEP_ALIAS = 'lockInProfit.stepsStrategy.stepAlias';
 
@@ -308,19 +310,29 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
+    public function isCreatedAsFixationStop(): bool
+    {
+        return ($this->context[self::CREATED_AS_FIXATION] ?? null) === true;
+    }
+
+    public static function addStopCreatedAsFixationFlagToContext(array $context): array
+    {
+        return array_merge($context, [self::CREATED_AS_FIXATION => true]);
+    }
+
     public function isManuallyCreatedStop(): bool
     {
         return !$this->isAdditionalStopFromLiquidationHandler() && !$this->isAnyKindOfFixation() && !$this->createdAsLockInProfit();
     }
 
     /**
-     * @see StopRepository::addIsAnyKindOfFixationCondition
+     * @see StopRepository::addIsBlockingBuyStopCondition
      */
     public function isAnyKindOfFixation(): bool
     {
         return  $this->isStopAfterFixHedgeOppositePosition() ||
-                $this->isStopAfterOtherSymbolLoss()
-//                $this->createdAsLockInProfit()
+                $this->isStopAfterOtherSymbolLoss() ||
+                $this->isCreatedAsFixationStop()
         ;
     }
 

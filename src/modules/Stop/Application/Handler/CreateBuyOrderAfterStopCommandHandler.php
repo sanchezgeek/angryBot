@@ -62,7 +62,12 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
     public function __invoke(CreateBuyOrderAfterStop $command): array
     {
         $stop = $this->stopRepository->find($command->stopId);
-        $isAdditionalFixationsStop = $stop->isStopAfterOtherSymbolLoss() || $stop->isStopAfterFixHedgeOppositePosition() || $stop->createdAsLockInProfit();
+        $isAdditionalFixationsStop =
+            $stop->isStopAfterOtherSymbolLoss() ||
+            $stop->isStopAfterFixHedgeOppositePosition() ||
+            $stop->createdAsLockInProfit() ||
+            $stop->isCreatedAsFixationStop()
+        ;
 
         if (!$stop->isWithOppositeOrder() && !$isAdditionalFixationsStop) {
             return [];
@@ -108,6 +113,8 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                     $stop->isStopAfterOtherSymbolLoss() => 'other.symbol.loss',
                     $stop->isStopAfterFixHedgeOppositePosition() => 'hedge',
                     $stop->createdAsLockInProfit() => 'lock.in.profit',
+                    $stop->isCreatedAsFixationStop() => 'fixation',
+                    default => 'unknown.fixation'
                 };
 
                 $orders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3.5, 0, BO::addOppositeFixationKind($withForceBuy, $kind));

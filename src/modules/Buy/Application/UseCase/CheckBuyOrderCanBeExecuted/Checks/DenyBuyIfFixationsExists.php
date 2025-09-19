@@ -92,7 +92,7 @@ final readonly class DenyBuyIfFixationsExists implements TradingCheckInterface
 
         return $this->stopsCache->get(
             sprintf('fixations_%s_%s_%s', $symbol->name(), $positionSide->value, $price->value()),
-            fn() => $this->stopsQueryService->getAnyKindOfFixationsCountBeforePrice($positionSide, $price, $markPrice),
+            fn() => $this->stopsQueryService->getBlockingStopsCountBeforePrice($positionSide, $price, $markPrice),
             100
         );
     }

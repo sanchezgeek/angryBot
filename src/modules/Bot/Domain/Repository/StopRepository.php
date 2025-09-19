@@ -34,6 +34,7 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
     private const string createdAfterOtherSymbolLoss = Stop::CREATED_AFTER_OTHER_SYMBOL_LOSS;
     private const string createdAfterFixHedgeOppositePosition = Stop::CREATED_AFTER_FIX_HEDGE_OPPOSITE_POSITION;
     private const string lockInProfitStepAliasFlag = Stop::LOCK_IN_PROFIT_STEP_ALIAS;
+    private const string createdAsFixationFlag = Stop::CREATED_AS_FIXATION;
 
     private string $exchangeOrderIdContext = Stop::EXCHANGE_ORDER_ID_CONTEXT;
 
@@ -298,23 +299,22 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         return $qb->andWhere("JSON_ELEMENT_EQUALS($alias.context, '$flagName', 'true') = true");
     }
 
-    /**
-     * @see Stop::isAnyKindOfFixation
-     */
-    public static function addIsAnyKindOfFixationCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
+    public static function addIsBlockingBuyStopCondition(QueryBuilder $qb, ?string $alias = null): QueryBuilder
     {
         $alias = $alias ?? QueryHelper::rootAlias($qb);
 
         $flagAfterOtherSymbolLoss = self::createdAfterOtherSymbolLoss;
         $flagAfterFixHedge = self::createdAfterFixHedgeOppositePosition;
         $lockInProfitStepAliasFlag = self::lockInProfitStepAliasFlag;
+        $createdAsFixationFlag = self::createdAsFixationFlag;
 
         return $qb
-            ->andWhere(
-                "(JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true"
-                . " OR JSON_ELEMENT_EQUALS($alias.context, '$flagAfterFixHedge', 'true') = true"
-                . " OR HAS_ELEMENT(s.context, '$lockInProfitStepAliasFlag') = true)"
-            )
+            ->andWhere("(" .
+                "    JSON_ELEMENT_EQUALS($alias.context, '$flagAfterOtherSymbolLoss', 'true') = true" .
+                " OR JSON_ELEMENT_EQUALS($alias.context, '$flagAfterFixHedge', 'true') = true" .
+                " OR JSON_ELEMENT_EQUALS($alias.context, '$createdAsFixationFlag', 'true') = true" .
+                " OR HAS_ELEMENT(s.context, '$lockInProfitStepAliasFlag') = true" .
+            ")")
         ;
     }
 

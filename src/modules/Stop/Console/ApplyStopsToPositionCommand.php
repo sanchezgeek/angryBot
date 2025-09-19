@@ -136,6 +136,10 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
         }
 
+        if ($mode === self::FIXATION_MODE) {
+            $context = Stop::addStopCreatedAsFixationFlagToContext($context);
+        }
+
         if (in_array($mode, [self::DANGER_MODE, self::FIXATION_MODE], true)) {
             $this->riskLevel = RiskLevel::Cautious;
 
