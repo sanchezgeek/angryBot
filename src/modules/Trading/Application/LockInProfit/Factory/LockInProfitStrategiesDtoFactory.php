@@ -11,6 +11,7 @@ use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\DateTimeHelper;
+use App\Helper\NumberHelper;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\LinpByPeriodicalFixationsStrategyDto;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixations\Step\PeriodicalFixationStep;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\LinpByStopStepsStrategyDto;
@@ -104,20 +105,9 @@ final readonly class LockInProfitStrategiesDtoFactory
         $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position)->part();
         $imRatio /= 2;
 
-        $minPercentToClose = .005;
-        $maxPercentToClose = .015;
-
         $part = $imRatio * 100 / $totalWithUnrealized;
 
-        if ($part > $maxPercentToClose) {
-            $part = $maxPercentToClose;
-        }
-
-        if ($part < $minPercentToClose) {
-            $part = $minPercentToClose;
-        }
-
-        return Percent::fromPart($part, false);
+        return Percent::fromPart(NumberHelper::minMax($part, 0.005, 0.015), false);
     }
 
     public static function makeGridDefinition(

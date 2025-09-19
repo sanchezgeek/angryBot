@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 
 use App\Bot\Domain\Entity\Stop;
+use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
-use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
+use App\Domain\Value\Percent\Percent;
+use App\Helper\NumberHelper;
 use App\Helper\OutputHelper;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionEntryDto;
 use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
@@ -30,6 +32,7 @@ use InvalidArgumentException;
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
     const float IM_PERCENT_RATIO_THRESHOLD = 1.5;
+    const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 2.5;
 
     public function __construct(
         private TradingParametersProviderInterface $parameters,
@@ -52,6 +55,15 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         foreach ($dto->steps as $key => $step) {
             $this->applyStep($entry, $step);
         }
+    }
+
+    public function closingPartMultiplier(Position $position): Percent
+    {
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+
+        $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
+
+        return Percent::fromPart(NumberHelper::minMax($part, 0.3, 1), false);
     }
 
     private function applyStep(LockInProfitEntry $entry, LinpByStopsGridStep $step): void
@@ -95,12 +107,14 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
 
         $ordersGridDefinition = $this->parseGrid($positionSide, $symbol, $triggerOnPrice, $step->gridsDefinition);
 
+        $positionSizeToCover = $this->closingPartMultiplier($position)->of($position->getNotCoveredSize());
+
         // @todo | lockInProfit | not only active. executed too?
         if ($existedStops) {
             $collection = new StopsCollection(...$existedStops);
 
             // @todo | lockInProfit | stops | mb use initial position size?
-            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($position->getNotCoveredSize()));
+            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($positionSizeToCover));
             if ($percent->value() <= 0) {
                 return;
             }
@@ -117,7 +131,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             new ApplyStopsToPositionEntryDto(
                 $symbol,
                 $positionSide,
-                $position->getNotCoveredSize(),
+                $positionSizeToCover,
                 new OrdersGridDefinitionCollection($symbol, 'from strategy', $ordersGridDefinition),
                 [
                     Stop::LOCK_IN_PROFIT_STEP_ALIAS => $stepAlias,
