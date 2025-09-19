@@ -22,6 +22,13 @@ final class LockInProfitStrategiesDtoFactoryTest extends KernelTestCase
 
     use ByBitV5ApiRequestsMocker;
 
+    private LockInProfitStrategiesDtoFactory $factory;
+
+    protected function setUp(): void
+    {
+        $this->factory = self::getContainer()->get(LockInProfitStrategiesDtoFactory::class);
+    }
+
     /**
      * @dataProvider cases
      */
@@ -32,9 +39,7 @@ final class LockInProfitStrategiesDtoFactoryTest extends KernelTestCase
         $apiResponse = GetWalletBalanceResponseBuilder::ok()->withUnifiedBalance($coin, 100, $im)->build();
         $this->matchGet(new GetWalletBalanceRequest(AccountType::UNIFIED, $coin), $apiResponse);
 
-        /** @var LockInProfitStrategiesDtoFactory $factory */
-        $factory = self::getContainer()->get(LockInProfitStrategiesDtoFactory::class);
-        $percent = $factory->minPercentToClose($position);
+        $percent = $this->factory->minPercentToClose($position);
 
         self::assertEquals($expectedPercent, $percent);
     }

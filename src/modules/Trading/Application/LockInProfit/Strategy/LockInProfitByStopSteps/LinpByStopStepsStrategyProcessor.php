@@ -20,8 +20,8 @@ use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\L
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitStrategyProcessorInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
-use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
+use App\Trading\Contract\PositionInfoProviderInterface;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinition;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -35,7 +35,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         private TradingParametersProviderInterface $parameters,
         private ApplyStopsToPositionHandler $applyStopsToHandler,
         private StopRepositoryInterface $stopRepository,
-        private ContractBalanceProviderInterface $contractBalanceProvider,
+        private PositionInfoProviderInterface $positionInfoProvider,
     ) {
     }
 
@@ -67,15 +67,12 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
 
         $existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias);
 
-        $im = InitialMarginHelper::realInitialMargin($position);
-        $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($position->symbol->associatedCoin());
-
-        $imRatio = $im / $contractBalance->totalWithUnrealized()->value();
-        if ($imRatio * 100 < self::IM_PERCENT_RATIO_THRESHOLD) {
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+        if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
             if ($existedStops) {
                 $collection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
                 $this->stopRepository->remove(...$collection->getItems());
-                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio < %s%%)', $position, self::IM_PERCENT_RATIO_THRESHOLD));
+                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD));
             }
             return;
         }

@@ -16,6 +16,7 @@ use App\Trading\Application\LockInProfit\Strategy\LockInProfitByPeriodicalFixati
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\LinpByStopStepsStrategyDto;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
 use App\Trading\Contract\ContractBalanceProviderInterface;
+use App\Trading\Contract\PositionInfoProviderInterface;
 
 final readonly class LockInProfitStrategiesDtoFactory
 {
@@ -97,11 +98,11 @@ final readonly class LockInProfitStrategiesDtoFactory
 
     public function minPercentToClose(Position $position): Percent
     {
-        $im = InitialMarginHelper::realInitialMargin($position);
         $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($position->symbol->associatedCoin());
 
         $totalWithUnrealized = $contractBalance->totalWithUnrealized()->value();
-        $imRatio = $im / $totalWithUnrealized / 2;
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position)->part();
+        $imRatio /= 2;
 
         $minPercentToClose = .005;
         $maxPercentToClose = .015;
@@ -130,6 +131,7 @@ final readonly class LockInProfitStrategiesDtoFactory
 
     public function __construct(
         private ContractBalanceProviderInterface $contractBalanceProvider,
+        private PositionInfoProviderInterface $positionInfoProvider,
     ) {
     }
 }
