@@ -67,7 +67,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
         $priceChangePercent = $priceChangeInfo->getPriceChangePercent()->setOutputFloatPrecision(2);
         $message = sprintf(
-            'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) %s',
+            'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) athPart: %s',
             $priceChangeInfo->partOfDayPassed,
             $priceChangePercent,
             $symbol->name(),
@@ -78,7 +78,7 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $priceChangeInfo->priceDelta(),
             $priceChangePercent,
             $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
-            $symbol->name(),
+            TA::pricePartOfAth($symbol, $priceChangeInfo->toPrice)
         );
 
         match (SettingsHelper::exact(self::SETTING)) {
