@@ -8,6 +8,7 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Service\Exchange\Trade\CannotAffordOrderCostException;
 use App\Bot\Domain\Repository\BuyOrderRepository;
+use App\Command\Position\OpenedPositions\Cache\OpenedPositionsCache;
 use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\Service\OrderCostCalculator;
 use App\Domain\Position\Helper\InitialMarginHelper;
@@ -43,7 +44,9 @@ final readonly class AutoOpenHandler
         $reviewResult = $this->claimReviewer->handle($claim);
 
         if (!$reviewResult->suggestedParameters) {
-            self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), OutputHelper::getPrettyUnescaped($reviewResult->info(), false)));
+            if (!$reviewResult->silent) {
+                self::output(sprintf('skip autoOpen on %s %s (%s)', $symbol->name(), $positionSide->title(), OutputHelper::getPrettyUnescaped($reviewResult->info(), false)));
+            }
             return;
         }
 
@@ -121,6 +124,7 @@ final readonly class AutoOpenHandler
             $this->openPositionHandler->handle($openPositionEntry);
             // @todo throw event and handle in some listener
             $this->notifyAboutSuccess($claim, $reviewResult, $openPositionEntry);
+            $this->openedPositionsCache->addSymbolToWatch($symbol);
         } catch (CannotAffordOrderCostException|InsufficientAvailableBalanceException) {
 
         } catch (Throwable $e) {
@@ -207,6 +211,7 @@ final readonly class AutoOpenHandler
         private ContractBalanceProviderInterface $contractBalanceProvider,
         private BuyOrderRepository $buyOrderRepository,
         private OrderCostCalculator $orderCostCalculator,
+        private OpenedPositionsCache $openedPositionsCache,
     ) {
     }
 
