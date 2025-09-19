@@ -297,7 +297,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         if ($singleCoin) {
             $balance = $this->exchangeAccountService->getContractWalletBalance($singleCoin);
-            $total = $balance->totalWithUnrealized();
+            $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($singleCoin);
+            $total = $balance->totalWithUnrealized()->add($spotBalance->available);
         }
 
         $unrealisedTotal = 0;
@@ -321,8 +322,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         ### bottom START ###
         $bottomCells = [Cell::default($this->clock->now()->format('D d M H:i'))->setAlign(CellAlign::CENTER)];
-        $balanceContent = isset($balance)
-            ? sprintf('%s avail | %s free | %s total', self::formatPnl($balance->available)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value())
+        $balanceContent = isset($balance) && isset($spotBalance)
+            ? sprintf('%s avail | %s free | %s real %s spot', self::formatPnl($balance->available)->value(), self::formatPnl($balance->free)->value(), self::formatPnl($balance->total)->value(), self::formatPnl($spotBalance->available)->value())
             : '';
         $bottomCells[] = sprintf('% 48s', $balanceContent);
         $bottomCells[] = isset($total) ? self::formatPnl($total) : '';
