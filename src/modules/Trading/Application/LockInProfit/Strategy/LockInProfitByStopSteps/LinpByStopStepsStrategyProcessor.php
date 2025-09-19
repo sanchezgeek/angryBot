@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 
+use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
+use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\NumberHelper;
@@ -31,14 +33,15 @@ use InvalidArgumentException;
 
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
-    const float IM_PERCENT_RATIO_THRESHOLD = 1.5;
-    const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 2.5;
+    private const float IM_PERCENT_RATIO_THRESHOLD = 1;
+    private const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 2;
 
     public function __construct(
         private TradingParametersProviderInterface $parameters,
         private ApplyStopsToPositionHandler $applyStopsToHandler,
         private StopRepositoryInterface $stopRepository,
         private PositionInfoProviderInterface $positionInfoProvider,
+        private StopServiceInterface $stopService,
     ) {
     }
 
@@ -57,9 +60,9 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         }
     }
 
-    public function closingPartMultiplier(Position $position): Percent
+    public function closingPartMultiplier(Position $position, ?Percent $imRatio = null): Percent
     {
-        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+        $imRatio = $imRatio ?? $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
 
         $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
 
@@ -77,44 +80,60 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $symbol = $position->symbol;
         $positionSide = $position->side;
 
-        $existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias);
-
-        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
-        if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
-            if ($existedStops) {
-                $collection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
-                $this->stopRepository->remove(...$collection->getItems());
-                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD));
-            }
-            return;
-        }
-
         $stopDistancePricePct = $this->parameters->transformLengthToPricePercent($symbol, $step->checkOnPriceLength);
         $absoluteLength = $stopDistancePricePct->of($position->entryPrice);
 
         $triggerOnPrice = $positionSide->isShort() ? $position->entryPrice()->value() - $absoluteLength : $position->entryPrice()->value() + $absoluteLength;
         // @todo | linp | insteadof <=0 always use some distance from 0
         if ($triggerOnPrice <= 0) {
-            $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->of($position->entryPrice);
+            $triggerOnPrice = 0 + $this->parameters->transformLengthToPricePercent($symbol, Length::Standard)->of($position->entryPrice);
         }
 
         $triggerOnPrice = $symbol->makePrice($triggerOnPrice);
 
-        $applicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
-        if (!$applicable) {
+        // @todo | lockInProfit | not only active. executed too?
+        $existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias);
+        $stepIsApplicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
+
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+        if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
+            if ($existedStops) {
+                $existedStopsCollection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
+
+                $this->stopRepository->remove(...$existedStopsCollection->getItems());
+                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD));
+            }
+
+            if ($stepIsApplicable) {
+                /**
+                 * create minimal order to prevent buy if step actual
+                 * @see DenyBuyIfFixationsExists::getFixationStopsCountBeforePrice
+                 */
+                $this->stopService->create(
+                    $symbol,
+                    $positionSide,
+                    PriceRange::create($entry->currentMarkPrice, $position->entryPrice(), $symbol)->getMiddlePrice(),
+                    $symbol->minOrderQty(),
+                    null,
+                    $this->stepStopsContext($step),
+                );
+            }
+
             return;
         }
 
+        if (!$stepIsApplicable) {
+            return;
+        }
+
+        $positionSizeToCover = $this->closingPartMultiplier($position, $imRatio)->of($position->getNotCoveredSize());
         $ordersGridDefinition = $this->parseGrid($positionSide, $symbol, $triggerOnPrice, $step->gridsDefinition);
 
-        $positionSizeToCover = $this->closingPartMultiplier($position)->of($position->getNotCoveredSize());
-
-        // @todo | lockInProfit | not only active. executed too?
         if ($existedStops) {
-            $collection = new StopsCollection(...$existedStops);
+            $existedStopsCollection = new StopsCollection(...$existedStops);
 
             // @todo | lockInProfit | stops | mb use initial position size?
-            $percent = $ordersGridDefinition->definedPercent->sub($collection->volumePart($positionSizeToCover));
+            $percent = $ordersGridDefinition->definedPercent->sub($existedStopsCollection->volumePart($positionSizeToCover));
             if ($percent->value() <= 0) {
                 return;
             }
@@ -133,10 +152,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
                 $positionSide,
                 $positionSizeToCover,
                 new OrdersGridDefinitionCollection($symbol, 'from strategy', $ordersGridDefinition),
-                [
-                    Stop::LOCK_IN_PROFIT_STEP_ALIAS => $stepAlias,
-                    Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
-                ]
+                $this->stepStopsContext($step)
             )
         );
     }
@@ -180,8 +196,16 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
-    private static function print(string $message): void
+//    private static function print(string $message): void
+//    {
+//        OutputHelper::print(sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message));
+//    }
+
+    private function stepStopsContext(LinpByStopsGridStep $step): array
     {
-        OutputHelper::print(sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message));
+        return [
+            Stop::LOCK_IN_PROFIT_STEP_ALIAS => $step->stepAlias,
+            Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
+        ];
     }
 }
