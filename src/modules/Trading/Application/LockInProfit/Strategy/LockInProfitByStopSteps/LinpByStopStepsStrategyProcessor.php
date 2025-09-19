@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 
-use App\Bot\Application\Service\Orders\StopServiceInterface;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
-use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\DenyBuyIfFixationsExists;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
@@ -33,7 +30,7 @@ use InvalidArgumentException;
 
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
-    private const float IM_PERCENT_RATIO_THRESHOLD = 1;
+//    private const float IM_PERCENT_RATIO_THRESHOLD = 1;
     private const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 2;
 
     public function __construct(
@@ -41,7 +38,6 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         private ApplyStopsToPositionHandler $applyStopsToHandler,
         private StopRepositoryInterface $stopRepository,
         private PositionInfoProviderInterface $positionInfoProvider,
-        private StopServiceInterface $stopService,
     ) {
     }
 
@@ -96,54 +92,53 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $stepIsApplicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
 
         $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($symbol, $position);
-        if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
-            if ($existedStops) {
-                $existedStopsCollection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
-
-                $this->stopRepository->remove(...$existedStopsCollection->getItems());
-                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%, step = %s)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD, $stepAlias));
-            }
-
-            if ($stepIsApplicable) {
-                /**
-                 * create minimal order to prevent buy if step actual
-                 * @see DenyBuyIfFixationsExists::getFixationStopsCountBeforePrice
-                 */
-                $this->stopService->create(
-                    $symbol,
-                    $positionSide,
-                    PriceRange::create($entry->currentMarkPrice, $position->entryPrice(), $symbol)->getMiddlePrice(),
-                    $symbol->minOrderQty(),
-                    null,
-                    $this->stepStopsContext($step),
-                );
-            }
-
-            return;
-        }
+//        if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
+//            if ($existedStops) {
+//                $existedStopsCollection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
+//
+//                $this->stopRepository->remove(...$existedStopsCollection->getItems());
+//                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%, step = %s)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD, $stepAlias));
+//            }
+//            if ($stepIsApplicable) {
+//                /**
+//                 * create minimal order to prevent buy if step actual
+//                 * @see DenyBuyIfFixationsExists::getFixationStopsCountBeforePrice
+//                 */
+//                $this->stopService->create(
+//                    $symbol,
+//                    $positionSide,
+//                    PriceRange::create($entry->currentMarkPrice, $position->entryPrice(), $symbol)->getMiddlePrice(),
+//                    $symbol->minOrderQty(),
+//                    null,
+//                    $this->stepStopsContext($step),
+//                );
+//            }
+//
+//            return;
+//        }
 
         if (!$stepIsApplicable) {
             return;
         }
 
-        $positionSizeToCover = $this->closingPartMultiplier($position, $imRatio)->of($position->getNotCoveredSize());
         $ordersGridDefinition = $this->parseGrid($positionSide, $symbol, $triggerOnPrice, $step->gridsDefinition);
+
+        $multiplier = $this->closingPartMultiplier($position, $imRatio); // self::debug(sprintf('[%s] multiplier for: %s', $position, $multiplier));
+        $positionSizeToCover = $multiplier->of($position->getNotCoveredSize()); // @todo | lockInProfit | stops | mb use initial position size?
 
         if ($existedStops) {
             $existedStopsCollection = new StopsCollection(...$existedStops);
+            $mustBeCoveredPercent = $ordersGridDefinition->definedPercent;
+            $mustBeCoveredSize = $mustBeCoveredPercent->of($positionSizeToCover);
+            $alreadyCoveredPart = $existedStopsCollection->volumePart($mustBeCoveredSize);
+//             self::debug(sprintf('[%s] must be covered: %s, already covered on this step: %s%%', $position, $mustBeCoveredPercent, $alreadyCoveredPart));
 
-            // @todo | lockInProfit | stops | mb use initial position size?
-            $percent = $ordersGridDefinition->definedPercent->sub($existedStopsCollection->volumePart($positionSizeToCover));
+            $percent = $mustBeCoveredPercent->sub($alreadyCoveredPart);
             if ($percent->value() <= 0) {
                 return;
             }
 
-            $ordersGridDefinition = new OrdersGridDefinition(
-                $ordersGridDefinition->priceRange,
-                $percent,
-                $ordersGridDefinition->ordersCount,
-                $ordersGridDefinition->contextsDefs
-            );
+            $ordersGridDefinition = $ordersGridDefinition->cloneWithNewPercent($percent);
         }
 
         $this->applyStopsToHandler->handle(
@@ -155,6 +150,11 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
                 $this->stepStopsContext($step)
             )
         );
+    }
+
+    private static function debug(string $message): void
+    {
+        OutputHelper::print(sprintf('%s: %s', OutputHelper::shortClassName(self::class), $message));
     }
 
     /**

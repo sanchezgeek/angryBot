@@ -65,4 +65,14 @@ final readonly class OrdersGridDefinition
 
         return new self($priceRange, $sizePart, $ordersCount, $contextsDefs ? explode(',', $contextsDefs) : []);
     }
+
+    public function cloneWithNewPercent(Percent $percent): self
+    {
+        return new self(
+            $this->priceRange,
+            $percent,
+            $this->ordersCount,
+            $this->contextsDefs
+        );
+    }
 }
