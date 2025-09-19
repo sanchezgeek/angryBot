@@ -95,7 +95,7 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
     {
         $ticker = $this->exchangeService->ticker($symbol);
 
-        return TA::currentPricePartOfAth($symbol, $ticker->markPrice);
+        return TA::pricePartOfAth($symbol, $ticker->markPrice);
     }
 
     public function __construct(

@@ -6,6 +6,7 @@ namespace App\Tests\Stub\TA;
 
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
+use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPrices;
 use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeResult;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
@@ -13,6 +14,7 @@ use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAverage
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use LogicException;
 use RuntimeException;
 
 class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
@@ -20,10 +22,11 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
     private array $averagePriceChangePrevResults = [];
     private array $averagePriceChangeResults = [];
     private array $atrResults = [];
+    private array $highLowPricesResults = [];
 
     public function __construct(
         public SymbolInterface $symbol,
-        public TimeFrame $interval,
+        public ?TimeFrame $interval = null,
     ) {
     }
 
@@ -35,6 +38,10 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
         null|float $absoluteChange = null,
     ): self {
         $interval = $this->interval;
+
+        if (!$interval) {
+            throw new LogicException('For addAtrResult $interval must be specified');
+        }
 
         if ($result) {
             $finalResult = $result;
@@ -80,9 +87,31 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
         return $result;
     }
 
+    private static function athResultKey(FindHighLowPrices $entry): string
+    {
+        return sprintf('%s', $entry->symbol->name());
+    }
+
+    public function addHighLowPricesResult(float $low, float $high): self
+    {
+        $symbol = $this->symbol;
+        $entry = new FindHighLowPrices($symbol);
+
+        $this->highLowPricesResults[self::athResultKey($entry)] = new FindHighLowPricesResult($symbol->makePrice($high), $symbol->makePrice($low));
+
+        return $this;
+    }
+
     public function highLowPrices(): FindHighLowPricesResult
     {
-        throw new RuntimeException('Not implemented yet');
+        $entry = new FindHighLowPrices($this->symbol);
+        $key = self::athResultKey($entry);
+
+        if (!($result = $this->highLowPricesResults[$key] ?? null)) {
+            throw new RuntimeException(sprintf('Cannot find mocked FindHighLowPricesResult for symbol = %s', $this->symbol->name()));
+        }
+
+        return $result;
     }
 
     public function instrumentAge(): GetInstrumentAgeResult

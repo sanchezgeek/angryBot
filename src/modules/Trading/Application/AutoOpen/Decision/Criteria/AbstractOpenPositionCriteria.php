@@ -14,7 +14,7 @@ abstract class AbstractOpenPositionCriteria implements JsonSerializable, Stringa
     public function jsonSerialize(): mixed
     {
         return [
-            'alias' => self::getAlias(),
+            'alias' => static::getAlias(),
         ];
     }
 

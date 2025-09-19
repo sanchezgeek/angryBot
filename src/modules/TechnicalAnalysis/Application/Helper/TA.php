@@ -14,6 +14,7 @@ use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeResult;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
+use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use JetBrains\PhpStorm\NoReturn;
 
@@ -44,12 +45,25 @@ final class TA
         return self::getTaToolsProvider()->create($symbol)->highLowPrices();
     }
 
-    public static function currentPricePartOfAth(SymbolInterface $symbol, SymbolPrice $price): Percent
+    public static function pricePartOfAth(SymbolInterface $symbol, SymbolPrice $price): Percent
+    {
+        $allTimeHighLow = TA::allTimeHighLow($symbol);
+        $currentPriceDeltaFromLow = $price->value() - $allTimeHighLow->low->value();
+
+        return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta(), false);
+    }
+
+    public static function pricePartOfAthResult(SymbolInterface $symbol, SymbolPrice $price): PricePartOfAth
     {
         $allTimeHighLow = TA::allTimeHighLow($symbol);
         $currentPriceDeltaFromLow = $price->deltaWith($allTimeHighLow->low);
+        $partOfAthDelta = abs($currentPriceDeltaFromLow) / $allTimeHighLow->delta();
 
-        return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta(), false);
+        return match (true) {
+            $price->lessThan($allTimeHighLow->low) => PricePartOfAth::overLow($partOfAthDelta),
+            $price->greaterThan($allTimeHighLow->high) => PricePartOfAth::overHigh($partOfAthDelta),
+            default => PricePartOfAth::inTheBetween($partOfAthDelta)
+        };
     }
 
     public static function instrumentAge(SymbolInterface $symbol): GetInstrumentAgeResult

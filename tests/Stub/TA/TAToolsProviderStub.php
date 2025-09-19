@@ -22,7 +22,7 @@ final class TAToolsProviderStub implements TAToolsProviderInterface
         foreach ($this->taStubs as $item) {
             if (
                 $item->symbol->name() === $symbol->name()
-                && $item->interval === $interval
+                && (!$interval || $item->interval === $interval)
             ) {
                 return $item;
             }
@@ -31,6 +31,13 @@ final class TAToolsProviderStub implements TAToolsProviderInterface
         throw new RuntimeException(
             sprintf('Cannot find mocked TechnicalAnalysisToolsInterface for symbol = %s and interval = %s', $symbol->name(), $interval->value)
         );
+    }
+
+    public function addTechnicalAnalysisTools(TechnicalAnalysisToolsInterface $taTools): self
+    {
+        $this->taStubs[] = $taTools;
+
+        return $this;
     }
 
     public function mockedTaTools(SymbolInterface $symbol, TimeFrame $interval): TechnicalAnalysisToolsStub
