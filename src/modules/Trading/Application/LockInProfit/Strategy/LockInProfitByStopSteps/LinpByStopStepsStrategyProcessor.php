@@ -101,7 +101,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
                 $existedStopsCollection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());
 
                 $this->stopRepository->remove(...$existedStopsCollection->getItems());
-                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD));
+                OutputHelper::print(sprintf('remove existed stops for %s ($im%%Ratio %s < %s%%, step = %s)', $position, $imRatio, self::IM_PERCENT_RATIO_THRESHOLD, $stepAlias));
             }
 
             if ($stepIsApplicable) {

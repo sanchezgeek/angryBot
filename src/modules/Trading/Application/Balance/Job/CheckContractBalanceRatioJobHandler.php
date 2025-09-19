@@ -28,9 +28,9 @@ final readonly class CheckContractBalanceRatioJobHandler
             return;
         }
 
-        $contractRealBalance = $contractBalance->total();
+        $contractRealBalance = $contractBalance->free();
         if ($contractRealBalance <= 0) {
-            return;
+            $contractRealBalance = $contractBalanceAvailable / 3;
         }
 
         $spotBalance = $this->exchangeAccountService->getSpotWalletBalance($coin)->available();
