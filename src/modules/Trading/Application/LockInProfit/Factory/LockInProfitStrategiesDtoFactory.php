@@ -102,7 +102,7 @@ final readonly class LockInProfitStrategiesDtoFactory
         $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($position->symbol->associatedCoin());
 
         $totalWithUnrealized = $contractBalance->totalWithUnrealized()->value();
-        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position)->part();
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position->symbol, $position)->part();
         $imRatio /= 2;
 
         $part = $imRatio * 100 / $totalWithUnrealized;

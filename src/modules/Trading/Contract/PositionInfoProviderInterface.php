@@ -6,8 +6,9 @@ namespace App\Trading\Contract;
 
 use App\Bot\Domain\Position;
 use App\Domain\Value\Percent\Percent;
+use App\Trading\Domain\Symbol\SymbolInterface;
 
 interface PositionInfoProviderInterface
 {
-    public function getRealInitialMarginToTotalContractBalanceRatio(Position $position): Percent;
+    public function getRealInitialMarginToTotalContractBalanceRatio(SymbolInterface $symbol, Position $position): Percent;
 }

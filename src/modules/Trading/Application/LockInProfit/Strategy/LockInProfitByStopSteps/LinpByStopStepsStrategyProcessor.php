@@ -62,7 +62,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
 
     public function closingPartMultiplier(Position $position, ?Percent $imRatio = null): Percent
     {
-        $imRatio = $imRatio ?? $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+        $imRatio = $imRatio ?? $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position->symbol, $position);
 
         $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
 
@@ -95,7 +95,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         $existedStops = $this->stopRepository->getByLockInProfitStepAlias($symbol, $positionSide, $stepAlias);
         $stepIsApplicable = $entry->currentMarkPrice->isPriceOverTakeProfit($positionSide, $triggerOnPrice->value());
 
-        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position);
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($symbol, $position);
         if ($imRatio->value() < self::IM_PERCENT_RATIO_THRESHOLD) {
             if ($existedStops) {
                 $existedStopsCollection = new StopsCollection(...$existedStops)->filterWithCallback(static fn(Stop $stop) => !$stop->isOrderPushedToExchange());

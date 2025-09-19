@@ -130,6 +130,8 @@ final readonly class AutoOpenHandler
         } catch (Throwable $e) {
             // @todo throw event and handle in some listener
             $this->notifyAboutFail($claim, $reviewResult, $openPositionEntry, $e);
+
+            throw $e;
         }
     }
 

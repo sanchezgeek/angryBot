@@ -201,7 +201,7 @@ final class OpenPositionHandler
 
     public function stoppedPartMultiplier(SymbolInterface $symbol, float $realPositionIm): Percent
     {
-        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($realPositionIm);
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($symbol, $realPositionIm);
 
         $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_CALC_STOPPED_PART;
 
