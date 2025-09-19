@@ -12,7 +12,7 @@ use App\Trading\Domain\Symbol\SymbolInterface;
 interface StopRepositoryInterface
 {
     public function save(Stop $stop);
-    public function remove(Stop $stop);
+    public function remove(Stop ...$stops);
 
     /**
      * @return Stop[]

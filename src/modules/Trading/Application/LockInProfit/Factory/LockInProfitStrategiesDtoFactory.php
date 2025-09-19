@@ -19,7 +19,7 @@ use App\Trading\Contract\ContractBalanceProviderInterface;
 
 final readonly class LockInProfitStrategiesDtoFactory
 {
-    public function threeStopStepsLock(?RiskLevel $riskLevel = null): LinpByStopStepsStrategyDto
+    public function threeStopStepsLock(Position $position, ?RiskLevel $riskLevel = null): LinpByStopStepsStrategyDto
     {
         // @todo | lockInProfit | stops | based on ath part
         // @todo | lockInProfit | stops | based on funding
@@ -129,7 +129,7 @@ final readonly class LockInProfitStrategiesDtoFactory
     }
 
     public function __construct(
-        private ContractBalanceProviderInterface $contractBalanceProvider
+        private ContractBalanceProviderInterface $contractBalanceProvider,
     ) {
     }
 }

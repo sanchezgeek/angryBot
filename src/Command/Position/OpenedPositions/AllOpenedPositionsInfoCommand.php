@@ -1266,7 +1266,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             );
         }
 
-        return $stoppedVolume ? implode(' / ', $stoppedVolume) : null;
+        return $stoppedVolume ? implode('/', $stoppedVolume) : null;
     }
 
     private static function getStopsCollectionInfo(
@@ -1278,7 +1278,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
         $symbol = $position->symbol;
         $entryPrice = $position->entryPrice();
 
-        $stoppedPartPct = (new Percent((new StopsCollection(...$stops))->volumePart($position->size), false))->setOutputFloatPrecision(1);
+        $stoppedPartPct = (new Percent((new StopsCollection(...$stops))->volumePart($position->size), false))->setOutputFloatPrecision(0);
         $firstStop = $stops[array_key_first($stops)];
         $firstStopPrice = $symbol->makePrice($firstStop->getPrice());
         $firstStopDistancePnlPct = PnlHelper::convertAbsDeltaToPnlPercentOnPrice(

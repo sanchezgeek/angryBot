@@ -42,11 +42,11 @@ final readonly class ApplyLockInProfitJobJobHandler
             $entries = [];
 
             if (SettingsHelper::enabledWithAlternatives(LinpByStopsSettings::Enabled, $symbol, $side)) {
-                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->threeStopStepsLock());
+                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->threeStopStepsLock($position));
             }
 
             if (SettingsHelper::enabledWithAlternatives(LinpByFixationsSettings::Periodical_Enabled, $symbol, $side)) {
-                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->defaultPeriodicalFixationsLock());
+                $entries[] = new LockInProfitEntry($position, $markPrice, $this->strategyDtoFactory->defaultPeriodicalFixationsLock($position));
             }
 
             foreach ($entries as $entry) {

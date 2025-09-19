@@ -58,10 +58,13 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
             : $this->getEntityManager()->wrapInTransaction($save);
     }
 
-    public function remove(Stop $stop): void
+    public function remove(Stop ...$stops): void
     {
-        $this->getEntityManager()->remove($stop);
-        $this->getEntityManager()->flush();
+        $this->getEntityManager()->wrapInTransaction(function() use ($stops) {
+            foreach ($stops as $stop) {
+                $this->getEntityManager()->remove($stop);
+            }
+        });
     }
 
     /**
