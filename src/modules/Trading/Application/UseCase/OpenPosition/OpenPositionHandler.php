@@ -26,16 +26,24 @@ use App\Domain\BuyOrder\Enum\BuyOrderState;
 use App\Domain\Order\Collection\OrdersCollection;
 use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
+use App\Domain\Order\ExchangeOrder;
 use App\Domain\Order\OrdersGrid;
+use App\Domain\Order\Service\OrderCostCalculator;
+use App\Domain\Position\ValueObject\Leverage;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\Helper\PriceHelper;
+use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\NumberHelper;
 use App\Helper\OutputHelper;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use App\Trading\Application\UseCase\OpenPosition\Exception\AutoReopenPositionDenied;
 use App\Trading\Application\UseCase\OpenPosition\Exception\InsufficientAvailableBalanceException;
+use App\Trading\Contract\ContractBalanceProviderInterface;
+use App\Trading\Contract\PositionInfoProviderInterface;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Trading\SDK\Check\Dto\TradingCheckContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
@@ -55,6 +63,8 @@ use Throwable;
  */
 final class OpenPositionHandler
 {
+    private const float IM_PERCENT_RATIO_TO_CALC_STOPPED_PART = 2;
+
     private OpenPositionEntryDto $entryDto;
     private Ticker $ticker;
     private ?Position $currentlyOpenedPosition;
@@ -70,7 +80,9 @@ final class OpenPositionHandler
         private readonly StopRepository $stopRepository,
         private readonly BuyOrderRepository $buyOrderRepository,
         private readonly PositionServiceInterface $positionService,
-        private readonly ContextShortcutRootProcessor $contextShortcutRootProcessor
+        private readonly ContextShortcutRootProcessor $contextShortcutRootProcessor,
+        private readonly OrderCostCalculator $orderCostCalculator,
+        private readonly PositionInfoProviderInterface $positionInfoProvider,
     ) {
     }
 
@@ -138,8 +150,11 @@ final class OpenPositionHandler
 # do market buy
         $marketBuyVolume = $symbol->roundVolume($totalSize - $buyGridOrdersVolumeSum);
 
+        $realPositionIm = $this->orderCostCalculator->orderMargin(new ExchangeOrder($symbol, $marketBuyVolume, $this->ticker->markPrice), new Leverage(100))->value();
+        $stoppedPartMultiplier = $this->stoppedPartMultiplier($symbol, $realPositionIm);
+
         if (!$entryDto->asBuyOrder && $entryDto->stopsGridsDefinition) {
-            $this->createStopsGrid($entryDto->stopsGridsDefinition, $marketBuyVolume);
+            $this->createStopsGrid($entryDto->stopsGridsDefinition, $stoppedPartMultiplier->of($marketBuyVolume));
         }
 
         if ($entryDto->asBuyOrder) {
@@ -182,6 +197,15 @@ final class OpenPositionHandler
             }
             $this->buyOrderRepository->save($buyOrder);
         }
+    }
+
+    public function stoppedPartMultiplier(SymbolInterface $symbol, float $realPositionIm): Percent
+    {
+        $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($realPositionIm);
+
+        $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_CALC_STOPPED_PART;
+
+        return Percent::fromPart(NumberHelper::minMax($part, 0.3, 1));
     }
 
     /**

@@ -17,9 +17,9 @@ final readonly class PositionInfoProvider implements PositionInfoProviderInterfa
     ) {
     }
 
-    public function getRealInitialMarginToTotalContractBalanceRatio(Position $position): Percent
+    public function getRealInitialMarginToTotalContractBalanceRatio(Position|float $position): Percent
     {
-        $im = InitialMarginHelper::realInitialMargin($position);
+        $im = $position instanceof Position ? InitialMarginHelper::realInitialMargin($position) : $position;
         $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($position->symbol->associatedCoin());
 
         return Percent::fromPart($im / $contractBalance->totalWithUnrealized()->value());

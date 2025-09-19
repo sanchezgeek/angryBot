@@ -66,7 +66,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
 
         $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
 
-        return Percent::fromPart(NumberHelper::minMax($part, 0.3, 1), false);
+        return Percent::fromPart(NumberHelper::minMax($part, 0.3, 1));
     }
 
     private function applyStep(LockInProfitEntry $entry, LinpByStopsGridStep $step): void

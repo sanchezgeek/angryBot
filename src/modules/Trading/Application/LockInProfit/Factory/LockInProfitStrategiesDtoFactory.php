@@ -107,7 +107,7 @@ final readonly class LockInProfitStrategiesDtoFactory
 
         $part = $imRatio * 100 / $totalWithUnrealized;
 
-        return Percent::fromPart(NumberHelper::minMax($part, 0.005, 0.015), false);
+        return Percent::fromPart(NumberHelper::minMax($part, 0.005, 0.015));
     }
 
     public static function makeGridDefinition(
