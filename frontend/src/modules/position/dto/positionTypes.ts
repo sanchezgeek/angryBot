@@ -3,5 +3,6 @@
 export type OpenedPositionDto = {
   symbol: string
   side: string
-  entryPrice: number
+  entryPrice: number,
+  liquidationPrice: number | null,
 }

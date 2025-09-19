@@ -54,6 +54,8 @@ let shortPositionLineSeries: ISeriesApi
 // @ts-ignore
 let longPositionLineSeries: ISeriesApi
 // @ts-ignore
+let liquidationLineSeries: ISeriesApi
+// @ts-ignore
 let seriesMarkers: ISeriesMarkersPluginApi
 // @ts-ignore
 let structureLineSeries: ISeriesApi
@@ -154,6 +156,13 @@ function updatePositions() {
         { value: position.entryPrice, time: candles[0].time },
         { value: position.entryPrice, time: candles[candles.length - 1].time },
       ])
+
+      if (position.liquidationPrice !== null) {
+        liquidationLineSeries.setData([
+          { value: position.liquidationPrice, time: candles[0].time },
+          { value: position.liquidationPrice, time: candles[candles.length - 1].time },
+        ])
+      }
     }
     if (position.side === 'buy') {
       longPositionLineSeries.setData([
@@ -180,6 +189,7 @@ onMounted(() => {
 
   shortPositionLineSeries = chart.addSeries(LineSeries, { color: 'red', lineWidth: 1 })
   longPositionLineSeries = chart.addSeries(LineSeries, { color: 'green', lineWidth: 1 })
+  liquidationLineSeries = chart.addSeries(LineSeries, { color: '#ab2d30', lineWidth: 2 })
   structureLineSeries = chart.addSeries(LineSeries, { color: '#47aEFA', lineWidth: 1 })
 
   setInterval(() => {

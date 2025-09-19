@@ -28,6 +28,7 @@ const options = ref([
 
 const { openedPositions, isPositionsLoading, fetchPositions, filters } = openedPositionsDataProxy()
 filters.value.symbol = symbol
+fetchPositions()
 
 const { structurePoints, marketStructureFilters, fetchMarketStructure } = marketStructureDataProxy()
 marketStructureFilters.value.symbol = symbol
