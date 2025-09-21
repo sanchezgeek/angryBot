@@ -52,7 +52,7 @@ class CreateFixationGridCommand extends AbstractCommand implements SymbolDepende
         $side = $position->side;
         $priceToRelate = $position->entryPrice();
 
-        $stopsGridsDef = $this->stopsGridDefinitionFinder->create($symbol, $side, $priceToRelate, $this->tradingStyle);
+        $stopsGridsDef = $this->stopsGridDefinitionFinder->basedOnRiskLevel($symbol, $side, $priceToRelate, $this->tradingStyle);
 
         if (
             $stopsGridsDef?->isFoundAutomaticallyFromTa()

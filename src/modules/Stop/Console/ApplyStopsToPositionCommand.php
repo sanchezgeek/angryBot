@@ -44,8 +44,10 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     public const string FORCE_OPTION = 'force';
     public const string MODE_OPTION = 'mode';
+
     public const string DANGER_MODE = 'danger';
     public const string FIXATION_MODE = 'fixation';
+    public const string AS_AFTER_AUTOOPEN_MODE = 'autoOpen';
 
     public const string RISK_LEVEL = 'riskLevel';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
@@ -77,20 +79,11 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         try {
             $this->fromPnlPercent = $this->paramFetcher->percentOption(self::FROM_PNL_PERCENT_OPTION);
         } catch (InvalidArgumentException) {
-            $value = $providedValue = $this->paramFetcher->getStringOption(self::FROM_PNL_PERCENT_OPTION);
-
-            if (str_starts_with($providedValue, '-')) {
-                $value = substr($providedValue, 1);
-            }
-
-            if (!PriceDistanceSelector::tryFrom($value)) {
-                throw new InvalidArgumentException(sprintf('%s must be one of pnl%% or PriceDistanceSelector', self::FROM_PNL_PERCENT_OPTION));
-            }
-
-            $this->fromPnlPercent = $providedValue;
+            $this->fromPnlPercent = $this->paramFetcher->floatOption(self::FROM_PNL_PERCENT_OPTION);
         }
 
         $this->uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid');
+        $this->mode = $this->paramFetcher->getStringOption(self::MODE_OPTION, false);
     }
 
     private RiskLevel $riskLevel;
@@ -98,6 +91,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
     private ?float $part;
     private string $uniqueId;
     private bool $force;
+    private ?string $mode;
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -105,8 +99,6 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
         /** @var ByBitLinearPositionService $positionService */
         $positionService = $this->positionService;
-
-        $mode = $this->paramFetcher->getStringOption(self::MODE_OPTION, false);
 
         $symbols = $this->getSymbols();
 
@@ -136,22 +128,22 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
             $context[Stop::OPPOSITE_ORDERS_DISTANCE_CONTEXT] = $oppositeBuyOrdersDistance;
         }
 
-        if ($mode === self::FIXATION_MODE) {
+        if ($this->mode === self::FIXATION_MODE) {
             $context = Stop::addStopCreatedAsFixationFlagToContext($context);
         }
 
-        if (in_array($mode, [self::DANGER_MODE, self::FIXATION_MODE], true)) {
+        if (in_array($this->mode, [self::DANGER_MODE, self::FIXATION_MODE], true)) {
             $this->riskLevel = RiskLevel::Cautious;
 
-            $this->fromPnlPercent = $this->fromPnlPercent ?? match ($mode) {
-                self::DANGER_MODE => sprintf('-%s', PriceDistanceSelector::VeryVeryShort->value),
-                self::FIXATION_MODE => sprintf('-%s', PriceDistanceSelector::AlmostImmideately->value),
+            $this->fromPnlPercent = $this->fromPnlPercent ?? match ($this->mode) {
+                self::DANGER_MODE => PriceDistanceSelector::VeryVeryShort->toLossExpr(),
+                self::FIXATION_MODE => PriceDistanceSelector::AlmostImmideately->toLossExpr(),
             };
         }
 
         $addedStopsCount = 0;
         foreach ($positions as $position) {
-            $priceToRelate = match ($mode) {
+            $priceToRelate = match ($this->mode) {
                 self::DANGER_MODE, self::FIXATION_MODE => $markPrices[$position->symbol->name()],
                 default => $position->entryPrice()
             };
@@ -175,7 +167,9 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $symbol = $position->symbol;
         $side = $position->side;
 
-        $stopsGridsDef = $this->stopsGridDefinitionFinder->create($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
+        $stopsGridsDef = $this->mode === self::AS_AFTER_AUTOOPEN_MODE
+            ? $this->stopsGridDefinitionFinder->forAutoOpen($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent)
+            : $this->stopsGridDefinitionFinder->basedOnRiskLevel($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
 
         if (
             $stopsGridsDef->isFoundAutomaticallyFromTa()

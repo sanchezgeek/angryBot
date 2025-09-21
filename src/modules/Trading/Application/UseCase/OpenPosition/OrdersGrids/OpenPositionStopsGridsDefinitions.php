@@ -16,7 +16,6 @@ use App\Trading\Application\Settings\OpenPositionSettings;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Grid\Definition\OrdersGridTools;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use InvalidArgumentException;
 
 final readonly class OpenPositionStopsGridsDefinitions
 {
@@ -29,7 +28,25 @@ final readonly class OpenPositionStopsGridsDefinitions
     ) {
     }
 
-    public function create(
+    public function forAutoOpen(
+        SymbolInterface $symbol,
+        Side $positionSide,
+        SymbolPrice $priceToRelate,
+        RiskLevel $riskLevel,
+        ?string $fromPnlPercent = null,
+    ): OrdersGridDefinitionCollection {
+        $fromPnlPercent = $fromPnlPercent ?? 0;
+
+        $defs = [
+            sprintf('%.2f%%-very-short..%.2f%%-very-short-very-short|30%%|3', $fromPnlPercent, $fromPnlPercent),
+            sprintf('%.2f%%-short..%.2f%%-short-very-short|25%%|3', $fromPnlPercent, $fromPnlPercent),
+            sprintf('%.2f%%-very-short..%.2f%%-very-short-long|20%%|5', $fromPnlPercent, $fromPnlPercent),
+        ];
+
+        return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
+    }
+
+    public function basedOnRiskLevel(
         SymbolInterface $symbol,
         Side $positionSide,
         SymbolPrice $priceToRelate,
@@ -50,22 +67,13 @@ final readonly class OpenPositionStopsGridsDefinitions
         };
     }
 
-    public function aggressive(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, null|float|string $fromPnlPercent): OrdersGridDefinitionCollection
+    public function aggressive(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, ?string $fromPnlPercent): OrdersGridDefinitionCollection
     {
-        $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
-
-        $shortBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::Standard)->value();
-        $shortBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($shortBoundPriceChangePercent);
-        $veryLongBoundPriceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, PriceDistanceSelector::VeryLong)->value();
-        $veryLongBoundPnl = PnlHelper::transformPriceChangeToPnlPercent($veryLongBoundPriceChangePercent);
-        $diff = $veryLongBoundPnl - $shortBoundPnl;
-
-        $modifier = $fromPnlPercent - $diff;
-        $modifier = sprintf('%s%.2f%%', $modifier > 0 ? '+' : '-', abs($modifier));
+        $fromPnlPercent = $fromPnlPercent ?? 0;
 
         $defs = [
-            sprintf('-standard+%.2f%%..-short%s|50%%|5', $fromPnlPercent, $modifier),
-            sprintf('-long+%.2f%%..-long%s|50%%|5', $fromPnlPercent, $modifier),
+            sprintf('%.2f%%-standard..%.2f%%-short-(very-long-standard)|50%%|5', $fromPnlPercent, $fromPnlPercent),
+            sprintf('%.2f%%-long..%.2f%%-long-(very-long-standard)|50%%|5', $fromPnlPercent, $fromPnlPercent),
         ];
 
         return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
@@ -73,7 +81,7 @@ final readonly class OpenPositionStopsGridsDefinitions
 
     public function conservative(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, null|float|string $fromPnlPercent): OrdersGridDefinitionCollection
     {
-        $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
+        $fromPnlPercent = $fromPnlPercent ?? 0;
 
         return $this->makeDefinition([
             sprintf('-standard+%.2f%%..-moderate-long+%.2f%%|50%%|5', $fromPnlPercent, $fromPnlPercent),
@@ -81,15 +89,9 @@ final readonly class OpenPositionStopsGridsDefinitions
         ], $priceToRelate, $symbol, $positionSide);
     }
 
-    public function cautious(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, null|float|string $fromPnlPercent): OrdersGridDefinitionCollection
+    public function cautious(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, ?string $fromPnlPercent): OrdersGridDefinitionCollection
     {
-        if ($fromPnlPercent === null) {
-            $fromPnlPercent = PriceDistanceSelector::VeryVeryShort->toLossExpr();
-            $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
-            $fromPnlPercent /= 2;
-        } else {
-            $fromPnlPercent = $this->parseFromPnlPercent($symbol, $fromPnlPercent);
-        }
+        $fromPnlPercent = $fromPnlPercent ?? sprintf('%s/2', PriceDistanceSelector::VeryVeryShort->toLossExpr());
 
         $defs = [
             sprintf('%.2f%%..-short+%.2f%%|50%%|5', $fromPnlPercent , $fromPnlPercent),
@@ -106,19 +108,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
-    private function parseFromPnlPercent(SymbolInterface $symbol, null|float|string $fromPnlPercent): float
-    {
-        $fromPnlPercent = $fromPnlPercent ?? 0;
-
-        if (is_string($fromPnlPercent)) {
-            [$distance, $sign] = self::parseDistanceSelector($fromPnlPercent);
-            $fromPnlPercent = $sign * $this->getBoundPnlPercent($symbol, $distance);
-        }
-
-        return $fromPnlPercent;
-    }
-
-    public function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection
+    private function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection
     {
         foreach ($defs as $key => $def) {
             $defs[$key] = $this->ordersGridTools->transformToFinalPercentRangeDefinition($symbol, $def);
@@ -128,20 +118,5 @@ final readonly class OpenPositionStopsGridsDefinitions
         $resultDef = OrdersGridDefinitionCollection::create($collectionDef, $priceToRelate, $positionSide, $symbol);
 
         return $resultDef->setFoundAutomaticallyFromTa();
-    }
-
-    public static function parseDistanceSelector(string $distance): array
-    {
-        $sign = 1;
-        if (str_starts_with($distance, '-')) {
-            $sign = -1;
-            $distance = substr($distance, 1);
-        }
-
-        if (!$parsed = PriceDistanceSelector::from($distance)) {
-            throw new InvalidArgumentException('distance must be of type PriceDistanceSelector');
-        }
-
-        return [$parsed, $sign];
     }
 }
