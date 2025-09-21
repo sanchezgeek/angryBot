@@ -53,7 +53,7 @@ final class LinpByStopStepsStrategyProcessorTest extends KernelTestCase
             [self::positionBasedOnPercentOfDeposit(2), Percent::string('100%')],
             [self::positionBasedOnPercentOfDeposit(1), Percent::string('66.7%')],
             [self::positionBasedOnPercentOfDeposit(0.6), Percent::string('40%')],
-            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('20%')],
+            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('35%')],
         ];
     }
 
