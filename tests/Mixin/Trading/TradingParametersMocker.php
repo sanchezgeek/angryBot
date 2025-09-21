@@ -15,6 +15,8 @@ use RuntimeException;
 
 trait TradingParametersMocker
 {
+    static array $stubs = [];
+
     private static ?TradingParametersProviderStub $tradingParametersProviderStub = null;
 
     public function createTradingParametersStub(): TradingParametersProviderStub
@@ -65,10 +67,14 @@ trait TradingParametersMocker
         );
     }
 
-    protected static function getTradingParametersStubWithAllPredefinedLengths(SymbolInterface $symbol): TradingParametersProviderStub
+    protected static function getDefaultTradingParametersStubWithAllPredefinedLengths(SymbolInterface $symbol): TradingParametersProviderStub
     {
+        if (isset(self::$stubs[$symbol->name()])) {
+            return self::$stubs[$symbol->name()];
+        }
+
         return
-            new TradingParametersProviderStub()
+            self::$stubs[$symbol->name()] = new TradingParametersProviderStub()
                 ->addTransformedLengthResult(Percent::string('0.1%'), $symbol, PriceDistanceSelector::AlmostImmideately)
                 ->addTransformedLengthResult(Percent::string('0.3%'), $symbol, PriceDistanceSelector::VeryVeryShort)
                 ->addTransformedLengthResult(Percent::string('0.5%'), $symbol, PriceDistanceSelector::VeryShort)

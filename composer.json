@@ -19,6 +19,7 @@
         "symfony/console": "*",
         "symfony/doctrine-messenger": "*",
         "symfony/dotenv": "*",
+        "symfony/expression-language": "7.3",
         "symfony/finder": "*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "*",

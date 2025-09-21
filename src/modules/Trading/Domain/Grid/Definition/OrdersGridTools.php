@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Trading\Domain\Grid\Definition;
 
 use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Value\Percent\Percent;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
-use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Symbol\SymbolInterface;
+use BackedEnum;
 use InvalidArgumentException;
-use Throwable;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 /**
  * @see \App\Tests\Functional\Modules\Trading\Domain\Grid\Definition\OrdersGridToolsTest
@@ -52,7 +51,8 @@ final readonly class OrdersGridTools
 
     public function transformToFinalPercentRangeDefinition(SymbolInterface $symbol, string $definition): string
     {
-        $pattern = '/^([-\d]+(?:\.\d+)?%)|([-\w]+)\.\.([-\d]+(?:\.\d+)?%)|([-\w]+)\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+//        $pattern = '/^([-\d]+(?:\.\d+)?%)|([-\w]+)\.\.([-\d]+(?:\.\d+)?%)|([-\w]+)\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
+        $pattern = '/^(.*)\.\.(.*)\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
         if (!preg_match($pattern, $definition)) {
             throw new InvalidArgumentException(
@@ -64,45 +64,61 @@ final readonly class OrdersGridTools
         $range = array_shift($arr);
         [$from, $to] = explode('..', $range);
 
-        if (!$fromPnlPercent = self::parsePercentFromRangeDefinition($from)) {
-            try {
-                $fromPnlPercent = $this->getPnlPercentFromLength($symbol, $from);
-            } catch (Throwable $e) {
-                throw new InvalidArgumentException(sprintf('Got %s while parse range definition `from`-clause', $e->getMessage()));
-            }
-        }
-
-        if (!$toPnlPercent = self::parsePercentFromRangeDefinition($to)) {
-            try {
-                $toPnlPercent = $this->getPnlPercentFromLength($symbol, $to);
-            } catch (Throwable $e) {
-                throw new InvalidArgumentException(sprintf('Got %s while parse range definition `to`-clause', $e->getMessage()));
-            }
-        }
+        $fromPnlPercent = $this->parseDistanceSelector($symbol, $from);
+        $toPnlPercent = $this->parseDistanceSelector($symbol, $to);
 
         return sprintf('%.2f%%..%.2f%%|%s', $fromPnlPercent, $toPnlPercent, implode('|', $arr));
     }
 
-    private static function parsePercentFromRangeDefinition(string $definition): ?float
+    private function parseDistanceSelector(SymbolInterface $symbol, string $distance): float
     {
-        if (
-            !str_ends_with($definition, '%')
-            || (!is_numeric(substr($definition, 0, -1)))
-        ) {
+        $expressionLanguage = new ExpressionLanguage();
+        $expressionLanguage->register('parse_custom', function ($str) {
+            return sprintf('parse_custom(%s)', $str);
+        }, function ($arguments, $str) {
+            preg_match_all('/[+-]?(?:' . self::allLengthsExpr() . '|[\d\.]+%?)/', $str, $matches);
+            return $matches[0];
+        });
+
+        $parts = $expressionLanguage->evaluate(sprintf('parse_custom("%s")', $distance));
+
+        $replacements = [];
+
+        foreach ($parts as $key => $part) {
+            if (str_starts_with($part, '-') || str_starts_with($part, '+')) {
+                $part = substr($part, 1);
+            }
+
+            $value = match(true) {
+                is_numeric($part) => $part,
+                ($parsedPercent = self::parseSimplePercent($part)) !== null => $parsedPercent,
+                ($lengthParsed = Length::tryFrom($part)) !== null => $this->getBoundPnlPercent($symbol, $lengthParsed),
+                default => throw new InvalidArgumentException(sprintf('Operand must be of type %s enum cases, float/int or percent ("%s" given [from "%s"])', Length::class, $part, $distance)),
+            };
+
+            if ($part !== $value) {
+                $replacements[$part] = (string)$value;
+            }
+        }
+
+        $replacements = array_flip($replacements);
+        uasort($replacements, static fn (string $a, string $b) => mb_strlen($b) <=> mb_strlen($a));
+        $replacements = array_flip($replacements);
+
+        foreach ($replacements as $search => $replacement) {
+            $distance = str_replace($search, (string)$replacement, $distance);
+        }
+
+        return $expressionLanguage->evaluate($distance);
+    }
+
+    private static function parseSimplePercent(string $definition): ?float
+    {
+        if (!str_ends_with($definition, '%') || (!is_numeric(substr($definition, 0, -1)))) {
             return null;
         }
 
         return (float)substr($definition, 0, -1);
-    }
-
-    /**
-     * @see OpenPositionStopsGridsDefinitions::parseFromPnlPercent DRY
-     */
-    private function getPnlPercentFromLength(SymbolInterface $symbol, string $length): float
-    {
-        [$distance, $sign] = self::parseDistanceSelector($length);
-
-        return $sign * $this->getBoundPnlPercent($symbol, $distance);
     }
 
     private function getBoundPnlPercent(SymbolInterface $symbol, Length $lengthSelector): float
@@ -112,18 +128,10 @@ final readonly class OrdersGridTools
         return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
-    private static function parseDistanceSelector(string $distance): array
+    private static function allLengthsExpr(): string
     {
-        $sign = 1;
-        if (str_starts_with($distance, '-')) {
-            $sign = -1;
-            $distance = substr($distance, 1);
-        }
+        $cases = array_map(static fn (BackedEnum $enum) => $enum->value, Length::cases());
 
-        if (!$parsed = PriceDistanceSelector::from($distance)) {
-            throw new InvalidArgumentException(sprintf('distance must be of type %s enum cases', PriceDistanceSelector::class));
-        }
-
-        return [$parsed, $sign];
+        return implode('|', $cases);
     }
 }

@@ -99,7 +99,7 @@ final readonly class AutoOpenHandler
         $ticker = $this->exchangeService->ticker($symbol);
 
         $priceToRelate = $ticker->markPrice;
-        $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toStringWithNegativeSign() : null;
+        $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toLossExpr() : null;
 
         // @todo | autoOpen | without stops? or other grid
         $stopsGridsDefinition = $this->stopsGridDefinitionFinder->create($symbol, $positionSide, $priceToRelate, $riskLevel, $fromPnlPercent);

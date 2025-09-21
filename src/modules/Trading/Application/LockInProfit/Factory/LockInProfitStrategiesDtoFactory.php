@@ -34,26 +34,26 @@ final readonly class LockInProfitStrategiesDtoFactory
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part1',
                 Length::Standard, // settings?
-                Tools::makeRawGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
+                Tools::makeRawGridDefinition(Length::VeryVeryShort->toLossExpr(), Length::Standard->toLossExpr(), 20, 10),
             ),
             // second part
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part2',
                 Length::BetweenLongAndStd,
-                Tools::makeRawGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 15, 10),
+                Tools::makeRawGridDefinition(Length::VeryVeryShort->toLossExpr(), Length::Long->toLossExpr(), 15, 10),
             ),
             // third part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part3',
                 Length::Long,
                 // @todo | lockInProfit | stops must be placed near position side
-                Tools::makeRawGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 30, 30),
+                Tools::makeRawGridDefinition(Length::Short->toLossExpr(), Length::VeryLong->toLossExpr(), 30, 30),
             ),
             // fourth part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part4',
                 Length::VeryVeryLong,
-                Tools::makeRawGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 25, 10),
+                Tools::makeRawGridDefinition(Length::Short->toLossExpr(), Length::VeryLong->toLossExpr(), 25, 10),
             ),
         );
     }

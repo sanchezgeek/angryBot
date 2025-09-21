@@ -21,8 +21,13 @@ enum PriceDistanceSelector: string
     case VeryVeryLong = 'very-very-long';
     case DoubleLong = 'double-long';
 
-    public function toStringWithNegativeSign(): string
+    public function toLossExpr(): string
     {
         return sprintf('-%s', $this->value);
+    }
+
+    public function toProfitExpr(): string
+    {
+        return sprintf('+%s', $this->value);
     }
 }
