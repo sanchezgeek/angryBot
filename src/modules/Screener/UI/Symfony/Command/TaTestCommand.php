@@ -10,11 +10,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\Infrastructure\ByBit\Service\ByBitLinearExchangeService;
-use App\Settings\Application\Service\AppSettingsService;
 use App\TechnicalAnalysis\Application\Service\TAToolsProvider;
-use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
-use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
-use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -84,11 +80,6 @@ class TaTestCommand extends AbstractCommand implements SymbolDependentCommand
 
     public function __construct(
         private readonly TAToolsProvider $taFactory,
-
-        private readonly AppSettingsService $settingsService,
-        private readonly OpenPositionHandler $openPositionHandler,
-        private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
-        private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private readonly ByBitLinearExchangeService $exchangeService,
         ?string $name = null,
     ) {

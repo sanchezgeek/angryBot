@@ -19,7 +19,6 @@ use App\TechnicalAnalysis\Application\Service\TAToolsProvider;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\UseCase\OpenPosition\OpenPositionHandler;
 use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionBuyGridsDefinitions;
-use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -137,12 +136,8 @@ class ShowAllParametersCommand extends AbstractCommand implements SymbolDependen
         private readonly TAToolsProvider $taFactory,
 
         private readonly AppSettingsService $settingsService,
-        private readonly OpenPositionHandler $openPositionHandler,
-        private readonly OpenPositionBuyGridsDefinitions $buyOrdersGridDefinitionFinder,
-        private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
         private readonly ByBitLinearExchangeService $exchangeService,
         private readonly ByBitLinearPositionService $positionService,
-        private readonly TradingParametersProviderInterface $tradingParameters,
         private readonly AppDynamicParameterEvaluator $parameterEvaluator,
         private readonly AppDynamicParametersLocator $parametersLocator,
         ?string $name = null,

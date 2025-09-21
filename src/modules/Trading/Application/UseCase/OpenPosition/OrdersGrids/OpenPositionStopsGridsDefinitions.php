@@ -6,12 +6,10 @@ namespace App\Trading\Application\UseCase\OpenPosition\OrdersGrids;
 
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
-use App\Domain\Stop\Helper\PnlHelper;
-use App\Domain\Trading\Enum\PriceDistanceSelector;
+use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
-use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Application\Settings\OpenPositionSettings;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Grid\Definition\OrdersGridTools;
@@ -23,30 +21,41 @@ final readonly class OpenPositionStopsGridsDefinitions
 
     public function __construct(
         private AppSettingsProviderInterface $settings,
-        private TradingParametersProviderInterface $tradingParametersProvider,
         private OrdersGridTools $ordersGridTools,
     ) {
     }
 
-    public function forAutoOpen(
+    public function standard(
         SymbolInterface $symbol,
         Side $positionSide,
         SymbolPrice $priceToRelate,
         RiskLevel $riskLevel,
-        ?string $fromPnlPercent = null,
+        null|float|string $fromPnlPercent = null,
     ): OrdersGridDefinitionCollection {
         $fromPnlPercent = $fromPnlPercent ?? 0;
 
-        $defs = [
-            sprintf('%.2f%%-very-short..%.2f%%-very-short-very-short|30%%|3', $fromPnlPercent, $fromPnlPercent),
-            sprintf('%.2f%%-short..%.2f%%-short-very-short|25%%|3', $fromPnlPercent, $fromPnlPercent),
-            sprintf('%.2f%%-very-short..%.2f%%-very-short-long|20%%|5', $fromPnlPercent, $fromPnlPercent),
-        ];
+        $defs = match ($riskLevel) {
+            default => [
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|30%%|3', $fromPnlPercent, Length::VeryShort->value, $fromPnlPercent, Length::VeryShort->value, Length::VeryShort->value),
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|25%%|3', $fromPnlPercent, Length::Short->value, $fromPnlPercent, Length::Short->value, Length::VeryShort->value),
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|20%%|5', $fromPnlPercent, Length::VeryShort->value, $fromPnlPercent, Length::VeryShort->value, Length::Long->value), // same
+            ],
+            RiskLevel::Cautious => [
+                sprintf('%.2f%%-very-very-short..%.2f%%-very-very-short-very-very-short|30%%|3', $fromPnlPercent, $fromPnlPercent),
+                sprintf('%.2f%%-very-short..%.2f%%-very-short-very-very-short|25%%|3', $fromPnlPercent, $fromPnlPercent),
+                sprintf('%.2f%%-very-short..%.2f%%-very-short-long|20%%|5', $fromPnlPercent, $fromPnlPercent), // same
+            ],
+            RiskLevel::Aggressive => [
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|30%%|3', $fromPnlPercent, Length::Short->value, $fromPnlPercent, Length::Short->value, Length::Short->value),
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|25%%|3', $fromPnlPercent, Length::BetweenShortAndStd->value, $fromPnlPercent, Length::BetweenShortAndStd->value, Length::Short->value),
+                sprintf('%.2f%%-%s..%.2f%%-%s-%s|20%%|5', $fromPnlPercent, Length::Short->value, $fromPnlPercent, Length::Short->value, Length::Long->value), // almost same =)
+            ],
+        };
 
         return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
     }
 
-    public function basedOnRiskLevel(
+    public function deprecated(
         SymbolInterface $symbol,
         Side $positionSide,
         SymbolPrice $priceToRelate,
@@ -79,7 +88,7 @@ final readonly class OpenPositionStopsGridsDefinitions
         return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
     }
 
-    public function conservative(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, null|float|string $fromPnlPercent): OrdersGridDefinitionCollection
+    public function conservative(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, ?string $fromPnlPercent): OrdersGridDefinitionCollection
     {
         $fromPnlPercent = $fromPnlPercent ?? 0;
 
@@ -91,7 +100,7 @@ final readonly class OpenPositionStopsGridsDefinitions
 
     public function cautious(SymbolInterface $symbol, Side $positionSide, SymbolPrice $priceToRelate, ?string $fromPnlPercent): OrdersGridDefinitionCollection
     {
-        $fromPnlPercent = $fromPnlPercent ?? sprintf('%s/2', PriceDistanceSelector::VeryVeryShort->toLossExpr());
+        $fromPnlPercent = $fromPnlPercent ?? sprintf('%s/2', Length::VeryVeryShort->toLossExpr());
 
         $defs = [
             sprintf('%.2f%%..-short+%.2f%%|50%%|5', $fromPnlPercent , $fromPnlPercent),
@@ -99,13 +108,6 @@ final readonly class OpenPositionStopsGridsDefinitions
         ];
 
         return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
-    }
-
-    private function getBoundPnlPercent(SymbolInterface $symbol, PriceDistanceSelector $lengthSelector): float
-    {
-        $priceChangePercent = $this->tradingParametersProvider->transformLengthToPricePercent($symbol, $lengthSelector)->value();
-
-        return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
     private function makeDefinition(array $defs, SymbolPrice $priceToRelate, SymbolInterface $symbol, Side $positionSide): OrdersGridDefinitionCollection

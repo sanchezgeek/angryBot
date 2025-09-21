@@ -102,7 +102,7 @@ final readonly class AutoOpenHandler
         $fromPnlPercent = $riskLevel === RiskLevel::Cautious ? PriceDistanceSelector::VeryVeryShort->toLossExpr() : null;
 
         // @todo | autoOpen | without stops? or other grid
-        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->basedOnRiskLevel($symbol, $positionSide, $priceToRelate, $riskLevel, $fromPnlPercent);
+        $stopsGridsDefinition = $this->stopsGridDefinitionFinder->standard($symbol, $positionSide, $priceToRelate, $riskLevel, $fromPnlPercent);
 
         // @todo | autoOpen | mb without stops in case of very small amount?
         $openPositionEntry = new OpenPositionEntryDto(

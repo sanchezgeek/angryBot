@@ -220,7 +220,7 @@ class OpenPositionCommand extends AbstractCommand implements PositionDependentCo
             return OrdersGridDefinitionCollection::create($definition, $priceToRelate, $positionSide, $symbol);
         }
 
-        return $this->stopsGridDefinitionFinder->basedOnRiskLevel($symbol, $positionSide, $priceToRelate, $this->riskLevel);
+        return $this->stopsGridDefinitionFinder->deprecated($symbol, $positionSide, $priceToRelate, $this->riskLevel);
     }
 
     public function __construct(

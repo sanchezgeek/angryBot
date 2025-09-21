@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Stop\Console;
 
 use App\Application\UniqueIdGeneratorInterface;
@@ -79,7 +81,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         try {
             $this->fromPnlPercent = $this->paramFetcher->percentOption(self::FROM_PNL_PERCENT_OPTION);
         } catch (InvalidArgumentException) {
-            $this->fromPnlPercent = $this->paramFetcher->floatOption(self::FROM_PNL_PERCENT_OPTION);
+            $this->fromPnlPercent = $this->paramFetcher->requiredFloatOption(self::FROM_PNL_PERCENT_OPTION);
         }
 
         $this->uniqueId = $this->uniqueIdGenerator->generateUniqueId('sl-grid');
@@ -167,9 +169,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $symbol = $position->symbol;
         $side = $position->side;
 
-        $stopsGridsDef = $this->mode === self::AS_AFTER_AUTOOPEN_MODE
-            ? $this->stopsGridDefinitionFinder->forAutoOpen($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent)
-            : $this->stopsGridDefinitionFinder->basedOnRiskLevel($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
+        $stopsGridsDef = $this->stopsGrids->standard($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
 
         if (
             $stopsGridsDef->isFoundAutomaticallyFromTa()
@@ -211,7 +211,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     public function __construct(
         ByBitLinearPositionService $positionService,
-        private readonly OpenPositionStopsGridsDefinitions $stopsGridDefinitionFinder,
+        private readonly OpenPositionStopsGridsDefinitions $stopsGrids,
         private readonly ApplyStopsToPositionHandler $handler,
         private readonly UniqueIdGeneratorInterface $uniqueIdGenerator,
         private readonly StopRepositoryInterface $stopRepository,
