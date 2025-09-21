@@ -41,6 +41,7 @@ use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Tests\Mixin\Tester\ByBitV5ApiRequestsMocker;
 use App\Tests\Mixin\Trading\TradingParametersMocker;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -86,7 +87,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     ): void {
         $symbol = $ticker->symbol;
         // @todo get from stop
-        self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol));
+        self::setTradingParametersStubInContainer(self::getDefaultTradingParametersStubWithAllPredefinedLengths($symbol));
 
         $this->overrideSetting(SettingAccessor::exact(CreateOppositeBuySettings::Martingale_Enabled, $stop->getSymbol(), $stop->getPositionSide()), $martingaleEnabled);
 
@@ -275,10 +276,10 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
                 $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, $doubleLongOrderDistance * 1.5, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
                 $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, $doubleLongOrderDistance, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[1]), sign: -1);
 
-                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::VeryVeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
-                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
-                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
-                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::BetweenLongAndStd, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::VeryLong, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 2, PriceDistanceSelector::Long, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::BetweenLongAndStd, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[1]]), sign: -1);
+                $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[0]]), sign: -1);
 
 
                 $martingaleOrders[] = self::orderBasedOnLength($stop, $stopPrice, $stopVolume / 3, PriceDistanceSelector::Standard, array_merge($forcedWithShortStop, [BuyOrder::DOUBLE_HASH_FLAG => $doubleHashes[2]]), sign: -1);
@@ -340,7 +341,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                self::getTradingParametersStub($stop->getSymbol())->transformLengthToPricePercent($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+                self::getDefaultTradingParametersStubWithAllPredefinedLengths($stop->getSymbol())->transformLengthToPricePercent($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
             ),
             $stopPrice
         );
@@ -366,25 +367,5 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
             $wholePositionSize,
             $boDef,
         );
-    }
-
-    private static function getTradingParametersStub(SymbolInterface $symbol): TradingParametersProviderStub
-    {
-        $timeframe = self::DEFAULT_TIMEFRAME_FOR_ATR;
-        $period = self::DEFAULT_ATR_PERIOD;
-
-        return
-            new TradingParametersProviderStub()
-                ->addTransformedLengthResult(Percent::string('0.3%'), $symbol, PriceDistanceSelector::VeryVeryShort, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('0.5%'), $symbol, PriceDistanceSelector::VeryShort, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('0.6%'), $symbol, PriceDistanceSelector::Short, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('0.7%'), $symbol, PriceDistanceSelector::BetweenShortAndStd, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('1%'), $symbol, PriceDistanceSelector::Standard, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('1.5%'), $symbol, PriceDistanceSelector::BetweenLongAndStd, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('2%'), $symbol, PriceDistanceSelector::Long, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('10%'), $symbol, PriceDistanceSelector::VeryLong, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('20%'), $symbol, PriceDistanceSelector::VeryVeryLong, $timeframe, $period)
-                ->addTransformedLengthResult(Percent::string('30%'), $symbol, PriceDistanceSelector::DoubleLong, $timeframe, $period)
-            ;
     }
 }

@@ -17,7 +17,9 @@ interface TradingParametersProviderInterface
 {
     public const TimeFrame LONG_ATR_TIMEFRAME = TimeFrame::D1;
     public const int LONG_ATR_PERIOD = 10;
+
     public const int ATR_PERIOD_FOR_ORDERS = 4;
+    public const TimeFrame ATR_TIMEFRAME_FOR_ORDERS = self::LONG_ATR_TIMEFRAME;
 
     public static function riskLevel(SymbolInterface $symbol, Side $side): RiskLevel;
 
@@ -27,5 +29,5 @@ interface TradingParametersProviderInterface
     public function significantPriceChange(SymbolInterface $symbol, float $passedPartOfDay, ?float $atrBaseMultiplierOverride = null): Percent;
     public function standardAtrForOrdersLength(SymbolInterface $symbol, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): AveragePriceChange;
 
-    public function transformLengthToPricePercent(SymbolInterface $symbol, PriceDistanceSelector $length, TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
+    public function transformLengthToPricePercent(SymbolInterface $symbol, PriceDistanceSelector $length, TimeFrame $timeframe = self::ATR_TIMEFRAME_FOR_ORDERS, int $period = self::ATR_PERIOD_FOR_ORDERS): Percent;
 }

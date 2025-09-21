@@ -167,10 +167,11 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
                     $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, $doubleLongOrderDistance * 1.7, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]), sign: -1);
                     $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, $doubleLongOrderDistance * 1.5, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
                     $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, $doubleLongOrderDistance, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[1]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, D::VeryVeryLong, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, D::VeryLong, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3, D::Long, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[1]), sign: -1);
-                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3, D::BetweenLongAndStd, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]), sign: -1);
+
+                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, D::VeryLong, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2, D::Long, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3, D::BetweenLongAndStd, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[1]), sign: -1);
+                    $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3, D::Standard, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[0]), sign: -1);
 
                     $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 3, D::Standard, BO::addDoubleFlag($forcedWithShortStop, $doubleHashes[2]), sign: -1);
                     $martingaleOrders[] = $this->orderBasedOnLength($stop, $refPrice, $stopVolume / 2,
