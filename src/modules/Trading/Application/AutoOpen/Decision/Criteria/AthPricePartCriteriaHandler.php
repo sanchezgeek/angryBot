@@ -26,9 +26,9 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         // @todo | autoOpen | ath | возможно стоит снизить порог, т.к. сейчас будут ещё другие проверки, а эта пропорционально снизит процент депозита
 
         $percent = match ($riskLevel) {
-            RiskLevel::Cautious => 70,
-            default => 50,
-            RiskLevel::Aggressive => 40,
+            RiskLevel::Cautious => 85,
+            default => 75,
+            RiskLevel::Aggressive => 60,
         };
 
         return new Percent($percent);

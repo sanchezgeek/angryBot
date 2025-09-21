@@ -81,7 +81,16 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             TA::pricePartOfAth($symbol, $priceChangeInfo->toPrice)
         );
 
-        match (SettingsHelper::exact(self::SETTING)) {
+        if ($atrBaseMultiplierOverride = $event->source->atrBaseMultiplierOverride) {
+            $message .= sprintf(' | $atrBaseMultiplierOverride: %s', $atrBaseMultiplierOverride);
+        }
+
+        if ($criteriasSuggestions = $event->source->criteriasSuggestions) {
+            $message .= sprintf(' | $criteriasSuggestions: %s', json_encode($criteriasSuggestions));
+        }
+
+        // force notify if autoOpen disabled
+        match (!$event->tryOpenPosition || SettingsHelper::exact(self::SETTING)) {
             true => $this->notifications->info($message),
             default => $this->notifications->muted($message),
         };

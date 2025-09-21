@@ -44,9 +44,9 @@ final readonly class AutoOpenClaimReviewer
         $riskLevel = $this->parameters->riskLevel($symbol, $positionSide);
 
         [$minPercentOfDepositToUseAsMargin, $maxPercentOfDepositToUseAsMargin] = match ($riskLevel) {
-            RiskLevel::Cautious => [0.6, 2],
-            default => [0.8, 3],
-            RiskLevel::Aggressive => [1.2, 5],
+            RiskLevel::Cautious => [0.2, 0.8],
+            default => [0.3, 1.4],
+            RiskLevel::Aggressive => [0.6, 1.7],
         };
 
         $confidenceRateVotes = new ConfidenceRateVotesCollection();

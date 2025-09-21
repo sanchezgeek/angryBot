@@ -38,7 +38,7 @@ final class AthPricePartCriteria extends AbstractOpenPositionCriteria
         return $this->athPartThresholdOverrides[$side->value] ?? null;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
         return array_merge(parent::jsonSerialize(), [
             'athPartThresholdOverrides' => $this->athPartThresholdOverrides

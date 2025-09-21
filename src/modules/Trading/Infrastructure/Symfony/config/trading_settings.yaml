@@ -32,6 +32,7 @@ autoOpen.enabled[symbol=PAXGUSDT]: false
 autoOpen.enabled[symbol=USD1USDT]: false
 autoOpen.enabled[symbol=USDCUSDT]: false
 autoOpen.enabled[symbol=XAUTUSDT]: false
+autoOpen.enabled[symbol=USDEUSDT]: false
 
 
 
