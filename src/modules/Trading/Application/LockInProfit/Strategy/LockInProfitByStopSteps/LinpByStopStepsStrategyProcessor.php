@@ -24,6 +24,9 @@ use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
 use App\Trading\Domain\Grid\Definition\OrdersGridTools;
 use InvalidArgumentException;
 
+/**
+ * @see \App\Tests\Functional\Modules\Trading\Applicaiton\LockInProfit\Strategy\Processor\LinpByStopStepsStrategyProcessorTest
+ */
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
     private const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 1.5;
@@ -58,7 +61,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
 
         $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
 
-        return Percent::fromPart(FloatHelper::round(NumberHelper::minMax($part, 0.35, 1)));
+        return Percent::fromPart(FloatHelper::round(NumberHelper::minMax($part, 0.2, 1)));
     }
 
     private function applyStep(LockInProfitEntry $entry, LinpByStopsGridStep $step): void

@@ -16,6 +16,9 @@ use App\Tests\Mock\Response\ByBitV5Api\Account\GetWalletBalanceResponseBuilder;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\LinpByStopStepsStrategyProcessor;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
+/**
+ * @covers LinpByStopStepsStrategyProcessor
+ */
 final class LinpByStopStepsStrategyProcessorTest extends KernelTestCase
 {
     private const float DEPOSIT = 100;
@@ -53,7 +56,7 @@ final class LinpByStopStepsStrategyProcessorTest extends KernelTestCase
             [self::positionBasedOnPercentOfDeposit(2), Percent::string('100%')],
             [self::positionBasedOnPercentOfDeposit(1), Percent::string('66.7%')],
             [self::positionBasedOnPercentOfDeposit(0.6), Percent::string('40%')],
-            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('35%')],
+            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('20%')],
         ];
     }
 
