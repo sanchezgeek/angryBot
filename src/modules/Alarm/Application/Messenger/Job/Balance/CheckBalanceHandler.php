@@ -22,23 +22,24 @@ final readonly class CheckBalanceHandler
         $contractAvailableGreaterThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnContractAvailableBalanceGreaterThan));
         $contractAvailableLessThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnContractAvailableBalanceLessThan));
 
-        $contractTotalGreaterThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceGreaterThan));
-        $contractTotalLessThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceLessThan));
+        $totalGreaterThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceGreaterThan));
+        $totalLessThan = self::parseSetting($this->settings->optional(AlarmSettings::AlarmOnTotalBalanceLessThan));
 
         if (
             !$contractAvailableGreaterThan
             && !$contractAvailableLessThan
-            && !$contractTotalGreaterThan
-            && !$contractTotalLessThan
+            && !$totalGreaterThan
+            && !$totalLessThan
         ) {
             return;
         }
 
         if ($this->limiter->consume()->isAccepted()) {
             $contractBalance = $this->exchangeAccountService->getContractWalletBalance(Coin::USDT);
+            $spotBalance = $this->exchangeAccountService->getSpotWalletBalance(Coin::USDT);
 
             $available = $contractBalance->available();
-            $total = $contractBalance->totalWithUnrealized()->value();
+            $total = $contractBalance->totalWithUnrealized()->add($spotBalance->available())->value();
 
             if ($contractAvailableGreaterThan && $available > $contractAvailableGreaterThan) {
                 $this->notify(sprintf('contractBalance.available > %s', $contractAvailableGreaterThan), true);
@@ -48,12 +49,12 @@ final readonly class CheckBalanceHandler
                 $this->notify(sprintf('contractBalance.available < %s', $contractAvailableLessThan), false);
             }
 
-            if ($contractTotalGreaterThan && $total > $contractTotalGreaterThan) {
-                $this->notify(sprintf('contractBalance.TOTAL > %s', $contractTotalGreaterThan), true);
+            if ($totalGreaterThan && $total > $totalGreaterThan) {
+                $this->notify(sprintf('balancealance.TOTAL > %s', $totalGreaterThan), true);
             }
 
-            if ($contractTotalLessThan && $total < $contractTotalLessThan) {
-                $this->notify(sprintf('contractBalance.TOTAL < %s', $contractTotalLessThan), false);
+            if ($totalLessThan && $total < $totalLessThan) {
+                $this->notify(sprintf('balance.TOTAL < %s', $totalLessThan), false);
             }
         }
     }
