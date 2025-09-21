@@ -13,7 +13,7 @@ use Stringable;
 final readonly class AveragePriceChange implements JsonSerializable, Stringable
 {
     public function __construct(
-        public TimeFrame $interval,
+        public TimeFrame $timeframe,
         public int $period,
         public float $absoluteChange,
         public Percent $percentChange,
@@ -29,7 +29,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
     public function multiply(float $multiplier): self
     {
         return new self(
-            $this->interval,
+            $this->timeframe,
             $this->period,
             $this->absoluteChange * $multiplier,
             new Percent($this->percentChange->value() * $multiplier, false),
@@ -40,7 +40,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
     public function divide(float $divider): self
     {
         return new self(
-            $this->interval,
+            $this->timeframe,
             $this->period,
             $this->absoluteChange / $divider,
             new Percent($this->percentChange->value() / $divider, false),
@@ -55,7 +55,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
             $this->absoluteChange,
             $this->percentChange,
             $this->refPrice !== null ? sprintf(', refPrice=%s', $this->refPrice) : '',
-            $this->interval->value,
+            $this->timeframe->value,
             $this->period
         );
     }
@@ -63,7 +63,7 @@ final readonly class AveragePriceChange implements JsonSerializable, Stringable
     public function jsonSerialize(): mixed
     {
         return [
-            'interval' => $this->interval->value,
+            'interval' => $this->timeframe->value,
             'period' => $this->period,
             'percentChange' => $this->percentChange->value(),
             'absoluteChange' => $this->absoluteChange,

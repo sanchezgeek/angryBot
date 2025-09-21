@@ -66,7 +66,7 @@ final class PriceChange implements JsonSerializable, Stringable
     public static function fromAveragePriceChange(AveragePriceChange $averagePriceChange): self
     {
         return new self(
-            $averagePriceChange->interval,
+            $averagePriceChange->timeframe,
             $averagePriceChange->absoluteChange,
             $averagePriceChange->percentChange,
             $averagePriceChange->refPrice
