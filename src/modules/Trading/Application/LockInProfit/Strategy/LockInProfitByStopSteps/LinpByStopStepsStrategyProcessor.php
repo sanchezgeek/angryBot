@@ -7,9 +7,6 @@ namespace App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\StopRepositoryInterface;
-use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
-use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Value\Percent\Percent;
@@ -20,12 +17,11 @@ use App\Stop\Application\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandler;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitStrategyProcessorInterface;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
-use App\Trading\Application\UseCase\OpenPosition\OrdersGrids\OpenPositionStopsGridsDefinitions;
 use App\Trading\Contract\LockInProfit\LockInProfitEntry;
 use App\Trading\Contract\PositionInfoProviderInterface;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinition;
 use App\Trading\Domain\Grid\Definition\OrdersGridDefinitionCollection;
-use App\Trading\Domain\Symbol\SymbolInterface;
+use App\Trading\Domain\Grid\Definition\OrdersGridTools;
 use InvalidArgumentException;
 
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
@@ -37,6 +33,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
         private ApplyStopsToPositionHandler $applyStopsToHandler,
         private StopRepositoryInterface $stopRepository,
         private PositionInfoProviderInterface $positionInfoProvider,
+        private OrdersGridTools $ordersGridTools,
     ) {
     }
 
@@ -92,7 +89,9 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
             return;
         }
 
-        $ordersGridDefinition = $this->parseGrid($positionSide, $symbol, $triggerOnPrice, $step->gridsDefinition);
+        $gridDefinition = $this->ordersGridTools->transformToFinalPercentRangeDefinition($symbol, $step->gridsDefinition);
+        $ordersGridDefinition = OrdersGridDefinition::create($gridDefinition, $triggerOnPrice, $positionSide, $symbol);
+
         $imRatio = $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($symbol, $position);
         $multiplier = $this->closingPartMultiplier($position, $imRatio);
         $positionSizeToCover = $multiplier->of($position->getNotCoveredSize()); // @todo | lockInProfit | stops | mb use initial position size?
@@ -123,45 +122,6 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
                 $this->stepStopsContext($step)
             )
         );
-    }
-
-    /**
-     * Move somewhere + use for buy/stop grids on open
-     */
-    private function parseGrid(Side $positionSide, SymbolInterface $symbol, SymbolPrice $refPrice, string $definition): OrdersGridDefinition
-    {
-        $arr = explode('|', $definition);
-        $range = array_shift($arr);
-        [$from, $to] = explode('..', $range);
-
-        $fromPnlPercent = $this->parseFromPnlPercent($symbol, $from);
-        $toPnlPercent = $this->parseFromPnlPercent($symbol, $to);
-
-        $stringDef = sprintf('%.2f%%..%.2f%%|%s', $fromPnlPercent, $toPnlPercent, implode('|', $arr));
-
-        return OrdersGridDefinition::create($stringDef, $refPrice, $positionSide, $symbol);
-    }
-
-    /**
-     * @see OpenPositionStopsGridsDefinitions::parseFromPnlPercent DRY
-     */
-    private function parseFromPnlPercent(SymbolInterface $symbol, null|float|string $fromPnlPercent): float
-    {
-        $fromPnlPercent = $fromPnlPercent ?? 0;
-
-        if (is_string($fromPnlPercent)) {
-            [$distance, $sign] = OpenPositionStopsGridsDefinitions::parseDistanceSelector($fromPnlPercent);
-            $fromPnlPercent = $sign * $this->getBoundPnlPercent($symbol, $distance);
-        }
-
-        return $fromPnlPercent;
-    }
-
-    private function getBoundPnlPercent(SymbolInterface $symbol, Length $lengthSelector): float
-    {
-        $priceChangePercent = $this->parameters->transformLengthToPricePercent($symbol, $lengthSelector)->value();
-
-        return PnlHelper::transformPriceChangeToPnlPercent($priceChangePercent);
     }
 
 //    private static function print(string $message): void

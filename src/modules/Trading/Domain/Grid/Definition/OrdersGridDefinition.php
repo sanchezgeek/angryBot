@@ -12,6 +12,9 @@ use App\Domain\Value\Percent\Percent;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
+/**
+ * @see \App\Tests\Unit\Modules\Trading\Domain\Grid\Definition\OrdersGridDefinitionTest
+ */
 final readonly class OrdersGridDefinition
 {
     public function __construct(
@@ -29,30 +32,20 @@ final readonly class OrdersGridDefinition
         Side $positionSide,
         SymbolInterface $symbol
     ): self {
-        $equivRangePattern = '/^\d+%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
         $accurateRangePattern = '/^[-\d]+(?:\.\d+)?%\.\.[-\d]+(?:\.\d+)?%\|\d+%(?:\|\d+)?(?:\|[,\w=%]+)?$/';
 
-        $isEquivRange = preg_match($equivRangePattern, $definition);
-        $isAccurateRange = preg_match($accurateRangePattern, $definition);
-
-        if (!$isEquivRange && !$isAccurateRange) {
+        if (!preg_match($accurateRangePattern, $definition)) {
             throw new InvalidArgumentException(
-                sprintf('Invalid definition "%s" ("%s" or "%s" expected)', $definition, $equivRangePattern, $accurateRangePattern),
+                sprintf('Invalid definition "%s" ("%s" expected, e.g. `-100%%..-200%%|50%%|5|wOO,aF`)', $definition, $accurateRangePattern),
             );
         }
 
         $parts = explode('|', $definition);
-        if ($isEquivRange) {
-            $rangePnl = Percent::string($parts[0], false);
 
-            $fromPnl = -$rangePnl->value();
-            $toPnl = $rangePnl->value();
-        } else {
-            $rangeDef = explode('..', $parts[0]);
+        $rangeDef = explode('..', $parts[0]);
 
-            $fromPnl = (float)$rangeDef[0];
-            $toPnl = (float)$rangeDef[1];
-        }
+        $fromPnl = (float)$rangeDef[0];
+        $toPnl = (float)$rangeDef[1];
 
         $from = PnlHelper::targetPriceByPnlPercent($priceToRelate, $fromPnl, $positionSide);
         $to = PnlHelper::targetPriceByPnlPercent($priceToRelate, $toPnl, $positionSide);

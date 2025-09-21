@@ -17,6 +17,6 @@ final class AverageTrueRangeCache extends AbstractCacheService implements Techni
 
     protected static function getDefaultTtl(): int
     {
-        return 3600; // every hour
+        return 10000; // every hour
     }
 }

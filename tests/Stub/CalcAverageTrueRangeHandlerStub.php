@@ -23,7 +23,7 @@ final class CalcAverageTrueRangeHandlerStub implements CalcAverageTrueRangeHandl
         $this->data[] = [
             'entry' => $entry,
             'result' => new CalcAverageTrueRangeResult(
-                new AveragePriceChange($entry->interval, $entry->period, $atrAbsolute, $percentResult)
+                new AveragePriceChange($entry->timeframe, $entry->period, $atrAbsolute, $percentResult)
             ),
         ];
     }

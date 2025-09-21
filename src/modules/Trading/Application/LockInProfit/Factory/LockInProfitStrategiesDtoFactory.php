@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Trading\Application\LockInProfit\Factory;
 
 use App\Bot\Domain\Position;
-use App\Domain\Position\Helper\InitialMarginHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
@@ -18,6 +17,8 @@ use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\LinpBy
 use App\Trading\Application\LockInProfit\Strategy\LockInProfitByStopSteps\Step\LinpByStopsGridStep;
 use App\Trading\Contract\ContractBalanceProviderInterface;
 use App\Trading\Contract\PositionInfoProviderInterface;
+
+use App\Trading\Domain\Grid\Definition\OrdersGridTools as Tools;
 
 final readonly class LockInProfitStrategiesDtoFactory
 {
@@ -33,26 +34,26 @@ final readonly class LockInProfitStrategiesDtoFactory
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part1',
                 Length::Standard, // settings?
-                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
+                Tools::makeRawGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Standard->toStringWithNegativeSign(), 20, 10),
             ),
             // second part
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part2',
                 Length::BetweenLongAndStd,
-                self::makeGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 15, 10),
+                Tools::makeRawGridDefinition(Length::VeryVeryShort->toStringWithNegativeSign(), Length::Long->toStringWithNegativeSign(), 15, 10),
             ),
             // third part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part3',
                 Length::Long,
                 // @todo | lockInProfit | stops must be placed near position side
-                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 30, 30),
+                Tools::makeRawGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 30, 30),
             ),
             // fourth part: back to position entry
             new LinpByStopsGridStep(
                 'defaultThreeStepsLock-part4',
                 Length::VeryVeryLong,
-                self::makeGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 25, 10),
+                Tools::makeRawGridDefinition(Length::Short->toStringWithNegativeSign(), Length::VeryLong->toStringWithNegativeSign(), 25, 10),
             ),
         );
     }
@@ -108,15 +109,6 @@ final readonly class LockInProfitStrategiesDtoFactory
         $part = $imRatio * 100 / $totalWithUnrealized;
 
         return Percent::fromPart(NumberHelper::minMax($part, 0.005, 0.015));
-    }
-
-    public static function makeGridDefinition(
-        string $from,
-        string $to,
-        float $positionSizePercent,
-        int $stopsCount,
-    ): string {
-        return sprintf('%s..%s|%d%%|%s', $from, $to, $positionSizePercent, $stopsCount);
     }
 
     public function __construct(

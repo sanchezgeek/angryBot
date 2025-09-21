@@ -11,7 +11,7 @@ final class CalcAverageTrueRange
 {
     public function __construct(
         public SymbolInterface $symbol,
-        public TimeFrame $interval,
+        public TimeFrame $timeframe,
         public int $period,
     ) {
         assert($this->period >= 2, 'For ATR calculation period must be >= 2');

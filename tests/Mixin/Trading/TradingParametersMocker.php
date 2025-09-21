@@ -6,6 +6,7 @@ namespace App\Tests\Mixin\Trading;
 
 use App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParameters;
 use App\Buy\Application\UseCase\CheckBuyOrderCanBeExecuted\Checks\BuyOnLongDistanceAndCheckAveragePrice;
+use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
@@ -62,5 +63,23 @@ trait TradingParametersMocker
             TradingParametersProviderInterface::LONG_ATR_TIMEFRAME,
             TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS,
         );
+    }
+
+    protected static function getTradingParametersStubWithAllPredefinedLengths(SymbolInterface $symbol): TradingParametersProviderStub
+    {
+        return
+            new TradingParametersProviderStub()
+                ->addTransformedLengthResult(Percent::string('0.1%'), $symbol, PriceDistanceSelector::AlmostImmideately)
+                ->addTransformedLengthResult(Percent::string('0.3%'), $symbol, PriceDistanceSelector::VeryVeryShort)
+                ->addTransformedLengthResult(Percent::string('0.5%'), $symbol, PriceDistanceSelector::VeryShort)
+                ->addTransformedLengthResult(Percent::string('0.6%'), $symbol, PriceDistanceSelector::Short)
+                ->addTransformedLengthResult(Percent::string('0.7%'), $symbol, PriceDistanceSelector::BetweenShortAndStd)
+                ->addTransformedLengthResult(Percent::string('1%'), $symbol, PriceDistanceSelector::Standard)
+                ->addTransformedLengthResult(Percent::string('1.5%'), $symbol, PriceDistanceSelector::BetweenLongAndStd)
+                ->addTransformedLengthResult(Percent::string('2%'), $symbol, PriceDistanceSelector::Long)
+                ->addTransformedLengthResult(Percent::string('10%'), $symbol, PriceDistanceSelector::VeryLong)
+                ->addTransformedLengthResult(Percent::string('20%'), $symbol, PriceDistanceSelector::VeryVeryLong)
+                ->addTransformedLengthResult(Percent::string('30%'), $symbol, PriceDistanceSelector::DoubleLong)
+            ;
     }
 }

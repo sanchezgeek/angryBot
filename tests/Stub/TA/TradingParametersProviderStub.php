@@ -28,7 +28,7 @@ class TradingParametersProviderStub implements TradingParametersProviderInterfac
         Percent $percentResult,
         SymbolInterface $symbol,
         PriceDistanceSelector $distanceSelector,
-        TimeFrame $timeframe = TradingParametersProviderInterface::LONG_ATR_TIMEFRAME,
+        TimeFrame $timeframe = TradingParametersProviderInterface::ATR_TIMEFRAME_FOR_ORDERS,
         int $period = TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS,
     ): self {
         $key = self::_stopLengthResultKey($symbol, $distanceSelector, $timeframe, $period);

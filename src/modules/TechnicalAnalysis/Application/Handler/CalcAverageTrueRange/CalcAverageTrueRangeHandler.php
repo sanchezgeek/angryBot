@@ -38,7 +38,7 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
         $cacheKey = sprintf(
             'averageTrueRange_for_%s_onInterval_%s_intervalsBack_%d',
             $entry->symbol->name(),
-            $entry->interval->value,
+            $entry->timeframe->value,
             $entry->period
         );
 
@@ -48,32 +48,32 @@ final readonly class CalcAverageTrueRangeHandler implements CalcAverageTrueRange
     private function doHandle(CalcAverageTrueRange $entry): CalcAverageTrueRangeResult
     {
         $symbol = $entry->symbol;
-        $candleInterval = $entry->interval;
+        $timeframe = $entry->timeframe;
         $period = $entry->period;
         $atr = null;
         $refPrice = null;
 
         while ($atr === null && $period >= 2) {
             try {
-                [$atr, $refPrice] = $this->getForPeriod($period, $symbol, $candleInterval);
+                [$atr, $refPrice] = $this->getForPeriod($period, $symbol, $timeframe);
             } catch (\BadFunctionCallException $e) {
                 $period--;
             }
         }
 
         if ($atr === null) {
-            $candles = $this->candlesProvider->getPreviousCandles($symbol, $candleInterval, 1, true);
+            $candles = $this->candlesProvider->getPreviousCandles($symbol, $timeframe, 1, true);
             $atr = $candles[0]->highLowDiff();
             $refPrice = $candles[array_key_last($candles)]->close;
         }
 
         return new CalcAverageTrueRangeResult(
             new AveragePriceChange(
-                $candleInterval,
-                $period,
-                $entry->symbol->makePrice($atr)->value(),
-                Percent::fromPart($atr / $refPrice, false),
-                $refPrice
+                timeframe: $timeframe,
+                period: $period,
+                absoluteChange: $entry->symbol->makePrice($atr)->value(),
+                percentChange: Percent::fromPart($atr / $refPrice, false),
+                refPrice: $refPrice
             )
         );
     }
