@@ -34,7 +34,7 @@ final readonly class GetInstrumentAgeHandler implements GetInstrumentAgeHandlerI
     {
         $symbol = $entry->symbol;
 
-        $candles = $this->candlesProvider->getPreviousCandles($symbol, TimeFrame::M1, 1000);
+        $candles = $this->candlesProvider->getPreviousCandles($symbol, TimeFrame::W1, 10000000);
         $first = $candles[array_key_first($candles)];
 
         return (new DateTimeImmutable)->setTimestamp($first->time);

@@ -22,7 +22,6 @@ enum TimeFrame: string
     case h12 = '12h';
     case D1 = '1D';
     case W1 = '1W';
-    case M1 = '1M';
 
     public const array DATE_INTERVALS = [
         self::m1->value => '1 minute',
@@ -38,7 +37,6 @@ enum TimeFrame: string
         self::h12->value => '12 hours',
         self::D1->value => '1 day',
         self::W1->value => '1 week',
-        self::M1->value => '1 month',
     ];
 
     public function toDateInterval(): DateInterval

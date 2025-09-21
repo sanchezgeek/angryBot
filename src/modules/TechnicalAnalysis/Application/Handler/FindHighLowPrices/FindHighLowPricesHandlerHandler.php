@@ -21,7 +21,7 @@ final readonly class FindHighLowPricesHandlerHandler implements FindHighLowPrice
         #[AppDynamicParameterEvaluations(defaultValueProvider: FindHighLowPricesEntryEvaluationProvider::class, skipUserInput: true)]
         FindHighLowPrices $entry
     ): FindHighLowPricesResult {
-        $cacheKey = sprintf('HL_prices_%s', $entry->symbol->name());
+        $cacheKey = sprintf('HighLow_Prices_%s', $entry->symbol->name());
 
         return $this->cache->get($cacheKey, fn () => $this->doHandle($entry));
     }
@@ -30,7 +30,7 @@ final readonly class FindHighLowPricesHandlerHandler implements FindHighLowPrice
     {
         $symbol = $entry->symbol;
 
-        $candles = $this->candlesProvider->getPreviousCandles($symbol, TimeFrame::M1, 1000);
+        $candles = $this->candlesProvider->getPreviousCandles($symbol, TimeFrame::W1, 10000000);
 
         $prices = [];
         foreach ($candles as $candle) {

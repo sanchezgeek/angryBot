@@ -34,7 +34,6 @@ final readonly class GetKlinesRequest extends AbstractByBitApiRequest
         TimeFrame::h12->value => '720',
         TimeFrame::D1->value => 'D',
         TimeFrame::W1->value => 'W',
-        TimeFrame::M1->value => 'M',
     ];
 
     public function method(): string
