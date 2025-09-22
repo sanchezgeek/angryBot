@@ -60,11 +60,13 @@ final readonly class LockInProfitStrategiesDtoFactory
 
     public function defaultPeriodicalFixationsLock(Position $position): LinpByPeriodicalFixationsStrategyDto
     {
+        // @todo | lockInProfit | increase distance? in case of small im
+
         $smallPartToClose = $this->minPercentToClose($position);
         $bigPartToClose = new Percent($smallPartToClose->value() * 2);
 
-        // @todo use funding here
-        // @todo use free to total balance ratio (make faster for negative free)
+        // @todo | lockInProfit |  use funding here
+        // @todo | lockInProfit |  use free to total balance ratio (make faster for negative free)
 
         return new LinpByPeriodicalFixationsStrategyDto(
             new PeriodicalFixationStep(
@@ -108,7 +110,7 @@ final readonly class LockInProfitStrategiesDtoFactory
 
         $part = $imRatio * 100 / $totalWithUnrealized;
 
-        return Percent::fromPart(NumberHelper::minMax($part, 0.005, 0.015));
+        return Percent::fromPart(NumberHelper::minMax($part, 0.001, 0.015));
     }
 
     public function __construct(
