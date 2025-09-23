@@ -5,9 +5,11 @@ namespace App\Screener\Console;
 use App\Command\AbstractCommand;
 use App\Command\Mixin\PositionAwareCommand;
 use App\Domain\Coin\Coin;
+use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChange;
 use App\Screener\Application\Contract\Query\FindSignificantPriceChangeHandlerInterface;
+use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,6 +23,7 @@ class FindSignificantPriceChangeCommand extends AbstractCommand
 
     public const string DAYS_DELTA_OPTION = 'days-delta';
     public const string BASE_ATR_MULTIPLIER_OPTION = 'atr-multiplier';
+    public const string BIAS = 'bias';
 
     private int $daysDelta;
     private ?float $atrMultiplier;
@@ -31,6 +34,7 @@ class FindSignificantPriceChangeCommand extends AbstractCommand
         $this
             ->addOption(self::DAYS_DELTA_OPTION, 'd', InputOption::VALUE_REQUIRED, '', '0')
             ->addOption(self::BASE_ATR_MULTIPLIER_OPTION, 'm', InputOption::VALUE_OPTIONAL)
+            ->addOption(self::BIAS, 'b', InputOption::VALUE_REQUIRED)
         ;
     }
 
@@ -51,10 +55,30 @@ class FindSignificantPriceChangeCommand extends AbstractCommand
             true,
         );
 
+        $bias = $this->paramFetcher->getStringOption(self::BIAS);
+        $bias = Side::from($bias);
+
         $result = $this->handler->handle($entry);
-        OutputHelper::print($result);die;
+
+        $r = [];
+        foreach ($result as $item) {
+            if ($this->positionSideToPositionLoss($item) !== $bias) {
+                continue;
+            }
+
+            $r[] = $item;
+        }
+
+        OutputHelper::print($r);die;
 
         return Command::SUCCESS;
+    }
+
+    public function positionSideToPositionLoss(FindSignificantPriceChangeResponse $info): Side
+    {
+        $priceMovement = $info->info->getPriceMovement();
+
+        return $priceMovement->isLossFor(Side::Sell) ? Side::Sell : Side::Buy;
     }
 
     public function __construct(

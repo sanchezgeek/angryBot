@@ -7,6 +7,7 @@ use App\Domain\Coin\Coin;
 use App\Domain\Coin\CoinAmount;
 use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\SymbolPrice;
+use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\Common\Emun\Asset\AssetCategory;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\Repository\SymbolRepository;
@@ -153,7 +154,8 @@ class Symbol implements SymbolInterface, Stringable, JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'name' => $this->name()
+            'name' => $this->name(),
+            'url' => OutputHelper::urlToSymbolDashboard($this)
         ];
     }
 }
