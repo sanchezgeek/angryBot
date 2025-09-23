@@ -12,7 +12,7 @@ use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 
 final class InstrumentAgeIsAppropriateCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface
 {
-    public const int DAYS_THRESHOLD = 6;
+    public const int DAYS_THRESHOLD = 20;
 
     public function supportsCriteriaCheck(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): bool
     {
