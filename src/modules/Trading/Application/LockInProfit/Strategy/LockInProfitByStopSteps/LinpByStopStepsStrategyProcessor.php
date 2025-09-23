@@ -29,7 +29,7 @@ use InvalidArgumentException;
  */
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
-    private const float BIG_IM_PERCENT_RATIO = 2;
+    private const float BIG_IM_PERCENT_RATIO = 1.3;
 
     public function __construct(
         private TradingParametersProviderInterface $parameters,

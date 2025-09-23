@@ -166,6 +166,30 @@ final class ByBitLinearPositionService implements PositionServiceInterface
      *
      * @throws SizeCannotBeLessOrEqualsZeroException
      */
+    public function getMainPositions(): array
+    {
+        $result = [];
+        foreach ($this->getAllPositions() as $symbolPositions) {
+            foreach ($symbolPositions as $position) {
+                if ($position->isMainPositionOrWithoutHedge()) {
+                    $result[$position->symbol->name()] = $position;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return Position[]
+     *
+     * @throws ApiRateLimitReached
+     * @throws UnexpectedApiErrorException
+     * @throws UnknownByBitApiErrorException
+     * @throws PermissionDeniedException
+     *
+     * @throws SizeCannotBeLessOrEqualsZeroException
+     */
     public function getPositionsWithoutLiquidation(): array
     {
         $result = [];
