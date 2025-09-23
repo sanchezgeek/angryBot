@@ -14,7 +14,6 @@ use App\Trading\Application\AutoOpen\Decision\OpenPositionPrerequisiteCheckerInt
 use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateDecision;
 use App\Trading\Application\AutoOpen\Decision\Result\OpenPositionPrerequisiteCheckResult;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
-use RuntimeException;
 
 final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface, OpenPositionConfidenceRateDecisionVoterInterface
 {
@@ -58,7 +57,7 @@ final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequis
                 );
             }
         } else {
-            throw new RuntimeException('not implemented yet');
+            return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs', true);
         }
 
         return new OpenPositionPrerequisiteCheckResult(true, OutputHelper::shortClassName(self::class), sprintf('current funding (%s) >= %s', $funding, self::FUNDING_THRESHOLD_FOR_SHORT));

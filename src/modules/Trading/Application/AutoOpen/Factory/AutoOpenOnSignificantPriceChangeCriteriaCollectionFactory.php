@@ -6,8 +6,8 @@ namespace App\Trading\Application\AutoOpen\Factory;
 
 use App\Notification\Application\Contract\AppNotificationsServiceInterface;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AbstractOpenPositionCriteria;
-use App\Trading\Application\AutoOpen\Decision\Criteria\AthPricePartCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\AutoOpenNotDisabledCriteria;
+use App\Trading\Application\AutoOpen\Decision\Criteria\ByReason\SignificantPriceChangeFound\AthPricePartCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\FundingIsAppropriateCriteria;
 use App\Trading\Application\AutoOpen\Decision\Criteria\InstrumentAgeIsAppropriateCriteria;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;

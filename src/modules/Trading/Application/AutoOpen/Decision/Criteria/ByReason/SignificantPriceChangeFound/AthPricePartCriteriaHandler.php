@@ -2,22 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Trading\Application\AutoOpen\Decision\Criteria;
+namespace App\Trading\Application\AutoOpen\Decision\Criteria\ByReason\SignificantPriceChangeFound;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
+use App\Trading\Application\AutoOpen\Decision\Criteria\AbstractOpenPositionCriteria;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionConfidenceRateDecisionVoterInterface;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionPrerequisiteCheckerInterface;
 use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateDecision;
 use App\Trading\Application\AutoOpen\Decision\Result\OpenPositionPrerequisiteCheckResult;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
+use App\Trading\Application\AutoOpen\Reason\AutoOpenOnSignificantPriceChangeReason;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
-use LogicException;
 
+/**
+ * @see \App\Tests\Functional\Modules\Trading\Applicaiton\AutoOpen\Decision\Criteria\ByReason\SignificantPriceChangeFound\AthPricePartCriteriaHandlerTest
+ */
 final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface, OpenPositionConfidenceRateDecisionVoterInterface
 {
     public static function usedThresholdFromAth(RiskLevel $riskLevel): Percent
@@ -36,12 +40,12 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
 
     public function supportsCriteriaCheck(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): bool
     {
-        return $criteria instanceof AthPricePartCriteria;
+        return $criteria instanceof AthPricePartCriteria && $claim->reason instanceof AutoOpenOnSignificantPriceChangeReason;
     }
 
     public function supportsMakeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): bool
     {
-        return $criteria instanceof AthPricePartCriteria;
+        return $criteria instanceof AthPricePartCriteria && $claim->reason instanceof AutoOpenOnSignificantPriceChangeReason;
     }
 
     public function checkCriteria(
@@ -51,13 +55,21 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         $symbol = $claim->symbol;
         $side = $claim->positionSide;
 
+        // для лонгов можно сделать если меньше ATL либо второго минимума по структуре
+
+        // @todo | autoOpen | skip (now only for SHORTs) // diable force opposite for buy through context
         if (!$side->isShort()) {
-            throw new LogicException('Now only for SHORTs');
+            return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs', true);
+        }
+
+        $threshold = self::usedThresholdFromAth($this->parameters->riskLevel($symbol, $side));
+
+        if ($modifier = $criteria->getAthThresholdModifier($side)) {
+            $threshold = $modifier->of($threshold);
+            // longs logic
         }
 
         $currentPricePartOfAth = $this->getCurrentPricePartOfAth($symbol);
-        $threshold = $criteria->getAthThresholdPercentOverride($side) ?? self::usedThresholdFromAth($this->parameters->riskLevel($symbol, $side));
-
         if ($currentPricePartOfAth->value() < $threshold->value()) {
             $thresholdForNotification = $threshold->value();
 //            $thresholdForNotification -= ($thresholdForNotification / 10);

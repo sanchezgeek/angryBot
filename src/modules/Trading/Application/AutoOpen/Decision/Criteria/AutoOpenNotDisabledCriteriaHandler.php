@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\AutoOpen\Decision\Criteria;
 
-use App\Domain\Position\ValueObject\Side;
 use App\Helper\OutputHelper;
 use App\Settings\Application\Helper\SettingsHelper;
 use App\Trading\Application\AutoOpen\Decision\OpenPositionPrerequisiteCheckerInterface;
@@ -25,11 +24,6 @@ final class AutoOpenNotDisabledCriteriaHandler implements OpenPositionPrerequisi
     ): OpenPositionPrerequisiteCheckResult {
         $symbol = $claim->symbol;
         $positionSide = $claim->positionSide;
-
-        // @todo | autoOpen | skip (now only for SHORTs) // diable force opposite for by through context
-        if ($positionSide === Side::Buy) {
-            return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs', true);
-        }
 
 //        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
 
