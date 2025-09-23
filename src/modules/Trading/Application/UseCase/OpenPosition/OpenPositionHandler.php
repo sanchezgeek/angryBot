@@ -346,7 +346,9 @@ final class OpenPositionHandler
 
     public static function balanceConsideredAsAvailableForTrade(ContractBalance $contractBalance): float
     {
+        $unrealizedRatio = $contractBalance->unrealisedPnl / ($contractBalance->totalWithUnrealized()->value() / 3);
+
         // @todo | autoOpen | parameters
-        return $contractBalance->available() / max(1.5, $contractBalance->unrealizedPartToTotal());
+        return $contractBalance->available() / max(1.5, $unrealizedRatio);
     }
 }

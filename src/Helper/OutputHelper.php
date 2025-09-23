@@ -60,7 +60,7 @@ class OutputHelper
     {
         foreach ($data as $item) {
             if (is_array($item) || $item instanceof JsonSerializable || is_object($item)) {
-                echo json_encode($item, JSON_PRETTY_PRINT);
+                echo json_encode($item, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 return;
             }
 
