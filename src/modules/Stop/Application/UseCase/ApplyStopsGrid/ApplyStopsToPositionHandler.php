@@ -16,6 +16,9 @@ use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * @see \App\Tests\Functional\Modules\Stop\Applicaiton\UseCase\ApplyStopsGrid\ApplyStopsToPositionHandlerTest
+ */
 final readonly class ApplyStopsToPositionHandler
 {
     public function __construct(
