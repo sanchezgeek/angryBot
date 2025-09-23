@@ -54,8 +54,8 @@ final readonly class ApplyStopsToPositionHandler
             $orders = new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount);
             $orders = new OrdersCollection(...$orders);
 
-            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */
-            $roundVolumeToMin = $stopsHasOppositeBuyOrders;
+//            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */ $roundVolumeToMin = $stopsHasOppositeBuyOrders;
+            $roundVolumeToMin = true;
             if ($roundVolumeToMin) {
                 $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
             }
