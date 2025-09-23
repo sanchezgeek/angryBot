@@ -25,7 +25,7 @@ trait BuyOrdersTester
     {
         $buyOrders = [];
         foreach(self::getBuyOrderRepository()->findAll() as $buyOrder) {
-            $buyOrders[] = clone $buyOrder;
+            $buyOrders[$buyOrder->getId()] = clone $buyOrder;
         }
 
         return $buyOrders;

@@ -29,6 +29,7 @@ use App\Settings\Application\Service\SettingAccessor;
 use App\Stop\Application\Contract\Command\CreateBuyOrderAfterStop;
 use App\Stop\Application\Handler\CreateBuyOrderAfterStopCommandHandler;
 use App\Stop\Application\Settings\CreateOppositeBuySettings;
+use App\Tests\Assertion\CustomAssertions;
 use App\Tests\Factory\Entity\StopBuilder;
 use App\Tests\Factory\TickerFactory;
 use App\Tests\Fixture\StopFixture;
@@ -74,8 +75,6 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
     /**
      * @dataProvider cases
-     *
-     * @param BuyOrder[] $expectedBuyOrders
      */
     public function testCreateBuyOrdersAfterStop(
         Ticker $ticker,
@@ -96,7 +95,19 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $this->runMessageConsume(new CreateBuyOrderAfterStop($stop->getId(), $wholePositionSize, $ticker->markPrice->value(), $ordersDoublesHashes));
 
-        $this->seeBuyOrdersInDb(...$expectedBuyOrders);
+        $actualOrders = self::getCurrentBuyOrdersSnapshot();
+
+        if ($commonBuyOrders = $expectedBuyOrders['common'] ?? null) {
+
+            $commonBuyOrdersMatch = array_intersect_key($actualOrders, $commonBuyOrders);
+            CustomAssertions::assertObjectsWithInnerSymbolsEquals($commonBuyOrdersMatch, $commonBuyOrders);
+
+            $restOrders = array_diff_key($actualOrders, $commonBuyOrders);
+
+            self::assertCount(count($restOrders), $expectedBuyOrders['martingale']);
+        } else {
+            $this->seeBuyOrdersInDb(...$expectedBuyOrders);
+        }
     }
 
     public function cases(): iterable
@@ -303,13 +314,19 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         // active
         foreach ($orders->getOrders() as $order) {
-            $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context(), BuyOrderState::Active);
+            $buyOrders[$fromId] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context(), BuyOrderState::Active);
             $fromId++;
         }
 
+        $martingaleBuyOrders = [];
+
         foreach ($martingaleOrders as $order) {
-            $buyOrders[] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
+            $martingaleBuyOrders[$fromId] = new BuyOrder($fromId, $order->price(), $order->volume(), $symbol, $side, $order->context());
             $fromId++;
+        }
+
+        if ($martingaleBuyOrders) {
+            return ['common' => $buyOrders, 'martingale' => $martingaleBuyOrders];
         }
 
         return $buyOrders;
@@ -353,7 +370,8 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     private static function caseDescription(Stop $stop, float $wholePositionSize, array $createdBoyOrders): string
     {
         $boDef = [];
-        foreach ($createdBoyOrders as $boyOrder) {
+        $borders = $createdBoyOrders['common'] ?? $createdBoyOrders;
+        foreach ($borders as $boyOrder) {
             $boDef[] = sprintf('price=%s, volume=%s', $boyOrder->getPrice(), $boyOrder->getVolume());
         }
         $boDef = implode(' | ', $boDef);

@@ -60,7 +60,7 @@ final class CreateOppositeStopsAfterBuyCommandHandlerTest extends KernelTestCase
     {
         parent::setUp();
 
-        self::getContainer()->set(TAToolsProviderInterface::class, $this->initializeTaProviderStub());
+        $this->initializeTaProviderStub();
     }
 
     /**
