@@ -51,8 +51,8 @@ final class LockInProfitStrategiesDtoFactoryTest extends KernelTestCase
             [self::positionBasedOnPercentOfDeposit(4), Percent::string('1.5%')],
             [self::positionBasedOnPercentOfDeposit(2), Percent::string('1%')],
             [self::positionBasedOnPercentOfDeposit(1), Percent::string('0.5%')],
-            [self::positionBasedOnPercentOfDeposit(0.6), Percent::string('0.5%')],
-            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('0.5%')],
+            [self::positionBasedOnPercentOfDeposit(0.6), Percent::string('0.3%')],
+            [self::positionBasedOnPercentOfDeposit(0.2), Percent::string('0.1%')],
         ];
     }
 
