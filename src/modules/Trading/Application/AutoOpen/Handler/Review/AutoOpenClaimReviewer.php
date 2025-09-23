@@ -38,6 +38,17 @@ final readonly class AutoOpenClaimReviewer
             }
         }
 
+        /**
+         * @todo
+         * https://chat.deepseek.com/a/chat/s/d5fda68f-9d0a-49d3-9743-1fd0269c97cf
+         * общались про autoOpen/весь диалог
+         * Начиная отсюда: Ваш текущий критерий (1) — это только пункт 2 в этом списке
+         *
+         * VolumeAnalysisCriteria
+         * MarketStructureCriteria
+         *  можешь написать ещё один Finder (скорее всего так и надо. на вход он будет принимать массив ZigZagPoint[]), который будет для искать есть ли на структуре от текущей даты (или возможно переданной как параметр) idm, который был снят через заполнение имбаланса, который идёт до этого правильного отката?
+         */
+
         // @todo | autoOpen | calc size based on further liquidation (must be safe)
         // it can be another criteria =)
 

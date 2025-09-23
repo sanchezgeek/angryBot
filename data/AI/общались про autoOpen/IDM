@@ -1,0 +1,839 @@
+ты мне раньше писал вот такой код:
+
+
+
+final class ZigZagPoint implements JsonSerializable
+{
+    public const PEAK = 'peak';
+    public const TROUGH = 'trough';
+
+    public function __construct(
+        private int $candleIndex,
+        private float $price,
+        private string $type,
+        private int $time,
+    ) {
+    }
+
+    public function getCandleIndex(): int
+    {
+        return $this->candleIndex;
+    }
+
+    public function getPrice(): float
+    {
+        return $this->price;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    public function getUtcDatetime(): string
+    {
+        return date('Y-m-d H:i:s', $this->time);
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'time' => $this->time,
+            'type' => $this->type,
+            'price' => $this->price,
+//            'utcDatetime' => $this->getUtcDatetime(),
+        ];
+    }
+}
+
+final class ZigZagFinder
+{
+    public const PEAK = 'peak';
+    public const TROUGH = 'trough';
+
+    private array $pivots = [];
+    /** @var CandleDto[] */
+    private array $candles = [];
+    private ?int $lastPivotIndex = null;
+    private ?float $lastPivotPrice = null;
+    private ?string $lastPivotType = null;
+    private ?float $currentExtremePrice = null;
+    private ?int $currentExtremeIndex = null;
+
+    public function find(array $candles): array
+    {
+        if (count($candles) < 3) return [];
+
+        $this->candles = $candles;
+        $this->resetState();
+
+        for ($i = 1; $i < count($this->candles) - 1; $i++) {
+            $this->processCandle($i);
+        }
+
+        $this->addFinalPoint();
+        return $this->pivots;
+    }
+
+    private function resetState(): void
+    {
+        $this->pivots = [];
+        $this->lastPivotIndex = null;
+        $this->lastPivotPrice = null;
+        $this->lastPivotType = null;
+        $this->currentExtremePrice = null;
+        $this->currentExtremeIndex = null;
+
+        // Инициализация первыми двумя свечами
+        $first = $this->candles[0];
+        $second = $this->candles[1];
+
+        if ($first->getHigh() > $second->getHigh()) {
+            $this->lastPivotType = self::PEAK;
+            $this->lastPivotPrice = $first->getHigh();
+            $this->lastPivotIndex = 0;
+        } elseif ($first->getLow() < $second->getLow()) {
+            $this->lastPivotType = self::TROUGH;
+            $this->lastPivotPrice = $first->getLow();
+            $this->lastPivotIndex = 0;
+        }
+    }
+
+    private function processCandle(int $index): void
+    {
+        $candle = $this->candles[$index];
+        $prevCandle = $this->candles[$index-1];
+        $nextCandle = $this->candles[$index+1];
+
+        // Определение локальных экстремумов
+        $isPeak = $candle->getHigh() >= $prevCandle->getHigh() &&
+            $candle->getHigh() >= $nextCandle->getHigh();
+
+        $isTrough = $candle->getLow() <= $prevCandle->getLow() &&
+            $candle->getLow() <= $nextCandle->getLow();
+
+        if (!$isPeak && !$isTrough) {
+            return;
+        }
+
+        if ($this->lastPivotType === null) {
+            $this->initFirstPivot($index, $isPeak, $candle);
+            return;
+        }
+
+        if ($isPeak) {
+            $this->handlePeak($index, $candle);
+        } elseif ($isTrough) {
+            $this->handleTrough($index, $candle);
+        }
+    }
+
+    private function initFirstPivot(int $index, bool $isPeak, CandleDto $candle): void
+    {
+        if ($isPeak) {
+            $this->lastPivotType = self::PEAK;
+            $this->lastPivotPrice = $candle->getHigh();
+            $this->lastPivotIndex = $index;
+        } else {
+            $this->lastPivotType = self::TROUGH;
+            $this->lastPivotPrice = $candle->getLow();
+            $this->lastPivotIndex = $index;
+        }
+    }
+
+    private function handlePeak(int $index, CandleDto $candle): void
+    {
+        $price = $candle->getHigh();
+
+        if ($this->lastPivotType === self::TROUGH) {
+            // Проверка на смену направления вверх
+            if ($price > $this->lastPivotPrice) {
+                $this->addPivot($index, $price, self::PEAK);
+            }
+        } elseif ($this->lastPivotType === self::PEAK) {
+            // Обновление текущего пика, если он выше предыдущего
+            if ($price > $this->lastPivotPrice) {
+                $this->updateLastPivot($index, $price, self::PEAK);
+            }
+        }
+    }
+
+    private function handleTrough(int $index, CandleDto $candle): void
+    {
+        $price = $candle->getLow();
+
+        if ($this->lastPivotType === self::PEAK) {
+            // Проверка на смену направления вниз
+            if ($price < $this->lastPivotPrice) {
+                $this->addPivot($index, $price, self::TROUGH);
+            }
+        } elseif ($this->lastPivotType === self::TROUGH) {
+            // Обновление текущей впадины, если она ниже предыдущей
+            if ($price < $this->lastPivotPrice) {
+                $this->updateLastPivot($index, $price, self::TROUGH);
+            }
+        }
+    }
+
+    private function addPivot(int $index, float $price, string $type): void
+    {
+        $this->pivots[] = new ZigZagPoint(
+            $index,
+            $price,
+            $type,
+//            $this->candles[$index]->getUtcDatetime()
+            $this->candles[$index]->time
+        );
+
+        $this->lastPivotIndex = $index;
+        $this->lastPivotPrice = $price;
+        $this->lastPivotType = $type;
+    }
+
+    private function updateLastPivot(int $index, float $price, string $type): void
+    {
+        // Обновляем последнюю точку
+        $this->lastPivotIndex = $index;
+        $this->lastPivotPrice = $price;
+        $this->lastPivotType = $type;
+
+        // Обновляем последнюю точку в массиве
+        if (!empty($this->pivots)) {
+            $lastIndex = count($this->pivots) - 1;
+            $this->pivots[$lastIndex] = new ZigZagPoint(
+                $index,
+                $price,
+                $type,
+                $this->candles[$index]->time
+            );
+        }
+    }
+
+    private function addFinalPoint(): void
+    {
+        if ($this->lastPivotIndex === null) return;
+
+        $lastCandle = end($this->candles);
+        $lastIndex = array_key_last($this->candles);
+
+        if ($this->lastPivotType === self::PEAK) {
+            $price = $lastCandle->getHigh();
+            $type = self::PEAK;
+        } else {
+            $price = $lastCandle->getLow();
+            $type = self::TROUGH;
+        }
+
+        $this->addPivot($lastIndex, $price, $type);
+    }
+}
+
+и хендлер:
+
+final class ZigZagService
+{
+    public function __construct(private ZigZagFinder $finder)
+    {
+    }
+
+    /**
+     * @param array $candles
+     * @return ZigZagPoint[]
+     */
+    public function findZigZagPoints(array $candles): array
+    {
+        return $this->finder->find($candles);
+    }
+}
+
+ZigZagPoint ищет "правильные откаты" на передынной рыночной структуре
+
+можешь написать ещё один Finder (скорее всего так и надо. на вход он будет принимать массив ZigZagPoint[]), который будет для искать есть ли на структуре от текущей даты (или возможно переданной как параметр) idm, который был снят через заполнение имбаланса, который идёт до этого правильного отката?
+
+
+
+
+Мы хотим найти IDM (Imbalance Delivery Model) - это модель, которая возникает, когда цена заполняет имбаланс (не сбалансированную область) и затем происходит откат.
+Обычно IDM ищется после того, как цена сделала значительное движение (импульс), затем откатилась, и теперь мы ищем признаки того, что крупные игроки (умные деньги) входят в рынок.
+
+Однако, в данном случае, мы уже имеем точки зигзага (ZigZagPoint), которые показывают значительные поворотные точки (пики и впадины).
+
+Мы можем искать следующую структуру для медвежьего IDM (для шортов):
+
+Был нисходящий импульс (движение вниз) - это будет видно по серии более низких минимумов и максимумов.
+
+Затем происходит откат вверх (ретрайсмент) к зоне имбаланса (или к зоне, где была ликвидность).
+
+В этой зоне мы ищем признаки разворота: например, свечные паттерны, уменьшение объема на подъеме и увеличение на снижении.
+
+Но поскольку у нас уже есть точки зигзага, мы можем определить структуру: нисходящий импульс -> откат -> признаки разворота.
+
+Однако, условие задачи: найти IDM, который был снят через заполнение имбаланса, который идёт до этого правильного отката.
+
+Уточнение: имбаланс (небаланс) - это ценовой разрыв (гэп) или быстрый движение без отката, который оставляет область, которую впоследствии цена может заполнить.
+
+Алгоритм для Finder (назовем его ImbalanceDeliveryModelFinder):
+
+Проходим по точкам зигзага и ищем импульсные движения (длинные свечи с большим объемом) и последующие откаты.
+
+Ищем имбалансы (гэпы) на импульсном движении. Имбаланс можно определить как резкое движение, при котором между свечами есть разрыв (цена открытия следующей свечи не перекрывает диапазон предыдущей) или очень быстрое движение без отката.
+
+После имбаланса цена может вернуться (заполнить) эту область, и тогда мы будем считать, что имбаланс снят.
+
+Затем после заполнения имбаланса мы ожидаем откат (который уже отмечен в зигзаге) и затем признаки входа умных денег (IDM).
+
+Однако, в условии сказано: "idm, который был снят через заполнение имбаланса, который идёт до этого правильного отката".
+
+Возможно, имеется в виду, что мы ищем откат (ретрайсмент) после импульса, и перед этим откатом был имбаланс, который уже заполнен.
+
+Для упрощения, давайте сосредоточимся на поиске имбалансов и их заполнения, а затем проверим, был ли после заполнения откат (который мы видим в зигзаге).
+
+Шаги:
+
+Найти имбалансы в движении (гэпы или очень резкие движения).
+
+Проверить, что имбаланс был заполнен (цена вернулась в область имбаланса и закрыла гэп).
+
+Проверить, что после заполнения имбаланса последовал откат (который мы видим в зигзаге) в противоположную сторону.
+
+Для медвежьего сценария (шорты):
+
+Импульс вниз -> имбаланс вниз -> откат вверх (заполнение имбаланса) -> формирование разворота (IDM) и затем движение вниз.
+
+Мы хотим найти такие структуры, где имбаланс вниз был заполнен откатом вверх, и затем после этого отката началось движение вниз (которое мы можем видеть в зигзаге как последующий пик и затем падение).
+
+Но поскольку мы получаем на вход точки зигзага, мы можем искать структуру:
+
+text
+... -> пик (P1) -> падение до впадины (T1) [импульс вниз] -> откат до пика (P2) [заполнение имбаланса, если он был между P1 и T1] -> падение до впадины (T2) [новый минимум]
+При этом между P1 и T1 должен быть имбаланс, который был заполнен при движении от T1 к P2.
+
+Как найти имбаланс?
+
+text
+Имбаланс можно определить как область между максимальной ценой предыдущей свечи и минимальной ценой следующей свечи (для нисходящего движения) или наоборот (для восходящего).
+
+Для нисходящего имбаланса: свеча с индексом i имеет низкий (low) ниже, чем высокий (high) свечи i+1, и при этом между ними есть разрыв.
+
+Однако, в реальности имбаланс может быть не только в виде гэпа, но и в виде очень резкого движения без отката.
+Упростим: будем искать гэпы (разрывы) в ценовом движении.
+
+Алгоритм для ImbalanceDeliveryModelFinder:
+
+text
+Вход: массив ZigZagPoint[] $zigzagPoints, массив свечей (CandleDto[]) $candles
+
+Шаги:
+
+  1. Проходим по zigzagPoints и ищем последовательности: пик -> впадина -> пик -> впадина (для медвежьего сценария).
+
+  2. Для каждого такого отрезка (P1, T1, P2, T2) проверяем:
+      - Движение от P1 к T1 было импульсным (большие свечи, возможно, с гэпами вниз).
+      - Между P1 и T1 находим имбаланс (гэп вниз). Гэп вниз: когда минимальная цена свечи i меньше максимальной цены свечи i-1 (но для нисходящего движения мы ищем разрыв вниз: high свечи i < low свечи i-1? Нет, для нисходящего гэпа: high свечи i < low свечи i-1, но это не совсем правильно).
+
+      Правильнее: нисходящий гэп возникает, когда максимальная цена текущей свечи ниже минимальной цены предыдущей свечи.
+
+  3. Проверяем, что имбаланс (гэп) между P1 и T1 был заполнен при движении от T1 к P2 (цена поднялась выше максимальной цены свечи, которая начала гэп, или хотя бы в область гэпа).
+
+  4. Затем проверяем, что откат от T1 к P2 не превысил определенный уровень (например, 61.8% Фибоначчи от движения P1-T1) и что на P2 есть признаки разворота (например, медвежьи свечные паттерны).
+
+  5. Если все условия выполнены, то считаем, что нашли IDM структуру.
+Однако, условие задачи: "idm, который был снят через заполнение имбаланса, который идёт до этого правильного отката" может означать, что мы ищем откат (P2) и перед ним был имбаланс, который заполнен.
+
+Реализация:
+
+text
+Создадим класс ImbalanceDeliveryModelFinder:
+
+  public function findIDM(array $zigzagPoints, array $candles): array
+
+Он будет возвращать массив структур (объектов IDMStructure), которые содержат информацию о найденных IDM.
+
+Но поскольку задача сложная и требует уточнения, я предложу упрощенную версию, которая ищет гэпы и их заполнение, а затем проверяет, что после заполнения был откат (в точках зигзага).
+
+Шаги для Finder:
+
+  1. Проходим по свечам и ищем гэпы (нисходящие и восходящие).
+  2. Для каждого гэпа проверяем, был ли он заполнен (цена вернулась в диапазон гэпа).
+  3. Затем смотрим, есть ли в точках зигзага откат после заполнения гэпа.
+
+Однако, такой подход может не учитывать структуру зигзага.
+
+Альтернатива: идти по точкам зигзага и для каждого отрезка (от пика к впадине или наоборот) проверять, есть ли на этом отрезке гэпы, и затем на следующем отрезке (откате) эти гэпы заполняются.
+
+Поскольку задача не тривиальная, я напишу заготовку, которую можно будет дорабатывать.
+
+Предлагаю следующий план:
+
+  - Сначала напишем детектор гэпов (на основе массива свечей).
+  - Затем для каждого гэпа проверим, был ли он заполнен (цена вернулась в диапазон гэпа) и когда.
+  - Затем посмотрим, совпадает ли момент заполнения гэпа с откатом в точках зигзага.
+
+Но условие: "idm, который был снят через заполнение имбаланса, который идёт до этого правильного отката" — возможно, означает, что имбаланс был снят (заполнен) и затем последовал откат (который мы видим в зигзаге). И мы хотим найти такие откаты, перед которыми было заполнение имбаланса.
+
+Тогда мы можем:
+
+  1. Найти все гэпы и их заполнение.
+  2. Для каждого заполнения гэпа посмотреть, есть ли в зигзаге точка отката (пик или впадина) вблизи момента заполнения.
+
+Однако, это может дать много ложных сигналов.
+
+Уточним: мы ищем откат (ретрайсмент) после импульса, и этот импульс должен содержать имбаланс, который затем заполняется during the retracement.
+
+Возможно, лучше искать структуру именно в точках зигзага:
+
+  - Ищем в зигзаге последовательность: пик (P1) -> впадина (T1) [импульс вниз] -> пик (P2) [откат] -> впадина (T2) [продолжение вниз]
+
+  - Затем проверяем, что на движении P1->T1 был имбаланс (гэп вниз).
+  - Проверяем, что при движении T1->P2 этот имбаланс был заполнен (цена поднялась в область гэпа).
+  - Затем на P2 должны быть признаки разворота (например, медвежья свечная модель).
+
+Вот под такой алгоритм и напишем.
+
+Создадим класс:
+
+  class ImbalanceDeliveryModelFinder
+  {
+      public function findBearishIDM(array $zigzagPoints, array $candles): array
+      {
+          $structures = [];
+
+          // Проходим по точкам зигзага, ищем последовательности P1 -> T1 -> P2 -> T2
+          for ($i = 0; $i < count($zigzagPoints) - 3; $i++) {
+              $p1 = $zigzagPoints[$i];
+              $t1 = $zigzagPoints[$i+1];
+              $p2 = $zigzagPoints[$i+2];
+              $t2 = $zigzagPoints[$i+3];
+
+              // Проверяем, что это структура: пик -> впадина -> пик -> впадина
+              if ($p1->getType() !== ZigZagPoint::PEAK ||
+                  $t1->getType() !== ZigZagPoint::TROUGH ||
+                  $p2->getType() !== ZigZagPoint::PEAK ||
+                  $t2->getType() !== ZigZagPoint::TROUGH) {
+                  continue;
+              }
+
+              // Проверяем, что движение вниз (P1->T1) и затем вверх (T1->P2) и затем снова вниз (P2->T2)
+              if ($t1->getPrice() >= $p1->getPrice() ||
+                  $p2->getPrice() <= $t1->getPrice() ||
+                  $t2->getPrice() >= $p2->getPrice()) {
+                  continue;
+              }
+
+              // Теперь ищем имбаланс (гэпы) на движении от P1 до T1
+              $p1Index = $p1->getCandleIndex();
+              $t1Index = $t1->getCandleIndex();
+
+              // Находим все гэпы на этом отрезке
+              $gaps = $this->findGapsInRange($candles, $p1Index, $t1Index);
+
+              // Проверяем, что хотя бы один гэп был заполнен при движении от T1 до P2
+              $filledGaps = [];
+              foreach ($gaps as $gap) {
+                  if ($this->isGapFilled($gap, $candles, $t1Index, $p2->getCandleIndex())) {
+                      $filledGaps[] = $gap;
+                  }
+              }
+
+              if (count($filledGaps) > 0) {
+                  // Нашли структуру с заполненными гэпами
+                  $structures[] = new BearishIDMStructure($p1, $t1, $p2, $t2, $filledGaps);
+              }
+          }
+
+          return $structures;
+      }
+
+      private function findGapsInRange(array $candles, int $startIndex, int $endIndex): array
+      {
+          $gaps = [];
+          // Проходим от startIndex до endIndex-1
+          for ($i = $startIndex; $i < $endIndex; $i++) {
+              $current = $candles[$i];
+              $next = $candles[$i+1];
+
+              // Проверяем нисходящий гэп: high текущей свечи < low следующей свечи?
+              // Нет, для нисходящего гэпа: high следующей свечи < low текущей свечи?
+              // Actually, нисходящий гэп: когда high свечи i+1 < low свечи i
+              if ($next->getHigh() < $current->getLow()) {
+                  $gaps[] = new Gap($i, $i+1, $current->getLow(), $next->getHigh(), Gap::BEARISH);
+              }
+          }
+          return $gaps;
+      }
+
+      private function isGapFilled(Gap $gap, array $candles, int $startIndex, int $endIndex): bool
+      {
+          // Проверяем, что в диапазоне от startIndex до endIndex цена заполнила гэп
+          // Заполнение гэпа: цена должна быть выше верхней границы гэпа (для нисходящего гэпа верхняя граница - это low свечи, которая была до гэпа)
+          // В нисходящем гэпе: gap верх = low свечи i (более ранняя свеча), gap низ = high свечи i+1
+          // Чтобы заполнить гэп, цена должна подняться выше gap верх (т.е. выше low свечи i)
+
+          $gapTop = $gap->getTop(); // Это low свечи i (которая была до гэпа)
+
+          for ($i = $startIndex; $i <= $endIndex; $i++) {
+              if ($candles[$i]->getHigh() >= $gapTop) {
+                  return true;
+              }
+          }
+
+          return false;
+      }
+  }
+
+Это упрощенная реализация. Нужно также определить классы Gap и BearishIDMStructure.
+
+Однако, имейте в виду, что это лишь один из способов. В реальности可能需要 более сложные проверки.
+
+Также можно улучшить детектор гэпов: иногда гэп может быть не между соседними свечами, а через несколько свечей (если движение очень быстрое).
+
+Но для начала можно попробовать такой вариант.
+
+Если вы хотите, я могу написать код для Finder и вспомогательных классов.
+Чтобы дополнить вашу систему анализа рыночной структуры, я создам новый Finder для идентификации IDM (Imbalance Delivery Model), который возникает после заполнения имбаланса перед правильным откатом. Вот реализация:
+
+php
+<?php
+
+namespace App\Trading\Application\Analysis\Structure;
+
+use App\Trading\Domain\Analysis\ZigZagPoint;
+
+class ImbalanceDeliveryModelFinder
+{
+    public const float IMBALANCE_FILL_THRESHOLD = 0.8; // 80% заполнения имбаланса
+    public const int MIN_CANDLES_AFTER_FILL = 3; // Минимальное количество свечей после заполнения
+
+    /**
+     * @param ZigZagPoint[] $zigzagPoints
+     * @param CandleDto[] $candles
+     * @return IDMStructure[]
+     */
+    public function findIDM(array $zigzagPoints, array $candles): array
+    {
+        $structures = [];
+        $imbalanceZones = $this->findImbalanceZones($candles);
+
+        foreach ($imbalanceZones as $imbalance) {
+            if ($fillPoint = $this->findImbalanceFill($imbalance, $candles, $zigzagPoints)) {
+                if ($structure = $this->validateIDMStructure($imbalance, $fillPoint, $zigzagPoints, $candles)) {
+                    $structures[] = $structure;
+                }
+            }
+        }
+
+        return $structures;
+    }
+
+    /**
+     * @param CandleDto[] $candles
+     * @return ImbalanceZone[]
+     */
+    private function findImbalanceZones(array $candles): array
+    {
+        $zones = [];
+
+        for ($i = 1; $i < count($candles); $i++) {
+            $current = $candles[$i];
+            $previous = $candles[$i - 1];
+
+            // Определяем нисходящий имбаланс (медвежий)
+            if ($current->getHigh() < $previous->getLow()) {
+                $zones[] = new ImbalanceZone(
+                    $i - 1,
+                    $i,
+                    $previous->getLow(),
+                    $current->getHigh(),
+                    ImbalanceZone::BEARISH
+                );
+            }
+            // Определяем восходящий имбаланс (бычий)
+            elseif ($current->getLow() > $previous->getHigh()) {
+                $zones[] = new ImbalanceZone(
+                    $i - 1,
+                    $i,
+                    $current->getLow(),
+                    $previous->getHigh(),
+                    ImbalanceZone::BULLISH
+                );
+            }
+        }
+
+        return $zones;
+    }
+
+    private function findImbalanceFill(ImbalanceZone $imbalance, array $candles, array $zigzagPoints): ?ImbalanceFillPoint
+    {
+        $startIndex = $imbalance->getEndIndex() + 1;
+
+        for ($i = $startIndex; $i < count($candles); $i++) {
+            $candle = $candles[$i];
+
+            // Проверяем заполнение имбаланса
+            $fillPercentage = $this->calculateFillPercentage($imbalance, $candle);
+
+            if ($fillPercentage >= self::IMBALANCE_FILL_THRESHOLD) {
+                $nearestZigZag = $this->findNearestZigZagPoint($i, $zigzagPoints);
+
+                return new ImbalanceFillPoint(
+                    $i,
+                    $candle,
+                    $fillPercentage,
+                    $nearestZigZag
+                );
+            }
+        }
+
+        return null;
+    }
+
+    private function calculateFillPercentage(ImbalanceZone $imbalance, CandleDto $candle): float
+    {
+        if ($imbalance->getType() === ImbalanceZone::BEARISH) {
+            // Для медвежьего имбаланса: проверяем, насколько цена закрылась выше нижней границы
+            $fillLevel = min($candle->getHigh(), $imbalance->getTop());
+            $imbalanceRange = $imbalance->getTop() - $imbalance->getBottom();
+            $filledRange = $fillLevel - $imbalance->getBottom();
+
+            return $imbalanceRange > 0 ? $filledRange / $imbalanceRange : 0;
+        } else {
+            // Для бычьего имбаланса: проверяем, насколько цена закрылась ниже верхней границы
+            $fillLevel = max($candle->getLow(), $imbalance->getBottom());
+            $imbalanceRange = $imbalance->getTop() - $imbalance->getBottom();
+            $filledRange = $imbalance->getTop() - $fillLevel;
+
+            return $imbalanceRange > 0 ? $filledRange / $imbalanceRange : 0;
+        }
+    }
+
+    private function findNearestZigZagPoint(int $candleIndex, array $zigzagPoints): ?ZigZagPoint
+    {
+        $nearestPoint = null;
+        $minDistance = PHP_INT_MAX;
+
+        foreach ($zigzagPoints as $point) {
+            $distance = abs($point->getCandleIndex() - $candleIndex);
+            if ($distance < $minDistance) {
+                $minDistance = $distance;
+                $nearestPoint = $point;
+            }
+        }
+
+        return $nearestPoint;
+    }
+
+    private function validateIDMStructure(
+        ImbalanceZone $imbalance,
+        ImbalanceFillPoint $fillPoint,
+        array $zigzagPoints,
+        array $candles
+    ): ?IDMStructure {
+        // Проверяем, что после заполнения имбаланса есть достаточное движение
+        if (count($candles) - $fillPoint->getCandleIndex() < self::MIN_CANDLES_AFTER_FILL) {
+            return null;
+        }
+
+        // Ищем подтверждающие паттерны после заполнения
+        $confirmationPatterns = $this->findConfirmationPatterns(
+            $fillPoint->getCandleIndex(),
+            $candles,
+            $imbalance->getType()
+        );
+
+        if (empty($confirmationPatterns)) {
+            return null;
+        }
+
+        return new IDMStructure(
+            $imbalance,
+            $fillPoint,
+            $confirmationPatterns,
+            $this->calculateIDMStrength($imbalance, $fillPoint, $confirmationPatterns)
+        );
+    }
+
+    private function findConfirmationPatterns(int $startIndex, array $candles, string $imbalanceType): array
+    {
+        $patterns = [];
+        $lookahead = min($startIndex + 10, count($candles) - 1);
+
+        for ($i = $startIndex + 1; $i <= $lookahead; $i++) {
+            $pattern = $this->analyzeCandlePattern($candles[$i], $candles[$i - 1], $imbalanceType);
+            if ($pattern) {
+                $patterns[] = $pattern;
+            }
+        }
+
+        return $patterns;
+    }
+
+    private function analyzeCandlePattern(CandleDto $current, CandleDto $previous, string $imbalanceType): ?CandlePattern
+    {
+        // Анализируем медвежьи паттерны для медвежьего имбаланса
+        if ($imbalanceType === ImbalanceZone::BEARISH) {
+            if ($current->getClose() < $previous->getClose() &&
+                $current->getVolume() > $previous->getVolume() * 1.2) {
+                return new CandlePattern(
+                    CandlePattern::BEARISH_ENGULFING,
+                    $current->getCandleIndex()
+                );
+            }
+        }
+        // Анализируем бычьи паттерны для бычьего имбаланса
+        else {
+            if ($current->getClose() > $previous->getClose() &&
+                $current->getVolume() > $previous->getVolume() * 1.2) {
+                return new CandlePattern(
+                    CandlePattern::BULLISH_ENGULFING,
+                    $current->getCandleIndex()
+                );
+            }
+        }
+
+        return null;
+    }
+
+    private function calculateIDMStrength(
+        ImbalanceZone $imbalance,
+        ImbalanceFillPoint $fillPoint,
+        array $confirmationPatterns
+    ): float {
+        $strength = 0.5; // Базовая сила
+
+        // Увеличиваем силу на основе процента заполнения
+        $strength += $fillPoint->getFillPercentage() * 0.3;
+
+        // Увеличиваем силу на основе количества подтверждающих паттернов
+        $strength += min(count($confirmationPatterns) * 0.1, 0.2);
+
+        // Увеличиваем силу для больших имбалансов
+        $imbalanceSize = $imbalance->getTop() - $imbalance->getBottom();
+        $strength += min($imbalanceSize / $imbalance->getTop() * 2, 0.2);
+
+        return min($strength, 1.0);
+    }
+}
+Вспомогательные классы:
+
+php
+<?php
+
+namespace App\Trading\Domain\Analysis\Structure;
+
+class ImbalanceZone
+{
+    public const BEARISH = 'bearish';
+    public const BULLISH = 'bullish';
+
+    public function __construct(
+        private int $startIndex,
+        private int $endIndex,
+        private float $top,
+        private float $bottom,
+        private string $type
+    ) {}
+
+    public function getStartIndex(): int { return $this->startIndex; }
+    public function getEndIndex(): int { return $this->endIndex; }
+    public function getTop(): float { return $this->top; }
+    public function getBottom(): float { return $this->bottom; }
+    public function getType(): string { return $this->type; }
+}
+
+class ImbalanceFillPoint
+{
+    public function __construct(
+        private int $candleIndex,
+        private CandleDto $candle,
+        private float $fillPercentage,
+        private ?ZigZagPoint $nearestZigZagPoint
+    ) {}
+
+    public function getCandleIndex(): int { return $this->candleIndex; }
+    public function getCandle(): CandleDto { return $this->candle; }
+    public function getFillPercentage(): float { return $this->fillPercentage; }
+    public function getNearestZigZagPoint(): ?ZigZagPoint { return $this->nearestZigZagPoint; }
+}
+
+class CandlePattern
+{
+    public const BEARISH_ENGULFING = 'bearish_engulfing';
+    public const BULLISH_ENGULFING = 'bullish_engulfing';
+    public const PIN_BAR = 'pin_bar';
+    public const INSIDE_BAR = 'inside_bar';
+
+    public function __construct(
+        private string $type,
+        private int $candleIndex
+    ) {}
+
+    public function getType(): string { return $this->type; }
+    public function getCandleIndex(): int { return $this->candleIndex; }
+}
+
+class IDMStructure
+{
+    public function __construct(
+        private ImbalanceZone $imbalanceZone,
+        private ImbalanceFillPoint $fillPoint,
+        private array $confirmationPatterns,
+        private float $strength
+    ) {}
+
+    public function getImbalanceZone(): ImbalanceZone { return $this->imbalanceZone; }
+    public function getFillPoint(): ImbalanceFillPoint { return $this->fillPoint; }
+    public function getConfirmationPatterns(): array { return $this->confirmationPatterns; }
+    public function getStrength(): float { return $this->strength; }
+}
+Сервис для использования Finder:
+
+php
+<?php
+
+namespace App\Trading\Application\Analysis;
+
+use App\Trading\Application\Analysis\Structure\ImbalanceDeliveryModelFinder;
+use App\Trading\Domain\Analysis\ZigZagPoint;
+
+class ImbalanceAnalysisService
+{
+    public function __construct(
+        private ImbalanceDeliveryModelFinder $finder,
+        private ZigZagService $zigZagService
+    ) {}
+
+    /**
+     * @param CandleDto[] $candles
+     * @return IDMStructure[]
+     */
+    public function findIDMStructures(array $candles): array
+    {
+        $zigzagPoints = $this->zigZagService->findZigZagPoints($candles);
+        return $this->finder->findIDM($zigzagPoints, $candles);
+    }
+
+    /**
+     * @param CandleDto[] $candles
+     * @return IDMStructure[]
+     */
+    public function findBearishIDMAfterFill(array $candles): array
+    {
+        $structures = $this->findIDMStructures($candles);
+
+        return array_filter($structures, function($structure) {
+            return $structure->getImbalanceZone()->getType() === ImbalanceZone::BEARISH &&
+                   $structure->getStrength() > 0.7;
+        });
+    }
+}
+Этот код предоставляет следующую функциональность:
+
+Обнаружение имбалансов: Находит ценовые разрывы между свечами
+
+Определение заполнения: Анализирует, когда цена возвращается чтобы заполнить имбаланс
+
+Поиск подтверждающих паттернов: Ищет свечные паттерны после заполнения имбаланса
+
+Оценка силы сигнала: Рассчитывает силу IDM структуры на основе различных факторов
+
+Вы можете использовать этот Finder в сочетании с вашей существующей системой ZigZag для идентификации качественных точек входа на основе концепции Smart Money.
