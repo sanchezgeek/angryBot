@@ -29,7 +29,7 @@ use InvalidArgumentException;
  */
 final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStrategyProcessorInterface
 {
-    private const float IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER = 1.5;
+    private const float BIG_IM_PERCENT_RATIO = 2;
 
     public function __construct(
         private TradingParametersProviderInterface $parameters,
@@ -59,7 +59,7 @@ final readonly class LinpByStopStepsStrategyProcessor implements LockInProfitStr
     {
         $imRatio = $imRatio ?? $this->positionInfoProvider->getRealInitialMarginToTotalContractBalanceRatio($position->symbol, $position);
 
-        $part = $imRatio->value() / self::IM_PERCENT_RATIO_TO_USE_CALC_MULTIPLIER;
+        $part = $imRatio->value() / self::BIG_IM_PERCENT_RATIO;
 
         return Percent::fromPart(FloatHelper::round(NumberHelper::minMax($part, 0.2, 1)));
     }

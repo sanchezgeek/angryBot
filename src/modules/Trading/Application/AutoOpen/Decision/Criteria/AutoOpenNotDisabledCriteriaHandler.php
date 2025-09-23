@@ -28,7 +28,7 @@ final class AutoOpenNotDisabledCriteriaHandler implements OpenPositionPrerequisi
 
         // @todo | autoOpen | skip (now only for SHORTs) // diable force opposite for by through context
         if ($positionSide === Side::Buy) {
-            return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs');
+            return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs', true);
         }
 
 //        if ($tradingStyle === TradingStyle::Cautious) self::output(sprintf('skip autoOpen (cautious trading style for %s %s)', $symbol->name(), $positionSide->title()));
