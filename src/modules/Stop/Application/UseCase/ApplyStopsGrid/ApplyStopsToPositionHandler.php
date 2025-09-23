@@ -46,12 +46,15 @@ final readonly class ApplyStopsToPositionHandler
         $resultTotalVolume = 0;
         foreach ($ordersGridDefinitionsCollection as $ordersGridDefinition) {
             $forVolume = $ordersGridDefinition->definedPercent->of($totalSize);
-            $stopsContext = $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Stop);
-            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */
+            $stopsContext = array_merge(
+                $entryDto->additionalContext,
+                $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Stop)
+            );
 
             $orders = new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount);
             $orders = new OrdersCollection(...$orders);
 
+            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */
             $roundVolumeToMin = $stopsHasOppositeBuyOrders;
             if ($roundVolumeToMin) {
                 $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
@@ -68,7 +71,7 @@ final readonly class ApplyStopsToPositionHandler
                     $order->price()->value(),
                     $order->volume(),
                     null,
-                    array_merge($stopsContext, $entryDto->additionalContext)
+                    $stopsContext,
                 );
 
                 $resultTotalVolume += $order->volume();

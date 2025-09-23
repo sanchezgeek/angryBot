@@ -108,9 +108,11 @@ final readonly class SymbolPrice implements Stringable, JsonSerializable
         return PnlHelper::getPnlInPercents($position, $this->value());
     }
 
-    public function getTargetPriceByPnlPercent(float $pnlPercent, Position $position): self
+    public function getTargetPriceByPnlPercent(float $pnlPercent, Position|Side $position): self
     {
-        return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $position->side);
+        $side = $position instanceof Side ? $position : $position->side;
+
+        return PnlHelper::targetPriceByPnlPercent($this, $pnlPercent, $side);
     }
 
     public function isPriceOverTakeProfit(Side $positionSide, float $takeProfitPrice): bool

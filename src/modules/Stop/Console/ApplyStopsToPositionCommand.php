@@ -49,7 +49,6 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
     public const string DANGER_MODE = 'danger';
     public const string FIXATION_MODE = 'fixation';
-    public const string AS_AFTER_AUTOOPEN_MODE = 'autoOpen';
 
     public const string RISK_LEVEL = 'riskLevel';
     public const string FROM_PNL_PERCENT_OPTION = 'from-percent';
@@ -131,7 +130,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         }
 
         if ($this->mode === self::FIXATION_MODE) {
-            $context = Stop::addStopCreatedAsFixationFlagToContext($context);
+            $context = Stop::addStopCreatedAsFixationFlags($context);
         }
 
         if (in_array($this->mode, [self::DANGER_MODE, self::FIXATION_MODE], true)) {
@@ -139,7 +138,7 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
             $this->fromPnlPercent = $this->fromPnlPercent ?? match ($this->mode) {
                 self::DANGER_MODE => PriceDistanceSelector::VeryVeryShort->toLossExpr(),
-                self::FIXATION_MODE => PriceDistanceSelector::AlmostImmideately->toLossExpr(),
+                default => null,
             };
         }
 
@@ -169,7 +168,16 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
         $symbol = $position->symbol;
         $side = $position->side;
 
-        $stopsGridsDef = $this->stopsGrids->standard($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
+        if ($this->mode === self::FIXATION_MODE) {
+            $qnt = $this->paramFetcher->getIntOption(
+                CreateStopsGridCommand::ORDERS_QNT_OPTION,
+                sprintf('In \'%s\' mode param "%s" is required.', $this->mode, CreateStopsGridCommand::ORDERS_QNT_OPTION)
+            );
+
+            $stopsGridsDef = $this->stopsGrids->fixation(symbol: $symbol, positionSide: $side, riskLevel: $this->riskLevel, priceToRelate: $priceToRelate, fromPnlPercent: $this->fromPnlPercent, stopsCount: $qnt);
+        } else {
+            $stopsGridsDef = $this->stopsGrids->standard($symbol, $side, $priceToRelate, $this->riskLevel, $this->fromPnlPercent);
+        }
 
         if (
             $stopsGridsDef->isFoundAutomaticallyFromTa()

@@ -316,9 +316,12 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return ($this->context[self::CREATED_AS_FIXATION] ?? null) === true;
     }
 
-    public static function addStopCreatedAsFixationFlagToContext(array $context): array
+    public static function addStopCreatedAsFixationFlags(array $context): array
     {
-        return array_merge($context, [self::CREATED_AS_FIXATION => true]);
+        return array_merge($context, [
+            self::WITHOUT_OPPOSITE_ORDER_CONTEXT => true,
+            self::CREATED_AS_FIXATION => true
+        ]);
     }
 
     public function isManuallyCreatedStop(): bool

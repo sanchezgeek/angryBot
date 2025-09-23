@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\UseCase\OpenPosition\OrdersGrids;
 
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Trading\Enum\PriceDistanceSelector as Length;
 use App\Domain\Trading\Enum\RiskLevel;
+use App\Domain\Value\Percent\Percent;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
 use App\Trading\Application\Settings\OpenPositionSettings;
@@ -22,6 +24,7 @@ final readonly class OpenPositionStopsGridsDefinitions
     public function __construct(
         private AppSettingsProviderInterface $settings,
         private OrdersGridTools $ordersGridTools,
+        private PositionServiceInterface $positionService,
     ) {
     }
 
@@ -51,6 +54,30 @@ final readonly class OpenPositionStopsGridsDefinitions
                 sprintf('%.2f%%-%s..%.2f%%-%s-%s|20%%|5', $fromPnlPercent, Length::Short->value, $fromPnlPercent, Length::Short->value, Length::Long->value), // almost same =)
             ],
         };
+
+        return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
+    }
+
+    public function fixation(
+        SymbolInterface $symbol,
+        Side $positionSide,
+        RiskLevel $riskLevel,
+        SymbolPrice $priceToRelate,
+        ?Percent $pnlPercentFromPosition = null,
+        null|float|string $fromPnlPercent = null,
+        int $stopsCount = 10,
+    ): OrdersGridDefinitionCollection {
+        $fromPnlPercent = $fromPnlPercent ?? Length::AlmostImmideately->toLossExpr();
+        $pnlPercentFromPosition = $pnlPercentFromPosition ? $pnlPercentFromPosition->value() : 0;
+
+        $position = $this->positionService->getPosition($symbol, $positionSide);
+        $toPrice = $position->entryPrice()->getTargetPriceByPnlPercent($pnlPercentFromPosition, $positionSide);
+
+        $toPnlPercent = $priceToRelate->differenceWith($toPrice)->percentDeltaForPositionLoss($positionSide);
+
+        $defs = [
+            sprintf('%s..%s|100%%|%d', $fromPnlPercent, $toPnlPercent, $stopsCount),
+        ];
 
         return $this->makeDefinition($defs, $priceToRelate, $symbol, $positionSide);
     }
