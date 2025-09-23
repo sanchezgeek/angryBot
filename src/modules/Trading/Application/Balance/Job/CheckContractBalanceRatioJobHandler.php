@@ -41,7 +41,11 @@ final readonly class CheckContractBalanceRatioJobHandler
 
         if ($contractRealBalance > $maxAllowedOnContractBalance) {
             $diff = $contractRealBalance - $maxAllowedOnContractBalance;
-            $transferAmount = min($contractBalanceAvailable - 1, $diff);
+            $transferAmount = min($contractBalanceAvailable - 1, $diff, $contractBalance->total());
+            if ($transferAmount <= 1) {
+                return;
+            }
+
             $this->exchangeAccountService->interTransferFromContractToSpot($coin, $transferAmount);
         }
     }
