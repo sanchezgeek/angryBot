@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Domain\Grid\Definition;
 
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
@@ -47,8 +48,17 @@ final readonly class OrdersGridDefinition
         $fromPnl = (float)$rangeDef[0];
         $toPnl = (float)$rangeDef[1];
 
-        $from = PnlHelper::targetPriceByPnlPercent($priceToRelate, $fromPnl, $positionSide);
-        $to = PnlHelper::targetPriceByPnlPercent($priceToRelate, $toPnl, $positionSide);
+        try {
+            $from = PnlHelper::targetPriceByPnlPercent($priceToRelate, $fromPnl, $positionSide);
+        } catch (PriceCannotBeLessThanZero) {
+            $from = $priceToRelate;
+        }
+
+        try {
+            $to = PnlHelper::targetPriceByPnlPercent($priceToRelate, $toPnl, $positionSide);
+        } catch (PriceCannotBeLessThanZero) {
+            $to = 0;
+        }
 
         $priceRange = PriceRange::create($from, $to, $symbol);
         $ordersCount = (int)($parts[2] ?? 1);
