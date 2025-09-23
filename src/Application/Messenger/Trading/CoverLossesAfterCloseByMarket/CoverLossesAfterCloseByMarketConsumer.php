@@ -58,7 +58,8 @@ readonly class CoverLossesAfterCloseByMarketConsumer
         $side = $closedPosition->side;
         $loss = $dto->loss->value();
 
-        $threshold = $this->contractBalanceProvider->getContractWalletBalance($closedPosition->symbol->associatedCoin())->totalWithUnrealized()->value() / 120;
+        $contractBalance = $this->contractBalanceProvider->getContractWalletBalance($closedPosition->symbol->associatedCoin());
+        $threshold = $contractBalance->totalWithUnrealized()->value() / 500;
 
         if ($loss < $threshold) {
             return;
