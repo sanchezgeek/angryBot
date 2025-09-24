@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Modules\TechnicalAnalysis\Application\Helper;
 
 use App\Bot\Domain\ValueObject\SymbolEnum;
-use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
@@ -25,11 +24,8 @@ final class TATest extends KernelTestCase
      */
     public function testSimple(SymbolInterface $symbol, float $low, float $high, float $current, float $expectedResult): void
     {
-        self::getContainer()->set(
-            TAToolsProviderInterface::class,
-            $this->initializeTaProviderStub()->addTechnicalAnalysisTools(
-                new TechnicalAnalysisToolsStub($symbol)->addHighLowPricesResult($low, $high)
-            )
+        $this->initializeTaProviderStub()->addTechnicalAnalysisTools(
+            new TechnicalAnalysisToolsStub($symbol)->addHighLowPricesResult($low, $high)
         );
 
         $result = TA::pricePartOfAth($symbol, $symbol->makePrice($current));
@@ -59,11 +55,8 @@ final class TATest extends KernelTestCase
      */
     public function testExtended(SymbolInterface $symbol, float $low, float $high, float $current, PricePartOfAth $expectedResult): void
     {
-        self::getContainer()->set(
-            TAToolsProviderInterface::class,
-            $this->initializeTaProviderStub()->addTechnicalAnalysisTools(
-                new TechnicalAnalysisToolsStub($symbol)->addHighLowPricesResult($low, $high)
-            )
+        $this->initializeTaProviderStub()->addTechnicalAnalysisTools(
+            new TechnicalAnalysisToolsStub($symbol)->addHighLowPricesResult($low, $high)
         );
 
         $result = TA::pricePartOfAthResult($symbol, $symbol->makePrice($current));

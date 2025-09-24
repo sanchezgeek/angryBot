@@ -67,9 +67,10 @@ final readonly class NotifyAboutSignificantPriceChangeListener
 
         $priceChangePercent = $priceChangeInfo->getPriceChangePercent()->setOutputFloatPrecision(2);
         $message = sprintf(
-            'days=%.2f [! %s !] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s) athPart: %s',
+            'days=%.2f [! %s !] [athPart: %s] %s [days=%.2f from %s].price=%s vs curr.price = %s: Δ = %s (%s > %s)',
             $priceChangeInfo->partOfDayPassed,
             $priceChangePercent,
+            TA::pricePartOfAth($symbol, $priceChangeInfo->toPrice),
             $symbol->name(),
             $priceChangeInfo->partOfDayPassed,
             $priceChangeInfo->fromDate->format('m-d'),
@@ -78,7 +79,6 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $priceChangeInfo->priceDelta(),
             $priceChangePercent,
             $info->pricePercentChangeConsideredAsSignificant->setOutputFloatPrecision(2), // @todo | priceChange | +/-
-            TA::pricePartOfAth($symbol, $priceChangeInfo->toPrice)
         );
 
         if ($atrBaseMultiplierOverride = $event->source->atrBaseMultiplierOverride) {
