@@ -43,8 +43,8 @@ use App\Output\Table\Dto\Style\Enum\Color;
 use App\Output\Table\Dto\Style\RowStyle;
 use App\Output\Table\Formatter\ConsoleTableBuilder;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
-use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Helper\TA;
+use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 use App\Trading\Domain\Symbol\Helper\SymbolHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -642,7 +642,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
     private array $ath;
 
-    private function getAthInfo(SymbolInterface $symbol): FindHighLowPricesResult
+    private function getAthInfo(SymbolInterface $symbol): HighLowPrices
     {
         return $this->ath[$symbol->name()] ?? $this->ath[$symbol->name()] = TA::allTimeHighLow($symbol);
     }

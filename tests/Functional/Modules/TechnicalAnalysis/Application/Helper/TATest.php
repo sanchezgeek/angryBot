@@ -59,7 +59,7 @@ final class TATest extends KernelTestCase
             new TechnicalAnalysisToolsStub($symbol)->addHighLowPricesResult($low, $high)
         );
 
-        $result = TA::pricePartOfAthResult($symbol, $symbol->makePrice($current));
+        $result = TA::pricePartOfAthExtended($symbol, $symbol->makePrice($current));
 
         self::assertEquals($expectedResult, $result);
     }

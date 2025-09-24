@@ -159,7 +159,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         return Percent::notStrict($result);
     }
 
-    #[AppDynamicParameter(group: 'trading')]
+    #[AppDynamicParameter(group: 'trading', name: 'lengths')]
     public function allPredefinedLengths(
         SymbolInterface $symbol,
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,

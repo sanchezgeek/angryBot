@@ -10,11 +10,11 @@ use App\Domain\Value\Percent\Percent;
 use App\Helper\Json;
 use App\Helper\OutputHelper;
 use App\Infrastructure\DependencyInjection\GetServiceHelper;
-use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeResult;
 use App\TechnicalAnalysis\Application\Contract\TAToolsProviderInterface;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
+use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use JetBrains\PhpStorm\NoReturn;
 
@@ -40,7 +40,7 @@ final class TA
         return self::getTaToolsProvider()->create($symbol, $timeFrame)->atr($period);
     }
 
-    public static function allTimeHighLow(SymbolInterface $symbol): FindHighLowPricesResult
+    public static function allTimeHighLow(SymbolInterface $symbol): HighLowPrices
     {
         return self::getTaToolsProvider()->create($symbol)->highLowPrices();
     }
@@ -53,16 +53,16 @@ final class TA
         return Percent::fromPart($currentPriceDeltaFromLow / $allTimeHighLow->delta(), false);
     }
 
-    public static function pricePartOfAthResult(SymbolInterface $symbol, SymbolPrice $price): PricePartOfAth
+    public static function pricePartOfAthExtended(SymbolInterface $symbol, SymbolPrice $price): PricePartOfAth
     {
         $allTimeHighLow = TA::allTimeHighLow($symbol);
         $currentPriceDeltaFromLow = $price->deltaWith($allTimeHighLow->low);
         $partOfAthDelta = abs($currentPriceDeltaFromLow) / $allTimeHighLow->delta();
 
         return match (true) {
-            $price->lessThan($allTimeHighLow->low) => PricePartOfAth::overLow($partOfAthDelta),
-            $price->greaterThan($allTimeHighLow->high) => PricePartOfAth::overHigh($partOfAthDelta),
-            default => PricePartOfAth::inTheBetween($partOfAthDelta)
+            $price->lessThan($allTimeHighLow->low) => PricePartOfAth::overLow($allTimeHighLow, $partOfAthDelta),
+            $price->greaterThan($allTimeHighLow->high) => PricePartOfAth::overHigh($allTimeHighLow, $partOfAthDelta),
+            default => PricePartOfAth::inTheBetween($allTimeHighLow, $partOfAthDelta)
         };
     }
 

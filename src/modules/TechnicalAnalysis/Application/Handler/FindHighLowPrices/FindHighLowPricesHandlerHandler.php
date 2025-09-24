@@ -11,8 +11,8 @@ use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterAuto
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\TechnicalAnalysis\Application\Contract\FindHighLowPricesHandlerInterface;
 use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPrices;
-use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Service\Candles\PreviousCandlesProvider;
+use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 
 final readonly class FindHighLowPricesHandlerHandler implements FindHighLowPricesHandlerInterface, AppDynamicParametersProviderInterface
 {
@@ -20,13 +20,13 @@ final readonly class FindHighLowPricesHandlerHandler implements FindHighLowPrice
     public function handle(
         #[AppDynamicParameterEvaluations(defaultValueProvider: FindHighLowPricesEntryEvaluationProvider::class, skipUserInput: true)]
         FindHighLowPrices $entry
-    ): FindHighLowPricesResult {
+    ): HighLowPrices {
         $cacheKey = sprintf('HighLow_Prices_%s', $entry->symbol->name());
 
         return $this->cache->get($cacheKey, fn () => $this->doHandle($entry));
     }
 
-    private function doHandle(FindHighLowPrices $entry): FindHighLowPricesResult
+    private function doHandle(FindHighLowPrices $entry): HighLowPrices
     {
         $symbol = $entry->symbol;
 
@@ -39,7 +39,7 @@ final readonly class FindHighLowPricesHandlerHandler implements FindHighLowPrice
             $prices[] = $candle->low;
         }
 
-        return new FindHighLowPricesResult(
+        return new HighLowPrices(
             $symbol->makePrice(max($prices)),
             $symbol->makePrice(min($prices))
         );

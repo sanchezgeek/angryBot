@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\TechnicalAnalysis\Application\Contract\Query;
+namespace App\TechnicalAnalysis\Domain\Dto\HighLow;
 
 use App\Domain\Price\SymbolPrice;
 use Stringable;
 
-final readonly class FindHighLowPricesResult implements Stringable
+final readonly class HighLowPrices implements Stringable
 {
     public function __construct(
         public SymbolPrice $high,

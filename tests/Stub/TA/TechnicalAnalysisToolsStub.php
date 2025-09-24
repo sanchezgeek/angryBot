@@ -7,12 +7,12 @@ namespace App\Tests\Stub\TA;
 use App\Domain\Trading\Enum\TimeFrame;
 use App\Domain\Value\Percent\Percent;
 use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPrices;
-use App\TechnicalAnalysis\Application\Contract\Query\FindHighLowPricesResult;
 use App\TechnicalAnalysis\Application\Contract\Query\GetInstrumentAgeResult;
 use App\TechnicalAnalysis\Application\Handler\CalcAverageTrueRange\CalcAverageTrueRangeResult;
 use App\TechnicalAnalysis\Application\Handler\FindAveragePriceChange\FindAveragePriceChangeResult;
 use App\TechnicalAnalysis\Application\Service\TechnicalAnalysisToolsInterface;
 use App\TechnicalAnalysis\Domain\Dto\AveragePriceChange;
+use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use LogicException;
 use RuntimeException;
@@ -97,12 +97,12 @@ class TechnicalAnalysisToolsStub implements TechnicalAnalysisToolsInterface
         $symbol = $this->symbol;
         $entry = new FindHighLowPrices($symbol);
 
-        $this->highLowPricesResults[self::athResultKey($entry)] = new FindHighLowPricesResult($symbol->makePrice($high), $symbol->makePrice($low));
+        $this->highLowPricesResults[self::athResultKey($entry)] = new HighLowPrices($symbol->makePrice($high), $symbol->makePrice($low));
 
         return $this;
     }
 
-    public function highLowPrices(): FindHighLowPricesResult
+    public function highLowPrices(): HighLowPrices
     {
         $entry = new FindHighLowPrices($this->symbol);
         $key = self::athResultKey($entry);
