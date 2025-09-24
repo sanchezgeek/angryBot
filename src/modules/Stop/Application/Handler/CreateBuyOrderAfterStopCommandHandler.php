@@ -17,6 +17,7 @@ use App\Domain\Order\Collection\OrdersLimitedWithMaxVolume;
 use App\Domain\Order\Collection\OrdersWithMinExchangeVolume;
 use App\Domain\Order\Order;
 use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\Exception\PriceCannotBeLessThanZero;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector as D;
@@ -233,6 +234,9 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             }
         }
 
+        $orders = array_filter($orders);
+        $martingaleOrders = array_filter($martingaleOrders);
+
         $orders = new OrdersLimitedWithMaxVolume(
             new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)),
             $stopVolume
@@ -254,7 +258,7 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
         return $buyOrders;
     }
 
-    private function orderBasedOnLength(Stop $stop, SymbolPrice $refPrice, float $volume, D|float $length, array $additionalContext = [], int $sign = 1): Order
+    private function orderBasedOnLength(Stop $stop, SymbolPrice $refPrice, float $volume, D|float $length, array $additionalContext = [], int $sign = 1): ?Order
     {
         $commonContext = [
             BO::IS_OPPOSITE_AFTER_SL_CONTEXT => true,
@@ -267,7 +271,12 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
         $distance = $length instanceof D ? $this->orderDistance($stop->getSymbol(), $refPrice, $length) : $length;
         $distance*= $sign;
 
-        $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
+        try {
+            $price = $side->isShort() ? $refPrice->sub($distance) : $refPrice->add($distance);
+        } catch (PriceCannotBeLessThanZero $e) {
+            return null;
+        }
+
         $volume = $stop->getSymbol()->roundVolume($volume);
         $context = array_merge($commonContext, $additionalContext);
 
