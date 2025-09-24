@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\Parameters;
 
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
@@ -43,6 +44,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         #[AppDynamicParameterAutowiredArgument]
         private ContractBalanceProviderInterface $contractBalanceProvider,
+
+        #[AppDynamicParameterAutowiredArgument]
+        private ExchangeServiceInterface $exchangeService,
     ) {
     }
 
@@ -143,7 +147,7 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         $atrChangePercent = $this->standardAtrForOrdersLength($symbol, $timeframe, $period)->percentChange->value();
 
         $result = match ($length) {
-            PriceDistanceSelector::AlmostImmideately => $atrChangePercent / 9,
+            PriceDistanceSelector::AlmostImmideately => $atrChangePercent / 12,
             PriceDistanceSelector::VeryVeryShort => $atrChangePercent / 7,
             PriceDistanceSelector::VeryShort => $atrChangePercent / 6,
             PriceDistanceSelector::Short => $atrChangePercent / 5,
@@ -165,9 +169,14 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): array {
+        $currentPrice = $this->exchangeService->ticker($symbol);
+
         $result = [];
         foreach (PriceDistanceSelector::cases() as $case) {
-            $result[$case->value] = $this->transformLengthToPricePercent($symbol, $case, $timeframe, $period);
+            $percent = $this->transformLengthToPricePercent($symbol, $case, $timeframe, $period);
+            $abs = $percent->of($currentPrice->markPrice->value());
+
+            $result[$case->value] = ['percent' => $percent, '$abs' => $abs];
         }
 
         return $result;

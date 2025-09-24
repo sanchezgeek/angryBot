@@ -27,7 +27,7 @@ final class IsPriceChangeSignificantAssertionTest extends TestCase
     public static function cases(): array
     {
         $symbol = SymbolEnum::AAVEUSDT;
-        $source = new HighLowPrices($symbol->makePrice(0), $symbol->makePrice(2));
+        $source = new HighLowPrices($symbol->makePrice(2), $symbol->makePrice(0));
 
         return [
             ['athPart' => PricePartOfAth::overLow($source, 1.7), 'positionSideBias' => Side::Sell, 27],

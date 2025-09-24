@@ -61,7 +61,10 @@ services:
         alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearPositionCacheDecoratedService
 
     App\Bot\Application\Service\Exchange\ExchangeServiceInterface:
-        alias: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService
+        arguments:
+            $exchangeService: '@App\Infrastructure\ByBit\Service\ByBitLinearExchangeService'
+        public: true
 
     App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService:
         class: App\Infrastructure\ByBit\Service\CacheDecorated\ByBitLinearExchangeCacheDecoratedService

@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Modules\TechnicalAnalysis\Application\Helper;
 use App\Bot\Domain\ValueObject\SymbolEnum;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
+use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 use App\Tests\Mixin\TA\TaToolsProviderMocker;
 use App\Tests\Stub\TA\TAToolsProviderStub;
 use App\Tests\Stub\TA\TechnicalAnalysisToolsStub;
@@ -67,17 +68,18 @@ final class TATest extends KernelTestCase
     public static function cases(): iterable
     {
         $symbol = SymbolEnum::AAVEUSDT;
+        $source = new HighLowPrices($symbol->makePrice(200), $symbol->makePrice(100));
 
         yield 'between' => [
-            $symbol, 100, 200, 150, PricePartOfAth::inTheBetween(0.5)
+            $symbol, 100, 200, 150, PricePartOfAth::inTheBetween($source, 0.5)
         ];
 
         yield 'moved over high' => [
-            $symbol, 100, 200, 225, PricePartOfAth::overHigh(1.25)
+            $symbol, 100, 200, 225, PricePartOfAth::overHigh($source, 1.25)
         ];
 
         yield 'moved over low' => [
-            $symbol, 100, 200, 20, PricePartOfAth::overLow(0.80)
+            $symbol, 100, 200, 20, PricePartOfAth::overLow($source, 0.80)
         ];
     }
 }
