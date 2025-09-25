@@ -15,6 +15,7 @@ use App\Screener\Application\Service\PreviousSymbolPriceProvider;
 use App\Screener\Application\Settings\ScreenerSettings;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\TechnicalAnalysis\Application\Helper\TA;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
@@ -77,7 +78,8 @@ final readonly class FindSignificantPriceChangeHandler implements FindSignifican
                         $symbol->makePrice($prevPrice),
                         $toDate,
                         $currentPrice,
-                        $partOfDayPassed
+                        $partOfDayPassed,
+                        TA::instrumentAge($symbol),
                     ),
                     $significantPriceDeltaPercent
                 );

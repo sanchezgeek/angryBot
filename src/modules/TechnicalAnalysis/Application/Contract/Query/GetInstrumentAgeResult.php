@@ -8,9 +8,10 @@ use App\Helper\DateTimeHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use DateInterval;
 use DateTimeImmutable;
+use JsonSerializable;
 use Stringable;
 
-final class GetInstrumentAgeResult implements Stringable
+final class GetInstrumentAgeResult implements Stringable, JsonSerializable
 {
     public function __construct(
         public SymbolInterface $symbol,
@@ -29,8 +30,13 @@ final class GetInstrumentAgeResult implements Stringable
         return DateTimeHelper::dateIntervalToDays($this->getInterval());
     }
 
-    public function __toString(): string
+    public function jsonSerialize(): string
     {
         return $this->getInterval()->format('%y years, %m months, %d days, %h hours, %i minutes, %s seconds');
+    }
+
+    public function __toString(): string
+    {
+        return $this->jsonSerialize();
     }
 }
