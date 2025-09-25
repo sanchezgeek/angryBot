@@ -21,7 +21,7 @@ final class InstrumentAgeIsAppropriateCriteriaHandler implements OpenPositionPre
 {
     public const int DAYS_THRESHOLD = 20;
 
-    public const int ABSOLUTE_MINIMUM_AGE_DAYS = 6; // Абсолютный минимум
+    public const int ABSOLUTE_MINIMUM_AGE_DAYS = 3; // Абсолютный минимум
     public const int RECOMMENDED_MINIMUM_AGE_DAYS = 10; // Рекомендуемый минимум
     public const int MATURE_AGE_DAYS = 30; // Возраст "зрелости"
     public const int CONFIDENT_AGE = 70;

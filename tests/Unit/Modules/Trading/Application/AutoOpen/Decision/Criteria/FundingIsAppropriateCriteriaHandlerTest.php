@@ -17,6 +17,9 @@ use App\Trading\Application\AutoOpen\Reason\ReasonForOpenPositionInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers FundingIsAppropriateCriteriaHandler
+ */
 final class FundingIsAppropriateCriteriaHandlerTest extends TestCase
 {
     const int FUNDING_ANALYSIS_HISTORICAL_PERIODS = 20;

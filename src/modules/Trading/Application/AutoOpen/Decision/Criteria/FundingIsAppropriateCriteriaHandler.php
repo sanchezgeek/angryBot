@@ -15,6 +15,9 @@ use App\Trading\Application\AutoOpen\Decision\Result\ConfidenceRateDecision;
 use App\Trading\Application\AutoOpen\Decision\Result\OpenPositionPrerequisiteCheckResult;
 use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 
+/**
+ * @see \App\Tests\Unit\Modules\Trading\Application\AutoOpen\Decision\Criteria\FundingIsAppropriateCriteriaHandlerTest
+ */
 final class FundingIsAppropriateCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface, OpenPositionConfidenceRateDecisionVoterInterface
 {
     public const float FUNDING_THRESHOLD_FOR_SHORT = -0.0001;

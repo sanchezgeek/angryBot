@@ -34,9 +34,9 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         // @todo | autoOpen | ath | возможно стоит снизить порог, т.к. сейчас будут ещё другие проверки, а эта пропорционально снизит процент депозита
 
         $percent = match ($riskLevel) {
-            RiskLevel::Cautious => 85,
-            default => 75,
-            RiskLevel::Aggressive => 60,
+            RiskLevel::Cautious => 80,
+            default => 60,
+            RiskLevel::Aggressive => 50,
         };
 
         return new Percent($percent);
@@ -65,6 +65,8 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
         if (!$side->isShort()) {
             return new OpenPositionPrerequisiteCheckResult(false, OutputHelper::shortClassName(self::class), 'autoOpen disabled for LONGs', true);
         }
+
+        // @todo возможно проверка isPriceChangeSignificant вообще должна быть здесь
 
         $threshold = self::usedThresholdFromAth($this->parameters->riskLevel($symbol, $side));
 
