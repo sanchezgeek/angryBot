@@ -265,7 +265,9 @@ final class OpenPositionHandler
                 new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(
                     ...new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount)
                 )),
-                $forVolume
+                $forVolume,
+                $symbol,
+                $positionSide,
             );
 
             foreach ($orders as $order) {
@@ -301,7 +303,7 @@ final class OpenPositionHandler
                 $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
             }
 
-            foreach (new OrdersLimitedWithMaxVolume($orders, $forVolume) as $order) {
+            foreach (new OrdersLimitedWithMaxVolume($orders, $forVolume, $symbol, $positionSide) as $order) {
                 if ($resultTotalVolume >= $totalSize) {
                     break;
                 }

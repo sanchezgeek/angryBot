@@ -239,7 +239,9 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 
         $orders = new OrdersLimitedWithMaxVolume(
             new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)),
-            $stopVolume
+            $stopVolume,
+            $symbol,
+            $side
         );
 
         $buyOrders = [];

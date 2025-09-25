@@ -307,7 +307,9 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         $orders = new OrdersLimitedWithMaxVolume(
             new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)),
-            $stopVolume
+            $stopVolume,
+            $symbol,
+            $side
         );
 
         $buyOrders = [];

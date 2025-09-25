@@ -216,30 +216,30 @@ final class OrdersGridTest extends TestCase
                 '$qnt' => 6,
                 'expectedOrders' => [
                     new Order($symbol->makePrice(29000), 0.008),
-                    new Order($symbol->makePrice(29002.416666666668), 0.008),
-                    new Order($symbol->makePrice(29004.833333333336), 0.008),
-                    new Order($symbol->makePrice(29007.250000000004), 0.008),
-                    new Order($symbol->makePrice(29009.66666666667), 0.008),
-                    new Order($symbol->makePrice(29012.08333333334), 0.008),
+                    new Order($symbol->makePrice(29002.41667), 0.008),
+                    new Order($symbol->makePrice(29004.83333), 0.008),
+                    new Order($symbol->makePrice(29007.25), 0.008),
+                    new Order($symbol->makePrice(29009.66667), 0.008),
+                    new Order($symbol->makePrice(29012.08333), 0.008),
                 ]
             ],
             [
                 '$priceRange' => PriceRange::byPositionPnlRange(
-                    PositionFactory::short($symbol, 29000, 1.5), 10, 100
+                    PositionFactory::short($symbol, 29000, 1.5), 10.5, 100
                 ),
                 '$forVolume' => 0.03,
                 '$qnt' => 10,
                 'expectedOrders' => [
                     new Order($symbol->makePrice(28710), 0.003),
-                    new Order($symbol->makePrice(28736.1), 0.003),
-                    new Order($symbol->makePrice(28762.199999999997), 0.003),
-                    new Order($symbol->makePrice(28788.299999999996), 0.003),
-                    new Order($symbol->makePrice(28814.399999999994), 0.003),
-                    new Order($symbol->makePrice(28840.499999999993), 0.003),
-                    new Order($symbol->makePrice(28866.59999999999), 0.003),
-                    new Order($symbol->makePrice(28892.69999999999), 0.003),
-                    new Order($symbol->makePrice(28918.79999999999), 0.003),
-                    new Order($symbol->makePrice(28944.899999999987), 0.003),
+                    new Order($symbol->makePrice(28735.955), 0.003),
+                    new Order($symbol->makePrice(28761.91), 0.003),
+                    new Order($symbol->makePrice(28787.865), 0.003),
+                    new Order($symbol->makePrice(28813.82), 0.003),
+                    new Order($symbol->makePrice(28839.775), 0.003),
+                    new Order($symbol->makePrice(28865.73), 0.003),
+                    new Order($symbol->makePrice(28891.685), 0.003),
+                    new Order($symbol->makePrice(28917.64), 0.003),
+                    new Order($symbol->makePrice(28943.595), 0.003),
 
                 ]
             ],
@@ -251,8 +251,8 @@ final class OrdersGridTest extends TestCase
                     new Order($symbol->makePrice(28710), 0.001),
                     new Order($symbol->makePrice(28762.2), 0.001),
                     new Order($symbol->makePrice(28814.4), 0.001),
-                    new Order($symbol->makePrice(28866.600000000002), 0.001),
-                    new Order($symbol->makePrice(28918.800000000003), 0.001),
+                    new Order($symbol->makePrice(28866.6), 0.001),
+                    new Order($symbol->makePrice(28918.8), 0.001),
 
                 ]
             ],

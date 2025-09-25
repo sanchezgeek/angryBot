@@ -7,6 +7,7 @@ namespace App\Domain\Price;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Stop\Helper\PnlHelper;
+use App\Helper\FloatHelper;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Generator;
 use Stringable;
@@ -94,12 +95,18 @@ final readonly class PriceRange implements Stringable
         return count(iterator_to_array($this->byStepIterator($step)));
     }
 
+    private function preRound(float $price): float
+    {
+        return FloatHelper::round($price, $this->symbol->pricePrecision() + 3);
+    }
+
     /**
      * @param int $qnt
      * @return Generator<SymbolPrice>
      */
     public function byQntIterator(int $qnt, ?Side $positionSide = Side::Sell): Generator
     {
+        $symbol = $this->symbol;
         $delta = $this->to()->value() - $this->from()->value();
 
         $priceStep = $delta / $qnt;
@@ -107,12 +114,12 @@ final readonly class PriceRange implements Stringable
         $resultQnt = 0;
         if ($positionSide === Side::Sell) {
             for ($price = $this->from()->value(); $price < $this->to()->value() && $resultQnt < $qnt; $price += $priceStep) {
-                yield $this->symbol->makePrice($price);
+                yield $symbol->makePrice($this->preRound($price));
                 $resultQnt++;
             }
         } else {
             for ($price = $this->to()->value(); $price > $this->from()->value() && $resultQnt < $qnt; $price -= $priceStep) {
-                yield $this->symbol->makePrice($price);
+                yield $symbol->makePrice($this->preRound($price));
                 $resultQnt++;
             }
         }

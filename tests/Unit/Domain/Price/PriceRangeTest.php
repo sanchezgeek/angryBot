@@ -236,18 +236,18 @@ final class PriceRangeTest extends TestCase
                 ]
             ],
             [
-                PriceRange::create(28710, 28971, $symbol), 10,
+                PriceRange::create(28710.51, 28971, $symbol), 10,
                 [
-                    $symbol->makePrice(28710),
-                    $symbol->makePrice(28736.1),
-                    $symbol->makePrice(28762.199999999997),
-                    $symbol->makePrice(28788.299999999996),
-                    $symbol->makePrice(28814.399999999994),
-                    $symbol->makePrice(28840.499999999993),
-                    $symbol->makePrice(28866.59999999999),
-                    $symbol->makePrice(28892.69999999999),
-                    $symbol->makePrice(28918.79999999999),
-                    $symbol->makePrice(28944.899999999987),
+                    $symbol->makePrice(28710.51),
+                    $symbol->makePrice(28736.559),
+                    $symbol->makePrice(28762.608),
+                    $symbol->makePrice(28788.657),
+                    $symbol->makePrice(28814.706),
+                    $symbol->makePrice(28840.755),
+                    $symbol->makePrice(28866.804),
+                    $symbol->makePrice(28892.853),
+                    $symbol->makePrice(28918.902),
+                    $symbol->makePrice(28944.951),
                 ]
             ],
         ];

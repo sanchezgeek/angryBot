@@ -120,7 +120,7 @@ class HedgePositionCommand extends AbstractCommand implements SymbolDependentCom
                 $orders[] = new Order($symbol->makePrice($price->value()), $volume);
             }
 
-            $orders = new OrdersLimitedWithMaxVolume(new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)), $qtyToOpenOnSupportSide);
+            $orders = new OrdersLimitedWithMaxVolume(new OrdersWithMinExchangeVolume($symbol, new OrdersCollection(...$orders)), $qtyToOpenOnSupportSide, $symbol, $positionSide);
 
             foreach ($orders as $order) {
                 $result = $this->createBuyOrderHandler->handle(

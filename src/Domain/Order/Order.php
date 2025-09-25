@@ -29,4 +29,13 @@ final readonly class Order
     {
         return $this->context;
     }
+
+    public function replacePrice(SymbolPrice $price): self
+    {
+        return new self(
+            $price,
+            $this->volume,
+            $this->context
+        );
+    }
 }

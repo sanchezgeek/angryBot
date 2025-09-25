@@ -177,7 +177,7 @@ class CreateStopsGridCommand extends AbstractCommand implements PositionDependen
                     )
                 )) {
                     # strict
-                    $orders = new OrdersLimitedWithMaxVolume($orders, $forVolume);
+                    $orders = new OrdersLimitedWithMaxVolume($orders, $forVolume, $symbol, $positionSide);
                 }
             }
 

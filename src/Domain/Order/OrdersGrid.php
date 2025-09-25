@@ -7,6 +7,7 @@ namespace App\Domain\Order;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Worker\AppContext;
 use DomainException;
 use Generator;
 
@@ -86,9 +87,10 @@ final class OrdersGrid
         $symbol = $this->getPriceRange()->getSymbol();
 
         $volume = $symbol->roundVolume($forVolume / $qnt);
+
         if ($volume === $symbol->minOrderQty() && $volume * $qnt > $forVolume) {
             $qnt = (int)(max($symbol->minOrderQty(), $forVolume) / $volume);
-            $volume = $symbol->roundVolume($forVolume / $qnt);
+            $volume = $symbol->roundVolumeDown($forVolume / $qnt);
         }
 
         foreach ($this->getPriceRange()->byQntIterator($qnt, $this->positionSide) as $priceItem) {

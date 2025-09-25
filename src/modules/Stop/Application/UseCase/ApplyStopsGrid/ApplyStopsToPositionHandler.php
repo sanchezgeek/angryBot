@@ -14,6 +14,7 @@ use App\Domain\Order\OrdersGrid;
 use App\Domain\Stop\StopsCollection;
 use App\Trading\Application\Order\ContextShortcut\ContextShortcutRootProcessor;
 use App\Trading\Application\Order\ContextShortcut\Exception\UnapplicableContextShortcutProcessorException;
+use App\Worker\AppContext;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -46,12 +47,15 @@ final readonly class ApplyStopsToPositionHandler
         $resultTotalVolume = 0;
         foreach ($ordersGridDefinitionsCollection as $ordersGridDefinition) {
             $forVolume = $ordersGridDefinition->definedPercent->of($totalSize);
+            $ordersCount = $ordersGridDefinition->ordersCount;
+            $priceRange = $ordersGridDefinition->priceRange;
+
             $stopsContext = array_merge(
                 $entryDto->additionalContext,
                 $this->contextShortcutRootProcessor->getResultContextArray($ordersGridDefinition->contextsDefs, OrderType::Stop)
             );
 
-            $orders = new OrdersGrid($ordersGridDefinition->priceRange)->ordersByQnt($forVolume, $ordersGridDefinition->ordersCount);
+            $orders = new OrdersGrid($priceRange)->ordersByQnt($forVolume, $ordersCount);
             $orders = new OrdersCollection(...$orders);
 
 //            $stopsHasOppositeBuyOrders = ($stopsContext[Stop::WITHOUT_OPPOSITE_ORDER_CONTEXT] ?? false) === false; /** @todo | Context =( */ $roundVolumeToMin = $stopsHasOppositeBuyOrders;
@@ -60,7 +64,7 @@ final readonly class ApplyStopsToPositionHandler
                 $orders = new OrdersWithMinExchangeVolume($symbol, $orders);
             }
 
-            foreach (new OrdersLimitedWithMaxVolume($orders, $forVolume) as $order) {
+            foreach (new OrdersLimitedWithMaxVolume($orders, $forVolume, $symbol, $positionSide) as $order) {
                 if ($resultTotalVolume >= $totalSize) {
                     break;
                 }

@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Order\Collection;
 
 use App\Domain\Order\Order;
+use App\Domain\Position\ValueObject\Side;
+use App\Domain\Price\PriceRange;
+use App\Trading\Domain\Symbol\SymbolInterface;
+use App\Worker\AppContext;
 use IteratorAggregate;
+use RuntimeException;
 use Traversable;
 
 /**
@@ -17,7 +22,9 @@ final class OrdersLimitedWithMaxVolume implements OrdersCollectionInterface
 
     public function __construct(
         private readonly OrdersCollectionInterface $ordersCollection,
-        private readonly float $maxVolume
+        private readonly float $maxVolume,
+        private readonly SymbolInterface $symbol,
+        private readonly Side $positionSIde,
     ) {
     }
 
@@ -33,7 +40,11 @@ final class OrdersLimitedWithMaxVolume implements OrdersCollectionInterface
         $volumeSum = 0;
         $maxVolume = $this->maxVolume;
         $orders = []; /** @var Order[] $orders */
-        foreach ($this->ordersCollection as $order) {
+
+        /** @var Order[] $initialOrders */
+        $initialOrders = iterator_to_array($this->ordersCollection);
+
+        foreach ($initialOrders as $order) {
             if ($volumeSum >= $maxVolume) {
                 break;
             }
@@ -55,6 +66,19 @@ final class OrdersLimitedWithMaxVolume implements OrdersCollectionInterface
             $volumeSum += $orderVolume;
 
             $orders[] = new Order($orderPrice, $orderVolume, $order->context());
+        }
+
+        if (count($initialOrders) !== count($orders)) {
+            $first = $initialOrders[array_key_first($initialOrders)];
+            $last = $initialOrders[array_key_last($initialOrders)];
+            $priceRange = PriceRange::create($first->price(), $last->price(), $this->symbol);
+
+            foreach ($priceRange->byQntIterator(count($orders), $this->positionSIde) as $key => $price) {
+                if (!isset($orders[$key])) {
+                    throw new RuntimeException(sprintf('Cannot found order by offset "%s"', $key));
+                }
+                $orders[$key] = $orders[$key]->replacePrice($price);
+            }
         }
 
         return $this->orders = $orders;
