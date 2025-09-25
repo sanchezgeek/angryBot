@@ -64,7 +64,10 @@ final readonly class CheckBalanceHandler
         if ($positive) {
             $this->appNotificationsService->warning($message, length: SoundLength::Short);
             $this->appNotificationsService->warning($message, length: SoundLength::Short);
+            $this->appNotificationsService->warning($message, length: SoundLength::Short);
         } else {
+            $this->appNotificationsService->warning($message);
+            $this->appNotificationsService->warning($message);
             $this->appNotificationsService->warning($message);
             $this->appNotificationsService->warning($message);
             $this->appNotificationsService->warning($message);
