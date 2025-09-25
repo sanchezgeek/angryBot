@@ -36,7 +36,7 @@ final readonly class MakePeriodicalOrderJobHandler
     {
         $now = new DateTimeImmutable();
 
-        foreach (self::TASKS as $task) {
+        foreach (self::TASKS as $key => $task) {
             $force = $task['force'] ?? false;
 
             $divided = explode(' every ', $task['task']);
@@ -55,22 +55,18 @@ final readonly class MakePeriodicalOrderJobHandler
                 throw new RuntimeException('`stop` action not implemented yet');
             }
 
-            $condition = $task['condition'];
-            $rawTask = sprintf('%s %s %s %s', $action, $qty, $symbol->name(), $side->value);
-
-            $lastRun = $this->cache->getLastRun($rawTask);
-
             $period = DateTimeHelper::dateIntervalToSeconds(DateInterval::createFromDateString($period));
-
+            $lastRun = $this->cache->getLastRun($key);
             $haveToRun = !$lastRun || $now->getTimestamp() - $lastRun->getTimestamp() > $period;
 
+            $condition = $task['condition'];
             $evaluateCondition = $this->evaluateCondition($condition, $symbol);
 
             if ($haveToRun && $evaluateCondition) {
                 $success = false;
                 $msg = '';
                 if ($action === 'buy') {
-                    $msg .= sprintf('MakePeriodicalOrderJobHandler for %s: ', $rawTask);
+                    $msg .= sprintf('MakePeriodicalOrderJobHandler for %s: ', sprintf('%s and %s', $task['task'], $task['condition']));
                     try {
                         $this->marketBuyHandler->handle(new MarketBuyEntryDto($symbol, $side, $qty, $force));
                         $success = true;
@@ -80,7 +76,7 @@ final readonly class MakePeriodicalOrderJobHandler
                 }
 
                 if ($success) {
-                    $this->cache->saveLastRun($rawTask, new DateTimeImmutable());
+                    $this->cache->saveLastRun($key, new DateTimeImmutable());
                 }
 
                 if ($msg) {

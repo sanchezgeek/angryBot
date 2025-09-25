@@ -7,7 +7,7 @@ namespace App\Trading\Application\Job\PeriodicalOrder;
 final class MakePeriodicalOrderJobHandlerTasks
 {
     public const array TASKS = [
-//        [
+//        'SOMEUSDT_1' => [
 //            'task' => 'buy 1 SOMEUSDT buy every 1 hour',
 //            'condition' => ':markPrice < <somePrice>', // and hedge->rate < 2
 //            'force' => true
