@@ -9,6 +9,7 @@ use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\RiskLevel;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\NumberHelper;
 use App\Helper\OutputHelper;
 use App\TechnicalAnalysis\Application\Helper\TA;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
@@ -22,21 +23,22 @@ use App\Trading\Application\AutoOpen\Reason\AutoOpenOnSignificantPriceChangeReas
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
+use RuntimeException;
 
 /**
  * @see \App\Tests\Functional\Modules\Trading\Applicaiton\AutoOpen\Decision\Criteria\ByReason\SignificantPriceChangeFound\AthPricePartCriteriaHandlerTest
  */
 final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequisiteCheckerInterface, OpenPositionConfidenceRateDecisionVoterInterface
 {
-    public static function usedThresholdFromAth(RiskLevel $riskLevel): Percent
+    public static function nominalThresholdFromAth(RiskLevel $riskLevel): Percent
     {
         // @todo | autoOpen | funding time + hedge + close
         // @todo | autoOpen | ath | возможно стоит снизить порог, т.к. сейчас будут ещё другие проверки, а эта пропорционально снизит процент депозита
 
         $percent = match ($riskLevel) {
-            RiskLevel::Cautious => 80,
-            default => 60,
-            RiskLevel::Aggressive => 50,
+            RiskLevel::Cautious => 90,
+            default => 80,
+            RiskLevel::Aggressive => 70,
         };
 
         return new Percent($percent);
@@ -68,12 +70,7 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
 
         // @todo возможно проверка isPriceChangeSignificant вообще должна быть здесь
 
-        $threshold = self::usedThresholdFromAth($this->parameters->riskLevel($symbol, $side));
-
-        if ($modifier = $criteria->getAthThresholdModifier($side)) {
-            $threshold = $modifier->of($threshold);
-            // longs logic
-        }
+        $threshold = $this->getAthThreshold($claim, $criteria);
 
         $currentPricePartOfAth = $this->getCurrentPricePartOfAth($symbol);
         if ($currentPricePartOfAth->value() < $threshold->value()) {
@@ -94,6 +91,44 @@ final readonly class AthPricePartCriteriaHandler implements OpenPositionPrerequi
             OutputHelper::shortClassName(self::class),
             sprintf('$currentPricePartOfAth (%s) >= %s%%)', $currentPricePartOfAth, $threshold)
         );
+    }
+
+    public function getAthThreshold(
+        InitialPositionAutoOpenClaim $claim,
+        AbstractOpenPositionCriteria|AthPricePartCriteria $criteria
+    ): Percent {
+        $symbol = $claim->symbol;
+        $side = $claim->positionSide;
+
+        if (!$side->isShort()) {
+            throw new RuntimeException('for shorts');
+        }
+
+        /** @var AutoOpenOnSignificantPriceChangeReason $reason */
+        $reason = $claim->reason;
+        $significantPriceChangeResponse = $reason->significantPriceChangeResponse;
+        $info = $significantPriceChangeResponse->info;
+
+        $partOfDayPassed = ($info->toDate->getTimestamp() - $info->fromDate->getTimestamp()) / 86400;
+
+        $baseSignificantPriceChangePercent = $this->parameters->significantPriceChange($symbol, $partOfDayPassed);
+
+        $priceChangePercent = $info->getPriceChangePercent();
+
+        $multiplier = $baseSignificantPriceChangePercent->value() / $priceChangePercent->value();
+
+        if ($partOfDayPassed < 2) {
+            $multiplier = $multiplier / ( $partOfDayPassed / 2);
+        }
+
+        $multiplier = NumberHelper::minMax($multiplier, 0, 1);
+
+        $threshold = self::nominalThresholdFromAth($this->parameters->riskLevel($symbol, $side));
+
+        /** @var Percent $resultThreshold */
+        $resultThreshold = Percent::fromPart($multiplier, false)->of($threshold);
+
+        return new Percent(FloatHelper::round($resultThreshold->value()), false);
     }
 
     public function makeConfidenceRateVote(InitialPositionAutoOpenClaim $claim, AbstractOpenPositionCriteria $criteria): ConfidenceRateDecision

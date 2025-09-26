@@ -21,7 +21,6 @@ use App\Clock\ClockInterface;
 use App\Connection\Application\Messenger\Job\CheckConnection;
 use App\Domain\Coin\Coin;
 use App\Domain\Position\ValueObject\Side;
-use App\Domain\Value\Percent\Percent;
 use App\Helper\OutputHelper;
 use App\Infrastructure\Symfony\Messenger\Async\AsyncMessage as ASM;
 use App\Liquidation\Application\Job\RemoveStaleStops\RemoveStaleStopsMessage;
@@ -32,8 +31,6 @@ use App\Service\Infrastructure\Job\RestartWorker\RestartWorkerMessage;
 use App\Stop\Application\Job\MoveOpenedPositionStopsToBreakeven\MoveOpenedPositionStopsToBreakeven;
 use App\Stop\Application\UseCase\Push\MainPositionsStops\PushAllMainPositionsStops;
 use App\Stop\Application\UseCase\Push\RestPositionsStops\PushAllRestPositionsStops;
-use App\Trading\Application\AutoOpen\Decision\Criteria\ByReason\SignificantPriceChangeFound\AthPricePartCriteria;
-use App\Trading\Application\AutoOpen\Dto\InitialPositionAutoOpenClaim;
 use App\Trading\Application\Balance\Job\CheckContractBalanceRatioJob;
 use App\Trading\Application\Job\ApplyLockInProfit\ApplyLockInProfitJob;
 use App\Trading\Application\Job\PeriodicalOrder\MakePeriodicalOrderJob;
@@ -143,20 +140,19 @@ final class SchedulerFactory
         $common = 'PT5M';
         $longgg = 'PT10M';
 
-        $criteriasForHardPriceChange = [
-            new AthPricePartCriteria()
-                ->addThresholdModifier(Side::Sell, Percent::string('80%'))
-                ->addThresholdModifier(Side::Buy, Percent::string('80%'))
-        ];
-        $criteriasForVeryHardPriceChange = [
-            new AthPricePartCriteria()
-                ->addThresholdModifier(Side::Sell, Percent::string('50%'))
-                ->addThresholdModifier(Side::Buy, Percent::string('50%'))
-        ];
-
         // @todo | autoOpen | либо наоборот ath должен влиять на подбор baseAtr.multiplier. Либо и то и другое
 
-        $autoOpenForLongPeriods = false;
+        /**
+         * Для анализа MS:
+         * 23.09.25
+         * ASTER
+         * VELVET
+         * BARD
+         * UXLINK
+         * мб SUN,NEWT
+         */
+
+        $autoOpenForLongPeriods = true;
         return [
             # service // PeriodicalJob::create('2023-09-18T00:01:08Z', 'PT1M', AsyncMessage::for(new GenerateSupervisorConfigs())),
 
@@ -168,28 +164,16 @@ final class SchedulerFactory
             PeriodicalJob::create('2023-09-24T23:49:08Z', 'PT3H', new CheckApiKeyDeadlineDay()),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $common, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 0, true))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 0, true, atrBaseMultiplierOverride: 11, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 0, true, atrBaseMultiplierOverride: 12, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $common, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 1, true))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 1, true, atrBaseMultiplierOverride: 6, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 1, true, atrBaseMultiplierOverride: 8, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $common, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 2, true))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 2, true, atrBaseMultiplierOverride: 5, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 2, true, atrBaseMultiplierOverride: 7, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 3, $autoOpenForLongPeriods))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 3, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 5, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 3, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 7, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 4, $autoOpenForLongPeriods))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 4, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 6, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 4, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 8, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 5, $autoOpenForLongPeriods))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 5, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 6, criteriasSuggestions: $criteriasForHardPriceChange))),
-            PeriodicalJob::create('2023-09-24T23:49:08Z', $longgg, ASM::for(new CheckSignificantPriceChangeJob(Coin::USDT, 5, $autoOpenForLongPeriods, atrBaseMultiplierOverride: 8, criteriasSuggestions: $criteriasForVeryHardPriceChange))),
 
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 6))),
             //            PeriodicalJob::create('2023-09-24T23:49:08Z', $priceCheckIntervalLong, AsyncMessage::for(new CheckSymbolsPriceChange(Coin::USDT, 7))),

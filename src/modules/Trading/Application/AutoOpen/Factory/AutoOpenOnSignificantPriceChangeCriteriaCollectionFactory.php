@@ -36,10 +36,10 @@ final class AutoOpenOnSignificantPriceChangeCriteriaCollectionFactory extends Ab
 
         $criterias = self::mapToAliases($defaultCriterias);
 
-        foreach ($claim->reason->source->source->criteriasSuggestions as $criteriasSuggestion) {
-            $this->notifications->muted(sprintf('Override %s for %s %s with %s', $criteriasSuggestion::getAlias(), $claim->symbol->name(), $claim->positionSide->value, $criteriasSuggestion));
-            $criterias[$criteriasSuggestion::getAlias()] = $criteriasSuggestion;
-        }
+//        foreach ($claim->reason->significantPriceChangeResponse->criteriasSuggestions as $criteriasSuggestion) {
+//            $this->notifications->muted(sprintf('Override %s for %s %s with %s', $criteriasSuggestion::getAlias(), $claim->symbol->name(), $claim->positionSide->value, $criteriasSuggestion));
+//            $criterias[$criteriasSuggestion::getAlias()] = $criteriasSuggestion;
+//        }
 
         return $criterias;
     }

@@ -10,15 +10,15 @@ use LogicException;
 
 final class CheckSignificantPriceChangeJob
 {
-    /**
-     * @param AbstractOpenPositionCriteria[] $criteriasSuggestions
-     */
+//    /**
+//     * @param AbstractOpenPositionCriteria[] $criteriasSuggestions
+//     */
     public function __construct(
         public Coin $settleCoin,
         public int $daysDelta,
         public bool $autoOpen = false,
         public ?float $atrBaseMultiplierOverride = null,
-        public array $criteriasSuggestions = []
+//        public array $criteriasSuggestions = []
     ) {
         if ($this->daysDelta < 0) {
             throw new LogicException(sprintf('Days delta cannot be less than 0 (%s provided)', $this->daysDelta));

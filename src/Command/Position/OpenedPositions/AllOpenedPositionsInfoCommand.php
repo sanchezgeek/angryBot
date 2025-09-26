@@ -248,7 +248,10 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 $previousIterationCache = $this->cacheCollector;
                 $updateEnabled && sleep($this->paramFetcher->getIntOption(self::UPDATE_INTERVAL_OPTION));
             } catch (Throwable $exception) {
-                if (ConnectionHelper::isConnectionError($exception)) {
+                if (
+                    ConnectionHelper::isConnectionError($exception)
+                    || str_contains($exception->getMessage(), 'Too many visits. Exceeded the API Rate Limit')
+                ) {
                     echo 'reconnecting ... ' . PHP_EOL; sleep(5);
                 } else {
                     throw $exception;

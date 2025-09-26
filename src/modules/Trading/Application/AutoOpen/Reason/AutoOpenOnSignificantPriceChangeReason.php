@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Trading\Application\AutoOpen\Reason;
 
-use App\Screener\Application\Event\SignificantPriceChangeFoundEvent;
+use App\Screener\Application\Contract\Query\FindSignificantPriceChangeResponse;
 
 final class AutoOpenOnSignificantPriceChangeReason implements ReasonForOpenPositionInterface
 {
     public function __construct(
-        public SignificantPriceChangeFoundEvent $source
+        public FindSignificantPriceChangeResponse $significantPriceChangeResponse
     ) {
     }
 
     public function getStringInfo(): string
     {
-        $info = $this->source->info;
+        $info = $this->significantPriceChangeResponse;
         $priceChangePercent = $info->info->getPriceChangePercent()->setOutputFloatPrecision(2);
 
         return sprintf(

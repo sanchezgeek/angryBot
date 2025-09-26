@@ -9,6 +9,9 @@ use App\Helper\FloatHelper;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAth;
 use App\TechnicalAnalysis\Domain\Dto\Ath\PricePartOfAthDesc;
 
+/**
+ * @see \App\Tests\Unit\Modules\Trading\Domain\Assertion\IsPriceChangeSignificantAssertionTest
+ */
 final class IsPriceChangeSignificantAssertion
 {
     public function assert(Side $positionSide): bool

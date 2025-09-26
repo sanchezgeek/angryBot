@@ -11,6 +11,9 @@ use App\TechnicalAnalysis\Domain\Dto\HighLow\HighLowPrices;
 use App\Trading\Domain\Assertion\IsPriceChangeSignificantAssertion;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @covers IsPriceChangeSignificantAssertion
+ */
 final class IsPriceChangeSignificantAssertionTest extends TestCase
 {
     /**

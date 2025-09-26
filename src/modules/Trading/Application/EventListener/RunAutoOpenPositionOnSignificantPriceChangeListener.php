@@ -23,7 +23,7 @@ final readonly class RunAutoOpenPositionOnSignificantPriceChangeListener
             new InitialPositionAutoOpenClaim(
                 $event->info->info->symbol,
                 $event->positionSideToPositionLoss(),
-                new AutoOpenOnSignificantPriceChangeReason($event)
+                new AutoOpenOnSignificantPriceChangeReason($event->info)
             )
         );
     }

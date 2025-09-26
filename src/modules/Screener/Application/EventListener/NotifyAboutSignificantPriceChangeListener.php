@@ -86,9 +86,9 @@ final readonly class NotifyAboutSignificantPriceChangeListener
             $message .= sprintf(' | $atrBaseMultiplierOverride: %s', $atrBaseMultiplierOverride);
         }
 
-        if ($criteriasSuggestions = $event->source->criteriasSuggestions) {
-            $message .= sprintf(' | $criteriasSuggestions: %s', json_encode($criteriasSuggestions));
-        }
+//        if ($criteriasSuggestions = $event->source->criteriasSuggestions) {
+//            $message .= sprintf(' | $criteriasSuggestions: %s', json_encode($criteriasSuggestions));
+//        }
 
         // force notify if autoOpen disabled
         match (!$event->tryOpenPosition || SettingsHelper::exact(self::SETTING)) {
