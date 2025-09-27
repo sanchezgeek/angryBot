@@ -28,6 +28,7 @@ use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Stop\StopsCollection;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\FloatHelper;
 use App\Helper\OutputHelper;
 use App\Infrastructure\ByBit\API\ConnectionHelper;
 use App\Infrastructure\ByBit\Service\Account\ByBitExchangeAccountService;
@@ -519,8 +520,23 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             sprintf('%.1f', $this->ims[$main->symbol->name()]),
         ]);
 
+        $mainPositionData = [];
+
+        $mainPositionDataCacheKey = OpenedPositionsCache::positionDataCacheKey($main);
+
         # PNL%
-        $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($main), false))->setOutputFloatPrecision(1)->setOutputDecimalsPrecision(7))->setAlign(CellAlign::RIGHT);
+        $mainPositionPnlPercent = new Percent($markPrice->getPnlPercentFor($main), false);
+        $mainPositionData['pnlPercent'] = $mainPositionPnlPercent;
+        $pnlPercentContent = $mainPositionPnlPercent->setOutputDecimalsPrecision(5)->setOutputFloatPrecision(0);
+        /** @var ?Percent $prevPnlPercent */
+        $prevPnlPercent = $specifiedCache[$mainPositionDataCacheKey]['pnlPercent'] ?? null;
+        if ($prevPnlPercent) {
+            $diff = self::getFormattedDiff(a: $mainPositionPnlPercent->value(), b: $prevPnlPercent->value(), formatter: static fn (float $percent) => sprintf('%s%%', FloatHelper::round($percent, 0)));
+            $pnlPercentContent = sprintf('%s %s', $pnlPercentContent, $diff);
+        }
+        $cells[] = Cell::default($pnlPercentContent);
+        # PNL% end
+
         # PNL value
         $mainPositionPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $mainPositionPnl));
         $mainPositionPnlContent = $mainPositionPnl < 0 ? CTH::colorizeText($mainPositionPnlContent, 'red-text') : $mainPositionPnlContent;
@@ -577,6 +593,8 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
         $unrealizedTotal += $mainPositionPnl;
 
+        $this->cacheCollector[$mainPositionDataCacheKey] = $mainPositionData;
+
         if ($support) {
             $supportPnl = $support->unrealizedPnl;
             $stoppedVolume = $this->prepareStoppedPartContent($support, $markPrice);
@@ -594,7 +612,15 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
                 '',
             ];
 
-            $cells[] = Cell::default((new Percent($markPrice->getPnlPercentFor($support), false))->setOutputFloatPrecision(1))->setAlign(CellAlign::RIGHT);
+            $supportPositionData = [];
+
+            $supportPositionDataCacheKey = OpenedPositionsCache::positionDataCacheKey($support);
+
+            # PNL%
+            $supportPnlPercent = new Percent($markPrice->getPnlPercentFor($support), false)->setOutputFloatPrecision(1);
+            $supportPositionData['pnlPercent'] = $supportPnlPercent;
+
+            $cells[] = Cell::default($supportPnlPercent->setOutputDecimalsPrecision(5)->setOutputFloatPrecision(0))->setAlign(CellAlign::RIGHT);
             $supportPnlContent = (string) self::formatPnl(new CoinAmount($symbol->associatedCoin(), $supportPnl));
             $supportPnlContent = !$isEquivalentHedge && $supportPnl < 0 ? CTH::colorizeText($supportPnlContent, 'yellow-text') : $supportPnlContent;
 
@@ -623,6 +649,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
 
             $unrealizedTotal += $supportPnl;
             $this->cacheCollector[$supportPositionCacheKey] = $support;
+            $this->cacheCollector[$supportPositionDataCacheKey] = $supportPositionData;
 
             if (($selectedCacheKey = $this->getSelectedCacheKey()) && !isset($specifiedCache[$supportPositionCacheKey])) {
                 $this->addToCache($selectedCacheKey, $supportPositionCacheKey, $support);
@@ -887,7 +914,7 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             '[%d] %s:   %s (%s)',
             $index,
             $this->extraSymbolText($symbolRaw),
-            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: $byMaxNegativeChange),
+            self::getFormattedDiff(a: $a, b: $b, formatter: $pnlFormatter, alreadySigned: true),
             $pnlContent
         );
     }
@@ -1117,24 +1144,31 @@ class AllOpenedPositionsInfoCommand extends AbstractCommand implements PositionD
             return '';
         }
 
-        [$sign, $color] = match (true) {
-            $diff > 0 => ['+', 'green-text'],
-            $diff < 0 => ['', 'bright-red-text'],
-            default => [null, null]
+        $color = match (true) {
+            $diff > 0 => 'green-text',
+            $diff < 0 => 'bright-red-text',
+            default => null
         };
 
         if ($withoutColor === true) {
             $color = null;
         }
 
+        $formatter = $formatter ?? static fn (mixed $value) => $value;
+
         if ($alreadySigned) {
             $value = $formatter($diff);
         } else {
+            $sign = match (true) {
+                $diff > 0 => '+',
+                $diff < 0 => '-',
+                default => null
+            };
+
             $value = $formatter(abs($diff));
-            $value = $diff < 0 ? -$value : $value;
+//            $value = $diff < 0 ? -$value : $value;
             $value = sprintf('%s%s', $sign ?? '', $value);
         }
-
 
         return $color ? CTH::colorizeText($value, $color) : $value;
     }

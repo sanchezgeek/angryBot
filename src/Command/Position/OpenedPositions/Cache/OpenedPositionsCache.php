@@ -84,4 +84,9 @@ final class OpenedPositionsCache extends AbstractCacheService
     {
         return sprintf('position_%s_%s', $position->symbol->name(), $position->side->value);
     }
+
+    public static function positionDataCacheKey(Position $position): string
+    {
+        return sprintf('position_data_%s_%s', $position->symbol->name(), $position->side->value);
+    }
 }
