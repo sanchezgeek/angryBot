@@ -21,7 +21,6 @@ use App\Tests\Helper\CheckLiquidationParametersBag;
 use App\Tests\Helper\Tests\TestCaseDescriptionHelper;
 use App\Tests\Mixin\Settings\SettingsAwareTest;
 use App\Tests\Mixin\Trading\TradingParametersMocker;
-use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Worker\AppContext;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -36,13 +35,6 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
     use SettingsAwareTest;
     use TradingParametersMocker;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        self::createTradingParametersStub();
-    }
-
     public function testCriticalPartOfLiquidationDistance(): void
     {
         $criticalPartOfLiqDistance = 10;
@@ -51,6 +43,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
         $symbol = SymbolEnum::BTCUSDT;
         $position = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
         $ticker = TickerFactory::withEqualPrices($symbol, 35000);
+
+        self::mockTradingParametersForLiquidationTests($symbol);
 
         # without override
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100);
@@ -117,6 +111,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 
     public function additionalStopCases(): iterable
     {
+        self::createTradingParametersStub();
+
         $criticalPartOfLiquidationDistance = 30;
  // from functional
         $source = AddStopWhenPositionLiquidationInWarningRangeTest::addStopTestCases('fromDynamicParametersTest', $criticalPartOfLiquidationDistance);
@@ -134,7 +130,8 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
              * @var Position $position
              * @var Ticker $ticker
              */
-            $bag = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), $message, $position, $ticker);
+            self::mockTradingParametersForLiquidationTests($position->symbol);
+            $bag = CheckLiquidationParametersBag::create(self::getContainerSettingsProvider(), self::getMockedTradingParametersStub(), $message, $position, $ticker);
             $expectedActualStopsRange = $bag->actualStopsRange();
             $expectedStopPrice = $bag->additionalStopPrice();
             $expectedCriticalDistance = $bag->criticalDistance();
@@ -159,6 +156,7 @@ final class CheckPositionIsUnderLiquidationDynamicParametersTest extends KernelT
 // manual
         #### corner cases
         $symbol = SymbolEnum::BTCUSDT;
+        self::mockTradingParametersForLiquidationTests($symbol);
         $message = new CheckPositionIsUnderLiquidation(symbol: $symbol, percentOfLiquidationDistanceToAddStop: 70, warningPnlDistance: 100, criticalPartOfLiquidationDistance: $criticalPartOfLiquidationDistance);
         $long = PositionBuilder::long()->entry(30000)->size(1)->liq(29999)->build();
 

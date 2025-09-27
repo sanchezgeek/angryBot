@@ -86,7 +86,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     ): void {
         $symbol = $ticker->symbol;
         // @todo get from stop
-        self::setTradingParametersStubInContainer(self::getDefaultTradingParametersStubWithAllPredefinedLengths($symbol));
+        self::mockTradingParametersStubWithAllPredefinedLengths($symbol);
 
         $this->overrideSetting(SettingAccessor::exact(CreateOppositeBuySettings::Martingale_Enabled, $stop->getSymbol(), $stop->getPositionSide()), $martingaleEnabled);
 
@@ -113,6 +113,8 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
     public function cases(): iterable
     {
         $symbol = SymbolEnum::BTCUSDT;
+        self::createTradingParametersStub();
+        self::mockTradingParametersStubWithAllPredefinedLengths($symbol);
 
         ### BTCUSDT SHORT
         $ticker = TickerFactory::create($symbol, 100100);
@@ -360,7 +362,7 @@ final class CreateBuyOrdersAfterStopCommandHandlerTest extends KernelTestCase
 
         return PnlHelper::convertPnlPercentOnPriceToAbsDelta(
             PnlHelper::transformPriceChangeToPnlPercent(
-                self::getDefaultTradingParametersStubWithAllPredefinedLengths($stop->getSymbol())->transformLengthToPricePercent($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
+                self::getMockedTradingParametersStub()->transformLengthToPricePercent($stop->getSymbol(), $lengthSelector, self::DEFAULT_TIMEFRAME_FOR_ATR, self::DEFAULT_ATR_PERIOD)
             ),
             $stopPrice
         );

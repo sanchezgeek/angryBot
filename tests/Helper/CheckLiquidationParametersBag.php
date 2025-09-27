@@ -15,9 +15,12 @@ use App\Domain\Price\PriceRange;
 use App\Domain\Price\SymbolPrice;
 use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Value\Percent\Percent;
+use App\Helper\NumberHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -38,15 +41,22 @@ class CheckLiquidationParametersBag
 
     private function __construct(
         private readonly AppSettingsProviderInterface $settingsProvider,
+        private readonly TradingParametersProviderInterface $tradingParameters,
         private readonly CheckPositionIsUnderLiquidation $message,
         private readonly Position $position,
         private readonly ?Ticker $ticker,
     ) {
     }
 
-    public static function create(AppSettingsProviderInterface $settingsProvider, CheckPositionIsUnderLiquidation $message, Position $position, ?Ticker $ticker = null): self
+    public static function create(
+        AppSettingsProviderInterface $settingsProvider,
+        TradingParametersProviderInterface $tradingParameters,
+        CheckPositionIsUnderLiquidation $message,
+        Position $position,
+        ?Ticker $ticker = null
+    ): self
     {
-        return new self($settingsProvider, $message, $position, $ticker);
+        return new self($settingsProvider, $tradingParameters, $message, $position, $ticker);
     }
 
     /**
@@ -229,24 +239,25 @@ class CheckLiquidationParametersBag
     public function actualStopsRange(): PriceRange
     {
         $position = $this->position;
+        $symbol = $position->symbol;
         $liquidationPrice = $position->liquidationPrice();
 
         $additionalStopPrice = $this->additionalStopPrice();
         $criticalDistance = $this->criticalDistance();
 
-        $actualStopsRangeFromAdditionalStop = $this->settingsProvider->required(
-            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
-        );
+        if (!$actualStopsRangePercent = SettingsHelper::withAlternativesOptional(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $symbol, $position->side)) {
+            $actualStopsRangePercent = $this->tradingParameters->transformLengthToPricePercent(
+                symbol: $symbol,
+                length: LiquidationDynamicParameters::ACTUAL_STOPS_RANGE,
+                period: TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS
+            );
+        }
 
-        $modifier = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
+        $modifier = $actualStopsRangePercent->of($additionalStopPrice->value());
         $max = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
         $min = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
 
-        if ($modifier < $min) {
-            $modifier = $min;
-        } elseif ($modifier > $max) {
-            $modifier = $max;
-        }
+        $modifier = NumberHelper::minMax($modifier, $min, $max);
         $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
 
         if ($position->side->isShort()) {
@@ -265,7 +276,7 @@ class CheckLiquidationParametersBag
             }
         }
 
-        return PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);
+        return PriceRange::create($symbol->makePrice($tickerSideBound->value()), $symbol->makePrice($liquidationBound), $this->position->symbol);
     }
 
     /**

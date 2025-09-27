@@ -23,7 +23,7 @@ final class OrdersGridToolsTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        $this->parser = new OrdersGridTools(self::getDefaultTradingParametersStubWithAllPredefinedLengths(self::SYMBOL));
+        $this->parser = new OrdersGridTools(self::mockTradingParametersStubWithAllPredefinedLengths(self::SYMBOL));
     }
 
     /**

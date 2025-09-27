@@ -68,7 +68,7 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
         $symbol = $ticker->symbol;
 
         self::overrideSetting(SettingAccessor::exact(TradingSettings::Global_RiskLevel, $position->symbol, $position->side), RiskLevel::Conservative);
-        self::setTradingParametersStubInContainer(self::getTradingParametersStub($symbol, $maxAllowedPercentPriceChange));
+        self::mockTradingParametersStub(self::getMockedTradingParametersStub(), $symbol, $maxAllowedPercentPriceChange);
 
         $context = TradingCheckContext::withCurrentPositionState($ticker, $position);
         $orderDto = new MarketBuyCheckDto($orderDto, $ticker);
@@ -80,15 +80,12 @@ final class BuyOnLongDistanceAndCheckAveragePriceTest extends KernelTestCase
         self::assertEquals($expectedResult, $result);
     }
 
-    private static function getTradingParametersStub(SymbolInterface $symbol, float $percentChange): TradingParametersProviderStub
+    private static function mockTradingParametersStub(TradingParametersProviderStub $stub, SymbolInterface $symbol, float $percentChange): void
     {
         $timeframe = TradingParametersProviderInterface::LONG_ATR_TIMEFRAME;
         $period = TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS;
 
-        return
-            new TradingParametersProviderStub()
-                ->addTransformedLengthResult(new Percent($percentChange), $symbol, self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE, $timeframe, $period)
-            ;
+        $stub->addTransformedLengthResult(new Percent($percentChange), $symbol, self::DEFAULT_MAX_ALLOWED_PRICE_DISTANCE, $timeframe, $period);
     }
 
     public function cases(): iterable
