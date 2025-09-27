@@ -37,8 +37,8 @@ enum LiquidationHandlerSettings: string implements AppSettingInterface, AppSetti
     #[SettingParametersAttribute(type: SettingType::Float)]
     case AcceptableStoppedPartOverride = 'liquidationHandlerSettings.acceptableStoppedPartFallback';
 
-    #[SettingParametersAttribute(type: SettingType::Float)]
-    case ActualStopsRangeFromAdditionalStop = 'liquidationHandlerSettings.actualStopsRangeFromAdditionalStop';
+    #[SettingParametersAttribute(type: SettingType::Percent)]
+    case ActualStopsRangeFromAdditionalStop = 'liquidationHandlerSettings.actualStopsRangeFromAdditionalStops';
 
     #[SettingParametersAttribute(type: SettingType::Boolean)]
     case FixOppositeIfMain = 'liquidationHandlerSettings.fixOpposite.if.oppositeBecameMain';

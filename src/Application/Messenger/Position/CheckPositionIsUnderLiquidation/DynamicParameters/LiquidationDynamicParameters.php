@@ -15,14 +15,17 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
 use App\Domain\Value\Percent\Percent;
 use App\Helper\FloatHelper;
+use App\Helper\NumberHelper;
 use App\Liquidation\Application\Settings\LiquidationHandlerSettings;
 use App\Liquidation\Application\Settings\WarningDistanceSettings;
 use App\Settings\Application\Contract\AppDynamicParametersProviderInterface;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameter;
 use App\Settings\Application\DynamicParameters\Attribute\AppDynamicParameterEvaluations;
 use App\Settings\Application\DynamicParameters\DefaultValues\DefaultValueProviderEnum;
+use App\Settings\Application\Helper\SettingsHelper;
 use App\Settings\Application\Service\AppSettingsProviderInterface;
 use App\Settings\Application\Service\SettingAccessor;
+use App\Tests\Stub\TA\TradingParametersProviderStub;
 use App\Trading\Application\Parameters\TradingParametersProviderInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use App\Worker\AppContext;
@@ -35,7 +38,8 @@ use RuntimeException;
 final class LiquidationDynamicParameters implements LiquidationDynamicParametersInterface, AppDynamicParametersProviderInterface
 {
     public const float ACCEPTABLE_STOPPED_PART_DIVIDER = 3;
-    public const PriceDistanceSelector DISTANCE_FOR_CALCULATE_WARNING_RANGE = PriceDistanceSelector::Long;
+    public const PriceDistanceSelector WARNING_RANGE = PriceDistanceSelector::Long;
+    public const PriceDistanceSelector ACTUAL_STOPS_RANGE = PriceDistanceSelector::AlmostImmideately;
 
     private SymbolInterface $symbol;
     private ?float $warningDistanceRaw = null;
@@ -198,7 +202,7 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
         $regular = PnlHelper::transformPriceChangeToPnlPercent(
             $this->tradingParametersProvider->transformLengthToPricePercent(
                 symbol: $this->symbol,
-                length: self::DISTANCE_FOR_CALCULATE_WARNING_RANGE,
+                length: self::WARNING_RANGE,
                 period: $period
             )
         )->value();
@@ -374,26 +378,25 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
             return $this->actualStopsPriceRange;
         }
 
+        $symbol = $this->symbol;
         $position = $this->position;
         $additionalStopPrice = $this->additionalStopPrice();
 
-        // @todo | Apply TA | LiquidationDynamicParameters::actualStopsRange
-        $actualStopsRangeFromAdditionalStop = $this->settingsProvider->required(
-            SettingAccessor::withAlternativesAllowed(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)
-        );
+        if (!$actualStopsRangePercent = SettingsHelper::withAlternativesOptional(LiquidationHandlerSettings::ActualStopsRangeFromAdditionalStop, $position->symbol, $position->side)) {
+            $actualStopsRangePercent = $this->tradingParametersProvider->transformLengthToPricePercent(
+                symbol: $symbol,
+                length: self::ACTUAL_STOPS_RANGE,
+                period: TradingParametersProviderInterface::ATR_PERIOD_FOR_ORDERS
+            );
+        }
 
-        $modifierInitial = PnlHelper::convertPnlPercentOnPriceToAbsDelta($actualStopsRangeFromAdditionalStop, $additionalStopPrice);
+        $modifierInitial = $actualStopsRangePercent->of($additionalStopPrice->value());
         $modifierMax = PnlHelper::convertPnlPercentOnPriceToAbsDelta(100, $additionalStopPrice);
         $modifierMin = PnlHelper::convertPnlPercentOnPriceToAbsDelta(10, $additionalStopPrice);
 
-        try {
-            $modifier = $modifierInitial;
+        $modifier = NumberHelper::minMax($modifierInitial, $modifierMin, $modifierMax);
 
-            if ($modifier < $modifierMin) {
-                $modifier = $modifierMin;
-            } elseif ($modifier > $modifierMax) {
-                $modifier = $modifierMax;
-            }
+        try {
             $variableError = PnlHelper::convertPnlPercentOnPriceToAbsDelta(2, $additionalStopPrice);
 //            if (self::isDebug()) var_dump($modifierMin, $modifierMax, $position->liquidationDistance(), $modifier, $additionalStopPrice);die;
 
@@ -411,13 +414,13 @@ final class LiquidationDynamicParameters implements LiquidationDynamicParameters
                 $liquidationBound = min($liquidationBound, $markPrice - $variableError);
             }
 
-            return $this->actualStopsPriceRange = PriceRange::create($tickerSideBound, $liquidationBound, $this->position->symbol);
+            return $this->actualStopsPriceRange = PriceRange::create($symbol->makePrice($tickerSideBound->value()), $symbol->makePrice($liquidationBound), $this->position->symbol);
         } catch (\Exception $e) {
             // @todo | liquidation | log into app_errors?
             if ($e->getMessage() === 'Price cannot be less than zero.') {
                 $modifier = min($modifierInitial, $modifierMax);
 
-                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier), $this->symbol);
+                $this->actualStopsPriceRange = PriceRange::create($additionalStopPrice->sub($modifier), $additionalStopPrice->add($modifier), $symbol);
                 var_dump(sprintf('LiquidationDynamicParameters / %s: %f - %f', $position->symbol->name(), $this->actualStopsPriceRange->from()->value(), $this->actualStopsPriceRange->to()->value()));
 
                 return $this->actualStopsPriceRange;
