@@ -22,7 +22,7 @@ abstract class AbstractExecuteHandlerMessageCommand extends AbstractCommand
     {
         parent::initialize($input, $output);
 
-        $this->handlerMessageReference = HandlerMessageReferenceFactory::fromTaskEntryClass(TruncateOrdersEntry::class);
+        $this->handlerMessageReference = $this->factory->fromTaskEntryClass(TruncateOrdersEntry::class);
     }
 
     /**
@@ -45,5 +45,12 @@ abstract class AbstractExecuteHandlerMessageCommand extends AbstractCommand
         }
 
         return $this->handlerMessageReference->makeTaskEntryFromUserInput($input);
+    }
+
+    public function __construct(
+        private readonly HandlerMessageReferenceFactory $factory,
+        ?string $name = null
+    ) {
+        parent::__construct($name);
     }
 }

@@ -173,3 +173,9 @@ services:
     App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactoryInterface:
         class: App\Application\Messenger\Position\CheckPositionIsUnderLiquidation\DynamicParameters\LiquidationDynamicParametersFactory
         public: true
+
+    App\modules\UserInteraction\HandlerMessage\Factory\HandlerMessageReferenceFactory:
+        class: App\modules\UserInteraction\HandlerMessage\Factory\HandlerMessageReferenceFactory
+
+    App\modules\UserInteraction\HandlerMessage\Factory\HandlerMessageParameterReferenceFactory:
+        class: App\modules\UserInteraction\HandlerMessage\Factory\HandlerMessageParameterReferenceFactory

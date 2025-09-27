@@ -5,7 +5,6 @@ namespace App\Bot\Domain\Repository;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Bot\Domain\Repository\Dto\FindStopsDto;
-use App\Bot\Domain\Ticker;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\Enum\PriceMovementDirection;
 use App\Domain\Price\PriceRange;
@@ -345,6 +344,9 @@ class StopRepository extends ServiceEntityRepository implements StopRepositoryIn
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @return Stop[]
+     */
     public function getCreatedAsLockInProfit(?SymbolInterface $symbol = null, ?Side $positionSide = null): array
     {
         $flag = self::lockInProfitStepAliasFlag;

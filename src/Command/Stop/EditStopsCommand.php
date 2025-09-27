@@ -31,6 +31,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use Throwable;
+
 use function array_map;
 use function count;
 use function explode;
@@ -289,6 +291,12 @@ class EditStopsCommand extends AbstractCommand implements PositionDependentComma
             return $this->getPriceRange(false);
         } catch (InvalidArgumentException $e) {
             return null;
+        } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), 'position not found')) {
+                return null;
+            }
+
+            throw $e;
         }
     }
 

@@ -60,6 +60,28 @@ class BuyOrderRepository extends ServiceEntityRepository
     /**
      * @return BuyOrder[]
      */
+    public function findAllByParams(?SymbolInterface $symbol = null, ?Side $side = null, ?callable $qbModifier = null): array
+    {
+        $qb = $this->createQueryBuilder('b');
+
+        if ($side) {
+            $qb->andWhere('b.positionSide = :posSide')->setParameter(':posSide', $side);
+        }
+
+        if ($symbol) {
+            $qb->andWhere('b.symbol = :symbol')->setParameter(':symbol', $symbol->name());
+        }
+
+        if ($qbModifier) {
+            $qbModifier($qb);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return BuyOrder[]
+     */
     public function findActive(
         ?SymbolInterface $symbol = null,
         ?Side $side = null,

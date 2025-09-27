@@ -29,7 +29,8 @@ final readonly class TruncateOrdersHandler
         $dryRun = $entry->dry;
         $buyOrdersFilterCallbacks = $entry->getBuyOrdersFilterCallbacks();
         $slFilterCallbacks = $entry->getStopsFilterCallbacks();
-        $mode = $entry->mode;
+
+        $all = $entry->mode === TruncateOrdersMode::All;
         $ordersType = $entry->ordersType;
 
         $totalStopsCount = null;
@@ -37,33 +38,44 @@ final readonly class TruncateOrdersHandler
         $totalBuyOrdersCount = null;
         $removedBuyOrdersCount = null;
 
-        if ($mode === TruncateOrdersMode::All && !$buyOrdersFilterCallbacks && !$slFilterCallbacks) {
+        $symbol = $entry->symbol;
+        $whereClause = $symbol ? "symbol='$symbol'" : '1=1';
+
+        if ($all && !$buyOrdersFilterCallbacks && !$slFilterCallbacks) {
             $connection = $this->entityManager->getConnection();
 
             if ($ordersType === TruncateOrdersType::All) {
                 if ($dryRun) {
-                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery('SELECT count(1) FROM buy_order WHERE 1=1')->fetchOne();
-                    $totalStopsCount = $removedStopsCount = $connection->executeQuery('SELECT count(1) FROM stop WHERE 1=1')->fetchOne();
+                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery(sprintf('SELECT count(1) FROM buy_order WHERE %s', $whereClause))->fetchOne();
+                    $totalStopsCount = $removedStopsCount = $connection->executeQuery(sprintf('SELECT count(1) FROM stop WHERE %s', $whereClause))->fetchOne();
                 } else {
-                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery('DELETE FROM buy_order WHERE 1=1')->rowCount();
-                    $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
+                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery(sprintf('DELETE FROM buy_order WHERE %s', $whereClause))->rowCount();
+//                    if (!$symbol) {
+//                        $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
+//                    }
 
-                    $totalStopsCount = $removedStopsCount = $connection->executeQuery('DELETE FROM stop WHERE 1=1')->rowCount();
-                    $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
+                    $totalStopsCount = $removedStopsCount = $connection->executeQuery(sprintf('DELETE FROM stop WHERE %s', $whereClause))->rowCount();
+//                    if (!$symbol) {
+//                        $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
+//                    }
                 }
             } elseif ($ordersType === TruncateOrdersType::Buy) {
                 if ($dryRun) {
-                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery('SELECT count(1) FROM buy_order WHERE 1=1')->fetchOne();
+                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery(sprintf('SELECT count(1) FROM buy_order WHERE %s', $whereClause))->fetchOne();
                 } else {
-                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery('DELETE FROM buy_order WHERE 1=1')->rowCount();
-                    $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
+                    $totalBuyOrdersCount = $removedBuyOrdersCount = $connection->executeQuery(sprintf('DELETE FROM buy_order WHERE %s', $whereClause))->rowCount();
+//                    if (!$symbol) {
+//                        $connection->executeQuery('SELECT setval(\'buy_order_id_seq\', 1, false);');
+//                    }
                 }
             } elseif ($ordersType === TruncateOrdersType::Stops) {
                 if ($dryRun) {
-                    $totalStopsCount = $removedStopsCount = $connection->executeQuery('SELECT count(1) FROM stop WHERE 1=1')->fetchOne();
+                    $totalStopsCount = $removedStopsCount = $connection->executeQuery(sprintf('SELECT count(1) FROM stop WHERE %s', $whereClause))->fetchOne();
                 } else {
-                    $totalStopsCount = $removedStopsCount = $connection->executeQuery('DELETE FROM stop WHERE 1=1')->rowCount();
-                    $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
+                    $totalStopsCount = $removedStopsCount = $connection->executeQuery(sprintf('DELETE FROM stop WHERE %s', $whereClause))->rowCount();
+//                    if (!$symbol) {
+//                        $connection->executeQuery('SELECT setval(\'stop_id_seq\', 1, false);');
+//                    }
                 }
             }
 
@@ -78,24 +90,13 @@ final readonly class TruncateOrdersHandler
         $stops = null;
         $buyOrders = null;
 
-        if ($mode === TruncateOrdersMode::All) {
-            if ($ordersType === TruncateOrdersType::All) {
-                $buyOrders = $this->buyOrderRepository->findAll();
-                $stops = $this->stopRepository->findAll();
-            } elseif ($ordersType === TruncateOrdersType::Buy) {
-                $buyOrders = $this->buyOrderRepository->findAll();
-            } elseif ($ordersType === TruncateOrdersType::Stops) {
-                $stops = $this->stopRepository->findAll();
-            }
-        } elseif ($mode === TruncateOrdersMode::Active) {
-            if ($ordersType === TruncateOrdersType::All) {
-                $buyOrders = $this->buyOrderRepository->findActive();
-                $stops = $this->stopRepository->findActive();
-            } elseif ($ordersType === TruncateOrdersType::Buy) {
-                $buyOrders = $this->buyOrderRepository->findActive();
-            } elseif ($ordersType === TruncateOrdersType::Stops) {
-                $stops = $this->stopRepository->findActive();
-            }
+        if ($ordersType === TruncateOrdersType::All) {
+            $buyOrders = $all ? $this->buyOrderRepository->findAllByParams($symbol) : $this->buyOrderRepository->findActive($symbol);
+            $stops = $all ? $this->stopRepository->findAllByParams($symbol) : $this->stopRepository->findActive($symbol);
+        } elseif ($ordersType === TruncateOrdersType::Buy) {
+            $buyOrders = $all ? $this->buyOrderRepository->findAllByParams($symbol) : $this->buyOrderRepository->findActive($symbol);
+        } elseif ($ordersType === TruncateOrdersType::Stops) {
+            $stops = $all ? $this->stopRepository->findAllByParams($symbol) : $this->stopRepository->findActive($symbol);
         }
 
         $this->entityManager->beginTransaction();

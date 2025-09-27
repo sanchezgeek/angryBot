@@ -2,6 +2,7 @@
 
 namespace App\Trading\Console\Orders;
 
+use App\modules\UserInteraction\HandlerMessage\Factory\HandlerMessageReferenceFactory;
 use App\Trading\Application\UseCase\TruncateOrders\TruncateOrdersEntry;
 use App\Trading\Application\UseCase\TruncateOrders\TruncateOrdersHandler;
 use App\UserInteraction\HandlerMessage\AbstractExecuteHandlerMessageCommand;
@@ -57,8 +58,9 @@ class TruncateOrdersCommand extends AbstractExecuteHandlerMessageCommand
 
     public function __construct(
         private readonly TruncateOrdersHandler $handler,
+        private HandlerMessageReferenceFactory $factory,
         ?string $name = null,
     ) {
-        parent::__construct($name);
+        parent::__construct($this->factory, $name);
     }
 }

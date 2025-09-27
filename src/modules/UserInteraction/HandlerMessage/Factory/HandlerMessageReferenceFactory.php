@@ -10,14 +10,19 @@ use ReflectionException;
 
 final class HandlerMessageReferenceFactory
 {
+    public function __construct(
+        private HandlerMessageParameterReferenceFactory $handlerMessageParameterReferenceFactory
+    ) {
+    }
+
     /**
      * @throws ReflectionException
      */
-    public static function fromTaskEntryClass(string $taskEntryClass): HandlerMessageReference
+    public function fromTaskEntryClass(string $taskEntryClass): HandlerMessageReference
     {
         $parameters = [];
         foreach (new ReflectionClass($taskEntryClass)->getConstructor()->getParameters() as $parameter) {
-            $parameters[] = HandlerMessageParameterReferenceFactory::makeReferenceFromParameterReflection($parameter);
+            $parameters[] = $this->handlerMessageParameterReferenceFactory->makeReferenceFromParameterReflection($parameter);
         }
 
         return new HandlerMessageReference($taskEntryClass, $parameters);

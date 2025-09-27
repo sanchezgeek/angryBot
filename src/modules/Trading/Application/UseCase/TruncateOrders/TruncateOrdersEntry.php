@@ -6,6 +6,7 @@ namespace App\Trading\Application\UseCase\TruncateOrders;
 
 use App\Trading\Application\UseCase\TruncateOrders\Enum\TruncateOrdersMode;
 use App\Trading\Application\UseCase\TruncateOrders\Enum\TruncateOrdersType;
+use App\Trading\Domain\Symbol\SymbolInterface;
 use InvalidArgumentException;
 
 final class TruncateOrdersEntry
@@ -32,6 +33,7 @@ final class TruncateOrdersEntry
     public function __construct(
         public readonly TruncateOrdersMode $mode,
         public readonly TruncateOrdersType $ordersType,
+        public readonly ?SymbolInterface $symbol = null,
     ) {
     }
 
