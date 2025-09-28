@@ -6,6 +6,7 @@ namespace App\Stop\Application\Handler;
 
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderEntryDto;
 use App\Application\UseCase\BuyOrder\Create\CreateBuyOrderHandler;
+use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder as BO;
 use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Repository\StopRepository;
@@ -94,7 +95,6 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 
         $martingaleOrders = [];
         $orders = [];
-        $active = true;
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
             if ($distanceOverride instanceof Percent) {
                 $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
@@ -111,7 +111,6 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             $withForceBuy = [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
-                $active = false;
                 $kind = match (true) {
                     $stop->isStopAfterOtherSymbolLoss() => 'other.symbol.loss',
                     $stop->isStopAfterFixHedgeOppositePosition() => 'hedge',
@@ -246,16 +245,18 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             $side
         );
 
+        $tickerPrice = $this->exchangeService->ticker($symbol)->indexPrice;
         $buyOrders = [];
 
-        // active
-        foreach ($orders->getOrders() as $order) {
-            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context(), $active ? BuyOrderState::Active : null);
-            $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
-        }
+        foreach (array_merge($orders->getOrders(), $martingaleOrders) as $order) {
+            if ($order === null) {
+                continue;
+            }
 
-        foreach ($martingaleOrders as $order) {
-            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context());
+            $orderPrice = $order->price();
+            $active = $side->isShort() ? $orderPrice->lessOrEquals($tickerPrice) : $orderPrice->greaterOrEquals($tickerPrice);
+
+            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $orderPrice->value(), $order->context(), $active ? BuyOrderState::Active : null);
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
 
@@ -337,6 +338,8 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
         private readonly TradingParametersProviderInterface $tradingParametersProvider,
         #[AppDynamicParameterAutowiredArgument]
         private readonly CreateBuyOrderHandler $createBuyOrderHandler,
+        #[AppDynamicParameterAutowiredArgument]
+        private readonly ExchangeServiceInterface $exchangeService,
     ) {
     }
 }
