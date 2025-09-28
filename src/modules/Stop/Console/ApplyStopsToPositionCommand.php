@@ -195,13 +195,15 @@ class ApplyStopsToPositionCommand extends AbstractCommand implements PositionDep
 
         if ($existedStopsInRange->totalCount()) {
             $coveredPart = $existedStopsInRange->volumePart($position->size);
-            $newPart = $part - $coveredPart;
-            if ($newPart <= 0.00) {
-                if (!$this->force) {
+
+            if (!$this->force) {
+                $newPart = $part - $coveredPart;
+
+                if ($newPart <= 0.00) {
                     $this->io->info('All volume already covered');
                     return null;
                 }
-            } else {
+
                 $part = $newPart;
             }
         }
