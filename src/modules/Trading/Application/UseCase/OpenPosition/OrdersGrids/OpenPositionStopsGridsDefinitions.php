@@ -31,11 +31,12 @@ final readonly class OpenPositionStopsGridsDefinitions
     public function standard(
         SymbolInterface $symbol,
         Side $positionSide,
-        SymbolPrice $priceToRelate,
+        SymbolPrice|float $priceToRelate,
         RiskLevel $riskLevel,
         null|float|string $fromPnlPercent = null,
     ): OrdersGridDefinitionCollection {
         $fromPnlPercent = $fromPnlPercent ?? 0;
+        $priceToRelate = $priceToRelate instanceof SymbolPrice ? $priceToRelate : $symbol->makePrice($priceToRelate);
 
         $defs = match ($riskLevel) {
             default => [

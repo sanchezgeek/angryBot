@@ -36,12 +36,16 @@ final readonly class ApplyStopsToPositionHandler
      */
     public function handle(ApplyStopsToPositionEntryDto $entryDto): StopsCollection
     {
+        $dry = $entryDto->dry;
+
         $symbol = $entryDto->symbol;
         $positionSide = $entryDto->positionSide;
         $ordersGridDefinitionsCollection = $entryDto->stopsGridsDefinition;
         $totalSize = $entryDto->totalSize;
 
-        $this->entityManager->beginTransaction();
+        if (!$dry) {
+            $this->entityManager->beginTransaction();
+        }
 
         $stops = [];
         $resultTotalVolume = 0;
@@ -70,21 +74,25 @@ final readonly class ApplyStopsToPositionHandler
                 }
 
                 $stops[] = $this->stopService->create(
-                    $symbol,
-                    $positionSide,
-                    $order->price()->value(),
-                    $order->volume(),
-                    null,
-                    $stopsContext,
+                    symbol: $symbol,
+                    positionSide: $positionSide,
+                    price: $order->price()->value(),
+                    volume: $order->volume(),
+                    context: $stopsContext,
+                    dryRun: $dry
                 );
 
                 $resultTotalVolume += $order->volume();
             }
         }
 
-        $this->entityManager->flush();
-        $this->entityManager->commit();
+        $stopsCollection = new StopsCollection(...$stops);
 
-        return new StopsCollection(...$stops);
+        if (!$dry) {
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+        }
+
+        return $stopsCollection;
     }
 }
