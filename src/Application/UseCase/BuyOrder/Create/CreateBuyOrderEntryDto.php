@@ -16,7 +16,7 @@ final class CreateBuyOrderEntryDto
         public readonly float $volume,
         public readonly float $price,
         public array $context = [],
-        public BuyOrderState $state = BuyOrderState::Idle,
+        public ?BuyOrderState $state = null,
     ) {
     }
 }

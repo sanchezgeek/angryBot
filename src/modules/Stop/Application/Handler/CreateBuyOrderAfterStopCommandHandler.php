@@ -94,6 +94,7 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 
         $martingaleOrders = [];
         $orders = [];
+        $active = true;
         if ($isMinVolume || !$isBigStop || $distanceOverride) {
             if ($distanceOverride instanceof Percent) {
                 $distanceOverride = PnlHelper::convertPnlPercentOnPriceToAbsDelta($distanceOverride, $stopPrice);
@@ -110,6 +111,7 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
             $withForceBuy = [BO::FORCE_BUY_CONTEXT => $forceBuyEnabled];
 
             if ($isAdditionalFixationsStop) {
+                $active = false;
                 $kind = match (true) {
                     $stop->isStopAfterOtherSymbolLoss() => 'other.symbol.loss',
                     $stop->isStopAfterFixHedgeOppositePosition() => 'hedge',
@@ -248,7 +250,7 @@ final class CreateBuyOrderAfterStopCommandHandler implements DependencyInfoProvi
 
         // active
         foreach ($orders->getOrders() as $order) {
-            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context(), BuyOrderState::Active);
+            $dto = new CreateBuyOrderEntryDto($symbol, $side, $order->volume(), $order->price()->value(), $order->context(), $active ? BuyOrderState::Active : null);
             $buyOrders[] = $this->createBuyOrderHandler->handle($dto)->buyOrder;
         }
 

@@ -99,7 +99,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
     private bool $isOppositeStopExecuted = false;
     private false|null|StopCreationStrategyDefinition $stopCreationStrategyDefinition = false;
 
-    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [], BuyOrderState $state = BuyOrderState::Idle)
+    public function __construct(int $id, SymbolPrice|float $price, float $volume, SymbolInterface $symbol, Side $positionSide, array $context = [], ?BuyOrderState $state = null)
     {
         $this->id = $id;
         $this->price = $symbol->makePrice(SymbolPrice::toFloat($price))->value();
@@ -107,7 +107,7 @@ class BuyOrder implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInt
         $this->positionSide = $positionSide;
         $this->context = $context;
         $this->symbol = $symbol;
-        $this->state = $state;
+        $this->state = $state ?? BuyOrderState::Idle;
     }
 
     public function getStopCreationDefinition(): ?StopCreationStrategyDefinition
