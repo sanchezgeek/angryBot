@@ -21,21 +21,25 @@ What is there?
 2) SL placement 
 
    `SL-grid` based on a simple technical analysis (1D `ATR`[7-10])
-3) LockInProfit
+3) Opposite SL and BuyOrders
+
+    Opposite SL - after BO execution
+    Opposite BO - after SL for keep in position and keep best entry price (+ Martingale, if enabled)
+4) LockInProfit
     - creation of an `SL-grid` between ticker and position.entryPrice after passing a certain distance (based on `ATR`)
     - periodic profit taking after passing a certain distance
-4) Preventing the liquidation of positions when trading on `UTA` (when unrealized profits of each position are used to maintain liquidation of all other positions)
+5) Preventing the liquidation of positions when trading on `UTA` (when unrealized profits of each position are used to maintain liquidation of all other positions)
 
     In critical situations, the bot will automatically close positions in small parts after the price passes a certain threshold.
 
     For example, 95% of distance between entry and liquidation passed - 2%-SL will be created, 50% passed - 20% of the position
    
     This should not happen, because when opening positions stops are placed, but there is such a mechanism for insurance.
-5) Hedging
+6) Hedging
    
     Hedges positions (manually at the moment, but there are plans for automatic hedging as a separate LockInProfit strategy)
-6) Covering losses by profits from other positions
-7) Lots of other things ...
+7) Covering losses by profits from other positions
+8) Lots of other things ...
 
 At the moment, the bot is showing good results if you don't trade with your hand and just trust what it does. But we need to maximize profits.
 
