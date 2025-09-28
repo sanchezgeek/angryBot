@@ -18,7 +18,11 @@ final class ChecksNotPassedException extends Exception
         if ($this->result instanceof CompositeTradingCheckResult && $short) {
             $messages = [];
 
-            foreach ($result->getResults() as $result) {
+            foreach ($this->result->getResults() as $result) {
+                if ($result->success) {
+                    continue;
+                }
+
                 $messages[] = match (true) {
                     $result instanceof FurtherPositionLiquidationAfterBuyIsTooClose => sprintf('liq. is too near [Δ=%s,safe=%s]', $result->actualDistance(), $result->safeDistance),
                     $result instanceof BuyOrderPlacedTooFarFromPositionEntry => sprintf('too.far.from.pos.entry[Δ=%s,allowed=%s]', $result->orderPricePercentChangeFromPositonEntry, $result->maxAllowedPercentChange),
