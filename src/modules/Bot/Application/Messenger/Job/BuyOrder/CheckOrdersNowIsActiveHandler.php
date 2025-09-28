@@ -8,8 +8,6 @@ use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
 use App\Bot\Domain\Entity\BuyOrder;
 use App\Bot\Domain\Repository\BuyOrderRepository;
 use App\Clock\ClockInterface;
-use App\Domain\Position\ValueObject\Side;
-use App\Domain\Price\SymbolPrice;
 use App\Trading\Application\Symbol\SymbolProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -53,23 +51,11 @@ final readonly class CheckOrdersNowIsActiveHandler
                         continue;
                     }
 
-                    $comparator = self::getComparator($buyOrder->getPositionSide());
-                    if ($comparator($buyOrder->getPrice(), $symbolPrice)) {
-                        $buyOrder->setActive($this->clock->now());
-                    }
+                    $buyOrder->setActive($this->clock->now());
                 }
             }
         }
 
         $this->entityManager->flush();
-    }
-
-    private static function getComparator(Side $positionSide): callable
-    {
-        if ($positionSide === Side::Buy) {
-            return static fn(float $buyOrderPrice, SymbolPrice $currentPrice) => $currentPrice->lessOrEquals($buyOrderPrice);
-        }
-
-        return static fn(float $buyOrderPrice, SymbolPrice $currentPrice) => $currentPrice->greaterOrEquals($buyOrderPrice);
     }
 }
