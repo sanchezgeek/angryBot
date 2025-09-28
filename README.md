@@ -10,7 +10,7 @@ What is there?
     To be sure, they are checked:
     - CurrentPrice-to-ATH ratio 
      
-        Example: ATH=1000, currentPrice = 900 => confidenceRate = 0.9
+        Example: ATH=1000, currentPrice = 900 => `confidenceRate` = 0.9
     - FundingRate
    
         Does not open at strongly negative funding. also affects confidenceRate)
@@ -18,11 +18,13 @@ What is there?
    
         For coins with a small age, the confidenceRate will be lower
     - ... There are plans to check the MarketStructure break (Smart Money) ...
-2) SL placement based on a simple technical analysis (1D ATR[7-10])
+2) SL placement 
+
+   `SL-grid` based on a simple technical analysis (1D `ATR`[7-10])
 3) LockInProfit
-    - creation of an SL-grid before the position opening price after passing a certain distance
+    - creation of an `SL-grid` between ticker and position.entryPrice after passing a certain distance (based on `ATR`)
     - periodic profit taking after passing a certain distance
-4) Preventing the liquidation of positions when trading on UTA (when unrealized profits of each position are used to maintain liquidation of all other positions)
+4) Preventing the liquidation of positions when trading on `UTA` (when unrealized profits of each position are used to maintain liquidation of all other positions)
 
     In critical situations, the bot will automatically close positions in small parts after the price passes a certain threshold.
 
@@ -32,6 +34,8 @@ What is there?
 5) Hedging
    
     Hedges positions (manually at the moment, but there are plans for automatic hedging as a separate LockInProfit strategy)
+6) Covering losses by profits from other positions
+7) Lots of other things ...
 
 At the moment, the bot is showing good results if you don't trade with your hand and just trust what it does. But we need to maximize profits.
 
