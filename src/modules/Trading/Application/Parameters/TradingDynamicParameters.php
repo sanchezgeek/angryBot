@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Trading\Application\Parameters;
 
 use App\Bot\Application\Service\Exchange\ExchangeServiceInterface;
+use App\Bot\Application\Service\Exchange\PositionServiceInterface;
 use App\Bot\Application\Settings\TradingSettings;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Trading\Enum\PriceDistanceSelector;
@@ -47,6 +48,9 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
 
         #[AppDynamicParameterAutowiredArgument]
         private ExchangeServiceInterface $exchangeService,
+
+        #[AppDynamicParameterAutowiredArgument]
+        private PositionServiceInterface $positionService,
     ) {
     }
 
@@ -169,14 +173,36 @@ final readonly class TradingDynamicParameters implements TradingParametersProvid
         TimeFrame $timeframe = self::LONG_ATR_TIMEFRAME,
         int $period = self::ATR_PERIOD_FOR_ORDERS,
     ): array {
-        $currentPrice = $this->exchangeService->ticker($symbol);
+        $currentPrice = $this->exchangeService->ticker($symbol)->markPrice;
+
+        $position = null;
+        $positions = $this->positionService->getPositions($symbol);
+        if ($positions) {
+            $first = $positions[array_key_first($positions)];
+            $position = $first->getHedge()?->mainPosition ?? $first;
+        }
+        $currentPositionDelta = $position?->entryPrice()->differenceWith($currentPrice)->absDelta();
 
         $result = [];
         foreach (PriceDistanceSelector::cases() as $case) {
             $percent = $this->transformLengthToPricePercent($symbol, $case, $timeframe, $period);
-            $abs = $percent->of($currentPrice->markPrice->value());
+            $abs = $percent->of($currentPrice->value());
 
             $result[$case->value] = ['percent' => $percent, '$abs' => $abs];
+        }
+
+        $currentKey = null;
+        if ($position) {
+            foreach ($result as $key => $item) {
+                $abs = $item['percent']->of($position->entryPrice);
+                if ($currentPositionDelta >= $abs) {
+                    $currentKey = $key;
+                }
+            }
+        }
+
+        if ($currentKey) {
+            $result[$currentKey]['current'] = true;
         }
 
         return $result;
