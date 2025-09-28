@@ -42,8 +42,8 @@ final class PredefinedStopLengthProcessor extends AbstractBaseStopLengthProcesso
             $riskLevel = TradingDynamicParameters::riskLevel($buyOrder->getSymbol(), $buyOrder->getPositionSide());
 
             $length = match ($riskLevel) {
-                RiskLevel::Cautious => PriceDistanceSelector::VeryVeryShort,
-                RiskLevel::Conservative => PriceDistanceSelector::VeryShort,
+                RiskLevel::Cautious => PriceDistanceSelector::AlmostImmideately,
+                RiskLevel::Conservative => PriceDistanceSelector::VeryVeryShort,
                 RiskLevel::Aggressive => PriceDistanceSelector::Short,
             };
 
