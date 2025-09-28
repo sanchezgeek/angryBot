@@ -32,7 +32,9 @@ final readonly class CreateStopHandler implements CreateStopHandlerInterface
             $command->context
         );
 
-        $this->repository->save($stop);
+        if (!$command->dryRun) {
+            $this->repository->save($stop);
+        }
 
         return $stop;
     }

@@ -17,6 +17,7 @@ final readonly class CreateStop
         public ?float $triggerDelta = null,
         public array $context = [],
         public ?int $id = null,
+        public bool $dryRun = false,
     ) {
     }
 
@@ -29,7 +30,8 @@ final readonly class CreateStop
             price: $this->price,
             triggerDelta: $this->triggerDelta,
             context: array_merge($this->context, $context),
-            id: $this->id
+            id: $this->id,
+            dryRun: $this->dryRun
         );
     }
 }

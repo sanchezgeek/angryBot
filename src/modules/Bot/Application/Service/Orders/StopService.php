@@ -27,8 +27,15 @@ final class StopService implements StopServiceInterface
         $this->messageBus = $messageBus;
     }
 
-    public function create(SymbolInterface $symbol, Side $positionSide, SymbolPrice|float $price, float $volume, ?float $triggerDelta = null, array $context = []): Stop
-    {
+    public function create(
+        SymbolInterface $symbol,
+        Side $positionSide,
+        SymbolPrice|float $price,
+        float $volume,
+        ?float $triggerDelta = null,
+        array $context = [],
+        bool $dryRun = false
+    ): Stop {
         // @todo По хорошему тут должна быть защита: если ужё всё под стопами - то нельзя создавать
         // Но не переборщить
         // + может быть job, который будет как-то хитро делать rearrange
@@ -40,7 +47,8 @@ final class StopService implements StopServiceInterface
                 volume: $volume,
                 price: $price instanceof SymbolPrice ? $price->value() : $price,
                 triggerDelta: $triggerDelta,
-                context: $context
+                context: $context,
+                dryRun: $dryRun,
             ),
         );
     }
