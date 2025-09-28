@@ -26,10 +26,14 @@ final class PositionStopRangesCollectionTest extends TestCase
 
         $stopsRanges = [];
         foreach ($positionStopsRanges as $range => $stopsInRange) {
-            $stopsRanges[$range] = $stopsInRange;
+            $stopsRanges[$range] = $stopsInRange->getItems();
         }
 
-        self::assertEquals($expectedStopsRanges, $stopsRanges);
+        $expectedRanges = array_map(function ($stopsInRange) {
+            return $stopsInRange->getItems();
+        }, $expectedStopsRanges);
+
+        self::assertEquals($expectedRanges, $stopsRanges);
     }
 
     private function rangesTestDataProvider(): iterable

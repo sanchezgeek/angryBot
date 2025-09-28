@@ -8,6 +8,7 @@ use App\Bot\Domain\Entity\Stop;
 use App\Bot\Domain\Position;
 use App\Domain\Position\ValueObject\Side;
 use App\Domain\Price\PriceRange;
+use App\Infrastructure\Exception\UnexpectedValueException;
 use App\Trading\Domain\Symbol\SymbolInterface;
 use Exception;
 use IteratorAggregate;
@@ -29,38 +30,41 @@ final class StopsCollection implements IteratorAggregate
     /** @var Stop[] */
     private array $items = [];
 
-    public function __construct(Stop ...$items)
+    public function __construct(Stop ...$stops)
     {
-        foreach ($items as $item) {
-            $this->add($item);
+        foreach ($stops as $stop) {
+            $this->add($stop);
         }
     }
 
     public function add(Stop $stop): self
     {
-        if (isset($this->items[$stop->getId()])) {
-            throw new \LogicException(sprintf('Stop with id "%d" was added before.', $stop->getId()));
+        $key = self::getKey($stop);
+
+        if (isset($this->items[$key])) {
+            if ($stopId = self::getStopId($stop)) {
+                throw new \LogicException(sprintf('Stop with id "%d" was added before.', $stopId));
+            } else {
+                throw new \LogicException(sprintf('Stop with hash "%s" was added before.', $key));
+            }
         }
 
-        $this->items[$stop->getId()] = $stop;
+        $this->items[$key] = $stop;
 
         return $this;
     }
 
     public function remove(Stop $stop): self
     {
-        if (!$this->has($stop->getId())) {
-            throw new LogicException(sprintf('Stop with id "%d" not found.', $stop->getId()));
+        $key = self::getKey($stop);
+
+        if (!isset($this->items[$key])) {
+            throw new LogicException('Stop with not found.');
         }
 
-        unset($this->items[$stop->getId()]);
+        unset($this->items[$key]);
 
         return $this;
-    }
-
-    public function has(int $id): bool
-    {
-        return isset($this->items[$id]);
     }
 
     /**
@@ -68,7 +72,7 @@ final class StopsCollection implements IteratorAggregate
      */
     public function getItems(): array
     {
-        return $this->items;
+        return $this->mapToIds($this->items);
     }
 
     public function getIterator(): \Generator
@@ -150,20 +154,55 @@ final class StopsCollection implements IteratorAggregate
 
     public function grabBySymbolAndSide(SymbolInterface $symbol, ?Side $side = null): array
     {
-        return array_filter($this->items, static fn(Stop $stop) => $stop->getSymbol()->eq($symbol) && (!$side || $stop->getPositionSide() === $side));
+        return $this->mapToIds(
+            array_filter($this->items, static fn(Stop $stop) => $stop->getSymbol()->eq($symbol) && (!$side || $stop->getPositionSide() === $side))
+        );
     }
 
+    /**
+     * @throws UnexpectedValueException
+     */
     public function getOneById(int $id): Stop
     {
-        if (!$stop = $this->items[$id] ?? null) {
-            throw new Exception(sprintf('Cannot find stop by id=%d', $id));
+        foreach ($this->items as $item) {
+            if ($item->getId() === $id) {
+                return $item;
+            }
         }
 
-        return $stop;
+        throw new Exception(sprintf('Cannot find stop by id=%d', $id));
     }
 
     private function getItemsPrices(): array
     {
         return array_map(static fn(Stop $stop) => $stop->getPrice(), $this->items);
+    }
+
+    private static function getKey(Stop $stop): string
+    {
+        return spl_object_hash($stop);
+    }
+
+    private static function getStopId(Stop $stop): ?int
+    {
+        try {
+            return $stop->getId();
+        } catch (UnexpectedValueException) {
+            return null;
+        }
+    }
+
+    private function mapToIds(array $items): array
+    {
+        $result = [];
+        foreach ($items as $key => $item) {
+            if ($id = self::getStopId($item)) {
+                $result[$id] = $item;
+            } else {
+                $result[$key] = $item;
+            }
+        }
+
+        return $result;
     }
 }

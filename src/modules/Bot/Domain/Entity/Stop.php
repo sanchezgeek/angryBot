@@ -22,6 +22,7 @@ use App\Domain\Stop\Helper\PnlHelper;
 use App\EventBus\HasEvents;
 use App\EventBus\RecordEvents;
 use App\Infrastructure\Doctrine\Identity\SkipIfIdAssignedGenerator;
+use App\Infrastructure\Exception\UnexpectedValueException;
 use App\Trading\Domain\Symbol\Entity\Symbol;
 use App\Trading\Domain\Symbol\SymbolContainerInterface;
 use App\Trading\Domain\Symbol\SymbolInterface;
@@ -113,8 +114,15 @@ class Stop implements HasEvents, VolumeSignAwareInterface, OrderTypeAwareInterfa
         return $this;
     }
 
+    /**
+     * @throws UnexpectedValueException
+     */
     public function getId(): int
     {
+        if (!$this->id) {
+            throw new UnexpectedValueException('ID is not set');
+        }
+
         return $this->id;
     }
 

@@ -17,17 +17,6 @@ use function iterator_to_array;
  */
 final class StopsCollectionTest extends TestCase
 {
-    public function testHas(): void
-    {
-        $collection = new StopsCollection();
-
-        $collection->add(StopBuilder::short(100500, 29000, 0.001)->build());
-
-        self::assertFalse($collection->has(1));
-        self::assertTrue($collection->has(100500));
-        self::assertFalse($collection->has(999999));
-    }
-
     public function testItems(): void
     {
         $collection = new StopsCollection();
@@ -65,9 +54,10 @@ final class StopsCollectionTest extends TestCase
             new StopsCollection(
                 StopBuilder::short(3, 29010, 0.001, $symbol)->build(),
                 StopBuilder::short(2, 29020, 0.02, $symbol)->build(),
-            ),
-            $collection->grabFromRange($range)
+            )->getItems(),
+            $collection->grabFromRange($range)->getItems()
         );
+
         self::assertEquals(0.032, $collection->totalVolume());
     }
 
