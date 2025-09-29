@@ -1,4 +1,4 @@
-### Intro
+## About
 
 Stack: PHP 8.4 | Symfony | PostgreSQL | VueJS
 
@@ -50,7 +50,7 @@ Based on all this, there is a VERY HUGE need for
 2) QA, who will be able to debug it all.
 3) Frontend developers who can come up with a UI for all this goodness.
 
-### Contacts
+## Contacts
 
 If you are ready to cooperate, ready to try this bot in the current state or you need an explanation of how it works - contact me by email `sanchezgeek@gmail.com`
 
@@ -60,6 +60,13 @@ You can also try using it yourself if you have the basic skills of backend devel
 `USDT (TRC-20)`: TVej4oL2prmJci5SceGqGyNtjYM87yRunE
 
 `BTC`: bc1qcst3hy4heexz24086fkr7dp04xsdmrf2jmqcnq
+
+
+## License
+
+This project is licensed under a Non-Commercial License. See the [LICENSE](LICENSE) file for details.
+
+___________
 
 ### Start
 Option 1:
