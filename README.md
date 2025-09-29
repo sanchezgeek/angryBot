@@ -64,7 +64,7 @@ You can also try using it yourself if you have the basic skills of backend devel
 
 ## License
 
-This project is licensed under a Non-Commercial License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under a Non-Commercial License. See the [LICENSE](LICENSE.md) file for details.
 
 ___________
 
